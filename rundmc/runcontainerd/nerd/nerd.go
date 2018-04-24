@@ -22,15 +22,17 @@ func New(client *containerd.Client, context context.Context) *Nerd {
 	}
 }
 
-func (n *Nerd) CreateContainer(id string, spec specs.Spec) (containerd.Container, error) {
-	return n.client.NewContainer(n.context, id, containerd.WithSpec(&spec))
-}
+func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec) error {
+	container, err := n.client.NewContainer(n.context, containerID, containerd.WithSpec(spec))
+	if err != nil {
+		return err
+	}
 
-func (n *Nerd) CreateTask(io cio.Creator, container containerd.Container) (containerd.Task, error) {
-	return container.NewTask(n.context, io)
-}
+	task, err := container.NewTask(n.context, cio.NullIO)
+	if err != nil {
+		return err
+	}
 
-func (n *Nerd) StartTask(task containerd.Task) error {
 	return task.Start(n.context)
 }
 

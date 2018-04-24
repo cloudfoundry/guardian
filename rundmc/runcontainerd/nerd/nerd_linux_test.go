@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 
 	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/oci"
 	. "github.com/onsi/ginkgo"
@@ -27,25 +26,51 @@ var _ = Describe("Nerd", func() {
 		cnerd = nerd.New(containerdClient, containerdContext)
 	})
 
-	Describe("Delete", func() {
-		It("deletes the containerd container by id", func() {
-			spec := generateSpec(containerdContext, containerdClient, "test-id")
-			container := createContainer(containerdContext, containerdClient, spec, "test-id")
-			startInitProcess(containerdContext, container)
+	Describe("Create", func() {
+		AfterEach(func() {
+			cnerd.Delete(nil, "test-id")
+		})
 
+		It("creates the containerd container by id", func() {
+			spec := generateSpec(containerdContext, containerdClient, "test-id")
+			Expect(cnerd.Create(nil, "test-id", spec)).To(Succeed())
+
+			containers := listContainers(testConfig.CtrBin, testConfig.Socket)
+			Expect(containers).To(ContainSubstring("test-id"))
+		})
+
+		It("starts an init process in the container", func() {
+			spec := generateSpec(containerdContext, containerdClient, "test-id")
+			Expect(cnerd.Create(nil, "test-id", spec)).To(Succeed())
+
+			containers := listProcesses(testConfig.CtrBin, testConfig.Socket, "test-id")
+			Expect(containers).To(ContainSubstring("test-id"))
+		})
+	})
+
+	Describe("Delete", func() {
+		BeforeEach(func() {
+			spec := generateSpec(containerdContext, containerdClient, "test-id")
+			Expect(cnerd.Create(nil, "test-id", spec)).To(Succeed())
+		})
+
+		It("deletes the containerd container by id", func() {
 			Expect(cnerd.Delete(nil, "test-id")).To(Succeed())
+
 			containers := listContainers(testConfig.CtrBin, testConfig.Socket)
 			Expect(containers).NotTo(ContainSubstring("test-id"))
 		})
 	})
 
 	Describe("State", func() {
-		It("gets the pid and status of a running task", func() {
+		BeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, "test-id")
-			container := createContainer(containerdContext, containerdClient, spec, "test-id")
-			startInitProcess(containerdContext, container)
+			Expect(cnerd.Create(nil, "test-id", spec)).To(Succeed())
+		})
 
+		It("gets the pid and status of a running task", func() {
 			pid, status, err := cnerd.State(nil, "test-id")
+
 			Expect(err).NotTo(HaveOccurred())
 			Expect(pid).NotTo(BeZero())
 			Expect(status).To(Equal(containerd.Running))
@@ -76,20 +101,17 @@ func generateSpec(context context.Context, client *containerd.Client, containerI
 	return spec
 }
 
-func createContainer(context context.Context, client *containerd.Client, spec *specs.Spec, containerID string) containerd.Container {
-	container, err := client.NewContainer(context, containerID, containerd.WithSpec(spec))
-	Expect(err).NotTo(HaveOccurred())
-	return container
-}
-
-func startInitProcess(context context.Context, container containerd.Container) {
-	task, err := container.NewTask(context, cio.NullIO)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(task.Start(context)).To(Succeed())
-}
-
 func listContainers(ctr, socket string) string {
-	cmd := exec.Command(ctr, "--address", socket, "--namespace", fmt.Sprintf("nerdspace%d", GinkgoParallelNode()), "containers", "list")
+	return runCtr(ctr, socket, []string{"containers", "list"})
+}
+
+func listProcesses(ctr, socket, containerID string) string {
+	return runCtr(ctr, socket, []string{"tasks", "ps", containerID})
+}
+
+func runCtr(ctr, socket string, args []string) string {
+	defaultArgs := []string{"--address", socket, "--namespace", fmt.Sprintf("nerdspace%d", GinkgoParallelNode())}
+	cmd := exec.Command(ctr, append(defaultArgs, args...)...)
 
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())

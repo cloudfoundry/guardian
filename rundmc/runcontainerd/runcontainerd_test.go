@@ -27,79 +27,63 @@ var _ = Describe("Runcontainerd", func() {
 	})
 
 	Describe("Create", func() {
-
 		var (
-			createErr        error
-			id               string
-			bundle           goci.Bndl
-			createdContainer *runcontainerdfakes.FakeContainer
-			createdTask      *runcontainerdfakes.FakeTask
+			id         string
+			bundlePath string
+			bundle     goci.Bndl
+
+			createErr error
 		)
 
 		BeforeEach(func() {
-			id = "randomID"
+			id = "container-id"
+			bundlePath = "bundle-path"
 			bundle = goci.Bndl{
 				Spec: specs.Spec{
 					Hostname: "test-hostname",
 				},
 			}
-			bundleLoader.LoadReturns(bundle, nil)
-			createdContainer = new(runcontainerdfakes.FakeContainer)
-			createdTask = new(runcontainerdfakes.FakeTask)
-			nerdulator.CreateContainerReturns(createdContainer, nil)
-			nerdulator.CreateTaskReturns(createdTask, nil)
+			bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
+				if path == bundlePath {
+					return bundle, nil
+				}
+				return goci.Bndl{}, nil
+			}
 		})
 
 		JustBeforeEach(func() {
-			createErr = runContainerd.Create(nil, "", id, garden.ProcessIO{})
+			createErr = runContainerd.Create(nil, bundlePath, id, garden.ProcessIO{})
 		})
 
-		It("creates a containerd container, with the right args", func() {
-			Expect(nerdulator.CreateContainerCallCount()).To(Equal(1))
-			actualID, actualSpec := nerdulator.CreateContainerArgsForCall(0)
+		It("creates the container with the passed containerID", func() {
+			Expect(nerdulator.CreateCallCount()).To(Equal(1))
+			_, actualID, _ := nerdulator.CreateArgsForCall(0)
 			Expect(actualID).To(Equal(id))
-			Expect(actualSpec).To(Equal(bundle.Spec))
 		})
 
-		It("creates a containerd task, with the right args", func() {
-			Expect(nerdulator.CreateTaskCallCount()).To(Equal(1))
-			_, usedContainer := nerdulator.CreateTaskArgsForCall(0)
-			Expect(usedContainer).To(Equal(createdContainer))
-		})
-
-		It("starts a containerd task, with the right args", func() {
-			Expect(nerdulator.StartTaskCallCount()).To(Equal(1))
-			usedTask := nerdulator.StartTaskArgsForCall(0)
-			Expect(usedTask).To(Equal(createdTask))
+		It("creates the container using the spec from the loaded bundle", func() {
+			Expect(nerdulator.CreateCallCount()).To(Equal(1))
+			_, _, actualSpec := nerdulator.CreateArgsForCall(0)
+			Expect(actualSpec).To(Equal(&bundle.Spec))
 		})
 
 		Context("when loading the bundle returns an error", func() {
 			BeforeEach(func() {
-				bundleLoader.LoadReturns(goci.Bndl{}, errors.New("POTATO"))
+				bundleLoader.LoadReturns(goci.Bndl{}, errors.New("EXPLODE"))
 			})
 
-			It("returns an error", func() {
-				Expect(createErr).To(MatchError("POTATO"))
-			})
-		})
-
-		Context("when creating a containerd task errors", func() {
-			BeforeEach(func() {
-				nerdulator.CreateTaskReturns(nil, errors.New("BOOMS"))
-			})
-
-			It("bubbles up that error", func() {
-				Expect(createErr).To(MatchError("BOOMS"))
+			It("bubbles up that", func() {
+				Expect(createErr).To(MatchError("EXPLODE"))
 			})
 		})
 
-		Context("when starting a containerd task errors", func() {
+		Context("when creating the container returns an error", func() {
 			BeforeEach(func() {
-				nerdulator.StartTaskReturns(errors.New("HEY"))
+				nerdulator.CreateReturns(errors.New("EXPLODE"))
 			})
 
-			It("bubbles up that error", func() {
-				Expect(createErr).To(MatchError("HEY"))
+			It("bubbles up that", func() {
+				Expect(createErr).To(MatchError("EXPLODE"))
 			})
 		})
 	})
@@ -130,7 +114,8 @@ var _ = Describe("Runcontainerd", func() {
 
 	Describe("State", func() {
 		var (
-			state    runrunc.State
+			state runrunc.State
+
 			stateErr error
 		)
 

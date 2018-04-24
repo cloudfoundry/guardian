@@ -9,28 +9,15 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/cio"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-//go:generate counterfeiter . Container
-type Container interface {
-	containerd.Container
-}
-
-//go:generate counterfeiter . Task
-type Task interface {
-	containerd.Task
-}
-
 //go:generate counterfeiter . Nerdulator
 type Nerdulator interface {
-	CreateContainer(id string, spec specs.Spec) (containerd.Container, error)
-	CreateTask(io cio.Creator, container containerd.Container) (containerd.Task, error)
-	StartTask(task containerd.Task) error
+	Create(log lager.Logger, containerID string, spec *specs.Spec) error
+	Delete(log lager.Logger, containerID string) error
 
 	State(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error)
-	Delete(log lager.Logger, containerID string) error
 }
 
 //go:generate counterfeiter . BundleLoader
@@ -56,17 +43,7 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 		return err
 	}
 
-	container, err := r.nerd.CreateContainer(id, bundle.Spec)
-	if err != nil {
-		return err
-	}
-
-	task, err := r.nerd.CreateTask(cio.NullIO, container)
-	if err != nil {
-		return err
-	}
-
-	return r.nerd.StartTask(task)
+	return r.nerd.Create(log, id, &bundle.Spec)
 }
 
 func (r *RunContainerd) Exec(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
