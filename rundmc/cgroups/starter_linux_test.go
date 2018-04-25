@@ -304,6 +304,22 @@ var _ = Describe("CgroupStarter", func() {
 				}))
 			})
 		})
+
+		Context("when /proc/self/cgroup contains named cgroup hierarchies", func() {
+			BeforeEach(func() {
+				procSelfCgroupsContents = procSelfCgroupsContents + "1:name=systemd:/\n"
+				notMountedCgroups = []string{"name=systemd"}
+			})
+
+			It("should mount the named cgroup", func() {
+				Expect(starter.Start()).To(Succeed())
+				Expect(runner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
+					Path: "mount",
+					Args: []string{"-n", "-t", "cgroup", "-o", "name=systemd", "cgroup", path.Join(tmpDir, "cgroup", "name=systemd")},
+				}))
+			})
+
+		})
 	})
 
 	Context("when /proc/cgroups contains malformed entries", func() {

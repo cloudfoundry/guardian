@@ -103,6 +103,7 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		return CgroupsFormatError{Content: scanner.Text()}
 	}
 
+	kernelSubsystems := []string{}
 	for scanner.Scan() {
 		var subsystem string
 		var skip, enabled int
@@ -110,6 +111,8 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		if err != nil || n != 4 {
 			return CgroupsFormatError{Content: scanner.Text()}
 		}
+
+		kernelSubsystems = append(kernelSubsystems, subsystem)
 
 		if enabled == 0 {
 			continue
@@ -122,12 +125,8 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		}
 
 		subsystemMountPath := path.Join(s.CgroupPath, subsystem)
-		if err := s.idempotentCgroupMount(logger, subsystemMountPath, subsystemToMount); err != nil {
-			return err
-		}
-
-		gardenCgroupPath := filepath.Join(s.CgroupPath, subsystem, dirToCreate)
-		if err := s.createGardenCgroup(logger, gardenCgroupPath); err != nil {
+		gardenCgroupPath := filepath.Join(subsystemMountPath, dirToCreate)
+		if err := s.createAndChownCgroup(logger, subsystemMountPath, subsystemToMount, gardenCgroupPath); err != nil {
 			return err
 		}
 
@@ -136,13 +135,60 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 				return err
 			}
 		}
+	}
 
-		if err := s.Chowner.RecursiveChown(gardenCgroupPath); err != nil {
+	for _, subsystem := range subtract(procSelfSubsystems(subsystemGroupings), kernelSubsystems) {
+		cgroup := subsystemGroupings[subsystem]
+		subsystemMountPath := path.Join(s.CgroupPath, subsystem)
+		gardenCgroupPath := filepath.Join(subsystemMountPath, cgroup.Path, s.GardenCgroup)
+
+		if err := s.createAndChownCgroup(logger, subsystemMountPath, subsystem, gardenCgroupPath); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (s *CgroupStarter) createAndChownCgroup(logger lager.Logger, mountPath, subsystem, gardenCgroupPath string) error {
+	if err := s.idempotentCgroupMount(logger, mountPath, subsystem); err != nil {
+		return err
+	}
+
+	if err := s.createGardenCgroup(logger, gardenCgroupPath); err != nil {
+		return err
+	}
+
+	return s.Chowner.RecursiveChown(gardenCgroupPath)
+}
+
+func procSelfSubsystems(m map[string]group) []string {
+	result := []string{}
+	for k := range m {
+		result = append(result, k)
+	}
+
+	return result
+}
+
+func subtract(from, values []string) []string {
+	result := []string{}
+	for _, v := range from {
+		if !contains(values, v) {
+			result = append(result, v)
+		}
+	}
+
+	return result
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *CgroupStarter) modifyAllowedDevices(dir string, devices []specs.LinuxDeviceCgroup) error {
