@@ -7,6 +7,9 @@ ARGS=$@
 DIRS=$(for d in $ARGS; do [ -d "$d" ] && echo "$d"; done)
 
 TASK=ci/unit-tests/guardian.yml
+if [ "$TAG" == "xenial" ]; then
+  TASK=ci/unit-tests/guardian-xenial.yml
+fi
 if [ "$GOOS" == "windows" ]; then
   TASK=ci/unit-tests/guardian-windows.yml
 fi
