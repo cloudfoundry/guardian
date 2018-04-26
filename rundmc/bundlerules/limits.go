@@ -13,11 +13,18 @@ type Limits struct {
 	CpuQuotaPerShare uint64
 	BlockIOWeight    uint16
 	TCPMemoryLimit   int64
+	DisableSwapLimit bool
 }
 
 func (l Limits) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) (goci.Bndl, error) {
 	limit := int64(spec.Limits.Memory.LimitInBytes)
-	bndl = bndl.WithMemoryLimit(specs.LinuxMemory{Limit: &limit, Swap: &limit, KernelTCP: &l.TCPMemoryLimit})
+
+	var swapLimit *int64
+	if !l.DisableSwapLimit {
+		swapLimit = &limit
+	}
+
+	bndl = bndl.WithMemoryLimit(specs.LinuxMemory{Limit: &limit, Swap: swapLimit, KernelTCP: &l.TCPMemoryLimit})
 
 	shares := uint64(spec.Limits.CPU.LimitInShares)
 	cpuSpec := specs.LinuxCPU{Shares: &shares}

@@ -20,7 +20,29 @@ var _ = Describe("LimitsRule", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(*(newBndl.Resources().Memory.Limit)).To(BeNumerically("==", 4096))
+	})
+
+	It("limits swap to regular memory limit in bundle resources if swap limit is enabled", func() {
+		newBndl, err := bundlerules.Limits{}.Apply(goci.Bundle(), spec.DesiredContainerSpec{
+			Limits: garden.Limits{
+				Memory: garden.MemoryLimits{LimitInBytes: 4096},
+			},
+		}, "not-needed-path")
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(newBndl.Resources().Memory.Swap).ToNot(BeNil())
 		Expect(*(newBndl.Resources().Memory.Swap)).To(BeNumerically("==", 4096))
+	})
+
+	It("does not limit swap in bundle resources if swap limit is disabled", func() {
+		newBndl, err := bundlerules.Limits{DisableSwapLimit: true}.Apply(goci.Bundle(), spec.DesiredContainerSpec{
+			Limits: garden.Limits{
+				Memory: garden.MemoryLimits{LimitInBytes: 4096},
+			},
+		}, "not-needed-path")
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(newBndl.Resources().Memory.Swap).To(BeNil())
 	})
 
 	It("sets the correct TCPMemoryLimit in the bundle resources", func() {

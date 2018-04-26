@@ -268,6 +268,7 @@ type ServerCommand struct {
 		TCPMemoryLimit       uint64 `long:"tcp-memory-limit" default:"0" description:"Set hard limit for the tcp buf memory, value in bytes"`
 		DefaultBlockIOWeight uint16 `long:"default-container-blockio-weight" default:"0" description:"Default block IO weight assigned to a container"`
 		MaxContainers        uint64 `long:"max-containers" default:"0" description:"Maximum number of containers that can be created."`
+		DisableSwapLimit     bool   `long:"disable-swap-limit" description:"Disable swap memory limit"`
 	} `group:"Limits"`
 
 	Metrics struct {
@@ -837,6 +838,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 			CpuQuotaPerShare: cmd.Limits.CPUQuotaPerShare,
 			TCPMemoryLimit:   int64(cmd.Limits.TCPMemoryLimit),
 			BlockIOWeight:    cmd.Limits.DefaultBlockIOWeight,
+			DisableSwapLimit: cmd.Limits.DisableSwapLimit,
 		},
 	}
 	template := &rundmc.BundleTemplate{Rules: bundleRules}
