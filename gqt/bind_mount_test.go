@@ -95,6 +95,7 @@ var _ = Describe("Bind mount", func() {
 			bindMountMode = garden.BindMountModeRO
 			bindMountOrigin = garden.BindMountOriginHost
 			testFileName = ""
+			useSymlink = false
 			mountOptions = []string{"--bind"}
 			bindMountOrigin = garden.BindMountOriginHost
 		})
