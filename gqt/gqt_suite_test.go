@@ -280,7 +280,7 @@ func copyFile(srcPath, dstPath string) error {
 	return os.Chmod(writer.Name(), 0777)
 }
 
-func getCurrentCGroup(cgroupToFind string) (string, error) {
+func getCurrentCGroup(subsystemToFind string) (string, error) {
 	cgroupContent, err := ioutil.ReadFile(fmt.Sprintf("/proc/self/cgroup"))
 	if err != nil {
 		return "", err
@@ -293,11 +293,22 @@ func getCurrentCGroup(cgroupToFind string) (string, error) {
 			return "", errors.New("Error parsing cgroups:" + cgroup)
 		}
 		subsystems := strings.Split(fields[1], ",")
-		if containsElement(subsystems, cgroupToFind) {
+		if containsElement(subsystems, subsystemToHierarchyID(subsystemToFind)) {
 			return fields[2], nil
 		}
 	}
-	return "", errors.New("Cgroup subsystem not found: " + cgroupToFind)
+	return "", errors.New("Cgroup subsystem not found: " + subsystemToFind)
+}
+
+func subsystemToHierarchyID(subsystem string) string {
+	if subsystem == "systemd" {
+		// On Xenial there is a dedicated systemd named cgroup hirarchy (created by systemd itself) that looks like this in /proc/self/cgroup:
+		// 1:name=systemd:/user.slice/user-1000.slice/session-3.scope
+		// Here we "translate" the systemd "subsystem" name to hierarchy id so that it can be located in /proc/self/cgroup
+		// Do note that the systemd cgroup named hierarchy is not available on Trusty though
+		return "name=systemd"
+	}
+	return subsystem
 }
 
 func getCurrentCGroupPath(cgroupsRoot, subsystem, tag string, privileged bool) string {

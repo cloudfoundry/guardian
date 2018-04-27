@@ -137,9 +137,10 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		}
 	}
 
-	for _, subsystem := range subtract(procSelfSubsystems(subsystemGroupings), kernelSubsystems) {
+	for _, subsystem := range namedCgroupSubsystems(procSelfSubsystems(subsystemGroupings), kernelSubsystems) {
 		cgroup := subsystemGroupings[subsystem]
-		subsystemMountPath := path.Join(s.CgroupPath, subsystem)
+		subsystemName := cgroup.SubSystem[len("name="):len(cgroup.SubSystem)]
+		subsystemMountPath := path.Join(s.CgroupPath, subsystemName)
 		gardenCgroupPath := filepath.Join(subsystemMountPath, cgroup.Path, s.GardenCgroup)
 
 		if err := s.createAndChownCgroup(logger, subsystemMountPath, subsystem, gardenCgroupPath); err != nil {
@@ -176,6 +177,17 @@ func subtract(from, values []string) []string {
 	for _, v := range from {
 		if !contains(values, v) {
 			result = append(result, v)
+		}
+	}
+
+	return result
+}
+
+func namedCgroupSubsystems(procSelfSubsystems, kernelSubsystems []string) []string {
+	result := []string{}
+	for _, subsystem := range subtract(procSelfSubsystems, kernelSubsystems) {
+		if strings.HasPrefix(subsystem, "name=") {
+			result = append(result, subsystem)
 		}
 	}
 
