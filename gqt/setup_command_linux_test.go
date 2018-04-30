@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 
 	. "github.com/onsi/ginkgo"
@@ -81,7 +82,8 @@ var _ = Describe("gdn setup", func() {
 		})
 
 		It("allows both OCI default and garden specific devices", func() {
-			cgroupPath := getCurrentCGroupPath(cgroupsRoot, "devices", tag, false)
+			cgroupPath, err := cgrouper.GetCGroupPath(cgroupsRoot, "devices", tag, false)
+			Expect(err).NotTo(HaveOccurred())
 
 			content := readFile(filepath.Join(cgroupPath, "devices.list"))
 			expectedAllowedDevices := []string{
@@ -114,8 +116,9 @@ var _ = Describe("gdn setup", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				for _, subsystem := range subsystems {
-					path := getCurrentCGroupPath(cgroupsRoot, subsystem.Name(), tag, false)
+					path, err := cgrouper.GetCGroupPath(cgroupsRoot, subsystem.Name(), tag, false)
 					Expect(path).To(BeADirectory())
+					Expect(err).NotTo(HaveOccurred())
 
 					var stat syscall.Stat_t
 					Expect(syscall.Stat(path, &stat)).To(Succeed())

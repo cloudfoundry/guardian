@@ -18,6 +18,7 @@ import (
 
 	"code.cloudfoundry.org/garden/client"
 	"code.cloudfoundry.org/garden/client/connection"
+	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -361,7 +362,7 @@ func (r *RunningGarden) removeTempDirContentsPreservingMounts() error {
 	for _, tmpDirChild := range tmpDirContents {
 		if strings.Contains(tmpDirChild.Name(), "cgroups-") {
 			cGroupsPath := path.Join(r.TmpDir, tmpDirChild.Name())
-			if err = r.cleanGardenCgroups(cGroupsPath); err != nil {
+			if err = cgrouper.CleanGardenCgroups(cGroupsPath, r.Tag); err != nil {
 				return err
 			}
 		} else {
@@ -374,77 +375,6 @@ func (r *RunningGarden) removeTempDirContentsPreservingMounts() error {
 	}
 
 	return nil
-}
-
-func (r *RunningGarden) cleanGardenCgroups(cGroupsPath string) error {
-	subsystems, err := ioutil.ReadDir(cGroupsPath)
-	if err != nil {
-		return err
-	}
-
-	for _, subsystem := range subsystems {
-		cGroupPath, err := r.findCgroupPath(subsystem.Name())
-		if err != nil {
-			return err
-		}
-		nestedCgroup := filepath.Join(cGroupsPath, subsystem.Name(), cGroupPath)
-		path := filepath.Join(nestedCgroup, "garden-"+r.Tag)
-		rmErr := os.Remove(path)
-		if rmErr != nil && !os.IsNotExist(rmErr) {
-			procInfo, infoErr := getCgroupProcInfos(path)
-			if infoErr != nil {
-				return fmt.Errorf("%s: %s", rmErr, infoErr)
-			}
-			return fmt.Errorf("%s: %s", rmErr, procInfo)
-		}
-	}
-
-	return nil
-}
-
-func getCgroupProcInfos(cgroupFs string) (string, error) {
-	pids, readErr := ioutil.ReadFile(filepath.Join(cgroupFs, "cgroup.procs"))
-	if readErr != nil {
-		return "", fmt.Errorf("error reading cgroup.procs: %s", readErr)
-	}
-	var procInfos []string
-	for _, pid := range strings.Split(strings.TrimSpace(string(pids)), "\n") {
-		procInfo, infoErr := getProcInfo(pid)
-		if infoErr != nil {
-			return "", fmt.Errorf("getting proc info: %s", infoErr)
-		}
-		procInfos = append(procInfos, procInfo)
-	}
-	return strings.Join(procInfos, "\n"), nil
-}
-
-func getProcInfo(pid string) (string, error) {
-	line, err := ioutil.ReadFile(filepath.Join("/proc", pid, "cmdline"))
-	return string(line), err
-}
-
-// findCgroupPath, when running inside a container, returns the relative path of
-// the cgroup in the host.
-// E.g. /6d8612e9-cf2c-48d7-669e-249a546683f7, where 6d8612e9-cf2c-48d7-669e-249a546683f7
-// is the container id.
-func (r *RunningGarden) findCgroupPath(cgroupToFind string) (string, error) {
-	cgroupContent, err := ioutil.ReadFile(fmt.Sprintf("/proc/self/cgroup"))
-	if err != nil {
-		return "", err
-	}
-
-	cgroups := strings.Split(string(cgroupContent), "\n")
-	for _, cgroup := range cgroups {
-		fields := strings.Split(cgroup, ":")
-		if len(fields) != 3 {
-			return "", errors.New("Error parsing cgroups:" + cgroup)
-		}
-		subsystems := strings.Split(fields[1], ",")
-		if containsElement(subsystems, cgroupToFind) {
-			return fields[2], nil
-		}
-	}
-	return "", errors.New("Cgroup subsystem not found: " + cgroupToFind)
 }
 
 func (r *RunningGarden) Stop() error {
@@ -508,13 +438,4 @@ func intptr(i int) *int {
 
 func uint32ptr(i uint32) *uint32 {
 	return &i
-}
-
-func containsElement(strings []string, elem string) bool {
-	for _, e := range strings {
-		if e == elem {
-			return true
-		}
-	}
-	return false
 }

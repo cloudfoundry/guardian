@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -37,10 +38,9 @@ var _ = Describe("Limits", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		cgroupsRoot := filepath.Join(client.TmpDir, fmt.Sprintf("cgroups-%s", config.Tag))
-		cgroupPath = filepath.Join(
-			getCurrentCGroupPath(cgroupsRoot, cgroupType, config.Tag, privileged),
-			container.Handle(),
-		)
+		parentPath, err := cgrouper.GetCGroupPath(cgroupsRoot, cgroupType, config.Tag, privileged)
+		Expect(err).NotTo(HaveOccurred())
+		cgroupPath = filepath.Join(parentPath, container.Handle())
 	})
 
 	AfterEach(func() {

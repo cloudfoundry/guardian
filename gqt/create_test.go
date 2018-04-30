@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/containerdrunner"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 
@@ -51,10 +52,9 @@ var _ = Describe("Creating a Container", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		cgroupRoot := filepath.Join(client.TmpDir, fmt.Sprintf("cgroups-%d", GinkgoParallelNode()))
-		cgroupPath := filepath.Join(
-			getCurrentCGroupPath(cgroupRoot, "devices", strconv.Itoa(GinkgoParallelNode()), false),
-			container.Handle(),
-		)
+		parentPath, err := cgrouper.GetCGroupPath(cgroupRoot, "devices", strconv.Itoa(GinkgoParallelNode()), false)
+		Expect(err).NotTo(HaveOccurred())
+		cgroupPath := filepath.Join(parentPath, container.Handle())
 
 		content := readFile(filepath.Join(cgroupPath, "devices.list"))
 		expectedAllowedDevices := []string{
@@ -423,7 +423,8 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		checkBlockIOWeightInContainer := func(container garden.Container, expected string) {
-			parentCgroupPath := findCgroupPath(client.Pid, "blkio")
+			parentCgroupPath, err := cgrouper.GetCGroup("blkio")
+			Expect(err).NotTo(HaveOccurred())
 			parentCgroupPath = strings.TrimLeft(parentCgroupPath, "/")
 			blkIOWeightPath := fmt.Sprintf("%s/cgroups-%s/blkio/%s/garden-%s/%s/blkio.weight", client.TmpDir,
 				config.Tag, parentCgroupPath, config.Tag, container.Handle())
@@ -688,21 +689,6 @@ func numOpenSockets(pid int) (num int) {
 func numPipes(pid int) (num int) {
 	stdout := runCommand(exec.Command("sh", "-c", fmt.Sprintf("lsof -p %d | grep pipe", pid)))
 	return strings.Count(stdout, "\n")
-}
-
-func findCgroupPath(pid int, cgroupToFind string) string {
-	cgroupContent, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cgroup", pid))
-	Expect(err).NotTo(HaveOccurred())
-
-	cgroups := strings.Split(string(cgroupContent), "\n")
-	for _, cgroup := range cgroups {
-		if strings.Contains(cgroup, cgroupToFind) {
-			return strings.Split(cgroup, fmt.Sprintf("%s:", cgroupToFind))[1]
-		}
-	}
-
-	Fail(fmt.Sprintf("Could not find cgroup: %s", cgroupToFind))
-	return ""
 }
 
 func readFileContent(path string) string {

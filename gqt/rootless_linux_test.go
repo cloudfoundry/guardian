@@ -17,6 +17,7 @@ import (
 	"strconv"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
@@ -165,10 +166,9 @@ var _ = Describe("rootless containers", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			cgroupRoot := filepath.Join(client.TmpDir, fmt.Sprintf("cgroups-%d", GinkgoParallelNode()))
-			cgroupPath := filepath.Join(
-				getCurrentCGroupPath(cgroupRoot, "devices", strconv.Itoa(GinkgoParallelNode()), false),
-				container.Handle(),
-			)
+			parentPath, err := cgrouper.GetCGroupPath(cgroupRoot, "devices", strconv.Itoa(GinkgoParallelNode()), false)
+			Expect(err).NotTo(HaveOccurred())
+			cgroupPath := filepath.Join(parentPath, container.Handle())
 
 			content := readFile(filepath.Join(cgroupPath, "devices.list"))
 			expectedAllowedDevices := []string{
@@ -211,10 +211,9 @@ var _ = Describe("rootless containers", func() {
 
 			JustBeforeEach(func() {
 				cgroupsRoot := filepath.Join(client.TmpDir, fmt.Sprintf("cgroups-%s", config.Tag))
-				cgroupPath = filepath.Join(
-					getCurrentCGroupPath(cgroupsRoot, cgroupType, config.Tag, false),
-					container.Handle(),
-				)
+				parentPath, err := cgrouper.GetCGroupPath(cgroupsRoot, cgroupType, config.Tag, false)
+				Expect(err).NotTo(HaveOccurred())
+				cgroupPath = filepath.Join(parentPath, container.Handle())
 			})
 
 			BeforeEach(func() {

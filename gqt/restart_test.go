@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -291,7 +292,8 @@ var _ = Describe("Surviving Restarts", func() {
 
 				It("allows both OCI default and garden specific devices", func() {
 					cgroupsRoot := filepath.Join(config.TmpDir, fmt.Sprintf("cgroups-%s", config.Tag))
-					cgroupPath := getCurrentCGroupPath(cgroupsRoot, "devices", config.Tag, containerSpec.Privileged)
+					cgroupPath, err := cgrouper.GetCGroupPath(cgroupsRoot, "devices", config.Tag, containerSpec.Privileged)
+					Expect(err).NotTo(HaveOccurred())
 
 					content := readFile(filepath.Join(cgroupPath, "devices.list"))
 					expectedAllowedDevices := []string{
