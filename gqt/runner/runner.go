@@ -192,8 +192,6 @@ type RunningGarden struct {
 	logger  lager.Logger
 }
 
-const MNT_DETACH = 0x2
-
 var graphDirBase string
 
 func init() {

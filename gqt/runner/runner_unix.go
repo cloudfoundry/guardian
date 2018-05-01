@@ -13,6 +13,7 @@ import (
 	"github.com/eapache/go-resiliency/retrier"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"golang.org/x/sys/unix"
 )
 
 type UserCredential *syscall.Credential
@@ -81,7 +82,7 @@ func (r *RunningGarden) Cleanup() {
 			return nil // if we can remove it, it's already unmounted
 		}
 
-		if err := syscall.Unmount(path.Join(*r.GraphDir, "aufs"), MNT_DETACH); err != nil {
+		if err := unix.Unmount(path.Join(*r.GraphDir, "aufs"), unix.MNT_DETACH); err != nil {
 			r.logger.Error("failed-unmount-attempt", err)
 			return err
 		}

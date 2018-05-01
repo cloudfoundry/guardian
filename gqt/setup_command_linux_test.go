@@ -13,10 +13,10 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"golang.org/x/sys/unix"
 )
 
 var _ = Describe("gdn setup", func() {
@@ -120,8 +120,8 @@ var _ = Describe("gdn setup", func() {
 					Expect(path).To(BeADirectory())
 					Expect(err).NotTo(HaveOccurred())
 
-					var stat syscall.Stat_t
-					Expect(syscall.Stat(path, &stat)).To(Succeed())
+					var stat unix.Stat_t
+					Expect(unix.Stat(path, &stat)).To(Succeed())
 					Expect(stat.Uid).To(Equal(unprivilegedUID), "subsystem: "+subsystem.Name())
 					Expect(stat.Gid).To(Equal(unprivilegedGID))
 				}
@@ -188,7 +188,7 @@ func ensureCgroupsForTagUnmounted(cgroupsRoot string) {
 			// We ignore the error from grep in case it returns no lines.
 			lsofOutput, _ := exec.Command("sh", "-c", fmt.Sprintf("lsof | grep %s", cgroupsRoot)).CombinedOutput()
 			msg := fmt.Sprintf("cgroup root: %s\nmountpoint: %s\nprocMountsContent: %s\nlsof output: [%s]", cgroupsRoot, fields[1], string(mountsFileContent), string(lsofOutput))
-			Expect(syscall.Unmount(fields[1], syscall.MNT_DETACH)).To(Succeed(), msg)
+			Expect(unix.Unmount(fields[1], unix.MNT_DETACH)).To(Succeed(), msg)
 		}
 		if fields[2] == "tmpfs" && fields[1] == cgroupsRoot {
 			tmpFsFound = true
@@ -196,6 +196,6 @@ func ensureCgroupsForTagUnmounted(cgroupsRoot string) {
 	}
 
 	if tmpFsFound {
-		Expect(syscall.Unmount(cgroupsRoot, 0)).To(Succeed())
+		Expect(unix.Unmount(cgroupsRoot, 0)).To(Succeed())
 	}
 }
