@@ -291,8 +291,7 @@ var _ = Describe("Surviving Restarts", func() {
 				})
 
 				It("allows both OCI default and garden specific devices", func() {
-					cgroupsRoot := filepath.Join(config.TmpDir, fmt.Sprintf("cgroups-%s", config.Tag))
-					cgroupPath, err := cgrouper.GetCGroupPath(cgroupsRoot, "devices", config.Tag, containerSpec.Privileged)
+					cgroupPath, err := cgrouper.GetCGroupPath(config.CgroupRoot, "devices", config.Tag, containerSpec.Privileged)
 					Expect(err).NotTo(HaveOccurred())
 
 					content := readFile(filepath.Join(cgroupPath, "devices.list"))

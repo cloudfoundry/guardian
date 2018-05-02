@@ -51,8 +51,7 @@ var _ = Describe("Creating a Container", func() {
 		container, err = client.Create(garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())
 
-		cgroupRoot := filepath.Join(client.TmpDir, fmt.Sprintf("cgroups-%d", GinkgoParallelNode()))
-		parentPath, err := cgrouper.GetCGroupPath(cgroupRoot, "devices", strconv.Itoa(GinkgoParallelNode()), false)
+		parentPath, err := cgrouper.GetCGroupPath(config.CgroupRoot, "devices", strconv.Itoa(GinkgoParallelNode()), false)
 		Expect(err).NotTo(HaveOccurred())
 		cgroupPath := filepath.Join(parentPath, container.Handle())
 
@@ -391,8 +390,8 @@ var _ = Describe("Creating a Container", func() {
 			cpuset := readFileContent(fmt.Sprintf("/proc/%d/cpuset", clientPid))
 			cpuset = strings.TrimLeft(cpuset, "/")
 
-			cpuSharesPath := fmt.Sprintf("%s/cgroups-%s/cpu/%s/garden-%s/%s/cpu.shares", client.TmpDir,
-				config.Tag, cpuset, config.Tag, container.Handle())
+			cpuSharesPath := fmt.Sprintf("%s/cpu/%s/garden-%s/%s/cpu.shares",
+				config.CgroupRoot, cpuset, config.Tag, container.Handle())
 
 			cpuShares := readFileContent(cpuSharesPath)
 			Expect(cpuShares).To(Equal(strconv.Itoa(expected)))
@@ -426,8 +425,8 @@ var _ = Describe("Creating a Container", func() {
 			parentCgroupPath, err := cgrouper.GetCGroup("blkio")
 			Expect(err).NotTo(HaveOccurred())
 			parentCgroupPath = strings.TrimLeft(parentCgroupPath, "/")
-			blkIOWeightPath := fmt.Sprintf("%s/cgroups-%s/blkio/%s/garden-%s/%s/blkio.weight", client.TmpDir,
-				config.Tag, parentCgroupPath, config.Tag, container.Handle())
+			blkIOWeightPath := fmt.Sprintf("%s/blkio/%s/garden-%s/%s/blkio.weight",
+				config.CgroupRoot, parentCgroupPath, config.Tag, container.Handle())
 
 			blkIOWeight := readFileContent(blkIOWeightPath)
 			Expect(string(blkIOWeight)).To(Equal(expected))

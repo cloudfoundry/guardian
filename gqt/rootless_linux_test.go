@@ -19,6 +19,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
@@ -165,8 +166,7 @@ var _ = Describe("rootless containers", func() {
 			container, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
-			cgroupRoot := filepath.Join(client.TmpDir, fmt.Sprintf("cgroups-%d", GinkgoParallelNode()))
-			parentPath, err := cgrouper.GetCGroupPath(cgroupRoot, "devices", strconv.Itoa(GinkgoParallelNode()), false)
+			parentPath, err := cgrouper.GetCGroupPath(cgroups.CgroupRoot, "devices", strconv.Itoa(GinkgoParallelNode()), false)
 			Expect(err).NotTo(HaveOccurred())
 			cgroupPath := filepath.Join(parentPath, container.Handle())
 
@@ -210,8 +210,7 @@ var _ = Describe("rootless containers", func() {
 			)
 
 			JustBeforeEach(func() {
-				cgroupsRoot := filepath.Join(client.TmpDir, fmt.Sprintf("cgroups-%s", config.Tag))
-				parentPath, err := cgrouper.GetCGroupPath(cgroupsRoot, cgroupType, config.Tag, false)
+				parentPath, err := cgrouper.GetCGroupPath(cgroups.CgroupRoot, cgroupType, config.Tag, false)
 				Expect(err).NotTo(HaveOccurred())
 				cgroupPath = filepath.Join(parentPath, container.Handle())
 			})

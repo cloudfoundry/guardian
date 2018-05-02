@@ -65,13 +65,19 @@ var _ = Describe("gdn setup", func() {
 			// There is also a 1 character limit on the tag due to iptables rule length
 			// limitations.
 			tag = nodeToString(GinkgoParallelNode())
+
 			tmpDir = filepath.Join(
 				os.TempDir(),
 				fmt.Sprintf("test-garden-%s", tag),
 			)
-			cgroupsRoot = filepath.Join(tmpDir, fmt.Sprintf("cgroups-%s", tag))
-			ensureCgroupsForTagUnmounted(cgroupsRoot)
-			setupArgs = []string{"setup", "--tag", tag}
+			cgroupsRoot = filepath.Join(tmpDir, fmt.Sprintf("cgroups-foobar-%s", tag))
+			assertNotMounted(cgroupsRoot)
+			setupArgs = []string{"setup", "--tag", tag, "--cgroup-root", cgroupsRoot}
+		})
+
+		AfterEach(func() {
+			Expect(cgrouper.CleanGardenCgroups(cgroupsRoot, tag)).To(Succeed())
+			Expect(cgrouper.UnmountCgroups(cgroupsRoot)).To(Succeed())
 		})
 
 		It("sets up cgroups", func() {
@@ -169,33 +175,8 @@ var _ = Describe("gdn setup", func() {
 	})
 })
 
-func ensureCgroupsForTagUnmounted(cgroupsRoot string) {
-	mountsFileContent, err := ioutil.ReadFile("/proc/self/mounts")
+func assertNotMounted(cgroupsRoot string) {
+	mountsFileContent, err := ioutil.ReadFile("/proc/self/mountinfo")
 	Expect(err).NotTo(HaveOccurred())
-
-	lines := strings.Split(string(mountsFileContent), "\n")
-
-	tmpFsFound := false
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-
-		fields := strings.Fields(line)
-		if fields[2] == "cgroup" && strings.Contains(fields[1], cgroupsRoot) {
-			// We want the output of lsof right before the unmount is performed, so
-			// we call it here rather than in an error handling block.
-			// We ignore the error from grep in case it returns no lines.
-			lsofOutput, _ := exec.Command("sh", "-c", fmt.Sprintf("lsof | grep %s", cgroupsRoot)).CombinedOutput()
-			msg := fmt.Sprintf("cgroup root: %s\nmountpoint: %s\nprocMountsContent: %s\nlsof output: [%s]", cgroupsRoot, fields[1], string(mountsFileContent), string(lsofOutput))
-			Expect(unix.Unmount(fields[1], unix.MNT_DETACH)).To(Succeed(), msg)
-		}
-		if fields[2] == "tmpfs" && fields[1] == cgroupsRoot {
-			tmpFsFound = true
-		}
-	}
-
-	if tmpFsFound {
-		Expect(unix.Unmount(cgroupsRoot, 0)).To(Succeed())
-	}
+	Expect(string(mountsFileContent)).NotTo(ContainSubstring(cgroupsRoot))
 }

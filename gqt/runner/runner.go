@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -31,6 +30,7 @@ type GdnRunnerConfig struct {
 	TmpDir         string
 	User           UserCredential
 	ConfigFilePath string
+	CgroupRoot     string
 
 	Socket2meBin        string
 	Socket2meSocketPath string
@@ -207,6 +207,7 @@ func init() {
 func DefaultGdnRunnerConfig(binaries Binaries) GdnRunnerConfig {
 	var config GdnRunnerConfig
 	config.Tag = fmt.Sprintf("%d", GinkgoParallelNode())
+	config.CgroupRoot = "/sys/fs/cgroup"
 
 	var err error
 	config.TmpDir, err = ioutil.TempDir("", fmt.Sprintf("test-garden-%s-", config.Tag))
@@ -338,7 +339,11 @@ func (r *RunningGarden) forceStop() error {
 		}
 	}
 
-	if err := r.removeTempDirContentsPreservingMounts(); err != nil {
+	if err := cgrouper.CleanGardenCgroups(r.CgroupRoot, r.Tag); err != nil {
+		return err
+	}
+
+	if err := r.removeTempDirContentsPreservingGrootFSStores(); err != nil {
 		fmt.Printf("error on r.removeTempDirContentsPreservingMounts() during forceStop: %s\n", err.Error())
 		return err
 	}
@@ -346,7 +351,7 @@ func (r *RunningGarden) forceStop() error {
 	return nil
 }
 
-func (r *RunningGarden) removeTempDirContentsPreservingMounts() error {
+func (r *RunningGarden) removeTempDirContentsPreservingGrootFSStores() error {
 	tmpDir, err := os.Open(r.TmpDir)
 	if err != nil {
 		return err
@@ -358,16 +363,9 @@ func (r *RunningGarden) removeTempDirContentsPreservingMounts() error {
 	}
 
 	for _, tmpDirChild := range tmpDirContents {
-		if strings.Contains(tmpDirChild.Name(), "cgroups-") {
-			cGroupsPath := path.Join(r.TmpDir, tmpDirChild.Name())
-			if err = cgrouper.CleanGardenCgroups(cGroupsPath, r.Tag); err != nil {
+		if !strings.Contains(tmpDirChild.Name(), "store") {
+			if err := os.RemoveAll(filepath.Join(r.TmpDir, tmpDirChild.Name())); err != nil {
 				return err
-			}
-		} else {
-			if !strings.Contains(tmpDirChild.Name(), "store") {
-				if err := os.RemoveAll(filepath.Join(r.TmpDir, tmpDirChild.Name())); err != nil {
-					return err
-				}
 			}
 		}
 	}

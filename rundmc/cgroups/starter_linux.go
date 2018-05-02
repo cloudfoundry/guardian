@@ -19,7 +19,11 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-const cgroupsHeader = "#subsys_name hierarchy num_cgroups enabled"
+const (
+	CgroupRoot    = "/sys/fs/cgroup"
+	GardenCgroup  = "garden"
+	cgroupsHeader = "#subsys_name hierarchy num_cgroups enabled"
+)
 
 type CgroupsFormatError struct {
 	Content string
