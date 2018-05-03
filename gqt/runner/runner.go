@@ -21,6 +21,7 @@ import (
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
+	multierror "github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/tedsuo/ifrit"
@@ -320,9 +321,17 @@ type ErrGardenStop struct {
 }
 
 func (r *RunningGarden) DestroyAndStop() error {
-	defer r.forceStop()
+	var result *multierror.Error
 
-	return r.DestroyContainers()
+	if err := r.DestroyContainers(); err != nil {
+		result = multierror.Append(result, err)
+	}
+
+	if err := r.forceStop(); err != nil {
+		result = multierror.Append(result, err)
+	}
+
+	return result.ErrorOrNil()
 }
 
 func (r *RunningGarden) forceStop() error {
@@ -333,13 +342,11 @@ func (r *RunningGarden) forceStop() error {
 		r.Kill()
 	} else {
 		if err := r.Stop(); err != nil {
-			fmt.Printf("error on r.Stop() during forceStop: %s\n", err.Error())
 			return ErrGardenStop{error: err}
 		}
 	}
 
 	if err := r.removeTempDirContentsPreservingMounts(); err != nil {
-		fmt.Printf("error on r.removeTempDirContentsPreservingMounts() during forceStop: %s\n", err.Error())
 		return err
 	}
 
