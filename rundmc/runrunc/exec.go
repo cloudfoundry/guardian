@@ -93,6 +93,11 @@ type Runner interface {
 	Run(log lager.Logger)
 }
 
+//go:generate counterfeiter . PidGetter
+type PidGetter interface {
+	GetPid(log lager.Logger, containerHandle string) (int, error)
+}
+
 //go:generate counterfeiter . WaitWatcher
 
 type WaitWatcher interface { // get it??

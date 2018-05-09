@@ -39,6 +39,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/pidreader"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/rundmc/runrunc/pidgetter"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/sysinfo"
 	"github.com/cloudfoundry/dropsonde"
@@ -875,6 +876,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 			runrunc.LookupFunc(runrunc.LookupUser),
 			factory.WireExecRunner("exec"),
 			wireUIDGenerator(),
+			&pidgetter.FilePidGetter{Depot: depot},
 		)
 	}
 

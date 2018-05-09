@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/idmapper"
@@ -22,9 +22,10 @@ type Execer struct {
 	userLookuper   UserLookupper
 	runner         ExecRunner
 	processIDGen   UidGenerator
+	pidGetter      PidGetter
 }
 
-func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookuper UserLookupper, runner ExecRunner, processIDGen UidGenerator) *Execer {
+func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookuper UserLookupper, runner ExecRunner, processIDGen UidGenerator, pidGetter PidGetter) *Execer {
 	return &Execer{
 		bundleLoader:   bundleLoader,
 		processBuilder: processBuilder,
@@ -32,6 +33,7 @@ func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer
 		userLookuper:   userLookuper,
 		runner:         runner,
 		processIDGen:   processIDGen,
+		pidGetter:      pidGetter,
 	}
 }
 
@@ -42,12 +44,13 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec g
 	log.Info("start")
 	defer log.Info("finished")
 
-	ctrInitPid, err := ioutil.ReadFile(filepath.Join(bundlePath, "pidfile"))
+	ctrInitPid, err := e.pidGetter.GetPid(log, sandboxHandle)
 	if err != nil {
 		log.Error("read-pidfile-failed", err)
 		return nil, err
 	}
-	rootfsPath := filepath.Join("/proc", string(ctrInitPid), "root")
+
+	rootfsPath := filepath.Join("/proc", strconv.Itoa(ctrInitPid), "root")
 	user, err := e.userLookuper.Lookup(rootfsPath, spec.User)
 	if err != nil {
 		log.Error("user-lookup-failed", err)

@@ -26,6 +26,7 @@ var _ = Describe("Execer", func() {
 		userLookuper       *fakes.FakeUserLookupper
 		processIDGenerator *fakes.FakeUidGenerator
 		execRunner         *fakes.FakeExecRunner
+		pidGetter          *fakes.FakePidGetter
 
 		execer *runrunc.Execer
 
@@ -58,7 +59,6 @@ var _ = Describe("Execer", func() {
 		var err error
 		bundlePath, err = ioutil.TempDir("", "execer-test")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ioutil.WriteFile(filepath.Join(bundlePath, "pidfile"), []byte("some-pid"), 0600)).To(Succeed())
 
 		logger = lagertest.NewTestLogger("test")
 		spec = garden.ProcessSpec{
@@ -84,6 +84,8 @@ var _ = Describe("Execer", func() {
 		userLookuper.LookupReturns(user, nil)
 		processIDGenerator = new(fakes.FakeUidGenerator)
 		execRunner = new(fakes.FakeExecRunner)
+		pidGetter = new(fakes.FakePidGetter)
+		pidGetter.GetPidReturns(1234, nil)
 
 		execer = runrunc.NewExecer(
 			bundleLoader,
@@ -92,6 +94,7 @@ var _ = Describe("Execer", func() {
 			userLookuper,
 			execRunner,
 			processIDGenerator,
+			pidGetter,
 		)
 	})
 
@@ -108,7 +111,7 @@ var _ = Describe("Execer", func() {
 		It("looks up the user", func() {
 			Expect(userLookuper.LookupCallCount()).To(Equal(1))
 			rootfsPath, username := userLookuper.LookupArgsForCall(0)
-			Expect(rootfsPath).To(Equal(filepath.Join("/proc", "some-pid", "root")))
+			Expect(rootfsPath).To(Equal(filepath.Join("/proc", "1234", "root")))
 			Expect(username).To(Equal(spec.User))
 		})
 
@@ -120,7 +123,7 @@ var _ = Describe("Execer", func() {
 		It("sets up the working directory", func() {
 			Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
 			rootfsPath, hostUID, hostGID, mode, shouldRecreate, workDir := mkdirer.MkdirAsArgsForCall(0)
-			Expect(rootfsPath).To(Equal(filepath.Join("/proc", "some-pid", "root")))
+			Expect(rootfsPath).To(Equal(filepath.Join("/proc", "1234", "root")))
 			Expect(hostUID).To(Equal(11))
 			Expect(hostGID).To(Equal(22))
 			Expect(mode).To(Equal(os.FileMode(0755)))

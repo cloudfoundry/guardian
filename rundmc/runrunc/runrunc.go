@@ -36,11 +36,11 @@ type RuncBinary interface {
 func New(
 	runner commandrunner.CommandRunner, runcCmdRunner RuncCmdRunner,
 	runc RuncBinary, dadooPath, runcPath string, runcExtraArgs []string, bundleLoader BundleLoader, processBuilder ProcessBuilder,
-	mkdirer Mkdirer, userLookuper UserLookupper, execRunner ExecRunner, uidGenerator UidGenerator,
+	mkdirer Mkdirer, userLookuper UserLookupper, execRunner ExecRunner, uidGenerator UidGenerator, pidGetter PidGetter,
 ) *RunRunc {
 	return &RunRunc{
 		Creator: NewCreator(runcPath, runcExtraArgs, runner),
-		Execer:  NewExecer(bundleLoader, processBuilder, mkdirer, userLookuper, execRunner, uidGenerator),
+		Execer:  NewExecer(bundleLoader, processBuilder, mkdirer, userLookuper, execRunner, uidGenerator, pidGetter),
 
 		OomWatcher: NewOomWatcher(runner, runc),
 		Statser:    NewStatser(runcCmdRunner, runc),
