@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"code.cloudfoundry.org/garden"
 	"github.com/vishvananda/netlink"
 )
 
@@ -114,23 +113,6 @@ func (Link) List() (names []string, err error) {
 	}
 
 	return names, nil
-}
-
-func (l Link) Statistics(name string) (stats garden.ContainerNetworkStat, err error) {
-	var RxBytes, TxBytes uint64
-
-	if RxBytes, err = intfStat(name, "rx_bytes"); err != nil {
-		return stats, err
-	}
-
-	if TxBytes, err = intfStat(name, "tx_bytes"); err != nil {
-		return stats, err
-	}
-
-	return garden.ContainerNetworkStat{
-		RxBytes: RxBytes,
-		TxBytes: TxBytes,
-	}, nil
 }
 
 func intfStat(intf, statFile string) (stat uint64, err error) {

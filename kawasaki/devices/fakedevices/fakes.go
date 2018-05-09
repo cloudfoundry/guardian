@@ -1,7 +1,6 @@
 package fakedevices
 
 import "net"
-import "code.cloudfoundry.org/garden"
 
 type FaveVethCreator struct {
 	CreateCalledWith struct {
@@ -52,7 +51,6 @@ type FakeLink struct {
 	AddDefaultGWReturns error
 	SetMTUReturns       error
 	SetNsReturns        error
-	StatisticsReturns   error
 }
 
 func (f *FakeLink) AddIP(intf *net.Interface, ip net.IP, subnet *net.IPNet) error {
@@ -93,17 +91,6 @@ func (f *FakeLink) InterfaceByName(name string) (*net.Interface, bool, error) {
 	}
 
 	return nil, false, nil
-}
-
-func (f *FakeLink) Statistics() (garden.ContainerNetworkStat, error) {
-	if f.StatisticsReturns != nil {
-		return garden.ContainerNetworkStat{}, f.StatisticsReturns
-	}
-
-	return garden.ContainerNetworkStat{
-		RxBytes: 1,
-		TxBytes: 2,
-	}, nil
 }
 
 type FakeBridge struct {
