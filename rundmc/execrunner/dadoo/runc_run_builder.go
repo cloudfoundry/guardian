@@ -7,13 +7,17 @@ import (
 	"path/filepath"
 )
 
-func BuildRuncCommand(runtimePath, runMode, processPath, containerHandle, ttyConsoleSocket, logfilePath string) *exec.Cmd {
-	runtimeArgs := []string{
+func BuildRuncCommand(runtimePath, runMode, runcRoot, processPath, containerHandle, ttyConsoleSocket, logfilePath string) *exec.Cmd {
+	runtimeArgs := []string{}
+	if runcRoot != "" {
+		runtimeArgs = append(runtimeArgs, "--root", runcRoot)
+	}
+	runtimeArgs = append(runtimeArgs,
 		"--debug", "--log", logfilePath, "--log-format", "json",
 		runMode,
 		"--detach",
 		"--pid-file", filepath.Join(processPath, "pidfile"),
-	}
+	)
 	runtimeArgs = append(runtimeArgs, runmodeArgs(runMode, processPath)...)
 	runtimeArgs = append(runtimeArgs, ttyArgs(runMode, ttyConsoleSocket)...)
 	runtimeArgs = append(runtimeArgs, containerHandle)

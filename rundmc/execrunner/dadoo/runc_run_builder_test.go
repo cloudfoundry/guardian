@@ -19,10 +19,11 @@ var _ = Describe("RuncRunBuilder", func() {
 	)
 
 	It("builds a runc exec command for the non-tty case", func() {
-		cmd := dadoo.BuildRuncCommand(runtimePath, "exec", processPath, ctrHandle, "", logfilePath)
+		cmd := dadoo.BuildRuncCommand(runtimePath, "exec", "runc-root", processPath, ctrHandle, "", logfilePath)
 		Expect(cmd.Path).To(Equal(runtimePath))
 		Expect(cmd.Args).To(Equal([]string{
 			runtimePath,
+			"--root", "runc-root",
 			"--debug", "--log", logfilePath, "--log-format", "json",
 			"exec",
 			"--detach", "--pid-file", filepath.Join(processPath, "pidfile"),
@@ -32,10 +33,11 @@ var _ = Describe("RuncRunBuilder", func() {
 	})
 
 	It("builds a runc exec command for the tty case", func() {
-		cmd := dadoo.BuildRuncCommand(runtimePath, "exec", processPath, ctrHandle, "path/to/socketfile", logfilePath)
+		cmd := dadoo.BuildRuncCommand(runtimePath, "exec", "runc-root", processPath, ctrHandle, "path/to/socketfile", logfilePath)
 		Expect(cmd.Path).To(Equal(runtimePath))
 		Expect(cmd.Args).To(Equal([]string{
 			runtimePath,
+			"--root", "runc-root",
 			"--debug", "--log", logfilePath, "--log-format", "json",
 			"exec",
 			"--detach", "--pid-file", filepath.Join(processPath, "pidfile"),
@@ -46,10 +48,11 @@ var _ = Describe("RuncRunBuilder", func() {
 	})
 
 	It("builds a runc run command for the non-tty case", func() {
-		cmd := dadoo.BuildRuncCommand(runtimePath, "run", processPath, ctrHandle, "", logfilePath)
+		cmd := dadoo.BuildRuncCommand(runtimePath, "run", "runc-root", processPath, ctrHandle, "", logfilePath)
 		Expect(cmd.Path).To(Equal(runtimePath))
 		Expect(cmd.Args).To(Equal([]string{
 			runtimePath,
+			"--root", "runc-root",
 			"--debug", "--log", logfilePath, "--log-format", "json",
 			"run",
 			"--detach", "--pid-file", filepath.Join(processPath, "pidfile"),
@@ -59,10 +62,11 @@ var _ = Describe("RuncRunBuilder", func() {
 	})
 
 	It("builds a runc run command for the tty case", func() {
-		cmd := dadoo.BuildRuncCommand(runtimePath, "run", processPath, ctrHandle, "/some/socket", logfilePath)
+		cmd := dadoo.BuildRuncCommand(runtimePath, "run", "runc-root", processPath, ctrHandle, "/some/socket", logfilePath)
 		Expect(cmd.Path).To(Equal(runtimePath))
 		Expect(cmd.Args).To(Equal([]string{
 			runtimePath,
+			"--root", "runc-root",
 			"--debug", "--log", logfilePath, "--log-format", "json",
 			"run",
 			"--detach", "--pid-file", filepath.Join(processPath, "pidfile"),

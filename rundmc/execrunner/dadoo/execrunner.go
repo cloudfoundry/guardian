@@ -24,6 +24,7 @@ import (
 type ExecRunner struct {
 	dadooPath                string
 	runcPath                 string
+	runcRoot                 string
 	signallerFactory         *signals.SignallerFactory
 	commandRunner            commandrunner.CommandRunner
 	cleanupProcessDirsOnWait bool
@@ -33,12 +34,13 @@ type ExecRunner struct {
 }
 
 func NewExecRunner(
-	dadooPath, runcPath string, signallerFactory *signals.SignallerFactory,
+	dadooPath, runcPath, runcRoot string, signallerFactory *signals.SignallerFactory,
 	commandRunner commandrunner.CommandRunner, shouldCleanup bool, runMode string,
 ) *ExecRunner {
 	return &ExecRunner{
 		dadooPath:                dadooPath,
 		runcPath:                 runcPath,
+		runcRoot:                 runcRoot,
 		signallerFactory:         signallerFactory,
 		commandRunner:            commandRunner,
 		cleanupProcessDirsOnWait: shouldCleanup,
@@ -82,7 +84,7 @@ func (d *ExecRunner) Run(
 	}
 
 	cmd := buildDadooCommand(
-		tty, d.dadooPath, d.runMode, d.runcPath, processID, processPath, sandboxHandle,
+		tty, d.dadooPath, d.runMode, d.runcPath, d.runcRoot, processID, processPath, sandboxHandle,
 		[]*os.File{fd3w, logw, syncw}, procJSON,
 	)
 
@@ -170,8 +172,8 @@ func isNoSuchExecutable(logLine []byte) bool {
 	return noSuchFile.Match(logLine) || executableNotFound.Match(logLine)
 }
 
-func buildDadooCommand(tty bool, dadooPath, dadooRunMode, runcPath, processID, processPath, sandboxHandle string, extraFiles []*os.File, stdin io.Reader) *exec.Cmd {
-	dadooArgs := []string{}
+func buildDadooCommand(tty bool, dadooPath, dadooRunMode, runcPath, runcRoot, processID, processPath, sandboxHandle string, extraFiles []*os.File, stdin io.Reader) *exec.Cmd {
+	dadooArgs := []string{"-runc-root", runcRoot}
 	if tty {
 		dadooArgs = append(dadooArgs, "-tty")
 	}

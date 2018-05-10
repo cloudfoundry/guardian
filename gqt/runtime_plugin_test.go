@@ -92,6 +92,7 @@ var _ = Describe("Runtime Plugin", func() {
 				procId := process.ID()
 				Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
 					binaries.RuntimePlugin,
+					"--root", "/run/runc",
 					"--debug",
 					"--log", MatchRegexp(`/proc/\d+/fd/4`),
 					"--log-format", "json",
@@ -233,8 +234,12 @@ var _ = Describe("Runtime Plugin", func() {
 				logfileMatcher = HaveSuffix("exec.log")
 			}
 
-			pluginArgs := []interface{}{
-				binaries.RuntimePlugin,
+			pluginArgs := []interface{}{binaries.RuntimePlugin}
+			if runtime.GOOS != "windows" {
+				pluginArgs = append(pluginArgs, "--root", "/run/runc")
+			}
+
+			pluginArgs = append(pluginArgs,
 				"--debug",
 				"--log", logfileMatcher,
 				"--log-format", "json",
@@ -242,7 +247,7 @@ var _ = Describe("Runtime Plugin", func() {
 				"-p", MatchRegexp(".*"),
 				"--pid-file", MatchRegexp(".*"),
 				handle,
-			}
+			)
 
 			if runtime.GOOS != "windows" {
 				pluginArgs = append(pluginArgs, "--detach")

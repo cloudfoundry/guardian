@@ -33,12 +33,15 @@ var _ = Describe("Dadoo", func() {
 		bundleSaver = &goci.BundleSaver{}
 		mode        string
 		tty         bool
+		runcRoot    string
 	)
 
 	BeforeEach(func() {
 		var err error
 		bundlePath, err = ioutil.TempDir("", "dadoobundlepath")
 		Expect(err).NotTo(HaveOccurred())
+
+		runcRoot = ""
 
 		// runc require write permission on the rootfs when in userns
 		Expect(os.Chmod(bundlePath, 0755)).To(Succeed())
@@ -144,6 +147,7 @@ var _ = Describe("Dadoo", func() {
 
 		runDadoo := func(processSpec specs.Process) *gexec.Session {
 			dadooArgs := []string{}
+			dadooArgs = append(dadooArgs, "-runc-root", runcRoot)
 			if tty {
 				dadooArgs = append(dadooArgs, "-tty")
 			}
@@ -597,6 +601,48 @@ var _ = Describe("Dadoo", func() {
 
 					Expect(process.Wait().ExitCode()).To(Equal(2))
 					Expect(string(process.Buffer().Contents())).To(ContainSubstring("open %s: no such file or directory", exitPipe))
+				})
+			})
+
+			Context("when the -runc-root flag is passed", func() {
+				BeforeEach(func() {
+					var err error
+					runcRoot, err = ioutil.TempDir("", "")
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				JustBeforeEach(func() {
+					// hangs if GinkgoWriter is attached
+					cmd := exec.Command("runc", "--root", runcRoot, "create", "--no-new-keyring", "--bundle", bundlePath, filepath.Base(bundlePath))
+					Expect(cmd.Run()).To(Succeed())
+				})
+
+				AfterEach(func() {
+					Expect(os.RemoveAll(runcRoot)).To(Succeed())
+				})
+
+				It("uses the provided value as the runc root dir", func() {
+					processSpec, err := json.Marshal(&specs.Process{
+						Args:        []string{"/bin/sh", "-c", "exit 0"},
+						Cwd:         "/",
+						ConsoleSize: &specs.Box{},
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					cmd := exec.Command(dadooBinPath, "-runc-root", runcRoot, "exec", "runc", processDir, filepath.Base(bundlePath))
+					cmd.Stdin = bytes.NewReader(processSpec)
+					cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
+
+					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					openIOPipes()
+
+					matches, err := filepath.Glob(fmt.Sprintf("%s/*/state.json", runcRoot))
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(len(matches)).To(Equal(1))
+
+					Eventually(sess).Should(gexec.Exit(0))
 				})
 			})
 		}

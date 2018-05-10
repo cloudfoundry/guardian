@@ -35,6 +35,8 @@ func main() {
 func run() int {
 	tty := flag.Bool("tty", false, "tty requested")
 	socketDirPath := flag.String("socket-dir-path", "", "path to a dir in which to store console sockets")
+	runcRoot := flag.String("runc-root", "", "root directory for storage of container state")
+
 	flag.Parse()
 
 	runMode := flag.Args()[0] // exec or run
@@ -81,9 +83,9 @@ func run() int {
 			return logAndExit(fmt.Sprintf("value for --socket-dir-path cannot exceed %d characters in length", MaxSocketDirPathLength))
 		}
 		ttySocketPath := setupTTYSocket(stdinR, stdoutW, winsz, pidFilePath, *socketDirPath, ioWg)
-		runcExecCmd = dadoo.BuildRuncCommand(runtime, runMode, processStateDir, containerId, ttySocketPath, logFile)
+		runcExecCmd = dadoo.BuildRuncCommand(runtime, runMode, *runcRoot, processStateDir, containerId, ttySocketPath, logFile)
 	} else {
-		runcExecCmd = dadoo.BuildRuncCommand(runtime, runMode, processStateDir, containerId, "", logFile)
+		runcExecCmd = dadoo.BuildRuncCommand(runtime, runMode, *runcRoot, processStateDir, containerId, "", logFile)
 		runcExecCmd.Stdin = stdinR
 		runcExecCmd.Stdout = stdoutW
 		runcExecCmd.Stderr = stderrW

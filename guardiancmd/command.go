@@ -123,7 +123,7 @@ type GardenFactory interface {
 	CommandRunner() commandrunner.CommandRunner
 	WireVolumizer(logger lager.Logger) gardener.Volumizer
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
-	WireExecRunner(runMode string) runrunc.ExecRunner
+	WireExecRunner(runMode, runcRoot string) runrunc.ExecRunner
 	WireRootfsFileCreator() rundmc.RootfsFileCreator
 }
 
@@ -854,6 +854,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	cmdRunner := factory.CommandRunner()
 	runcLogRunner := runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile)
 	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin}
+	runcRoot := cmd.computeRuncRoot()
 
 	var runner rundmc.OCIRuntime
 	if cmd.Containerd.Socket != "" {
@@ -874,7 +875,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 			processBuilder,
 			factory.WireMkdirer(),
 			runrunc.LookupFunc(runrunc.LookupUser),
-			factory.WireExecRunner("exec"),
+			factory.WireExecRunner("exec", runcRoot),
 			wireUIDGenerator(),
 			&pidgetter.FilePidGetter{Depot: depot},
 		)
@@ -882,14 +883,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 
 	eventStore := rundmc.NewEventStore(properties)
 	stateStore := rundmc.NewStateStore(properties)
-
-	runcRoot := filepath.Join("/", "run", "runc")
-	if os.Geteuid() != 0 {
-		runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
-		if runtimeDir != "" {
-			runcRoot = runtimeDir + "/runc"
-		}
-	}
 
 	pidFileReader := wirePidfileReader()
 	privilegeChecker := &privchecker.PrivilegeChecker{BundleLoader: bndlLoader}
@@ -904,7 +897,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		BundleGenerator:        template,
 		ProcessBuilder:         processBuilder,
 		BundleSaver:            bundleSaver,
-		ExecRunner:             factory.WireExecRunner("run"),
+		ExecRunner:             factory.WireExecRunner("run", runcRoot),
 		RuncDeleter:            runcDeleter,
 		PeaCleaner:             peaCleaner,
 	}
@@ -919,6 +912,15 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
 	return rundmc.New(depot, runner, bndlLoader, nstar, stopper, eventStore, stateStore, factory.WireRootfsFileCreator(), peaCreator, peaUsernameResolver), nil
+}
+
+func (cmd *ServerCommand) computeRuncRoot() string {
+	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
+	if os.Geteuid() != 0 && runtimeDir != "" {
+		return filepath.Join(runtimeDir, "runc")
+	}
+
+	return filepath.Join("/", "run", "runc")
 }
 
 func wirePidfileReader() *pidreader.PidFileReader {

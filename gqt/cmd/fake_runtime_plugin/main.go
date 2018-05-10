@@ -34,6 +34,9 @@ func main() {
 		cli.StringFlag{
 			Name: "image-store",
 		},
+		cli.StringFlag{
+			Name: "root",
+		},
 	}
 
 	fakeRuntimePlugin.Commands = []cli.Command{
