@@ -20,15 +20,9 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	"code.cloudfoundry.org/guardian/kawasaki"
-	kawasakifactory "code.cloudfoundry.org/guardian/kawasaki/factory"
-	"code.cloudfoundry.org/guardian/kawasaki/iptables"
-	"code.cloudfoundry.org/guardian/kawasaki/mtu"
+	"code.cloudfoundry.org/guardian/kawasaki/netns"
 	"code.cloudfoundry.org/guardian/kawasaki/ports"
-	"code.cloudfoundry.org/guardian/kawasaki/subnets"
-	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/metrics"
-	"code.cloudfoundry.org/guardian/netplugin"
-	locksmithpkg "code.cloudfoundry.org/guardian/pkg/locksmith"
 	"code.cloudfoundry.org/guardian/properties"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
@@ -42,6 +36,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/pidgetter"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/sysinfo"
+	"code.cloudfoundry.org/guardian/yamaha"
 	"github.com/cloudfoundry/dropsonde"
 	_ "github.com/docker/docker/daemon/graphdriver/aufs" // aufs needed for garden-shed
 	_ "github.com/docker/docker/pkg/chrootarchive"       // allow reexec of docker-applyLayer
@@ -143,6 +138,13 @@ var (
 		Type:     "c",
 		Major:    10,
 		Minor:    229,
+		FileMode: &worldReadWrite,
+	}
+	tuntapDevice = specs.LinuxDevice{
+		Path:     "/dev/net/tun",
+		Type:     "c",
+		Major:    10,
+		Minor:    200,
 		FileMode: &worldReadWrite,
 	}
 	allowedDevices = []specs.LinuxDeviceCgroup{
@@ -667,65 +669,67 @@ func extractIPs(ipflags []IPFlag) []net.IP {
 }
 
 func (cmd *ServerCommand) wireNetworker(log lager.Logger, factory GardenFactory, propManager kawasaki.ConfigStore, portPool *ports.PortPool) (gardener.Networker, gardener.Starter, error) {
-	externalIP, err := defaultExternalIP(cmd.Network.ExternalIP)
-	if err != nil {
-		return nil, nil, err
-	}
+	return &yamaha.Networker{NetnsExecer: &netns.Execer{}}, nil, nil
 
-	dnsServers := extractIPs(cmd.Network.DNSServers)
-	additionalDNSServers := extractIPs(cmd.Network.AdditionalDNSServers)
+	// externalIP, err := defaultExternalIP(cmd.Network.ExternalIP)
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
 
-	if cmd.Network.Plugin.Path() != "" {
-		resolvConfigurer := factory.WireResolvConfigurer()
-		externalNetworker := netplugin.New(
-			factory.CommandRunner(),
-			propManager,
-			externalIP,
-			dnsServers,
-			additionalDNSServers,
-			resolvConfigurer,
-			cmd.Network.Plugin.Path(),
-			cmd.Network.PluginExtraArgs,
-		)
-		return externalNetworker, externalNetworker, nil
-	}
+	// dnsServers := extractIPs(cmd.Network.DNSServers)
+	// additionalDNSServers := extractIPs(cmd.Network.AdditionalDNSServers)
 
-	var denyNetworksList []string
-	for _, network := range cmd.Network.DenyNetworks {
-		denyNetworksList = append(denyNetworksList, network.String())
-	}
+	// if cmd.Network.Plugin.Path() != "" {
+	// 	resolvConfigurer := factory.WireResolvConfigurer()
+	// 	externalNetworker := netplugin.New(
+	// 		factory.CommandRunner(),
+	// 		propManager,
+	// 		externalIP,
+	// 		dnsServers,
+	// 		additionalDNSServers,
+	// 		resolvConfigurer,
+	// 		cmd.Network.Plugin.Path(),
+	// 		cmd.Network.PluginExtraArgs,
+	// 	)
+	// 	return externalNetworker, externalNetworker, nil
+	// }
 
-	interfacePrefix := fmt.Sprintf("w%s", cmd.Server.Tag)
-	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
-	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
-	locksmith := &locksmithpkg.FileSystem{}
+	// var denyNetworksList []string
+	// for _, network := range cmd.Network.DenyNetworks {
+	// 	denyNetworksList = append(denyNetworksList, network.String())
+	// }
 
-	iptRunner := &logging.Runner{CommandRunner: factory.CommandRunner(), Logger: log.Session("iptables-runner")}
-	ipTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), iptRunner, locksmith, chainPrefix)
-	nonLoggingIPTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), factory.CommandRunner(), locksmith, chainPrefix)
-	ipTablesStarter := iptables.NewStarter(nonLoggingIPTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup, log)
-	ruleTranslator := iptables.NewRuleTranslator()
+	// interfacePrefix := fmt.Sprintf("w%s", cmd.Server.Tag)
+	// chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
+	// idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
+	// locksmith := &locksmithpkg.FileSystem{}
 
-	containerMtu := cmd.Network.Mtu
-	if containerMtu == 0 {
-		containerMtu, err = mtu.MTU(externalIP.String())
-		if err != nil {
-			return nil, nil, err
-		}
-	}
+	// iptRunner := &logging.Runner{CommandRunner: factory.CommandRunner(), Logger: log.Session("iptables-runner")}
+	// ipTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), iptRunner, locksmith, chainPrefix)
+	// nonLoggingIPTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), factory.CommandRunner(), locksmith, chainPrefix)
+	// ipTablesStarter := iptables.NewStarter(nonLoggingIPTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup, log)
+	// ruleTranslator := iptables.NewRuleTranslator()
 
-	networker := kawasaki.New(
-		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
-		subnets.NewPool(cmd.Network.Pool.CIDR()),
-		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, additionalDNSServers, cmd.Network.AdditionalHostEntries, containerMtu),
-		propManager,
-		kawasakifactory.NewDefaultConfigurer(ipTables, cmd.Containers.Dir),
-		portPool,
-		iptables.NewPortForwarder(ipTables),
-		iptables.NewFirewallOpener(ruleTranslator, ipTables),
-	)
+	// containerMtu := cmd.Network.Mtu
+	// if containerMtu == 0 {
+	// 	containerMtu, err = mtu.MTU(externalIP.String())
+	// 	if err != nil {
+	// 		return nil, nil, err
+	// 	}
+	// }
 
-	return networker, ipTablesStarter, nil
+	// networker := kawasaki.New(
+	// 	kawasaki.SpecParserFunc(kawasaki.ParseSpec),
+	// 	subnets.NewPool(cmd.Network.Pool.CIDR()),
+	// 	kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, additionalDNSServers, cmd.Network.AdditionalHostEntries, containerMtu),
+	// 	propManager,
+	// 	kawasakifactory.NewDefaultConfigurer(ipTables, cmd.Containers.Dir),
+	// 	portPool,
+	// 	iptables.NewPortForwarder(ipTables),
+	// 	iptables.NewFirewallOpener(ruleTranslator, ipTables),
+	// )
+
+	// return networker, ipTablesStarter, nil
 }
 
 func (cmd *ServerCommand) wireImagePlugin(commandRunner commandrunner.CommandRunner, uid, gid int) gardener.Volumizer {
@@ -796,6 +800,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		WithUIDMappings(uidMappings...).
 		WithGIDMappings(gidMappings...).
 		WithMounts(unprivilegedMounts...).
+		WithDevices(getUnprivilegedDevices()...).
 		WithMaskedPaths(defaultMaskedPaths())
 
 	unprivilegedBundle.Spec.Linux.Seccomp = seccomp

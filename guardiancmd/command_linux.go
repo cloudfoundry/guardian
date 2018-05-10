@@ -186,6 +186,10 @@ func getPrivilegedDevices() []specs.LinuxDevice {
 	return []specs.LinuxDevice{fuseDevice}
 }
 
+func getUnprivilegedDevices() []specs.LinuxDevice {
+	return []specs.LinuxDevice{tuntapDevice}
+}
+
 func bindMountPoints() []string {
 	return []string{"/etc/hosts", "/etc/resolv.conf"}
 }
