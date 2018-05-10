@@ -29,6 +29,9 @@ func main() {
 			Name: "log",
 		},
 		cli.StringFlag{
+			Name: "log-handle",
+		},
+		cli.StringFlag{
 			Name: "log-format",
 		},
 		cli.StringFlag{

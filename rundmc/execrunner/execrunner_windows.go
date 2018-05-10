@@ -1,12 +1,12 @@
 package execrunner
 
 import (
-	"fmt"
+	"bufio"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"syscall"
 
@@ -34,8 +34,23 @@ func (e *DirectExecRunner) Run(
 	log.Info("start")
 	defer log.Info("done")
 
-	logPath := filepath.Join(processPath, fmt.Sprintf("%s.log", e.RunMode))
-	cmd := exec.Command(e.RuntimePath, "--debug", "--log", logPath, "--log-format", "json", e.RunMode, "--pid-file", filepath.Join(processPath, "pidfile"))
+	logR, logW, err := os.Pipe()
+	if err != nil {
+		return nil, errors.Wrap(err, "creating log pipe")
+	}
+	defer logW.Close()
+
+	var childLogW syscall.Handle
+
+	// GetCurrentProcess doesn't error
+	self, _ := syscall.GetCurrentProcess()
+	// duplicate handle so it is inheritable by child process
+	err = syscall.DuplicateHandle(self, syscall.Handle(logW.Fd()), self, &childLogW, 0, true, syscall.DUPLICATE_SAME_ACCESS)
+	if err != nil {
+		return nil, errors.Wrap(err, "duplicating log pipe handle")
+	}
+
+	cmd := exec.Command(e.RuntimePath, "--debug", "--log-handle", strconv.FormatUint(uint64(childLogW), 10), "--log-format", "json", e.RunMode, "--pid-file", filepath.Join(processPath, "pidfile"))
 
 	if e.RunMode == "exec" {
 		specPath := filepath.Join(processPath, "spec.json")
@@ -56,6 +71,7 @@ func (e *DirectExecRunner) Run(
 	}
 
 	proc.mux.Lock()
+	go streamLogs(log, logR)
 
 	go func() {
 		if err := e.CommandRunner.Wait(cmd); err != nil {
@@ -71,7 +87,8 @@ func (e *DirectExecRunner) Run(
 				proc.exitErr = err
 			}
 		}
-		forwardLogs(log, logPath)
+		// the streamLogs go func will block until this handle is closed
+		syscall.CloseHandle(childLogW)
 		proc.mux.Unlock()
 	}()
 
@@ -129,13 +146,14 @@ func (p *process) Signal(signal garden.Signal) error {
 	return nil
 }
 
-func forwardLogs(log lager.Logger, logPath string) {
-	defer os.Remove(logPath)
+func streamLogs(logger lager.Logger, src *os.File) {
+	defer src.Close()
+	scanner := bufio.NewScanner(src)
 
-	buff, readErr := ioutil.ReadFile(logPath)
-	if readErr != nil {
-		log.Error("reading log file", readErr)
+	for scanner.Scan() {
+		nextLogLine := scanner.Bytes()
+		logging.ForwardRuncLogsToLager(logger, "winc", nextLogLine)
 	}
 
-	logging.ForwardRuncLogsToLager(log, "exec", buff)
+	logger.Info("done-streaming-winc-logs")
 }
