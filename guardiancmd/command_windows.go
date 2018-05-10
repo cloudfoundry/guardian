@@ -64,11 +64,7 @@ func (f *WindowsFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 }
 
 func (f *WindowsFactory) WireExecRunner(runMode, runcRoot string) runrunc.ExecRunner {
-	return &execrunner.DirectExecRunner{
-		RuntimePath:   f.config.Runtime.Plugin,
-		CommandRunner: f.commandRunner,
-		RunMode:       runMode,
-	}
+	return execrunner.NewWindowsExecRunner(f.config.Runtime.Plugin, runMode, f.commandRunner)
 }
 
 func (f *WindowsFactory) WireRootfsFileCreator() rundmc.RootfsFileCreator {
