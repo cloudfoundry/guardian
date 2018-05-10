@@ -25,15 +25,22 @@ type BundleLoader interface {
 	Load(string) (goci.Bndl, error)
 }
 
+//go:generate counterfeiter . Execer
+type Execer interface {
+	Exec(log lager.Logger, bundlePath string, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+}
+
 type RunContainerd struct {
 	nerd         NerdContainerizer
 	bundleLoader BundleLoader
+	execer       Execer
 }
 
-func New(nerdulator NerdContainerizer, bundleLoader BundleLoader) *RunContainerd {
+func New(nerdulator NerdContainerizer, bundleLoader BundleLoader, execer Execer) *RunContainerd {
 	return &RunContainerd{
 		nerd:         nerdulator,
 		bundleLoader: bundleLoader,
+		execer:       execer,
 	}
 }
 
@@ -47,7 +54,7 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 }
 
 func (r *RunContainerd) Exec(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
-	return nil, fmt.Errorf("Exec is not implemented yet")
+	return r.execer.Exec(log, bundlePath, id, spec, io)
 }
 
 func (r *RunContainerd) Attach(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error) {

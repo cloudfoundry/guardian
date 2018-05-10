@@ -1,4 +1,4 @@
-package pidgetter_test
+package runrunc_test
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/guardian/rundmc/rundmcfakes"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc/pidgetter"
+	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,7 +15,7 @@ import (
 
 var _ = Describe("FilePidGetter", func() {
 	var (
-		pidGetter  pidgetter.FilePidGetter
+		pidGetter  runrunc.FilePidGetter
 		depot      *rundmcfakes.FakeDepot
 		logger     *lagertest.TestLogger
 		bundlePath string
@@ -33,7 +33,7 @@ var _ = Describe("FilePidGetter", func() {
 
 		depot = new(rundmcfakes.FakeDepot)
 		depot.LookupReturns(bundlePath, nil)
-		pidGetter = pidgetter.FilePidGetter{Depot: depot}
+		pidGetter = runrunc.FilePidGetter{Depot: depot}
 	})
 
 	AfterEach(func() {

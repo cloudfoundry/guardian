@@ -35,6 +35,7 @@ import (
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/linux/proc"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/docker/docker/daemon/graphdriver"
 	"github.com/docker/docker/graph"
@@ -328,12 +329,16 @@ func wireMounts() bundlerules.Mounts {
 	}
 }
 
-func wireContainerd(socket string, bndlLoader *goci.BndlLoader) (rundmc.OCIRuntime, error) {
+func wireContainerd(socket string, bndlLoader *goci.BndlLoader, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer) (rundmc.OCIRuntime, error) {
 	containerdClient, err := containerd.New(socket)
 	if err != nil {
 		return nil, err
 	}
-	ctx := namespaces.WithNamespace(context.Background(), "garden")
+	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
 	nerd := nerd.New(containerdClient, ctx)
-	return runcontainerd.New(nerd, bndlLoader), nil
+	return runcontainerd.New(nerd, bndlLoader, wireExecer(&runcontainerd.PidGetter{Nerd: nerd})), nil
+}
+
+func containerdRuncRoot() string {
+	return proc.RuncRoot
 }

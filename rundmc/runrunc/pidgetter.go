@@ -1,16 +1,19 @@
-package pidgetter
+package runrunc
 
 import (
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
 
-	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/lager"
 )
 
+type Depot interface {
+	Lookup(lager.Logger, string) (string, error)
+}
+
 type FilePidGetter struct {
-	Depot rundmc.Depot
+	Depot Depot
 }
 
 func (f *FilePidGetter) GetPid(logger lager.Logger, containerHandle string) (int, error) {

@@ -4,10 +4,13 @@ import (
 	"errors"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/garden/gardenfakes"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/runcontainerdfakes"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -18,12 +21,14 @@ var _ = Describe("Runcontainerd", func() {
 		nerd          *runcontainerdfakes.FakeNerdContainerizer
 		bundleLoader  *runcontainerdfakes.FakeBundleLoader
 		runContainerd *runcontainerd.RunContainerd
+		execer        *runcontainerdfakes.FakeExecer
 	)
 
 	BeforeEach(func() {
 		nerd = new(runcontainerdfakes.FakeNerdContainerizer)
 		bundleLoader = new(runcontainerdfakes.FakeBundleLoader)
-		runContainerd = runcontainerd.New(nerd, bundleLoader)
+		execer = new(runcontainerdfakes.FakeExecer)
+		runContainerd = runcontainerd.New(nerd, bundleLoader, execer)
 	})
 
 	Describe("Create", func() {
@@ -144,6 +149,53 @@ var _ = Describe("Runcontainerd", func() {
 
 			It("bubbles up that error", func() {
 				Expect(stateErr).To(MatchError("BOOM"))
+			})
+		})
+	})
+
+	Describe("Exec", func() {
+		var (
+			logger  lager.Logger
+			spec    garden.ProcessSpec
+			io      garden.ProcessIO
+			process *gardenfakes.FakeProcess
+
+			execProcess garden.Process
+			execError   error
+		)
+
+		BeforeEach(func() {
+			logger = lagertest.NewTestLogger("potato")
+			spec = garden.ProcessSpec{ID: "process-id"}
+			io = garden.ProcessIO{}
+			process = new(gardenfakes.FakeProcess)
+			execer.ExecReturns(process, nil)
+		})
+
+		JustBeforeEach(func() {
+			execProcess, execError = runContainerd.Exec(logger, "bundle-path", "some-id", spec, io)
+		})
+
+		It("delegates to execer", func() {
+			Expect(execError).NotTo(HaveOccurred())
+			Expect(execProcess).To(BeIdenticalTo(process))
+
+			Expect(execer.ExecCallCount()).To(Equal(1))
+			actualLogger, actualBundlePath, actualID, actualSpec, actualIO := execer.ExecArgsForCall(0)
+			Expect(actualLogger).To(Equal(logger))
+			Expect(actualBundlePath).To(Equal("bundle-path"))
+			Expect(actualID).To(Equal("some-id"))
+			Expect(actualSpec).To(Equal(spec))
+			Expect(actualIO).To(Equal(io))
+		})
+
+		Context("when the execer fails", func() {
+			BeforeEach(func() {
+				execer.ExecReturns(nil, errors.New("execer-failed"))
+			})
+
+			It("returns the execer error", func() {
+				Expect(execError).To(MatchError("execer-failed"))
 			})
 		})
 	})

@@ -155,6 +155,10 @@ func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
 	panic("this should be unreachable: no sockets on Windows")
 }
 
-func wireContainerd(socket string, bndlLoader *goci.BndlLoader) (rundmc.OCIRuntime, error) {
+func wireContainerd(socket string, bndlLoader *goci.BndlLoader, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer) (rundmc.OCIRuntime, error) {
 	return nil, errors.New("containerd not impletemented on windows")
+}
+
+func containerdRuncRoot() string {
+	return ""
 }
