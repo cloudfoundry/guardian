@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pivotal-golang/clock"
+	"code.cloudfoundry.org/clock"
 )
 
 type PidFileReader struct {

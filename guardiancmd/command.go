@@ -15,6 +15,7 @@ import (
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 
+	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/garden/server"
 	"code.cloudfoundry.org/guardian/bindata"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -48,7 +49,6 @@ import (
 	"github.com/eapache/go-resiliency/retrier"
 	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/localip"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/sigmon"

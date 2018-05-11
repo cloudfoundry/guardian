@@ -5,10 +5,10 @@ import (
 	"os"
 	"time"
 
+	"code.cloudfoundry.org/clock/fakeclock"
 	"code.cloudfoundry.org/guardian/rundmc/pidreader"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-golang/clock/fakeclock"
 )
 
 var _ = Describe("PidFileReader", func() {

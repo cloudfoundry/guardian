@@ -3,9 +3,9 @@ package metrics
 import (
 	"time"
 
+	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/lager"
 	dropsonde_metrics "github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/pivotal-golang/clock"
 )
 
 func sendMetric(key string, value int) {
