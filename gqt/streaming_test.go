@@ -13,9 +13,9 @@ import (
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	. "code.cloudfoundry.org/guardian/matchers"
 
+	archiver "code.cloudfoundry.org/archiver/extractor/test_helper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	archiver "github.com/pivotal-golang/archiver/extractor/test_helper"
 )
 
 var _ = Describe("Streaming", func() {
