@@ -11,11 +11,8 @@ import (
 	"strconv"
 	"time"
 
-	"code.cloudfoundry.org/commandrunner"
-	"code.cloudfoundry.org/idmapper"
-	"code.cloudfoundry.org/lager"
-
 	"code.cloudfoundry.org/clock"
+	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden/server"
 	"code.cloudfoundry.org/guardian/bindata"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -42,6 +39,9 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/sysinfo"
+	"code.cloudfoundry.org/idmapper"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/dropsonde"
 	_ "github.com/docker/docker/daemon/graphdriver/aufs" // aufs needed for garden-shed
 	_ "github.com/docker/docker/pkg/chrootarchive"       // allow reexec of docker-applyLayer
@@ -49,7 +49,6 @@ import (
 	"github.com/eapache/go-resiliency/retrier"
 	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pivotal-golang/localip"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/sigmon"
 )
