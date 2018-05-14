@@ -856,41 +856,43 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin}
 	runcRoot := cmd.computeRuncRoot()
 
-	wireExecer := func(pidGetter runrunc.PidGetter) *runrunc.Execer {
+	pidFileReader := wirePidfileReader()
+	privilegeChecker := &privchecker.PrivilegeChecker{BundleLoader: bndlLoader}
+	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary)
+
+	var runner rundmc.OCIRuntime
+	var pidGetter peas.PidGetter
+	var peaCreator *peas.PeaCreator
+
+	wireExecerFunc := func(pidGetter runrunc.PidGetter) *runrunc.Execer {
 		return runrunc.NewExecer(bndlLoader, processBuilder, factory.WireMkdirer(),
 			runrunc.LookupFunc(runrunc.LookupUser), factory.WireExecRunner("exec", runcRoot), wireUIDGenerator(), pidGetter)
 	}
 
-	pidFileReader := wirePidfileReader()
-
-	var runner rundmc.OCIRuntime
 	if cmd.useContainerd() {
 		var err error
-		runner, err = wireContainerd(cmd.Containerd.Socket, bndlLoader, wireExecer)
+		runner, pidGetter, err = wireContainerd(cmd.Containerd.Socket, bndlLoader, wireExecerFunc)
 		if err != nil {
 			return nil, err
 		}
 	} else {
+		pidGetter = &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}
 		runner = runrunc.New(
 			cmdRunner,
 			runcLogRunner,
 			runcBinary,
 			cmd.Runtime.Plugin,
 			cmd.Runtime.PluginExtraArgs,
-			wireExecer(&pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}),
+			wireExecerFunc(pidGetter),
 		)
 	}
 
 	eventStore := rundmc.NewEventStore(properties)
 	stateStore := rundmc.NewStateStore(properties)
 
-	privilegeChecker := &privchecker.PrivilegeChecker{BundleLoader: bndlLoader}
-
-	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary)
-
-	peaCreator := &peas.PeaCreator{
+	peaCreator = &peas.PeaCreator{
 		Volumizer:              volumizer,
-		PidGetter:              &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader},
+		PidGetter:              pidGetter,
 		PrivilegedGetter:       privilegeChecker,
 		BindMountSourceCreator: bindMountSourceCreator,
 		BundleGenerator:        template,

@@ -18,6 +18,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
@@ -213,14 +214,16 @@ func wireMounts() bundlerules.Mounts {
 	}
 }
 
-func wireContainerd(socket string, bndlLoader *goci.BndlLoader, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer) (rundmc.OCIRuntime, error) {
+func wireContainerd(socket string, bndlLoader *goci.BndlLoader, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer) (rundmc.OCIRuntime, peas.PidGetter, error) {
 	containerdClient, err := containerd.New(socket)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
 	nerd := nerd.New(containerdClient, ctx)
-	return runcontainerd.New(nerd, bndlLoader, wireExecer(&runcontainerd.PidGetter{Nerd: nerd})), nil
+	pidGetter := &runcontainerd.PidGetter{Nerd: nerd}
+
+	return runcontainerd.New(nerd, bndlLoader, wireExecer(pidGetter)), pidGetter, nil
 }
 
 func containerdRuncRoot() string {
