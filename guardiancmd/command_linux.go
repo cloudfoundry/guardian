@@ -4,19 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"syscall"
-	"time"
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
-	"code.cloudfoundry.org/garden-shed/distclient"
-	quotaed_aufs "code.cloudfoundry.org/garden-shed/docker_drivers/aufs"
-	"code.cloudfoundry.org/garden-shed/layercake"
-	"code.cloudfoundry.org/garden-shed/layercake/cleaner"
-	"code.cloudfoundry.org/garden-shed/quota_manager"
-	"code.cloudfoundry.org/garden-shed/repository_fetcher"
 	"code.cloudfoundry.org/garden-shed/rootfs_provider"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki"
@@ -37,11 +28,9 @@ import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/linux/proc"
 	"github.com/containerd/containerd/namespaces"
-	"github.com/docker/docker/daemon/graphdriver"
-	"github.com/docker/docker/graph"
 	"github.com/docker/docker/pkg/mount"
-	"github.com/eapache/go-resiliency/retrier"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
 )
 
 type LinuxFactory struct {
@@ -77,7 +66,19 @@ func (f *LinuxFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 		return gardener.NewVolumeProvider(noop, noop, gardener.CommandFactory(preparerootfs.Command), f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
 	}
 
-	shed := f.wireShed(logger)
+	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger}
+	shed := rootfs_provider.Wire(
+		logger,
+		runner,
+		f.config.Graph.Dir,
+		f.config.Containers.DefaultRootFS,
+		f.config.Docker.Registry,
+		f.config.Docker.InsecureRegistries,
+		f.config.Graph.PersistentImages,
+		f.config.Graph.CleanupThresholdInMegabytes,
+		f.uidMappings,
+		f.gidMappings,
+	)
 	return gardener.NewVolumeProvider(shed, shed, gardener.CommandFactory(preparerootfs.Command), f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
 }
 
@@ -196,128 +197,11 @@ func mustGetMaxValidUID() int {
 }
 
 func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
-	_, _, errNo := syscall.Syscall(syscall.SYS_FCNTL, socketFD, syscall.F_SETFD, syscall.FD_CLOEXEC)
+	_, _, errNo := unix.Syscall(unix.SYS_FCNTL, socketFD, unix.F_SETFD, unix.FD_CLOEXEC)
 	if errNo != 0 {
 		return fmt.Errorf("setting cloexec on server socket: %s", errNo)
 	}
 	return nil
-}
-
-func (f *LinuxFactory) wireShed(logger lager.Logger) *rootfs_provider.CakeOrdinator {
-	graphRoot := f.config.Graph.Dir
-	logger = logger.Session(gardener.VolumizerSession, lager.Data{"graphRoot": graphRoot})
-
-	if err := exec.Command("modprobe", "aufs").Run(); err != nil {
-		logger.Error("unable-to-load-aufs", err)
-	}
-
-	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger}
-
-	if err := os.MkdirAll(graphRoot, 0755); err != nil {
-		logger.Fatal("failed-to-create-graph-directory", err)
-	}
-
-	dockerGraphDriver, err := graphdriver.New(graphRoot, nil)
-	if err != nil {
-		logger.Fatal("failed-to-construct-graph-driver", err)
-	}
-
-	backingStoresPath := filepath.Join(graphRoot, "backing_stores")
-	if mkdirErr := os.MkdirAll(backingStoresPath, 0660); mkdirErr != nil {
-		logger.Fatal("failed-to-mkdir-backing-stores", mkdirErr)
-	}
-
-	quotaedGraphDriver := &quotaed_aufs.QuotaedDriver{
-		GraphDriver: dockerGraphDriver,
-		Unmount:     quotaed_aufs.Unmount,
-		BackingStoreMgr: &quotaed_aufs.BackingStore{
-			RootPath: backingStoresPath,
-			Logger:   logger.Session("backing-store-mgr"),
-		},
-		LoopMounter: &quotaed_aufs.Loop{
-			Retrier: retrier.New(retrier.ConstantBackoff(200, 500*time.Millisecond), nil),
-			Logger:  logger.Session("loop-mounter"),
-		},
-		Retrier:  retrier.New(retrier.ConstantBackoff(200, 500*time.Millisecond), nil),
-		RootPath: graphRoot,
-		Logger:   logger.Session("quotaed-driver"),
-	}
-
-	dockerGraph, err := graph.NewGraph(graphRoot, quotaedGraphDriver)
-	if err != nil {
-		logger.Fatal("failed-to-construct-graph", err)
-	}
-
-	var cake layercake.Cake = &layercake.Docker{
-		Graph:  dockerGraph,
-		Driver: quotaedGraphDriver,
-	}
-
-	if cake.DriverName() == "aufs" {
-		cake = &layercake.AufsCake{
-			Cake:      cake,
-			Runner:    runner,
-			GraphRoot: graphRoot,
-		}
-	}
-
-	repoFetcher := repository_fetcher.Retryable{
-		RepositoryFetcher: &repository_fetcher.CompositeFetcher{
-			LocalFetcher: &repository_fetcher.Local{
-				Cake:              cake,
-				DefaultRootFSPath: f.config.Containers.DefaultRootFS,
-				IDProvider:        repository_fetcher.LayerIDProvider{},
-			},
-			RemoteFetcher: repository_fetcher.NewRemote(
-				f.config.Docker.Registry,
-				cake,
-				distclient.NewDialer(f.config.Docker.InsecureRegistries),
-				repository_fetcher.VerifyFunc(repository_fetcher.Verify),
-			),
-		},
-	}
-
-	rootFSNamespacer := &rootfs_provider.UidNamespacer{
-		Translator: rootfs_provider.NewUidTranslator(
-			f.uidMappings,
-			f.gidMappings,
-		),
-	}
-
-	retainer := cleaner.NewRetainer()
-	ovenCleaner := cleaner.NewOvenCleaner(retainer,
-		cleaner.NewThreshold(int64(f.config.Graph.CleanupThresholdInMegabytes)*1024*1024),
-	)
-
-	imageRetainer := &repository_fetcher.ImageRetainer{
-		GraphRetainer:             retainer,
-		DirectoryRootfsIDProvider: repository_fetcher.LayerIDProvider{},
-		DockerImageIDFetcher:      repoFetcher,
-
-		NamespaceCacheKey: rootFSNamespacer.CacheKey(),
-		Logger:            logger,
-	}
-
-	// spawn off in a go function to avoid blocking startup
-	// worst case is if an image is immediately created and deleted faster than
-	// we can retain it we'll garbage collect it when we shouldn't. This
-	// is an OK trade-off for not having garden startup block on dockerhub.
-	go imageRetainer.Retain(f.config.Graph.PersistentImages)
-
-	layerCreator := rootfs_provider.NewLayerCreator(cake, rootfs_provider.SimpleVolumeCreator{}, rootFSNamespacer)
-
-	quotaManager := &quota_manager.AUFSQuotaManager{
-		BaseSizer: quota_manager.NewAUFSBaseSizer(cake),
-		DiffSizer: &quota_manager.AUFSDiffSizer{
-			AUFSDiffPathFinder: quotaedGraphDriver,
-		},
-	}
-
-	return rootfs_provider.NewCakeOrdinator(cake,
-		repoFetcher,
-		layerCreator,
-		rootfs_provider.NewMetricsAdapter(quotaManager.GetUsage, quotaedGraphDriver.GetMntPath),
-		ovenCleaner)
 }
 
 func wireMounts() bundlerules.Mounts {
