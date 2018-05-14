@@ -8,7 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
+	"strconv"
 	"sync"
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
@@ -81,7 +81,7 @@ var _ = Describe("DirectExecRunner", func() {
 			Expect(cmdRunner.StartedCommands()[0].Args).To(ConsistOf(
 				runtimePath,
 				"--debug",
-				"--log", filepath.Join(processPath, "exec.log"),
+				"--log-handle", MatchRegexp("\\d+"),
 				"--log-format", "json",
 				"exec",
 				"-p", filepath.Join(processPath, "spec.json"),
@@ -107,7 +107,7 @@ var _ = Describe("DirectExecRunner", func() {
 				Expect(cmdRunner.StartedCommands()[0].Args).To(ConsistOf(
 					runtimePath,
 					"--debug",
-					"--log", filepath.Join(processPath, "run.log"),
+					"--log-handle", MatchRegexp("\\d+"),
 					"--log-format", "json",
 					"run",
 					"--pid-file", MatchRegexp(".*"),
@@ -153,7 +153,25 @@ var _ = Describe("DirectExecRunner", func() {
 				logs = `{"time":"2016-03-02T13:56:38Z", "level":"warning", "msg":"some-message"}
 {"time":"2016-03-02T13:56:38Z", "level":"error", "msg":"some-error"}`
 				cmdRunner.WhenRunning(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
-					ioutil.WriteFile(filepath.Join(processPath, "exec.log"), []byte(logs), 0777)
+
+					var handle uint64
+					var err error
+
+					for i, v := range c.Args {
+						if v == "--log-handle" {
+							handle, err = strconv.ParseUint(c.Args[i+1], 10, 64)
+							Expect(err).NotTo(HaveOccurred())
+
+							break
+						}
+					}
+					Expect(handle).NotTo(Equal(uint64(0)))
+
+					file := os.NewFile(uintptr(handle), fmt.Sprintf("%d.exec.log", handle))
+					_, err = file.Write([]byte(logs))
+					file.Close()
+					Expect(err).NotTo(HaveOccurred())
+
 					return nil
 				})
 			})
@@ -163,7 +181,7 @@ var _ = Describe("DirectExecRunner", func() {
 				Eventually(func() []lager.LogFormat {
 					execLogs = []lager.LogFormat{}
 					for _, log := range logger.Logs() {
-						if log.Message == "test-execrunner-windows.execrunner.exec" {
+						if log.Message == "test-execrunner-windows.execrunner.winc" {
 							execLogs = append(execLogs, log)
 						}
 					}
@@ -171,6 +189,18 @@ var _ = Describe("DirectExecRunner", func() {
 				}).Should(HaveLen(2))
 
 				Expect(execLogs[0].Data).To(HaveKeyWithValue("message", "some-message"))
+			})
+
+			It("the gofunc streaming logs exits", func() {
+				Eventually(func() bool {
+					found := false
+					for _, log := range logger.Logs() {
+						if log.Message == "test-execrunner-windows.execrunner.done-streaming-winc-logs" {
+							found = true
+						}
+					}
+					return found
+				}).Should(BeTrue())
 			})
 		})
 
@@ -341,9 +371,5 @@ var _ = Describe("DirectExecRunner", func() {
 })
 
 func exitWith(exitCode int) *exec.Cmd {
-	if runtime.GOOS == "windows" {
-		return exec.Command("powershell.exe", "-Command", fmt.Sprintf("Exit %d", exitCode))
-	}
-
-	return exec.Command("sh", "-c", fmt.Sprintf("exit %d", exitCode))
+	return exec.Command("cmd.exe", "/c", fmt.Sprintf("Exit %d", exitCode))
 }

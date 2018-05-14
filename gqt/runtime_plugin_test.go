@@ -125,7 +125,7 @@ var _ = Describe("Runtime Plugin", func() {
 				Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
 					binaries.RuntimePlugin,
 					"--debug",
-					"--log", HaveSuffix(filepath.Join("containers", handle, "processes", procId, "run.log")),
+					"--log-handle", MatchRegexp(`\d+`),
 					"--log-format", "json",
 					"run",
 					"--pid-file", HaveSuffix(filepath.Join("containers", handle, "processes", procId, "pidfile")),
@@ -229,28 +229,30 @@ var _ = Describe("Runtime Plugin", func() {
 		})
 
 		It("executes the plugin, passing the correct args for exec", func() {
-			logfileMatcher := MatchRegexp(".*")
-			if runtime.GOOS == "windows" {
-				logfileMatcher = HaveSuffix("exec.log")
-			}
-
-			pluginArgs := []interface{}{binaries.RuntimePlugin}
-			if runtime.GOOS != "windows" {
-				pluginArgs = append(pluginArgs, "--root", "/run/runc")
-			}
-
-			pluginArgs = append(pluginArgs,
+			pluginArgs := []interface{}{
+				binaries.RuntimePlugin,
+				"--root", "/run/runc",
 				"--debug",
-				"--log", logfileMatcher,
+				"--log", MatchRegexp(".*"),
 				"--log-format", "json",
 				"exec",
 				"-p", MatchRegexp(".*"),
 				"--pid-file", MatchRegexp(".*"),
 				handle,
-			)
+				"--detach",
+			}
 
-			if runtime.GOOS != "windows" {
-				pluginArgs = append(pluginArgs, "--detach")
+			if runtime.GOOS == "windows" {
+				pluginArgs = []interface{}{
+					binaries.RuntimePlugin,
+					"--debug",
+					"--log-handle", MatchRegexp(`\d`),
+					"--log-format", "json",
+					"exec",
+					"-p", MatchRegexp(".*"),
+					"--pid-file", MatchRegexp(".*"),
+					handle,
+				}
 			}
 
 			Expect(readPluginArgs(argsFilepath)).To(ConsistOf(pluginArgs))
