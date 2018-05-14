@@ -1,4 +1,4 @@
-package pidreader
+package pid
 
 import (
 	"fmt"
@@ -9,13 +9,13 @@ import (
 	"code.cloudfoundry.org/clock"
 )
 
-type PidFileReader struct {
+type FileReader struct {
 	Clock         clock.Clock
 	Timeout       time.Duration
 	SleepInterval time.Duration
 }
 
-func (p *PidFileReader) Pid(pidFilePath string) (int, error) {
+func (p *FileReader) Pid(pidFilePath string) (int, error) {
 	var (
 		pidContents   []byte
 		err           error

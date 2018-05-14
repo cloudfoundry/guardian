@@ -1,4 +1,4 @@
-package pidreader_test
+package pid_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestPidreader(t *testing.T) {
+func TestPid(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Pidreader Suite")
+	RunSpecs(t, "Pid Suite")
 }

@@ -34,9 +34,9 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/peas/privchecker"
-	"code.cloudfoundry.org/guardian/rundmc/pidreader"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/rundmc/runrunc/pid"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/sysinfo"
 	"code.cloudfoundry.org/idmapper"
@@ -861,6 +861,8 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 			runrunc.LookupFunc(runrunc.LookupUser), factory.WireExecRunner("exec", runcRoot), wireUIDGenerator(), pidGetter)
 	}
 
+	pidFileReader := wirePidfileReader()
+
 	var runner rundmc.OCIRuntime
 	if cmd.useContainerd() {
 		var err error
@@ -875,21 +877,20 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 			runcBinary,
 			cmd.Runtime.Plugin,
 			cmd.Runtime.PluginExtraArgs,
-			wireExecer(&runrunc.FilePidGetter{Depot: depot}),
+			wireExecer(&pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}),
 		)
 	}
 
 	eventStore := rundmc.NewEventStore(properties)
 	stateStore := rundmc.NewStateStore(properties)
 
-	pidFileReader := wirePidfileReader()
 	privilegeChecker := &privchecker.PrivilegeChecker{BundleLoader: bndlLoader}
 
 	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary)
 
 	peaCreator := &peas.PeaCreator{
 		Volumizer:              volumizer,
-		PidGetter:              pidFileReader,
+		PidGetter:              &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader},
 		PrivilegedGetter:       privilegeChecker,
 		BindMountSourceCreator: bindMountSourceCreator,
 		BundleGenerator:        template,
@@ -929,8 +930,8 @@ func (cmd *ServerCommand) computeRuncRoot() string {
 	return filepath.Join("/", "run", "runc")
 }
 
-func wirePidfileReader() *pidreader.PidFileReader {
-	return &pidreader.PidFileReader{
+func wirePidfileReader() *pid.FileReader {
+	return &pid.FileReader{
 		Clock:         clock.NewClock(),
 		Timeout:       10 * time.Second,
 		SleepInterval: time.Millisecond * 100,

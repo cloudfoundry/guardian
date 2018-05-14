@@ -27,7 +27,7 @@ var _ = Describe("PeaUsernameResolver", func() {
 		resolvedGid int
 		resolveErr  error
 
-		pidGetter          *peasfakes.FakePidGetter
+		pidGetter          *peasfakes.FakeProcessPidGetter
 		peaCreator         *rundmcfakes.FakePeaCreator
 		loader             *rundmcfakes.FakeBundleLoader
 		userLookuper       *runruncfakes.FakeUserLookupper
@@ -37,7 +37,7 @@ var _ = Describe("PeaUsernameResolver", func() {
 	)
 
 	BeforeEach(func() {
-		pidGetter = new(peasfakes.FakePidGetter)
+		pidGetter = new(peasfakes.FakeProcessPidGetter)
 		peaCreator = new(rundmcfakes.FakePeaCreator)
 		loader = new(rundmcfakes.FakeBundleLoader)
 		userLookuper = new(runruncfakes.FakeUserLookupper)

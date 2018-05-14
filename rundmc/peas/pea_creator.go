@@ -29,7 +29,7 @@ type Volumizer interface {
 
 //go:generate counterfeiter . PidGetter
 type PidGetter interface {
-	Pid(pidFilePath string) (int, error)
+	GetPid(log lager.Logger, handle string) (int, error)
 }
 
 //go:generate counterfeiter . PrivilegedGetter
@@ -95,7 +95,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		return errs("parse-user", err)
 	}
 
-	linuxNamespaces, err := p.linuxNamespaces(sandboxBundlePath, privileged)
+	linuxNamespaces, err := p.linuxNamespaces(log, sandboxHandle, privileged)
 	if err != nil {
 		return errs("determining-namespaces", err)
 	}
@@ -169,8 +169,8 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	return proc, nil
 }
 
-func (p *PeaCreator) linuxNamespaces(sandboxBundlePath string, privileged bool) (map[string]string, error) {
-	originalCtrInitPid, err := p.PidGetter.Pid(filepath.Join(sandboxBundlePath, "pidfile"))
+func (p *PeaCreator) linuxNamespaces(log lager.Logger, sandboxHandle string, privileged bool) (map[string]string, error) {
+	originalCtrInitPid, err := p.PidGetter.GetPid(log, sandboxHandle)
 	if err != nil {
 		return nil, errorwrapper.Wrap(err, "reading-ctr-pid")
 	}

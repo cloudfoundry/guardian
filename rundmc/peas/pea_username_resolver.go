@@ -12,8 +12,13 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
+//go:generate counterfeiter . ProcessPidGetter
+type ProcessPidGetter interface {
+	Pid(pidFilePath string) (int, error)
+}
+
 type PeaUsernameResolver struct {
-	PidGetter    PidGetter
+	PidGetter    ProcessPidGetter
 	PeaCreator   rundmc.PeaCreator
 	Loader       rundmc.BundleLoader
 	UserLookuper runrunc.UserLookupper

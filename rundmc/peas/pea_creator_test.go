@@ -64,7 +64,7 @@ var _ = Describe("PeaCreator", func() {
 		volumizer.CreateReturns(specs.Spec{Version: "some-spec-version"}, nil)
 		runcDeleter = new(peasfakes.FakeRuncDeleter)
 		pidGetter = new(peasfakes.FakePidGetter)
-		pidGetter.PidReturns(123, nil)
+		pidGetter.GetPidReturns(123, nil)
 		bindMountSourceCreator = new(depotfakes.FakeBindMountSourceCreator)
 		bindMountSourceCreator.CreateReturns(defaultBindMounts, nil)
 
@@ -384,7 +384,7 @@ var _ = Describe("PeaCreator", func() {
 
 		Context("when the pid getter returns an error", func() {
 			BeforeEach(func() {
-				pidGetter.PidReturns(-1, errors.New("pickle"))
+				pidGetter.GetPidReturns(-1, errors.New("pickle"))
 			})
 
 			It("returns a wrapped error", func() {

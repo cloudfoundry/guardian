@@ -1,4 +1,4 @@
-package pidreader_test
+package pid_test
 
 import (
 	"io/ioutil"
@@ -6,18 +6,17 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/clock/fakeclock"
-	"code.cloudfoundry.org/guardian/rundmc/pidreader"
+	"code.cloudfoundry.org/guardian/rundmc/runrunc/pid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("PidFileReader", func() {
-
+var _ = Describe("FileReader", func() {
 	var (
 		clk     *fakeclock.FakeClock
 		timeout time.Duration
 
-		pdr *pidreader.PidFileReader
+		pdr *pid.FileReader
 
 		pidFileContents string
 		pidFilePath     string
@@ -31,7 +30,7 @@ var _ = Describe("PidFileReader", func() {
 	})
 
 	JustBeforeEach(func() {
-		pdr = &pidreader.PidFileReader{
+		pdr = &pid.FileReader{
 			Clock:         clk,
 			Timeout:       timeout,
 			SleepInterval: 20 * time.Millisecond,
