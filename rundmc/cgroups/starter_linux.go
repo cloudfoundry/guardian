@@ -301,30 +301,30 @@ func (s *CgroupStarter) subsystemGroupings() (map[string]group, error) {
 	return groupings, scanner.Err()
 }
 
-func (s *CgroupStarter) idempotentCgroupMount(logger lager.Logger, cgroupPath, subsystems string) error {
+func (s *CgroupStarter) idempotentCgroupMount(logger lager.Logger, cgroupPath, subsystem string) error {
 	logger = logger.Session("mount-cgroup", lager.Data{
-		"path":       cgroupPath,
-		"subsystems": subsystems,
+		"path":      cgroupPath,
+		"subsystem": subsystem,
 	})
 
 	logger.Info("started")
+
+	if err := os.MkdirAll(cgroupPath, 0755); err != nil {
+		return fmt.Errorf("mkdir '%s': %s", cgroupPath, err)
+	}
 
 	mountPoint, err := s.MountPointChecker.IsMountPoint(cgroupPath)
 	if err != nil {
 		return err
 	}
 	if !mountPoint {
-		if err := os.MkdirAll(cgroupPath, 0755); err != nil {
-			return fmt.Errorf("mkdir '%s': %s", cgroupPath, err)
-		}
-
-		cmd := exec.Command("mount", "-n", "-t", "cgroup", "-o", subsystems, "cgroup", cgroupPath)
+		cmd := exec.Command("mount", "-n", "-t", "cgroup", "-o", subsystem, "cgroup", cgroupPath)
 		cmd.Stderr = logging.Writer(logger.Session("mount-cgroup-cmd"))
 		if err := s.CommandRunner.Run(cmd); err != nil {
-			return fmt.Errorf("mounting subsystems '%s' in '%s': %s", subsystems, cgroupPath, err)
+			return fmt.Errorf("mounting subsystem '%s' in '%s': %s", subsystem, cgroupPath, err)
 		}
 	} else {
-		logger.Info("subsystems-already-mounted")
+		logger.Info("subsystem-already-mounted")
 	}
 
 	logger.Info("finished")
