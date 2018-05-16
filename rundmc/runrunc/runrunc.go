@@ -35,13 +35,13 @@ type RuncBinary interface {
 
 func New(
 	runner commandrunner.CommandRunner, runcCmdRunner RuncCmdRunner,
-	runc RuncBinary, runcPath string, runcExtraArgs []string, execer *Execer,
+	runc RuncBinary, runcPath string, runcExtraArgs []string, execer *Execer, statser *Statser,
 ) *RunRunc {
 	return &RunRunc{
 		Creator:    NewCreator(runcPath, runcExtraArgs, runner),
 		Execer:     execer,
 		OomWatcher: NewOomWatcher(runner, runc),
-		Statser:    NewStatser(runcCmdRunner, runc),
+		Statser:    statser,
 		Stater:     NewStater(runcCmdRunner, runc),
 		Killer:     NewKiller(runcCmdRunner, runc),
 		Deleter:    NewDeleter(runcCmdRunner, runc),

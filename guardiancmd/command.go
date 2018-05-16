@@ -558,7 +558,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 func (cmd *ServerCommand) wirePeaCleaner(factory GardenFactory, volumizer gardener.Volumizer) gardener.PeaCleaner {
 	cmdRunner := factory.CommandRunner()
 	runcLogRunner := runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile)
-	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin}
+	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin, Root: cmd.computeRuncRoot()}
 
 	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary)
 	return peas.NewPeaCleaner(runcDeleter, volumizer, cmd.Containers.Dir)
@@ -853,8 +853,8 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 
 	cmdRunner := factory.CommandRunner()
 	runcLogRunner := runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile)
-	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin}
 	runcRoot := cmd.computeRuncRoot()
+	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin, Root: runcRoot}
 
 	pidFileReader := wirePidfileReader()
 	privilegeChecker := &privchecker.PrivilegeChecker{BundleLoader: bndlLoader}
@@ -869,9 +869,11 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 			runrunc.LookupFunc(runrunc.LookupUser), factory.WireExecRunner("exec", runcRoot), wireUIDGenerator(), pidGetter)
 	}
 
+	statser := runrunc.NewStatser(runcLogRunner, runcBinary)
+
 	if cmd.useContainerd() {
 		var err error
-		runner, pidGetter, err = wireContainerd(cmd.Containerd.Socket, bndlLoader, wireExecerFunc)
+		runner, pidGetter, err = wireContainerd(cmd.Containerd.Socket, bndlLoader, wireExecerFunc, statser)
 		if err != nil {
 			return nil, err
 		}
@@ -884,6 +886,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 			cmd.Runtime.Plugin,
 			cmd.Runtime.PluginExtraArgs,
 			wireExecerFunc(pidGetter),
+			statser,
 		)
 	}
 

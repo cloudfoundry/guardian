@@ -5,6 +5,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden/gardenfakes"
+	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/runcontainerdfakes"
@@ -18,17 +19,21 @@ import (
 
 var _ = Describe("Runcontainerd", func() {
 	var (
+		logger        lager.Logger
 		nerd          *runcontainerdfakes.FakeNerdContainerizer
 		bundleLoader  *runcontainerdfakes.FakeBundleLoader
 		runContainerd *runcontainerd.RunContainerd
 		execer        *runcontainerdfakes.FakeExecer
+		statser       *runcontainerdfakes.FakeStatser
 	)
 
 	BeforeEach(func() {
+		logger = lagertest.NewTestLogger("potato")
 		nerd = new(runcontainerdfakes.FakeNerdContainerizer)
 		bundleLoader = new(runcontainerdfakes.FakeBundleLoader)
 		execer = new(runcontainerdfakes.FakeExecer)
-		runContainerd = runcontainerd.New(nerd, bundleLoader, execer)
+		statser = new(runcontainerdfakes.FakeStatser)
+		runContainerd = runcontainerd.New(nerd, bundleLoader, execer, statser)
 	})
 
 	Describe("Create", func() {
@@ -155,7 +160,6 @@ var _ = Describe("Runcontainerd", func() {
 
 	Describe("Exec", func() {
 		var (
-			logger  lager.Logger
 			spec    garden.ProcessSpec
 			io      garden.ProcessIO
 			process *gardenfakes.FakeProcess
@@ -165,7 +169,6 @@ var _ = Describe("Runcontainerd", func() {
 		)
 
 		BeforeEach(func() {
-			logger = lagertest.NewTestLogger("potato")
 			spec = garden.ProcessSpec{ID: "process-id"}
 			io = garden.ProcessIO{}
 			process = new(gardenfakes.FakeProcess)
@@ -196,6 +199,46 @@ var _ = Describe("Runcontainerd", func() {
 
 			It("returns the execer error", func() {
 				Expect(execError).To(MatchError("execer-failed"))
+			})
+		})
+	})
+
+	Describe("Stats", func() {
+		var (
+			metrics    gardener.ActualContainerMetrics
+			metricsErr error
+		)
+
+		BeforeEach(func() {
+			statser.StatsReturns(gardener.ActualContainerMetrics{CPU: garden.ContainerCPUStat{Usage: 123}}, nil)
+		})
+
+		JustBeforeEach(func() {
+			metrics, metricsErr = runContainerd.Stats(logger, "some-id")
+		})
+
+		It("it succeeds", func() {
+			Expect(metricsErr).NotTo(HaveOccurred())
+		})
+
+		It("delegates to statser with the correct arguments", func() {
+			Expect(statser.StatsCallCount()).To(Equal(1))
+			actualLogger, actualContainerId := statser.StatsArgsForCall(0)
+			Expect(actualLogger).To(Equal(logger))
+			Expect(actualContainerId).To(Equal("some-id"))
+		})
+
+		It("returns a statser metric", func() {
+			Expect(metrics.CPU.Usage).To(Equal(uint64(123)))
+		})
+
+		Context("statser fails", func() {
+			BeforeEach(func() {
+				statser.StatsReturns(gardener.ActualContainerMetrics{}, errors.New("statser-failure"))
+			})
+
+			It("returns the statser error", func() {
+				Expect(metricsErr).To(MatchError("statser-failure"))
 			})
 		})
 	})

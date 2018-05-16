@@ -30,17 +30,24 @@ type Execer interface {
 	Exec(log lager.Logger, bundlePath string, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 }
 
+//go:generate counterfeiter . Statser
+type Statser interface {
+	Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error)
+}
+
 type RunContainerd struct {
 	nerd         NerdContainerizer
 	bundleLoader BundleLoader
 	execer       Execer
+	statser      Statser
 }
 
-func New(nerdulator NerdContainerizer, bundleLoader BundleLoader, execer Execer) *RunContainerd {
+func New(nerdulator NerdContainerizer, bundleLoader BundleLoader, execer Execer, statser Statser) *RunContainerd {
 	return &RunContainerd{
 		nerd:         nerdulator,
 		bundleLoader: bundleLoader,
 		execer:       execer,
+		statser:      statser,
 	}
 }
 
@@ -79,7 +86,7 @@ func (r *RunContainerd) State(log lager.Logger, id string) (runrunc.State, error
 }
 
 func (r *RunContainerd) Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error) {
-	return gardener.ActualContainerMetrics{}, fmt.Errorf("Stats is not implemented yet")
+	return r.statser.Stats(log, id)
 }
 
 func (r *RunContainerd) WatchEvents(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error {

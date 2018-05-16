@@ -346,6 +346,8 @@ var _ = Describe("Runtime Plugin", func() {
 
 			Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
 				binaries.RuntimePlugin,
+				"--root",
+				filepath.FromSlash("/run/runc"),
 				"--debug",
 				"--log", MatchRegexp(".*"),
 				"--log-format", "json",
