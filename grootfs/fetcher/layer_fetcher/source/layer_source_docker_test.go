@@ -588,7 +588,7 @@ var _ = Describe("Layer source: Docker", func() {
 		Context("when the blob does not exist", func() {
 			It("returns an error", func() {
 				_, _, err := layerSource.Blob(logger, groot.LayerInfo{BlobID: "sha256:steamed-blob"})
-				Expect(err).To(MatchError(ContainSubstring("fetching blob 404")))
+				Expect(err).To(MatchError(ContainSubstring("fetching blob 400")))
 			})
 		})
 
