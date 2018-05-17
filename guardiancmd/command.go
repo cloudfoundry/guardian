@@ -922,19 +922,6 @@ func (cmd *ServerCommand) useContainerd() bool {
 	return cmd.Containerd.Socket != ""
 }
 
-func (cmd *ServerCommand) computeRuncRoot() string {
-	if cmd.useContainerd() {
-		return filepath.Join(containerdRuncRoot(), containerdNamespace)
-	}
-
-	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
-	if os.Geteuid() != 0 && runtimeDir != "" {
-		return filepath.Join(runtimeDir, "runc")
-	}
-
-	return filepath.Join("/", "run", "runc")
-}
-
 func wirePidfileReader() *pid.FileReader {
 	return &pid.FileReader{
 		Clock:         clock.NewClock(),

@@ -229,3 +229,16 @@ func wireContainerd(socket string, bndlLoader *goci.BndlLoader, wireExecer func(
 func containerdRuncRoot() string {
 	return proc.RuncRoot
 }
+
+func (cmd *ServerCommand) computeRuncRoot() string {
+	if cmd.useContainerd() {
+		return filepath.Join(containerdRuncRoot(), containerdNamespace)
+	}
+
+	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
+	if os.Geteuid() != 0 && runtimeDir != "" {
+		return filepath.Join(runtimeDir, "runc")
+	}
+
+	return filepath.Join("/", "run", "runc")
+}

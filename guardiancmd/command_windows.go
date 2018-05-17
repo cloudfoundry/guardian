@@ -163,3 +163,7 @@ func wireContainerd(socket string, bndlLoader *goci.BndlLoader, wireExecer func(
 func containerdRuncRoot() string {
 	return ""
 }
+
+func (cmd *ServerCommand) computeRuncRoot() string {
+	return ""
+}

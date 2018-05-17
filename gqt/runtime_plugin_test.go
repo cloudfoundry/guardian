@@ -341,14 +341,29 @@ var _ = Describe("Runtime Plugin", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("executes the plugin, passing the correct args for delete", func() {
+		It("executes the plugin, passing the correct args for delete on windows", func() {
+			onlyOnWindows()
 			Expect(client.Destroy(handle)).To(Succeed())
 
 			Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
 				binaries.RuntimePlugin,
-				"--root",
-				filepath.FromSlash("/run/runc"),
 				"--debug",
+				"--log", MatchRegexp(".*"),
+				"--log-format", "json",
+				"delete",
+				handle,
+			))
+		})
+
+		It("executes the plugin, passing the correct args for delete on linux", func() {
+			onlyOnLinux()
+			Expect(client.Destroy(handle)).To(Succeed())
+
+			Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
+				binaries.RuntimePlugin,
+				"--debug",
+				"--root",
+				"/run/runc",
 				"--log", MatchRegexp(".*"),
 				"--log-format", "json",
 				"delete",
