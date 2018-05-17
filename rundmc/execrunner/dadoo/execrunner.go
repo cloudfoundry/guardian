@@ -17,6 +17,7 @@ import (
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/logging"
+	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/lager"
 )
@@ -215,8 +216,8 @@ type process struct {
 	ioWg                                         *sync.WaitGroup
 	winszCh                                      chan garden.WindowSize
 	cleanup                                      func() error
-	stdoutWriter                                 *DynamicMultiWriter
-	stderrWriter                                 *DynamicMultiWriter
+	stdoutWriter                                 *execrunner.DynamicMultiWriter
+	stderrWriter                                 *execrunner.DynamicMultiWriter
 	streamMutex                                  *sync.Mutex
 
 	signals.Signaller
@@ -260,8 +261,8 @@ func (d *ExecRunner) getProcess(log lager.Logger, id, processPath, pidFilePath s
 		winszCh:      make(chan garden.WindowSize, 5),
 		cleanup:      cleanupFunc,
 		Signaller:    d.signallerFactory.NewSignaller(pidFilePath),
-		stdoutWriter: NewDynamicMultiWriter(),
-		stderrWriter: NewDynamicMultiWriter(),
+		stdoutWriter: execrunner.NewDynamicMultiWriter(),
+		stderrWriter: execrunner.NewDynamicMultiWriter(),
 		streamMutex:  new(sync.Mutex),
 	}
 	return d.processes[processPath]

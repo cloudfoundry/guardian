@@ -1,4 +1,4 @@
-package dadoo
+package execrunner
 
 import (
 	"io"
@@ -25,11 +25,12 @@ func (w *DynamicMultiWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (w *DynamicMultiWriter) Attach(writer io.Writer) {
+func (w *DynamicMultiWriter) Attach(writer io.Writer) int {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 
 	w.writers = append(w.writers, writer)
+	return len(w.writers)
 }
 
 func (w *DynamicMultiWriter) Count() int {

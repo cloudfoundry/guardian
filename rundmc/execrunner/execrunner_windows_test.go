@@ -4,12 +4,16 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
+	"syscall"
+	"time"
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
@@ -20,35 +24,98 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("DirectExecRunner", func() {
+var _ = Describe("WindowsExecRunner", func() {
+	const (
+		runtimePath = "container-runtime-path"
+	)
+
 	var (
 		cmdRunner   *fake_command_runner.FakeCommandRunner
-		execRunner  *execrunner.DirectExecRunner
+		execRunner  *execrunner.WindowsExecRunner
 		logger      *lagertest.TestLogger
-		runtimePath = "container-runtime-path"
 		cleanupFunc func() error
 
-		process     garden.Process
-		processIO   garden.ProcessIO
-		runErr      error
-		processID   string
-		processPath string
-		logs        string
+		process               garden.Process
+		processIO             garden.ProcessIO
+		runErr                error
+		processID             string
+		processPath           string
+		logs                  string
+		wincExitCode          int
+		wincWaitErrors        bool
+		wincStartErrors       bool
+		waitBeforeStdoutWrite bool
+		proceed               chan struct{}
 	)
 
 	BeforeEach(func() {
 		cmdRunner = fake_command_runner.New()
 		logger = lagertest.NewTestLogger("test-execrunner-windows")
 
-		execRunner = &execrunner.DirectExecRunner{
-			RuntimePath:   runtimePath,
-			CommandRunner: cmdRunner,
-			RunMode:       "exec",
-		}
+		execRunner = execrunner.NewWindowsExecRunner(runtimePath, "exec", cmdRunner)
 		processID = "process-id"
 		var err error
 		processPath, err = ioutil.TempDir("", "processes")
 		Expect(err).ToNot(HaveOccurred())
+
+		wincWaitErrors = false
+		wincStartErrors = false
+		waitBeforeStdoutWrite = false
+		processIO = garden.ProcessIO{
+			Stdin: strings.NewReader(""),
+		}
+	})
+
+	setupCommandRunner := func(runner *fake_command_runner.FakeCommandRunner, startErrors, waitErrors, waitBeforeWrite bool, exitCode int, block chan struct{}) {
+		pio := []*os.File{}
+		runner.WhenStarting(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
+			if startErrors {
+				return errors.New("oops")
+			}
+			pio = duplicateStdioAndLog(c.Stdin, c.Stdout, c.Stderr, c.Args, processPath)
+			return nil
+		})
+
+		runner.WhenWaitingFor(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
+			defer func() {
+				for _, val := range pio {
+					val.Close()
+				}
+			}()
+
+			if block != nil {
+				<-block
+			}
+
+			if waitErrors {
+				return errors.New("couldn't wait for process")
+			}
+
+			if logs != "" {
+				_, err := pio[3].Write([]byte(logs))
+				Expect(err).NotTo(HaveOccurred())
+				pio[3].Close()
+			}
+
+			// Sleep before printing any stdout/stderr to allow attach calls to complete
+			if waitBeforeWrite {
+				time.Sleep(time.Millisecond * 500)
+			}
+
+			_, _ = pio[1].Write([]byte("hello stdout"))
+
+			io.Copy(pio[2], pio[0])
+
+			if exitCode != 0 {
+				return exitWith(exitCode).Run()
+			}
+
+			return nil
+		})
+	}
+
+	JustBeforeEach(func() {
+		setupCommandRunner(cmdRunner, wincStartErrors, wincWaitErrors, waitBeforeStdoutWrite, wincExitCode, proceed)
 	})
 
 	AfterEach(func() {
@@ -98,7 +165,7 @@ var _ = Describe("DirectExecRunner", func() {
 
 		Context("when the exec mode is 'run'", func() {
 			BeforeEach(func() {
-				execRunner.RunMode = "run"
+				execRunner = execrunner.NewWindowsExecRunner(runtimePath, "run", cmdRunner)
 			})
 
 			It("executes the runtime plugin with the correct arguments", func() {
@@ -152,28 +219,6 @@ var _ = Describe("DirectExecRunner", func() {
 				processID = "some-process-id"
 				logs = `{"time":"2016-03-02T13:56:38Z", "level":"warning", "msg":"some-message"}
 {"time":"2016-03-02T13:56:38Z", "level":"error", "msg":"some-error"}`
-				cmdRunner.WhenRunning(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
-
-					var handle uint64
-					var err error
-
-					for i, v := range c.Args {
-						if v == "--log-handle" {
-							handle, err = strconv.ParseUint(c.Args[i+1], 10, 64)
-							Expect(err).NotTo(HaveOccurred())
-
-							break
-						}
-					}
-					Expect(handle).NotTo(Equal(uint64(0)))
-
-					file := os.NewFile(uintptr(handle), fmt.Sprintf("%d.exec.log", handle))
-					_, err = file.Write([]byte(logs))
-					file.Close()
-					Expect(err).NotTo(HaveOccurred())
-
-					return nil
-				})
 			})
 
 			It("forwards the logs to lager", func() {
@@ -216,9 +261,7 @@ var _ = Describe("DirectExecRunner", func() {
 
 		Context("when the runtime plugin can't be started", func() {
 			BeforeEach(func() {
-				cmdRunner.WhenRunning(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
-					return errors.New("oops")
-				})
+				wincStartErrors = true
 			})
 
 			It("returns an error", func() {
@@ -226,7 +269,7 @@ var _ = Describe("DirectExecRunner", func() {
 			})
 		})
 
-		Context("when stdout and stderr streams are passed in", func() {
+		Context("when stdin, stdout, and stderr streams are passed in", func() {
 			var (
 				stdout *bytes.Buffer
 				stderr *bytes.Buffer
@@ -235,22 +278,16 @@ var _ = Describe("DirectExecRunner", func() {
 			BeforeEach(func() {
 				stdout = new(bytes.Buffer)
 				stderr = new(bytes.Buffer)
-				processIO = garden.ProcessIO{Stdout: stdout, Stderr: stderr}
+				processIO = garden.ProcessIO{Stdin: strings.NewReader("omg"), Stdout: stdout, Stderr: stderr}
 
-				cmdRunner.WhenRunning(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
-					if c.Stdout == nil || c.Stderr == nil {
-						return nil
-					}
-
-					_, _ = c.Stdout.Write([]byte("hello stdout"))
-					_, _ = c.Stderr.Write([]byte("an error"))
-					return nil
-				})
 			})
 
 			It("passes them to the command", func() {
+				_, err := process.Wait()
+				Expect(err).NotTo(HaveOccurred())
+
 				Expect(stdout.String()).To(Equal("hello stdout"))
-				Expect(stderr.String()).To(Equal("an error"))
+				Expect(stderr.String()).To(Equal("omg"))
 			})
 		})
 	})
@@ -269,7 +306,7 @@ var _ = Describe("DirectExecRunner", func() {
 				"handle",
 				"not-used",
 				0, 0,
-				garden.ProcessIO{},
+				processIO,
 				false,
 				bytes.NewBufferString("some-process"),
 				nil,
@@ -279,9 +316,7 @@ var _ = Describe("DirectExecRunner", func() {
 
 		Context("when the process exits 0", func() {
 			BeforeEach(func() {
-				cmdRunner.WhenWaitingFor(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
-					return exitWith(0).Run()
-				})
+				wincExitCode = 0
 			})
 
 			It("returns the exit code of the process", func() {
@@ -293,9 +328,7 @@ var _ = Describe("DirectExecRunner", func() {
 
 		Context("when the process returns a non-zero exit code", func() {
 			BeforeEach(func() {
-				cmdRunner.WhenWaitingFor(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
-					return exitWith(12).Run()
-				})
+				wincExitCode = 12
 			})
 
 			It("returns the exit code of the process", func() {
@@ -307,9 +340,7 @@ var _ = Describe("DirectExecRunner", func() {
 
 		Context("when it returns a non ExitError", func() {
 			BeforeEach(func() {
-				cmdRunner.WhenWaitingFor(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
-					return errors.New("couldn't wait for process")
-				})
+				wincWaitErrors = true
 			})
 
 			It("returns the error", func() {
@@ -321,9 +352,7 @@ var _ = Describe("DirectExecRunner", func() {
 
 		Context("when it is called consecutive times", func() {
 			BeforeEach(func() {
-				cmdRunner.WhenWaitingFor(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
-					return exitWith(12).Run()
-				})
+				wincExitCode = 12
 			})
 
 			It("returns the same exit code both times ", func() {
@@ -338,13 +367,10 @@ var _ = Describe("DirectExecRunner", func() {
 		})
 
 		Context("when it is called multiple times in parallel before the process has exited", func() {
-			proceed := make(chan struct{})
 
 			BeforeEach(func() {
-				cmdRunner.WhenWaitingFor(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
-					<-proceed
-					return exitWith(12).Run()
-				})
+				proceed = make(chan struct{})
+				wincExitCode = 12
 			})
 
 			It("returns the same exit code every time", func() {
@@ -368,8 +394,158 @@ var _ = Describe("DirectExecRunner", func() {
 			})
 		})
 	})
+
+	Describe("Attach", func() {
+		BeforeEach(func() {
+			wincExitCode = 8
+			waitBeforeStdoutWrite = true
+
+			var buffer bytes.Buffer
+			for i := 0; i < 10240; i++ {
+				buffer.WriteString("a")
+			}
+			processIO = garden.ProcessIO{Stdin: strings.NewReader(buffer.String()), Stderr: new(bytes.Buffer)}
+		})
+
+		JustBeforeEach(func() {
+			process, runErr = execRunner.Run(
+				logger,
+				processID,
+				processPath,
+				"handle",
+				"not-used",
+				0, 0,
+				processIO,
+				false,
+				bytes.NewBufferString("some-process"),
+				cleanupFunc,
+			)
+		})
+
+		It("returns the process with the given id", func() {
+			p, err := execRunner.Attach(logger, processID, garden.ProcessIO{}, "")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(p).To(Equal(process))
+		})
+
+		It("calling Wait on the returned process gives the exit code", func() {
+			p, err := execRunner.Attach(logger, processID, garden.ProcessIO{}, "")
+			Expect(err).NotTo(HaveOccurred())
+
+			code, err := p.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(code).To(Equal(8))
+		})
+
+		It("pass stdin to, and get the stdout and stderr from the attached process", func() {
+			aout := new(bytes.Buffer)
+			aerr := new(bytes.Buffer)
+
+			attachIO := garden.ProcessIO{
+				Stdin:  strings.NewReader("omg"),
+				Stdout: aout,
+				Stderr: aerr,
+			}
+
+			p, err := execRunner.Attach(logger, processID, attachIO, "")
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = p.Wait()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(aout.String()).To(Equal("hello stdout"))
+			Expect(aerr.String()).To(ContainSubstring("omg"))
+		})
+
+		Context("multiple processes streaming stdout and stderr", func() {
+			var (
+				runStdout *bytes.Buffer
+				runStderr *bytes.Buffer
+			)
+
+			BeforeEach(func() {
+				runStdout = new(bytes.Buffer)
+				runStderr = new(bytes.Buffer)
+
+				processIO = garden.ProcessIO{
+					Stdin:  strings.NewReader("omg"),
+					Stdout: runStdout,
+					Stderr: runStderr,
+				}
+			})
+
+			It("multiplexes stdout and stderr", func() {
+				attachStdout := new(bytes.Buffer)
+				attachStderr := new(bytes.Buffer)
+
+				_, err := execRunner.Attach(logger, processID, garden.ProcessIO{Stdout: attachStdout, Stderr: attachStderr}, "")
+				Expect(err).NotTo(HaveOccurred())
+
+				process.Wait()
+				Expect(runStdout.String()).To(Equal("hello stdout"))
+				Expect(attachStdout.String()).To(Equal("hello stdout"))
+
+				Expect(runStderr.String()).To(Equal("omg"))
+				Expect(attachStderr.String()).To(Equal("omg"))
+			})
+		})
+
+		Context("a process with the given id does not exist", func() {
+			It("returns a ProcessNotFound error", func() {
+				_, err := execRunner.Attach(logger, "does-not-exist", garden.ProcessIO{}, "")
+				Expect(err).To(MatchError(garden.ProcessNotFoundError{ProcessID: "does-not-exist"}))
+			})
+		})
+	})
 })
 
 func exitWith(exitCode int) *exec.Cmd {
 	return exec.Command("cmd.exe", "/c", fmt.Sprintf("Exit %d", exitCode))
+}
+
+func duplicateStdioAndLog(stdin io.Reader, stdout io.Writer, stderr io.Writer, args []string, processPath string) []*os.File {
+	var origFiles [4]uintptr
+
+	fstdin, ok := stdin.(*os.File)
+	ExpectWithOffset(1, ok).To(BeTrue())
+	origFiles[0] = fstdin.Fd()
+
+	fstdout, ok := stdout.(*os.File)
+	ExpectWithOffset(1, ok).To(BeTrue())
+	origFiles[1] = fstdout.Fd()
+
+	fstderr, ok := stderr.(*os.File)
+	ExpectWithOffset(1, ok).To(BeTrue())
+	origFiles[2] = fstderr.Fd()
+
+	var handle uint64
+	var err error
+
+	for i, v := range args {
+		if v == "--log-handle" {
+			handle, err = strconv.ParseUint(args[i+1], 10, 64)
+			Expect(err).NotTo(HaveOccurred())
+
+			break
+		}
+	}
+	Expect(handle).NotTo(Equal(uint64(0)))
+
+	origFiles[3] = uintptr(handle)
+
+	var duplicates []*os.File
+
+	ExpectWithOffset(1, ok).To(BeTrue())
+
+	var dupped syscall.Handle
+	self, _ := syscall.GetCurrentProcess()
+
+	for i, h := range origFiles {
+		err := syscall.DuplicateHandle(self, syscall.Handle(h), self, &dupped, 0, false, syscall.DUPLICATE_SAME_ACCESS)
+		ExpectWithOffset(1, err).NotTo(HaveOccurred())
+		duplicates = append(duplicates, os.NewFile(uintptr(dupped), fmt.Sprintf("%s.%d", processPath, i)))
+	}
+
+	return duplicates
 }

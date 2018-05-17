@@ -2,6 +2,7 @@ package execrunner
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -18,13 +19,40 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type DirectExecRunner struct {
-	RuntimePath   string
-	CommandRunner commandrunner.CommandRunner
-	RunMode       string
+type WindowsExecRunner struct {
+	runtimePath   string
+	runMode       string
+	commandRunner commandrunner.CommandRunner
+	processes     map[string]*process
+	processMux    *sync.Mutex
 }
 
-func (e *DirectExecRunner) Run(
+func NewWindowsExecRunner(runtimePath, runMode string, commandRunner commandrunner.CommandRunner) *WindowsExecRunner {
+	return &WindowsExecRunner{
+		runtimePath:   runtimePath,
+		runMode:       runMode,
+		commandRunner: commandRunner,
+		processes:     map[string]*process{},
+		processMux:    new(sync.Mutex),
+	}
+}
+
+type process struct {
+	id           string
+	exitCode     int
+	exitErr      error
+	exitMutex    *sync.RWMutex
+	cleanup      func() error
+	logger       lager.Logger
+	stdoutWriter *DynamicMultiWriter
+	stderrWriter *DynamicMultiWriter
+	stdin        *os.File
+	stdout       *os.File
+	stderr       *os.File
+	outputWg     *sync.WaitGroup
+}
+
+func (e *WindowsExecRunner) Run(
 	log lager.Logger, processID, processPath, sandboxHandle, _ string,
 	_, _ uint32, pio garden.ProcessIO, _ bool, procJSON io.Reader,
 	extraCleanup func() error,
@@ -40,6 +68,24 @@ func (e *DirectExecRunner) Run(
 	}
 	defer logW.Close()
 
+	stdinR, stdinW, err := os.Pipe()
+	if err != nil {
+		return nil, errors.Wrap(err, "creating stdin pipe")
+	}
+	defer stdinR.Close()
+
+	stdoutR, stdoutW, err := os.Pipe()
+	if err != nil {
+		return nil, errors.Wrap(err, "creating stdout pipe")
+	}
+	defer stdoutW.Close()
+
+	stderrR, stderrW, err := os.Pipe()
+	if err != nil {
+		return nil, errors.Wrap(err, "creating stderr pipe")
+	}
+	defer stderrW.Close()
+
 	var childLogW syscall.Handle
 
 	// GetCurrentProcess doesn't error
@@ -50,9 +96,9 @@ func (e *DirectExecRunner) Run(
 		return nil, errors.Wrap(err, "duplicating log pipe handle")
 	}
 
-	cmd := exec.Command(e.RuntimePath, "--debug", "--log-handle", strconv.FormatUint(uint64(childLogW), 10), "--log-format", "json", e.RunMode, "--pid-file", filepath.Join(processPath, "pidfile"))
+	cmd := exec.Command(e.runtimePath, "--debug", "--log-handle", strconv.FormatUint(uint64(childLogW), 10), "--log-format", "json", e.runMode, "--pid-file", filepath.Join(processPath, "pidfile"))
 
-	if e.RunMode == "exec" {
+	if e.runMode == "exec" {
 		specPath := filepath.Join(processPath, "spec.json")
 		if err := writeProcessJSON(procJSON, specPath); err != nil {
 			return nil, err
@@ -62,19 +108,51 @@ func (e *DirectExecRunner) Run(
 		cmd.Args = append(cmd.Args, "--bundle", processPath, processID)
 	}
 
-	proc := &process{id: processID, cleanup: extraCleanup, logger: log}
+	cmd.Stdin = stdinR
+	cmd.Stdout = stdoutW
+	cmd.Stderr = stderrW
 
-	cmd.Stdout = pio.Stdout
-	cmd.Stderr = pio.Stderr
-	if err := e.CommandRunner.Start(cmd); err != nil {
+	if err := e.commandRunner.Start(cmd); err != nil {
 		return nil, errors.Wrap(err, "execing runtime plugin")
 	}
 
-	proc.mux.Lock()
 	go streamLogs(log, logR)
 
+	cleanup := func() error {
+		e.processMux.Lock()
+		delete(e.processes, processID)
+		e.processMux.Unlock()
+
+		if extraCleanup != nil {
+			return extraCleanup()
+		}
+
+		return nil
+	}
+
+	proc := &process{
+		id:           processID,
+		cleanup:      cleanup,
+		logger:       log,
+		stdin:        stdinW,
+		stdout:       stdoutR,
+		stderr:       stderrR,
+		stdoutWriter: NewDynamicMultiWriter(),
+		stderrWriter: NewDynamicMultiWriter(),
+		outputWg:     &sync.WaitGroup{},
+		exitMutex:    new(sync.RWMutex),
+	}
+
+	e.processMux.Lock()
+	e.processes[processID] = proc
+	e.processMux.Unlock()
+
+	proc.stream(pio, false)
+
+	proc.exitMutex.Lock()
+
 	go func() {
-		if err := e.CommandRunner.Wait(cmd); err != nil {
+		if err := e.commandRunner.Wait(cmd); err != nil {
 			if exitErr, ok := err.(*exec.ExitError); ok {
 				if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
 					proc.exitCode = status.ExitStatus()
@@ -87,9 +165,9 @@ func (e *DirectExecRunner) Run(
 				proc.exitErr = err
 			}
 		}
-		// the streamLogs go func will block until this handle is closed
+		// the streamLogs go func will only exit once this handle is closed
 		syscall.CloseHandle(childLogW)
-		proc.mux.Unlock()
+		proc.exitMutex.Unlock()
 	}()
 
 	return proc, nil
@@ -108,17 +186,75 @@ func writeProcessJSON(procJSON io.Reader, specPath string) error {
 	return nil
 }
 
-func (e *DirectExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
-	panic("not supported on this platform")
+func (e *WindowsExecRunner) Attach(log lager.Logger, processID string, pio garden.ProcessIO, _ string) (garden.Process, error) {
+	proc, err := e.getProcess(processID)
+	if err != nil {
+		return nil, err
+	}
+
+	proc.stream(pio, true)
+
+	return proc, nil
 }
 
-type process struct {
-	id       string
-	exitCode int
-	exitErr  error
-	mux      sync.RWMutex
-	cleanup  func() error
-	logger   lager.Logger
+func (e *WindowsExecRunner) getProcess(processID string) (*process, error) {
+	e.processMux.Lock()
+	defer e.processMux.Unlock()
+
+	proc, ok := e.processes[processID]
+	if !ok {
+		return nil, garden.ProcessNotFoundError{ProcessID: processID}
+	}
+
+	return proc, nil
+}
+
+func (p *process) stream(pio garden.ProcessIO, duplicate bool) {
+	var procStdin *os.File
+
+	procStdin = p.stdin
+
+	if pio.Stdin != nil {
+		if duplicate {
+			var dupped syscall.Handle
+			self, _ := syscall.GetCurrentProcess()
+			err := syscall.DuplicateHandle(self, syscall.Handle(p.stdin.Fd()), self, &dupped, 0, false, syscall.DUPLICATE_SAME_ACCESS)
+			if err != nil {
+				panic(err)
+			}
+
+			procStdin = os.NewFile(uintptr(dupped), fmt.Sprintf("%s.stdin", p.id))
+		}
+
+		go func() {
+			io.Copy(procStdin, pio.Stdin)
+			procStdin.Close()
+		}()
+	}
+
+	if pio.Stdout != nil {
+		count := p.stdoutWriter.Attach(pio.Stdout)
+		if count == 1 {
+			p.outputWg.Add(1)
+			go func() {
+				io.Copy(p.stdoutWriter, p.stdout)
+				p.stdout.Close()
+				p.outputWg.Done()
+			}()
+		}
+	}
+
+	if pio.Stderr != nil {
+		count := p.stderrWriter.Attach(pio.Stderr)
+		if count == 1 {
+			p.outputWg.Add(1)
+			go func() {
+				io.Copy(p.stderrWriter, p.stderr)
+				p.stderr.Close()
+				p.outputWg.Done()
+			}()
+		}
+	}
 }
 
 func (p *process) ID() string {
@@ -126,8 +262,14 @@ func (p *process) ID() string {
 }
 
 func (p *process) Wait() (int, error) {
-	p.mux.RLock()
-	defer p.mux.RUnlock()
+	p.exitMutex.RLock()
+	defer p.exitMutex.RUnlock()
+
+	p.outputWg.Wait()
+
+	p.stdin.Close()
+	p.stdout.Close()
+	p.stderr.Close()
 
 	if p.cleanup != nil {
 		if err := p.cleanup(); err != nil {
