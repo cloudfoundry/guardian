@@ -6,16 +6,14 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
-	"code.cloudfoundry.org/commandrunner"
-	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/rundmc"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups/fs"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -40,7 +38,6 @@ func NewStarter(
 	cgroupMountpoint string,
 	gardenCgroup string,
 	allowedDevices []specs.LinuxDeviceCgroup,
-	runner commandrunner.CommandRunner,
 	chowner Chowner,
 	mountPointChecker rundmc.MountPointChecker,
 ) *CgroupStarter {
@@ -50,25 +47,25 @@ func NewStarter(
 		ProcCgroups:       procCgroupReader,
 		ProcSelfCgroups:   procSelfCgroupReader,
 		AllowedDevices:    allowedDevices,
-		CommandRunner:     runner,
 		Logger:            logger,
 		Chowner:           chowner,
 		MountPointChecker: mountPointChecker,
+		FS:                fs.Functions(),
 	}
 }
 
 type CgroupStarter struct {
-	CgroupPath     string
-	GardenCgroup   string
-	AllowedDevices []specs.LinuxDeviceCgroup
-	CommandRunner  commandrunner.CommandRunner
-
+	CgroupPath      string
+	GardenCgroup    string
+	AllowedDevices  []specs.LinuxDeviceCgroup
 	ProcCgroups     io.ReadCloser
 	ProcSelfCgroups io.ReadCloser
 
 	Logger            lager.Logger
 	Chowner           Chowner
 	MountPointChecker rundmc.MountPointChecker
+
+	FS fs.FS
 }
 
 func (s *CgroupStarter) Start() error {
@@ -270,11 +267,11 @@ func (s *CgroupStarter) mountTmpfsOnCgroupPath(log lager.Logger, path string) {
 	log = log.Session("cgroups-tmpfs-mounting", lager.Data{"path": path})
 	log.Info("started")
 
-	if err := s.CommandRunner.Run(exec.Command("mount", "-t", "tmpfs", "-o", "uid=0,gid=0,mode=0755", "cgroup", path)); err != nil {
+	if err := s.FS.Mount("cgroup", path, "tmpfs", uintptr(0), "uid=0,gid=0,mode=0755"); err != nil {
 		log.Error("mount-failed-continuing-anyway", err)
-	} else {
-		log.Info("finished")
+		return
 	}
+	log.Info("finished")
 }
 
 type group struct {
@@ -318,9 +315,7 @@ func (s *CgroupStarter) idempotentCgroupMount(logger lager.Logger, cgroupPath, s
 		return err
 	}
 	if !mountPoint {
-		cmd := exec.Command("mount", "-n", "-t", "cgroup", "-o", subsystem, "cgroup", cgroupPath)
-		cmd.Stderr = logging.Writer(logger.Session("mount-cgroup-cmd"))
-		if err := s.CommandRunner.Run(cmd); err != nil {
+		if err := s.FS.Mount("cgroup", cgroupPath, "cgroup", uintptr(0), subsystem); err != nil {
 			return fmt.Errorf("mounting subsystem '%s' in '%s': %s", subsystem, cgroupPath, err)
 		}
 	} else {

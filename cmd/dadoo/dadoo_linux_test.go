@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
@@ -938,9 +937,8 @@ func mustOpen(path string) *os.File {
 
 func setupCgroups(cgroupsRoot string) error {
 	logger := lagertest.NewTestLogger("test")
-	runner := linux_command_runner.New()
 
-	starter := cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsRoot, "garden", []specs.LinuxDeviceCgroup{}, runner, &cgroups.OSChowner{}, rundmc.IsMountPoint)
+	starter := cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsRoot, "garden", []specs.LinuxDeviceCgroup{}, new(cgroups.OSChowner), rundmc.IsMountPoint)
 
 	return starter.Start()
 }

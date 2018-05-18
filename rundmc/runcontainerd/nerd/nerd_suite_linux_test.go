@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/guardian/gqt/containerdrunner"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
@@ -86,7 +85,6 @@ func TestNerd(t *testing.T) {
 
 func setupCgroups(cgroupsRoot string) {
 	logger := lagertest.NewTestLogger("test")
-	runner := linux_command_runner.New()
 
 	starter := cgroups.NewStarter(logger,
 		mustOpen("/proc/cgroups"),
@@ -94,8 +92,7 @@ func setupCgroups(cgroupsRoot string) {
 		cgroupsRoot,
 		"nerd",
 		[]specs.LinuxDeviceCgroup{},
-		runner,
-		&cgroups.OSChowner{},
+		new(cgroups.OSChowner),
 		rundmc.IsMountPoint)
 
 	Expect(starter.Start()).To(Succeed())

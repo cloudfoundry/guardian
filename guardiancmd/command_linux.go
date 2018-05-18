@@ -132,7 +132,7 @@ func createCgroupsStarter(logger lager.Logger, tag, cgroupRoot string, chowner c
 	}
 
 	return cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"),
-		cgroupsMountpoint, gardenCgroup, allowedDevices, linux_command_runner.New(), chowner, mountPointChecker)
+		cgroupsMountpoint, gardenCgroup, allowedDevices, chowner, mountPointChecker)
 }
 
 func (f *LinuxFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {

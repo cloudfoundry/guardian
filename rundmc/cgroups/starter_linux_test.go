@@ -5,12 +5,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
-	"code.cloudfoundry.org/commandrunner/fake_command_runner"
-	. "code.cloudfoundry.org/commandrunner/fake_command_runner/matchers"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	fakes "code.cloudfoundry.org/guardian/rundmc/cgroups/cgroupsfakes"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups/fs/fsfakes"
 	"code.cloudfoundry.org/guardian/rundmc/rundmcfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -21,11 +21,11 @@ import (
 
 var _ = Describe("CgroupStarter", func() {
 	var (
-		runner                    *fake_command_runner.FakeCommandRunner
 		starter                   *cgroups.CgroupStarter
 		logger                    lager.Logger
 		chowner                   *fakes.FakeChowner
 		mountPointChecker         *rundmcfakes.FakeMountPointChecker
+		fakeFS                    *fsfakes.FakeFS
 		procCgroupsContents       string
 		procSelfCgroupsContents   string
 		cgroupPathMounted         bool
@@ -36,17 +36,15 @@ var _ = Describe("CgroupStarter", func() {
 	)
 
 	BeforeEach(func() {
-		var err error
-		tmpDir, err = ioutil.TempDir("", "gdncgroup")
-		Expect(err).NotTo(HaveOccurred())
+		tmpDir = tempDir("", "gdncgroup")
 
 		procSelfCgroupsContents = ""
 		procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
 			"devices\t1\t1\t1\n"
 
 		logger = lagertest.NewTestLogger("test")
-		runner = fake_command_runner.New()
 		chowner = new(fakes.FakeChowner)
+		fakeFS = new(fsfakes.FakeFS)
 		mountPointChecker = new(rundmcfakes.FakeMountPointChecker)
 		cgroupPathMounted = true
 		cgroupPathMountCheckError = nil
@@ -68,22 +66,22 @@ var _ = Describe("CgroupStarter", func() {
 			return true, nil
 		}
 
-		starter = &cgroups.CgroupStarter{
-			CgroupPath:   path.Join(tmpDir, "cgroup"),
-			GardenCgroup: "garden",
-			AllowedDevices: []specs.LinuxDeviceCgroup{{
+		starter = cgroups.NewStarter(
+			logger,
+			ioutil.NopCloser(strings.NewReader(procCgroupsContents)),
+			ioutil.NopCloser(strings.NewReader(procSelfCgroupsContents)),
+			path.Join(tmpDir, "cgroup"),
+			"garden",
+			[]specs.LinuxDeviceCgroup{{
 				Type:   "c",
 				Major:  int64ptr(10),
 				Minor:  int64ptr(200),
 				Access: "rwm",
 			}},
-			CommandRunner:     runner,
-			ProcCgroups:       ioutil.NopCloser(strings.NewReader(procCgroupsContents)),
-			ProcSelfCgroups:   ioutil.NopCloser(strings.NewReader(procSelfCgroupsContents)),
-			Logger:            logger,
-			Chowner:           chowner,
-			MountPointChecker: mountPointChecker.Spy,
-		}
+			chowner,
+			mountPointChecker.Spy,
+		)
+		starter.FS = fakeFS
 	})
 
 	AfterEach(func() {
@@ -132,21 +130,18 @@ var _ = Describe("CgroupStarter", func() {
 		})
 
 		It("mounts it", func() {
-			starter.Start()
-			Expect(runner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-				Path: "mount",
-				Args: []string{"-t", "tmpfs", "-o", "uid=0,gid=0,mode=0755", "cgroup", path.Join(tmpDir, "cgroup")},
-			}))
+			Expect(starter.Start()).To(Succeed())
+
+			Expect(fakeFS.MountCallCount()).To(Equal(1))
+			expected := newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup"), "tmpfs", 0, "uid=0,gid=0,mode=0755")
+			Expect(newMountArgs(fakeFS.MountArgsForCall(0))).To(Equal(expected))
 		})
 	})
 
 	Context("when the cgroup path exists", func() {
 		It("does not mount it again", func() {
-			starter.Start()
-			Expect(runner).NotTo(HaveExecutedSerially(fake_command_runner.CommandSpec{
-				Path: "mount",
-				Args: []string{"-t", "tmpfs", "-o", "uid=0,gid=0,mode=0755", "cgroup", path.Join(tmpDir, "cgroup")},
-			}))
+			Expect(starter.Start()).To(Succeed())
+			Expect(fakeFS.MountCallCount()).To(Equal(0))
 		})
 	})
 
@@ -180,27 +175,18 @@ var _ = Describe("CgroupStarter", func() {
 		})
 
 		It("mounts the hierarchies which are not already mounted", func() {
-			starter.Start()
+			Expect(starter.Start()).To(Succeed())
 
-			Expect(runner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-				Path: "mount",
-				Args: []string{"-n", "-t", "cgroup", "-o", "devices", "cgroup", path.Join(tmpDir, "cgroup", "devices")},
-			}))
+			Expect(fakeFS.MountCallCount()).To(Equal(3))
 
-			Expect(runner).NotTo(HaveExecutedSerially(fake_command_runner.CommandSpec{
-				Path: "mount",
-				Args: []string{"-n", "-t", "cgroup", "-o", "memory", "cgroup", path.Join(tmpDir, "cgroup", "memory")},
-			}))
+			expected := newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup", "devices"), "cgroup", 0, "devices")
+			Expect(newMountArgs(fakeFS.MountArgsForCall(0))).To(Equal(expected))
 
-			Expect(runner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-				Path: "mount",
-				Args: []string{"-n", "-t", "cgroup", "-o", "cpu,cpuacct", "cgroup", path.Join(tmpDir, "cgroup", "cpu")},
-			}))
+			expected = newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup", "cpu"), "cgroup", 0, "cpu,cpuacct")
+			Expect(newMountArgs(fakeFS.MountArgsForCall(1))).To(Equal(expected))
 
-			Expect(runner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-				Path: "mount",
-				Args: []string{"-n", "-t", "cgroup", "-o", "cpu,cpuacct", "cgroup", path.Join(tmpDir, "cgroup", "cpuacct")},
-			}))
+			expected = newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup", "cpuacct"), "cgroup", 0, "cpu,cpuacct")
+			Expect(newMountArgs(fakeFS.MountArgsForCall(2))).To(Equal(expected))
 		})
 
 		It("creates needed directories", func() {
@@ -219,9 +205,7 @@ var _ = Describe("CgroupStarter", func() {
 				fullPath := path.Join(tmpDir, "cgroup", subsystem, "garden")
 				Expect(fullPath).To(BeADirectory())
 				Expect(allChowns).To(ContainElement(fullPath))
-				dirStat, err := os.Stat(fullPath)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(dirStat.Mode() & os.ModePerm).To(Equal(os.FileMode(0755)))
+				Expect(stat(fullPath).Mode() & os.ModePerm).To(Equal(os.FileMode(0755)))
 			}
 		})
 
@@ -230,7 +214,7 @@ var _ = Describe("CgroupStarter", func() {
 				for _, subsystem := range []string{"devices", "cpu", "memory"} {
 					fullPath := path.Join(tmpDir, "cgroup", subsystem, "garden")
 					Expect(fullPath).ToNot(BeADirectory())
-					Expect(os.MkdirAll(fullPath, 0700))
+					Expect(os.MkdirAll(fullPath, 0700)).To(Succeed())
 				}
 			})
 
@@ -238,9 +222,7 @@ var _ = Describe("CgroupStarter", func() {
 				starter.Start()
 				for _, subsystem := range []string{"devices", "cpu", "memory"} {
 					fullPath := path.Join(tmpDir, "cgroup", subsystem, "garden")
-					dirStat, err := os.Stat(fullPath)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(dirStat.Mode() & os.ModePerm).To(Equal(os.FileMode(0755)))
+					Expect(stat(fullPath).Mode() & os.ModePerm).To(Equal(os.FileMode(0755)))
 				}
 			})
 		})
@@ -265,9 +247,7 @@ var _ = Describe("CgroupStarter", func() {
 					fullPath := path.Join(tmpDir, "cgroup", subsystem, "461299e6-b672-497c-64e5-793494b9bbdb", "garden")
 					Expect(fullPath).To(BeADirectory())
 					Expect(allChowns).To(ContainElement(fullPath))
-					dirStat, err := os.Stat(fullPath)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(dirStat.Mode() & os.ModePerm).To(Equal(os.FileMode(0755)))
+					Expect(stat(fullPath).Mode() & os.ModePerm).To(Equal(os.FileMode(0755)))
 				}
 			})
 		})
@@ -281,10 +261,9 @@ var _ = Describe("CgroupStarter", func() {
 
 			It("mounts it as its own subsystem", func() {
 				Expect(starter.Start()).To(Succeed())
-				Expect(runner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-					Path: "mount",
-					Args: []string{"-n", "-t", "cgroup", "-o", "freezer", "cgroup", path.Join(tmpDir, "cgroup", "freezer")},
-				}))
+				Expect(fakeFS.MountCallCount()).To(Equal(1))
+				expected := newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup", "freezer"), "cgroup", 0, "freezer")
+				Expect(newMountArgs(fakeFS.MountArgsForCall(0))).To(Equal(expected))
 			})
 		})
 
@@ -297,11 +276,7 @@ var _ = Describe("CgroupStarter", func() {
 
 			It("skips it", func() {
 				Expect(starter.Start()).To(Succeed())
-
-				Expect(runner).ToNot(HaveExecutedSerially(fake_command_runner.CommandSpec{
-					Path: "mount",
-					Args: []string{"-n", "-t", "cgroup", "-o", "freezer", "cgroup", path.Join(tmpDir, "cgroup", "freezer")},
-				}))
+				Expect(fakeFS.MountCallCount()).To(Equal(0))
 			})
 		})
 
@@ -314,11 +289,9 @@ var _ = Describe("CgroupStarter", func() {
 				BeforeEach(func() {
 					notMountedCgroups = []string{}
 				})
+
 				It("does not mount it again", func() {
-					Expect(runner).ToNot(HaveExecutedSerially(fake_command_runner.CommandSpec{
-						Path: "mount",
-						Args: []string{"-n", "-t", "cgroup", "-o", "name=systemd", "cgroup", path.Join(tmpDir, "cgroup", "systemd")},
-					}))
+					Expect(fakeFS.MountCallCount()).To(Equal(0))
 				})
 			})
 
@@ -329,10 +302,9 @@ var _ = Describe("CgroupStarter", func() {
 
 				It("mounts it with name option as its own subsystem", func() {
 					Expect(starter.Start()).To(Succeed())
-					Expect(runner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-						Path: "mount",
-						Args: []string{"-n", "-t", "cgroup", "-o", "name=systemd", "cgroup", path.Join(tmpDir, "cgroup", "systemd")},
-					}))
+					Expect(fakeFS.MountCallCount()).To(Equal(1))
+					expected := newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup", "systemd"), "cgroup", 0, "name=systemd")
+					Expect(newMountArgs(fakeFS.MountArgsForCall(0))).To(Equal(expected))
 				})
 			})
 		})
@@ -392,13 +364,3 @@ var _ = Describe("CgroupStarter", func() {
 		})
 	})
 })
-
-func readFile(path string) []byte {
-	content, err := ioutil.ReadFile(path)
-	Expect(err).NotTo(HaveOccurred())
-	return content
-}
-
-func int64ptr(i int64) *int64 {
-	return &i
-}
