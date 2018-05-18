@@ -86,14 +86,15 @@ func TestNerd(t *testing.T) {
 func setupCgroups(cgroupsRoot string) {
 	logger := lagertest.NewTestLogger("test")
 
-	starter := cgroups.NewStarter(logger,
+	starter := cgroups.NewStarter(
+		logger,
 		mustOpen("/proc/cgroups"),
 		mustOpen("/proc/self/cgroup"),
 		cgroupsRoot,
 		"nerd",
 		[]specs.LinuxDeviceCgroup{},
-		new(cgroups.OSChowner),
-		rundmc.IsMountPoint)
+		rundmc.IsMountPoint,
+	)
 
 	Expect(starter.Start()).To(Succeed())
 }

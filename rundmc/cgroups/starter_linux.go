@@ -38,7 +38,6 @@ func NewStarter(
 	cgroupMountpoint string,
 	gardenCgroup string,
 	allowedDevices []specs.LinuxDeviceCgroup,
-	chowner Chowner,
 	mountPointChecker rundmc.MountPointChecker,
 ) *CgroupStarter {
 	return &CgroupStarter{
@@ -48,7 +47,7 @@ func NewStarter(
 		ProcSelfCgroups:   procSelfCgroupReader,
 		AllowedDevices:    allowedDevices,
 		Logger:            logger,
-		Chowner:           chowner,
+		Chowner:           new(OSChowner),
 		MountPointChecker: mountPointChecker,
 		FS:                fs.Functions(),
 	}
@@ -64,8 +63,20 @@ type CgroupStarter struct {
 	Logger            lager.Logger
 	Chowner           Chowner
 	MountPointChecker rundmc.MountPointChecker
+	FS                fs.FS
 
-	FS fs.FS
+	uid *int
+	gid *int
+}
+
+func (s *CgroupStarter) WithUID(uid int) *CgroupStarter {
+	s.uid = &uid
+	return s
+}
+
+func (s *CgroupStarter) WithGID(gid int) *CgroupStarter {
+	s.gid = &gid
+	return s
 }
 
 func (s *CgroupStarter) Start() error {
@@ -161,7 +172,7 @@ func (s *CgroupStarter) createAndChownCgroup(logger lager.Logger, mountPath, sub
 		return err
 	}
 
-	return s.Chowner.RecursiveChown(gardenCgroupPath)
+	return s.Chowner.RecursiveChown(gardenCgroupPath, s.uid, s.gid)
 }
 
 func procSelfSubsystems(m map[string]group) []string {

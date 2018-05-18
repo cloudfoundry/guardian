@@ -8,20 +8,17 @@ import (
 
 //go:generate counterfeiter . Chowner
 type Chowner interface {
-	RecursiveChown(path string) error
+	RecursiveChown(path string, uid, gid *int) error
 }
 
-type OSChowner struct {
-	UID *int
-	GID *int
-}
+type OSChowner struct{}
 
-func (c *OSChowner) RecursiveChown(path string) error {
-	if (c.UID == nil) != (c.GID == nil) {
+func (c *OSChowner) RecursiveChown(path string, uid, gid *int) error {
+	if (uid == nil) != (gid == nil) {
 		return errors.New("either both UID and GID must be nil, or neither can be nil")
 	}
 
-	if c.UID == nil || c.GID == nil {
+	if uid == nil || gid == nil {
 		return nil
 	}
 
@@ -30,6 +27,6 @@ func (c *OSChowner) RecursiveChown(path string) error {
 			return statErr
 		}
 
-		return os.Chown(name, *c.UID, *c.GID)
+		return os.Chown(name, *uid, *gid)
 	})
 }

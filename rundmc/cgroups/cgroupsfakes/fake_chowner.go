@@ -8,10 +8,12 @@ import (
 )
 
 type FakeChowner struct {
-	RecursiveChownStub        func(path string) error
+	RecursiveChownStub        func(path string, uid, gid *int) error
 	recursiveChownMutex       sync.RWMutex
 	recursiveChownArgsForCall []struct {
 		path string
+		uid  *int
+		gid  *int
 	}
 	recursiveChownReturns struct {
 		result1 error
@@ -23,16 +25,18 @@ type FakeChowner struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeChowner) RecursiveChown(path string) error {
+func (fake *FakeChowner) RecursiveChown(path string, uid *int, gid *int) error {
 	fake.recursiveChownMutex.Lock()
 	ret, specificReturn := fake.recursiveChownReturnsOnCall[len(fake.recursiveChownArgsForCall)]
 	fake.recursiveChownArgsForCall = append(fake.recursiveChownArgsForCall, struct {
 		path string
-	}{path})
-	fake.recordInvocation("RecursiveChown", []interface{}{path})
+		uid  *int
+		gid  *int
+	}{path, uid, gid})
+	fake.recordInvocation("RecursiveChown", []interface{}{path, uid, gid})
 	fake.recursiveChownMutex.Unlock()
 	if fake.RecursiveChownStub != nil {
-		return fake.RecursiveChownStub(path)
+		return fake.RecursiveChownStub(path, uid, gid)
 	}
 	if specificReturn {
 		return ret.result1
@@ -46,10 +50,10 @@ func (fake *FakeChowner) RecursiveChownCallCount() int {
 	return len(fake.recursiveChownArgsForCall)
 }
 
-func (fake *FakeChowner) RecursiveChownArgsForCall(i int) string {
+func (fake *FakeChowner) RecursiveChownArgsForCall(i int) (string, *int, *int) {
 	fake.recursiveChownMutex.RLock()
 	defer fake.recursiveChownMutex.RUnlock()
-	return fake.recursiveChownArgsForCall[i].path
+	return fake.recursiveChownArgsForCall[i].path, fake.recursiveChownArgsForCall[i].uid, fake.recursiveChownArgsForCall[i].gid
 }
 
 func (fake *FakeChowner) RecursiveChownReturns(result1 error) {

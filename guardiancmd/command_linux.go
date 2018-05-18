@@ -114,14 +114,24 @@ func (f *LinuxFactory) WireExecRunner(runMode, runcRoot string) runrunc.ExecRunn
 }
 
 func (f *LinuxFactory) WireCgroupsStarter(logger lager.Logger) gardener.Starter {
-	return createCgroupsStarter(logger, f.config.Server.Tag, "", &cgroups.OSChowner{}, rundmc.IsMountPoint)
+	return createCgroupsStarter(logger, f.config.Server.Tag, "", rundmc.IsMountPoint)
 }
 
 func (cmd *SetupCommand) WireCgroupsStarter(logger lager.Logger) gardener.Starter {
-	return createCgroupsStarter(logger, cmd.Tag, cmd.CgroupRoot, &cgroups.OSChowner{UID: cmd.RootlessUID, GID: cmd.RootlessGID}, rundmc.IsMountPoint)
+	starter := createCgroupsStarter(logger, cmd.Tag, cmd.CgroupRoot, rundmc.IsMountPoint)
+
+	if cmd.RootlessUID != nil {
+		starter = starter.WithUID(*cmd.RootlessUID)
+	}
+
+	if cmd.RootlessGID != nil {
+		starter = starter.WithGID(*cmd.RootlessGID)
+	}
+
+	return starter
 }
 
-func createCgroupsStarter(logger lager.Logger, tag, cgroupRoot string, chowner cgroups.Chowner, mountPointChecker rundmc.MountPointChecker) gardener.Starter {
+func createCgroupsStarter(logger lager.Logger, tag, cgroupRoot string, mountPointChecker rundmc.MountPointChecker) *cgroups.CgroupStarter {
 	cgroupsMountpoint := cgroups.CgroupRoot
 	gardenCgroup := cgroups.GardenCgroup
 	if tag != "" {
@@ -132,7 +142,7 @@ func createCgroupsStarter(logger lager.Logger, tag, cgroupRoot string, chowner c
 	}
 
 	return cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"),
-		cgroupsMountpoint, gardenCgroup, allowedDevices, chowner, mountPointChecker)
+		cgroupsMountpoint, gardenCgroup, allowedDevices, mountPointChecker)
 }
 
 func (f *LinuxFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {

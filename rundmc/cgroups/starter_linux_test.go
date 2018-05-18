@@ -78,10 +78,10 @@ var _ = Describe("CgroupStarter", func() {
 				Minor:  int64ptr(200),
 				Access: "rwm",
 			}},
-			chowner,
 			mountPointChecker.Spy,
 		)
 		starter.FS = fakeFS
+		starter.Chowner = chowner
 	})
 
 	AfterEach(func() {
@@ -198,7 +198,8 @@ var _ = Describe("CgroupStarter", func() {
 			starter.Start()
 			allChowns := []string{}
 			for i := 0; i < chowner.RecursiveChownCallCount(); i++ {
-				allChowns = append(allChowns, chowner.RecursiveChownArgsForCall(i))
+				path, _, _ := chowner.RecursiveChownArgsForCall(i)
+				allChowns = append(allChowns, path)
 			}
 
 			for _, subsystem := range []string{"devices", "cpu", "memory"} {
@@ -240,7 +241,8 @@ var _ = Describe("CgroupStarter", func() {
 				starter.Start()
 				allChowns := []string{}
 				for i := 0; i < chowner.RecursiveChownCallCount(); i++ {
-					allChowns = append(allChowns, chowner.RecursiveChownArgsForCall(i))
+					path, _, _ := chowner.RecursiveChownArgsForCall(i)
+					allChowns = append(allChowns, path)
 				}
 
 				for _, subsystem := range []string{"memory"} {
