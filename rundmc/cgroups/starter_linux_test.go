@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
 )
 
 var _ = Describe("CgroupStarter", func() {
@@ -316,6 +317,16 @@ var _ = Describe("CgroupStarter", func() {
 					}
 					Expect(mountArgs).To(ContainElement(newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup", "systemd"), "cgroup", 0, "name=systemd")))
 				})
+			})
+		})
+
+		Context("when a cgroup is already mounted", func() {
+			BeforeEach(func() {
+				fakeFS.MountReturns(unix.EBUSY)
+			})
+
+			It("succeeds", func() {
+				Expect(starter.Start()).To(Succeed())
 			})
 		})
 	})

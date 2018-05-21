@@ -325,13 +325,8 @@ func (s *CgroupStarter) idempotentCgroupMount(logger lager.Logger, cgroupPath, s
 	switch err {
 	case nil:
 	case unix.EBUSY:
-		mountPoint, checkErr := s.MountPointChecker.IsMountPoint(cgroupPath)
-		if checkErr != nil {
-			return checkErr
-		}
-		if !mountPoint {
-			return fmt.Errorf("mounting subsystem '%s' in '%s': %s", subsystem, cgroupPath, err)
-		}
+		// Attempting a mount over an exising mount of type cgroup and the same
+		// source and target results in EBUSY errno
 		logger.Info("subsystem-already-mounted")
 	default:
 		return fmt.Errorf("mounting subsystem '%s' in '%s': %s", subsystem, cgroupPath, err)
