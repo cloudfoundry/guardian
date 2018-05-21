@@ -128,7 +128,7 @@ var _ = Describe("CgroupStarter", func() {
 		It("mounts it", func() {
 			Expect(starter.Start()).To(Succeed())
 
-			Expect(fakeFS.MountCallCount()).To(Equal(1))
+			Expect(fakeFS.MountCallCount()).To(BeNumerically(">", 0))
 			expected := newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup"), "tmpfs", 0, "uid=0,gid=0,mode=0755")
 			Expect(newMountArgs(fakeFS.MountArgsForCall(0))).To(Equal(expected))
 		})
@@ -137,7 +137,9 @@ var _ = Describe("CgroupStarter", func() {
 	Context("when the cgroup path exists", func() {
 		It("does not mount it again", func() {
 			Expect(starter.Start()).To(Succeed())
-			Expect(fakeFS.MountCallCount()).To(Equal(0))
+			for i := 0; i < fakeFS.MountCallCount(); i++ {
+				Expect(newMountArgs(fakeFS.MountArgsForCall(i)).target).NotTo(Equal(filepath.Join(tmpDir, "cgroup")))
+			}
 		})
 	})
 
@@ -173,16 +175,19 @@ var _ = Describe("CgroupStarter", func() {
 		It("mounts the hierarchies which are not already mounted", func() {
 			Expect(starter.Start()).To(Succeed())
 
-			Expect(fakeFS.MountCallCount()).To(Equal(3))
+			Expect(fakeFS.MountCallCount()).To(Equal(4))
 
 			expected := newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup", "devices"), "cgroup", 0, "devices")
 			Expect(newMountArgs(fakeFS.MountArgsForCall(0))).To(Equal(expected))
 
-			expected = newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup", "cpu"), "cgroup", 0, "cpu,cpuacct")
+			expected = newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup", "memory"), "cgroup", 0, "memory")
 			Expect(newMountArgs(fakeFS.MountArgsForCall(1))).To(Equal(expected))
 
-			expected = newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup", "cpuacct"), "cgroup", 0, "cpu,cpuacct")
+			expected = newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup", "cpu"), "cgroup", 0, "cpu,cpuacct")
 			Expect(newMountArgs(fakeFS.MountArgsForCall(2))).To(Equal(expected))
+
+			expected = newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup", "cpuacct"), "cgroup", 0, "cpu,cpuacct")
+			Expect(newMountArgs(fakeFS.MountArgsForCall(3))).To(Equal(expected))
 		})
 
 		It("creates needed directories", func() {
@@ -304,9 +309,12 @@ var _ = Describe("CgroupStarter", func() {
 
 				It("mounts it with name option as its own subsystem", func() {
 					Expect(starter.Start()).To(Succeed())
-					Expect(fakeFS.MountCallCount()).To(Equal(1))
-					expected := newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup", "systemd"), "cgroup", 0, "name=systemd")
-					Expect(newMountArgs(fakeFS.MountArgsForCall(0))).To(Equal(expected))
+					Expect(fakeFS.MountCallCount()).To(BeNumerically(">", 0))
+					var mountArgs []mountArgs
+					for i := 0; i < fakeFS.MountCallCount(); i++ {
+						mountArgs = append(mountArgs, newMountArgs(fakeFS.MountArgsForCall(i)))
+					}
+					Expect(mountArgs).To(ContainElement(newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup", "systemd"), "cgroup", 0, "name=systemd")))
 				})
 			})
 		})

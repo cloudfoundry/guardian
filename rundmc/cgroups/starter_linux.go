@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
 
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups/fs"
@@ -320,16 +321,20 @@ func (s *CgroupStarter) idempotentCgroupMount(logger lager.Logger, cgroupPath, s
 		return fmt.Errorf("mkdir '%s': %s", cgroupPath, err)
 	}
 
-	mountPoint, err := s.MountPointChecker.IsMountPoint(cgroupPath)
-	if err != nil {
-		return err
-	}
-	if !mountPoint {
-		if err := s.FS.Mount("cgroup", cgroupPath, "cgroup", uintptr(0), subsystem); err != nil {
+	err := s.FS.Mount("cgroup", cgroupPath, "cgroup", uintptr(0), subsystem)
+	switch err {
+	case nil:
+	case unix.EBUSY:
+		mountPoint, checkErr := s.MountPointChecker.IsMountPoint(cgroupPath)
+		if checkErr != nil {
+			return checkErr
+		}
+		if !mountPoint {
 			return fmt.Errorf("mounting subsystem '%s' in '%s': %s", subsystem, cgroupPath, err)
 		}
-	} else {
 		logger.Info("subsystem-already-mounted")
+	default:
+		return fmt.Errorf("mounting subsystem '%s' in '%s': %s", subsystem, cgroupPath, err)
 	}
 
 	logger.Info("finished")
