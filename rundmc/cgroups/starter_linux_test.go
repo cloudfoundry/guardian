@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
-	fakes "code.cloudfoundry.org/guardian/rundmc/cgroups/cgroupsfakes"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups/fs/fsfakes"
 	"code.cloudfoundry.org/guardian/rundmc/rundmcfakes"
 	"code.cloudfoundry.org/lager"
@@ -23,7 +22,6 @@ var _ = Describe("CgroupStarter", func() {
 	var (
 		starter                   *cgroups.CgroupStarter
 		logger                    lager.Logger
-		chowner                   *fakes.FakeChowner
 		mountPointChecker         *rundmcfakes.FakeMountPointChecker
 		fakeFS                    *fsfakes.FakeFS
 		procCgroupsContents       string
@@ -43,7 +41,6 @@ var _ = Describe("CgroupStarter", func() {
 			"devices\t1\t1\t1\n"
 
 		logger = lagertest.NewTestLogger("test")
-		chowner = new(fakes.FakeChowner)
 		fakeFS = new(fsfakes.FakeFS)
 		mountPointChecker = new(rundmcfakes.FakeMountPointChecker)
 		cgroupPathMounted = true
@@ -81,7 +78,6 @@ var _ = Describe("CgroupStarter", func() {
 			mountPointChecker.Spy,
 		)
 		starter.FS = fakeFS
-		starter.Chowner = chowner
 	})
 
 	AfterEach(func() {
@@ -195,11 +191,13 @@ var _ = Describe("CgroupStarter", func() {
 		})
 
 		It("creates subdirectories owned by the specified user and group", func() {
-			starter.Start()
+			Expect(starter.WithUID(123).WithGID(987).Start()).To(Succeed())
 			allChowns := []string{}
-			for i := 0; i < chowner.RecursiveChownCallCount(); i++ {
-				path, _, _ := chowner.RecursiveChownArgsForCall(i)
+			for i := 0; i < fakeFS.ChownCallCount(); i++ {
+				path, uid, gid := fakeFS.ChownArgsForCall(i)
 				allChowns = append(allChowns, path)
+				Expect(uid).To(Equal(123))
+				Expect(gid).To(Equal(987))
 			}
 
 			for _, subsystem := range []string{"devices", "cpu", "memory"} {
@@ -238,10 +236,12 @@ var _ = Describe("CgroupStarter", func() {
 			})
 
 			It("creates subdirectories owned by the specified user and group", func() {
-				starter.Start()
+				Expect(starter.WithUID(123).WithGID(987).Start()).To(Succeed())
 				allChowns := []string{}
-				for i := 0; i < chowner.RecursiveChownCallCount(); i++ {
-					path, _, _ := chowner.RecursiveChownArgsForCall(i)
+				for i := 0; i < fakeFS.ChownCallCount(); i++ {
+					path, uid, gid := fakeFS.ChownArgsForCall(i)
+					Expect(uid).To(Equal(123))
+					Expect(gid).To(Equal(987))
 					allChowns = append(allChowns, path)
 				}
 

@@ -2,6 +2,7 @@ package cgroups
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -47,7 +48,6 @@ func NewStarter(
 		ProcSelfCgroups:   procSelfCgroupReader,
 		AllowedDevices:    allowedDevices,
 		Logger:            logger,
-		Chowner:           new(OSChowner),
 		MountPointChecker: mountPointChecker,
 		FS:                fs.Functions(),
 	}
@@ -61,7 +61,6 @@ type CgroupStarter struct {
 	ProcSelfCgroups io.ReadCloser
 
 	Logger            lager.Logger
-	Chowner           Chowner
 	MountPointChecker rundmc.MountPointChecker
 	FS                fs.FS
 
@@ -172,7 +171,7 @@ func (s *CgroupStarter) createAndChownCgroup(logger lager.Logger, mountPath, sub
 		return err
 	}
 
-	return s.Chowner.RecursiveChown(gardenCgroupPath, s.uid, s.gid)
+	return s.recursiveChown(gardenCgroupPath)
 }
 
 func procSelfSubsystems(m map[string]group) []string {
@@ -336,4 +335,22 @@ func (s *CgroupStarter) idempotentCgroupMount(logger lager.Logger, cgroupPath, s
 	logger.Info("finished")
 
 	return nil
+}
+
+func (s *CgroupStarter) recursiveChown(path string) error {
+	if (s.uid == nil) != (s.gid == nil) {
+		return errors.New("either both UID and GID must be nil, or neither can be nil")
+	}
+
+	if s.uid == nil || s.gid == nil {
+		return nil
+	}
+
+	return filepath.Walk(path, func(name string, info os.FileInfo, statErr error) error {
+		if statErr != nil {
+			return statErr
+		}
+
+		return s.FS.Chown(name, *s.uid, *s.gid)
+	})
 }
