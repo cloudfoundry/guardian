@@ -203,6 +203,49 @@ var _ = Describe("Runcontainerd", func() {
 		})
 	})
 
+	Describe("Attach", func() {
+		var (
+			io      garden.ProcessIO
+			process *gardenfakes.FakeProcess
+
+			attachProcess garden.Process
+			attachError   error
+		)
+
+		BeforeEach(func() {
+			io = garden.ProcessIO{}
+			process = new(gardenfakes.FakeProcess)
+			execer.AttachReturns(process, nil)
+		})
+
+		JustBeforeEach(func() {
+			attachProcess, attachError = runContainerd.Attach(logger, "bundle-path", "some-id", "some-proc-id", io)
+		})
+
+		It("delegates to execer", func() {
+			Expect(attachError).NotTo(HaveOccurred())
+			Expect(attachProcess).To(BeIdenticalTo(process))
+
+			Expect(execer.AttachCallCount()).To(Equal(1))
+			actualLogger, actualBundlePath, actualContainerID, actualProcessID, actualIO := execer.AttachArgsForCall(0)
+			Expect(actualLogger).To(Equal(logger))
+			Expect(actualBundlePath).To(Equal("bundle-path"))
+			Expect(actualContainerID).To(Equal("some-id"))
+			Expect(actualProcessID).To(Equal("some-proc-id"))
+			Expect(actualIO).To(Equal(io))
+		})
+
+		Context("when the execer fails", func() {
+			BeforeEach(func() {
+				execer.AttachReturns(nil, errors.New("execer-failed"))
+			})
+
+			It("returns the execer error", func() {
+				Expect(attachError).To(MatchError("execer-failed"))
+			})
+		})
+	})
+
 	Describe("Stats", func() {
 		var (
 			metrics    gardener.ActualContainerMetrics

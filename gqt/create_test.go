@@ -16,7 +16,6 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
-	"code.cloudfoundry.org/guardian/gqt/containerdrunner"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 
 	. "code.cloudfoundry.org/guardian/matchers"
@@ -607,41 +606,6 @@ var _ = Describe("Creating a Container", func() {
 				_, err := client.Create(garden.ContainerSpec{Privileged: true})
 				Expect(err).To(MatchError("privileged container creation is disabled"))
 			})
-		})
-	})
-
-	Context("when the containerd socket has been passed", func() {
-		var (
-			containerdSession *gexec.Session
-		)
-
-		BeforeEach(func() {
-			runDir, err := ioutil.TempDir("", "")
-			Expect(err).NotTo(HaveOccurred())
-			containerdConfig := containerdrunner.ContainerdConfig(runDir)
-			containerdSession = containerdrunner.NewSession(runDir, containerdBinaries, containerdConfig)
-
-			config.ContainerdSocket = containerdConfig.GRPC.Address
-		})
-
-		AfterEach(func() {
-			Expect(client.Destroy(container.Handle())).To(Succeed())
-			Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
-		})
-
-		JustBeforeEach(func() {
-			var err error
-			container, err = client.Create(garden.ContainerSpec{})
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("creates a containerd container with running init task", func() {
-			lookupCommand := exec.Command(containerdBinaries.Ctr, "--address", config.ContainerdSocket, "--namespace", "garden", "tasks", "ps", container.Handle())
-
-			session, err := gexec.Start(lookupCommand, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(session).Should(gbytes.Say(container.Handle()))
-			Eventually(session).Should(gexec.Exit(0))
 		})
 	})
 })

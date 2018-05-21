@@ -28,6 +28,7 @@ type BundleLoader interface {
 //go:generate counterfeiter . Execer
 type Execer interface {
 	Exec(log lager.Logger, bundlePath string, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	Attach(log lager.Logger, bundlePath string, id string, processId string, io garden.ProcessIO) (garden.Process, error)
 }
 
 //go:generate counterfeiter . Statser
@@ -65,7 +66,7 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, id string, spec garde
 }
 
 func (r *RunContainerd) Attach(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error) {
-	return nil, fmt.Errorf("Attach is not implemented yet")
+	return r.execer.Attach(log, bundlePath, id, processId, io)
 }
 
 func (r *RunContainerd) Kill(log lager.Logger, bundlePath string) error {

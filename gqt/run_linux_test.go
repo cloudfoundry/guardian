@@ -11,7 +11,6 @@ import (
 	"strconv"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/guardian/gqt/containerdrunner"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -541,42 +540,6 @@ var _ = Describe("Run", func() {
 					Expect(runErr).To(BeAssignableToTypeOf(garden.ExecutableNotFoundError{}))
 				})
 			})
-		})
-	})
-
-	Context("when the containerd socket has been passed", func() {
-		var (
-			containerdSession *gexec.Session
-			container         garden.Container
-		)
-
-		BeforeEach(func() {
-			runDir, err := ioutil.TempDir("", "")
-			Expect(err).NotTo(HaveOccurred())
-			containerdConfig := containerdrunner.ContainerdConfig(runDir)
-			containerdSession = containerdrunner.NewSession(runDir, containerdBinaries, containerdConfig)
-
-			config.ContainerdSocket = containerdConfig.GRPC.Address
-			client = runner.Start(config)
-
-			container, err = client.Create(garden.ContainerSpec{})
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		AfterEach(func() {
-			Expect(client.Destroy(container.Handle())).To(Succeed())
-			Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
-		})
-
-		It("runs a process", func() {
-			process, err := container.Run(garden.ProcessSpec{
-				Path: "/bin/sh",
-				Args: []string{"-c", "exit 13"},
-			}, garden.ProcessIO{})
-			Expect(err).NotTo(HaveOccurred())
-			statusCode, err := process.Wait()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(statusCode).To(Equal(13))
 		})
 	})
 })
