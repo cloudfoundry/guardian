@@ -30,7 +30,8 @@ var LimitCommand = cli.Command{
 
 	Action: func(ctx *cli.Context) error {
 		logger := lager.NewLogger("tardis")
-		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
+		logger.RegisterSink(lager.NewWriterSink(os.Stdout, lager.DEBUG))
+		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.ERROR))
 		logger.Info("starting")
 		defer logger.Info("ending")
 
