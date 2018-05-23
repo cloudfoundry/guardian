@@ -52,54 +52,55 @@ type runnerBinaries struct {
 
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
-
-	SynchronizedBeforeSuite(func() []byte {
-		return jsonMarshal(runnerBinaries{
-			Garden:     getGardenBinaries(),
-			Containerd: getContainerdBinaries(),
-		})
-	}, func(data []byte) {
-		bins := new(runnerBinaries)
-		jsonUnmarshal(data, bins)
-		binaries = bins.Garden
-		containerdBinaries = bins.Containerd
-		defaultTestRootFS = os.Getenv("GARDEN_TEST_ROOTFS")
-	})
-
-	SynchronizedAfterSuite(func() {}, func() {
-		gexec.CleanupBuildArtifacts()
-	})
-
-	BeforeEach(func() {
-		if defaultTestRootFS == "" {
-			Skip("No Garden RootFS")
-		}
-
-		// chmod all the artifacts
-		Expect(os.Chmod(filepath.Join(binaries.Gdn, "..", ".."), 0755)).To(Succeed())
-		filepath.Walk(filepath.Join(binaries.Gdn, "..", ".."), func(path string, info os.FileInfo, err error) error {
-			Expect(err).NotTo(HaveOccurred())
-			Expect(os.Chmod(path, 0755)).To(Succeed())
-			return nil
-		})
-
-		config = defaultConfig()
-		if runtime.GOOS == "linux" {
-			initGrootStore(config.ImagePluginBin, config.StorePath, []string{"0:4294967294:1", "1:65536:4294901758"})
-			initGrootStore(config.PrivilegedImagePluginBin, config.PrivilegedStorePath, nil)
-		}
-	})
-
-	AfterEach(func() {
-		// Windows worker is not containerised and therefore the test needs to take care to delete the temporary folder
-		if runtime.GOOS == "windows" {
-			Expect(os.RemoveAll(config.TmpDir)).To(Succeed())
-		}
-	})
-
 	SetDefaultEventuallyTimeout(5 * time.Second)
 	RunSpecs(t, "GQT Suite")
 }
+
+var _ = SynchronizedBeforeSuite(func() []byte {
+	binaries := runnerBinaries{
+		Garden:     getGardenBinaries(),
+		Containerd: getContainerdBinaries(),
+	}
+
+	// chmod all the artifacts
+	Expect(os.Chmod(filepath.Join(binaries.Garden.Gdn, "..", ".."), 0755)).To(Succeed())
+	filepath.Walk(filepath.Join(binaries.Garden.Gdn, "..", ".."), func(path string, info os.FileInfo, err error) error {
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chmod(path, 0755)).To(Succeed())
+		return nil
+	})
+
+	return jsonMarshal(binaries)
+}, func(data []byte) {
+	bins := new(runnerBinaries)
+	jsonUnmarshal(data, bins)
+	binaries = bins.Garden
+	containerdBinaries = bins.Containerd
+	defaultTestRootFS = os.Getenv("GARDEN_TEST_ROOTFS")
+})
+
+var _ = SynchronizedAfterSuite(func() {}, func() {
+	gexec.CleanupBuildArtifacts()
+})
+
+var _ = BeforeEach(func() {
+	if defaultTestRootFS == "" {
+		Skip("No Garden RootFS")
+	}
+
+	config = defaultConfig()
+	if runtime.GOOS == "linux" {
+		initGrootStore(config.ImagePluginBin, config.StorePath, []string{"0:4294967294:1", "1:65536:4294901758"})
+		initGrootStore(config.PrivilegedImagePluginBin, config.PrivilegedStorePath, nil)
+	}
+})
+
+var _ = AfterEach(func() {
+	// Windows worker is not containerised and therefore the test needs to take care to delete the temporary folder
+	if runtime.GOOS == "windows" {
+		Expect(os.RemoveAll(config.TmpDir)).To(Succeed())
+	}
+})
 
 func getGardenBinaries() runner.Binaries {
 	gardenBinaries := runner.Binaries{
