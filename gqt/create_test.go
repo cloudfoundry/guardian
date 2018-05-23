@@ -552,7 +552,7 @@ var _ = Describe("Creating a Container", func() {
 
 	Context("create more containers than the maxkeyring limit", func() {
 		BeforeEach(func() {
-			Expect(ioutil.WriteFile("/proc/sys/kernel/keys/maxkeys", []byte("10"), 0644)).To(Succeed())
+			Expect(ioutil.WriteFile("/proc/sys/kernel/keys/maxkeys", []byte("1"), 0644)).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -560,13 +560,13 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		It("works", func() {
-			containers := make([]garden.Container, 11)
-			for i := 0; i < 11; i++ {
+			containers := make([]garden.Container, 2)
+			for i := 0; i < 2; i++ {
 				c, err := client.Create(garden.ContainerSpec{})
 				Expect(err).ToNot(HaveOccurred())
 				containers[i] = c
 			}
-			for i := 0; i < 11; i++ {
+			for i := 0; i < 2; i++ {
 				client.Destroy(containers[i].Handle())
 			}
 		})
