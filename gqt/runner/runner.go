@@ -209,7 +209,6 @@ func DefaultGdnRunnerConfig(binaries Binaries) GdnRunnerConfig {
 	var err error
 	config.TmpDir, err = ioutil.TempDir("", fmt.Sprintf("test-garden-%s-", config.Tag))
 	Expect(err).NotTo(HaveOccurred())
-	Expect(os.MkdirAll(config.TmpDir, 0777)).To(Succeed())
 	Expect(os.Chmod(config.TmpDir, 0777)).To(Succeed())
 
 	graphDir := filepath.Join(graphDirBase, filepath.Base(config.TmpDir))
