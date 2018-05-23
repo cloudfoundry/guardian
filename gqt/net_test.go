@@ -27,6 +27,8 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
+var DEFAULT_RETRIES = 5
+
 var _ = Describe("Networking", func() {
 	var (
 		client    *runner.RunningGarden
@@ -288,7 +290,7 @@ var _ = Describe("Networking", func() {
 		})
 
 		It("should access internet", func() {
-			Expect(checkConnection(otherContainer, exampleDotCom.String(), 80)).To(Succeed())
+			Expect(checkConnectionWithRetries(otherContainer, exampleDotCom.String(), 80, DEFAULT_RETRIES)).To(Succeed())
 		})
 	})
 
@@ -376,7 +378,7 @@ var _ = Describe("Networking", func() {
 		})
 
 		It("should allow outbound traffic to IPs outside of the range", func() {
-			Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
+			Expect(checkConnectionWithRetries(container, "8.8.4.4", 53, DEFAULT_RETRIES)).To(Succeed())
 		})
 
 		Context("when multiple --deny-networks are passed", func() {
@@ -415,7 +417,7 @@ var _ = Describe("Networking", func() {
 
 			It("should access internet", func() {
 				Expect(container.NetOut(rule)).To(Succeed())
-				Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+				Expect(checkConnectionWithRetries(container, "8.8.8.8", 53, DEFAULT_RETRIES)).To(Succeed())
 			})
 
 			Context("when the dropped packets should get logged", func() {
@@ -425,7 +427,7 @@ var _ = Describe("Networking", func() {
 
 				It("should access internet", func() {
 					Expect(container.NetOut(rule)).To(Succeed())
-					Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+					Expect(checkConnectionWithRetries(container, "8.8.8.8", 53, DEFAULT_RETRIES)).To(Succeed())
 				})
 			})
 		})
@@ -463,8 +465,8 @@ var _ = Describe("Networking", func() {
 			It("should access internet", func() {
 				Expect(container.BulkNetOut([]garden.NetOutRule{rule1, rule2})).To(Succeed())
 
-				Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
-				Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
+				Expect(checkConnectionWithRetries(container, "8.8.8.8", 53, DEFAULT_RETRIES)).To(Succeed())
+				Expect(checkConnectionWithRetries(container, "8.8.4.4", 53, DEFAULT_RETRIES)).To(Succeed())
 			})
 
 			Context("when the dropped packets should get logged", func() {
@@ -475,8 +477,8 @@ var _ = Describe("Networking", func() {
 
 				It("should access internet", func() {
 					Expect(container.BulkNetOut([]garden.NetOutRule{rule1, rule2})).To(Succeed())
-					Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
-					Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
+					Expect(checkConnectionWithRetries(container, "8.8.8.8", 53, DEFAULT_RETRIES)).To(Succeed())
+					Expect(checkConnectionWithRetries(container, "8.8.4.4", 53, DEFAULT_RETRIES)).To(Succeed())
 				})
 			})
 
@@ -1084,31 +1086,35 @@ func containerIP(container garden.Container) string {
 	return properties[gardener.ContainerIPKey]
 }
 
-func checkConnection(container garden.Container, ip string, port int) error {
+func checkConnectionWithRetries(container garden.Container, ip string, port int, retries int) error {
 	checkConn := func() error {
-		process, err := container.Run(garden.ProcessSpec{
-			User: "alice",
-			Path: "sh",
-			Args: []string{"-c", fmt.Sprintf("echo hello | nc -w5 %s %d", ip, port)},
-		}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
-		if err != nil {
-			return err
-		}
-
-		exitCode, err := process.Wait()
-		if err != nil {
-			return err
-		}
-
-		if exitCode == 0 {
-			return nil
-		} else {
-			return fmt.Errorf("Request failed. Process exited with code %d", exitCode)
-		}
+		return checkConnection(container, ip, port)
 	}
 
-	backoffRetrier := retrier.New(retrier.ExponentialBackoff(5, time.Second), nil)
+	backoffRetrier := retrier.New(retrier.ExponentialBackoff(retries, time.Second), nil)
 	return backoffRetrier.Run(checkConn)
+}
+
+func checkConnection(container garden.Container, ip string, port int) error {
+	process, err := container.Run(garden.ProcessSpec{
+		User: "alice",
+		Path: "sh",
+		Args: []string{"-c", fmt.Sprintf("echo hello | nc -w 3 %s %d", ip, port)},
+	}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
+	if err != nil {
+		return err
+	}
+
+	exitCode, err := process.Wait()
+	if err != nil {
+		return err
+	}
+
+	if exitCode == 0 {
+		return nil
+	} else {
+		return fmt.Errorf("Request failed. Process exited with code %d", exitCode)
+	}
 }
 
 func ipAddress(subnet string, index int) string {

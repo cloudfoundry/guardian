@@ -272,7 +272,7 @@ var _ = Describe("Surviving Restarts", func() {
 				})
 
 				It("can still be able to access the internet", func() {
-					Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+					Expect(checkConnectionWithRetries(container, "8.8.8.8", 53, DEFAULT_RETRIES)).To(Succeed())
 				})
 
 				It("can still be accessible from the outside", func() {
@@ -326,7 +326,7 @@ var _ = Describe("Surviving Restarts", func() {
 					})
 
 					It("can still be able to access the allowed IPs", func() {
-						Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+						Expect(checkConnectionWithRetries(container, "8.8.8.8", 53, DEFAULT_RETRIES)).To(Succeed())
 					})
 				})
 
@@ -337,8 +337,8 @@ var _ = Describe("Surviving Restarts", func() {
 					})
 
 					It("is able to access the internet", func() {
-						Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
-						Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
+						Expect(checkConnectionWithRetries(container, "8.8.8.8", 53, DEFAULT_RETRIES)).To(Succeed())
+						Expect(checkConnectionWithRetries(container, "8.8.4.4", 53, DEFAULT_RETRIES)).To(Succeed())
 					})
 				})
 			})

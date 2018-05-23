@@ -342,8 +342,8 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		It("provides connectivity to the addresses provided", func() {
-			Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
-			Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
+			Expect(checkConnectionWithRetries(container, "8.8.8.8", 53, DEFAULT_RETRIES)).To(Succeed())
+			Expect(checkConnectionWithRetries(container, "8.8.4.4", 53, DEFAULT_RETRIES)).To(Succeed())
 		})
 	})
 
