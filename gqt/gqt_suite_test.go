@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/guardian/gqt/containerdrunner"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 	"code.cloudfoundry.org/guardian/pkg/locksmith"
@@ -30,10 +29,9 @@ var (
 	unprivilegedUID = uint32(5000)
 	unprivilegedGID = uint32(5000)
 
-	config             runner.GdnRunnerConfig
-	binaries           runner.Binaries
-	containerdBinaries containerdrunner.Binaries
-	defaultTestRootFS  string
+	config            runner.GdnRunnerConfig
+	binaries          runner.Binaries
+	defaultTestRootFS string
 )
 
 func goCompile(mainPackagePath string, buildArgs ...string) string {
@@ -46,8 +44,7 @@ func goCompile(mainPackagePath string, buildArgs ...string) string {
 }
 
 type runnerBinaries struct {
-	Garden     runner.Binaries
-	Containerd containerdrunner.Binaries
+	Garden runner.Binaries
 }
 
 func TestGqt(t *testing.T) {
@@ -58,8 +55,7 @@ func TestGqt(t *testing.T) {
 
 var _ = SynchronizedBeforeSuite(func() []byte {
 	binaries := runnerBinaries{
-		Garden:     getGardenBinaries(),
-		Containerd: getContainerdBinaries(),
+		Garden: getGardenBinaries(),
 	}
 
 	// chmod all the artifacts
@@ -75,7 +71,6 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	bins := new(runnerBinaries)
 	jsonUnmarshal(data, bins)
 	binaries = bins.Garden
-	containerdBinaries = bins.Containerd
 	defaultTestRootFS = os.Getenv("GARDEN_TEST_ROOTFS")
 })
 
@@ -133,16 +128,6 @@ func getGardenBinaries() runner.Binaries {
 	}
 
 	return gardenBinaries
-}
-
-func getContainerdBinaries() containerdrunner.Binaries {
-	containerdBin := makeContainerd()
-
-	return containerdrunner.Binaries{
-		Dir:        containerdBin,
-		Containerd: filepath.Join(containerdBin, "containerd"),
-		Ctr:        filepath.Join(containerdBin, "ctr"),
-	}
 }
 
 func initGrootStore(grootBin, storePath string, idMappings []string) {
@@ -333,17 +318,6 @@ func mustGetEnv(env string) string {
 		return value
 	}
 	panic(fmt.Sprintf("%s env must be non-empty", env))
-}
-
-func makeContainerd() string {
-	if runtime.GOOS == "windows" {
-		return ""
-	}
-	containerdPath := filepath.Join(mustGetEnv("GOPATH"), filepath.FromSlash("src/github.com/containerd/containerd"))
-	makeContainerdCommand := exec.Command("make")
-	makeContainerdCommand.Env = append(os.Environ(), "BUILDTAGS=no_btrfs")
-	runCommandInDir(makeContainerdCommand, containerdPath)
-	return filepath.Join(containerdPath, "bin")
 }
 
 func jsonMarshal(v interface{}) []byte {

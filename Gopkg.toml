@@ -1,0 +1,183 @@
+# Gopkg.toml example
+#
+# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# for detailed Gopkg.toml documentation.
+#
+# required = ["github.com/user/thing/cmd/thing"]
+# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
+#
+# [[constraint]]
+#   name = "github.com/user/project"
+#   version = "1.0.0"
+#
+# [[constraint]]
+#   name = "github.com/user/project2"
+#   branch = "dev"
+#   source = "github.com/myfork/project2"
+#
+# [[override]]
+#   name = "github.com/x/y"
+#   version = "2.4.0"
+#
+# [prune]
+#   non-go = false
+#   go-tests = true
+#   unused-packages = true
+
+ignored = ["code.cloudfoundry.org/garden-shed*"]
+
+[[constraint]]
+  revision = "e135af3d5a2a2c5a80d3c9b366669ac8ed18953b"
+  name = "code.cloudfoundry.org/archiver"
+
+[[constraint]]
+  revision = "02e53af36e6c978af692887ed449b74026d76fec"
+  name = "code.cloudfoundry.org/clock"
+
+[[constraint]]
+  revision = "501fd662150bcea5a42a9b5c1c283209720788c3"
+  name = "code.cloudfoundry.org/commandrunner"
+
+[[constraint]]
+  revision = "70715da12ee9e99858f2ba1013334776c73b6922"
+  name = "code.cloudfoundry.org/debugserver"
+
+[[constraint]]
+  branch = "master"
+  name = "code.cloudfoundry.org/garden"
+
+[[constraint]]
+  branch = "master"
+  name = "code.cloudfoundry.org/grootfs"
+
+[[constraint]]
+  branch = "master"
+  name = "code.cloudfoundry.org/idmapper"
+
+[[constraint]]
+  revision = "b60e04e119450552243196105bae0d42179ee0ca"
+  name = "code.cloudfoundry.org/lager"
+
+[[constraint]]
+  revision = "b88ad0dea95cd41f302cf7eb6ed951efafaf47f2"
+  name = "code.cloudfoundry.org/localip"
+
+[[constraint]]
+  name = "github.com/burntsushi/toml"
+  version = "0.3.0"
+
+[[constraint]]
+  name = "github.com/cloudfoundry/dropsonde"
+  version = "1.0.0"
+
+[[constraint]]
+  name = "github.com/cloudfoundry/gosigar"
+  version = "1.1.0"
+
+[[constraint]]
+  name = "github.com/containerd/containerd"
+  version = "1.1.0"
+
+# TODO: We are using the revision below because moby's latest tag is form last year
+# for some reason. The revision references the project state before they bumped to
+# golang 1.10. This was causing build failures for guardian on golang 1.9.6.
+# Maybe revise after we bump to go 1.10
+[[constraint]]
+  revision = "05346355dbd4300a21bfd64cda93ea6c5aef0cf0"
+  name = "github.com/docker/docker"
+
+[[constraint]]
+  name = "github.com/eapache/go-resiliency"
+  version = "1.1.0"
+
+[[constraint]]
+  revision = "b7773ae218740a7be65057fc60b366a49b538a44"
+  name = "github.com/hashicorp/go-multierror"
+
+[[constraint]]
+  name = "github.com/jessevdk/go-flags"
+  version = "1.4.0"
+
+[[constraint]]
+  revision = "ae77be60afb1dcacde03767a8c37337fad28ac14"
+  name = "github.com/kardianos/osext"
+
+[[constraint]]
+  revision = "d23ffcb85de31694d6ccaa23ccb4a03e55c1303f"
+  name = "github.com/mitchellh/copystructure"
+
+[[constraint]]
+  revision = "4fdf99ab29366514c69ccccddab5dc58b8d84062"
+  name = "github.com/mitchellh/go-ps"
+
+[[constraint]]
+  revision = "179d4d0c4d8d407a32af483c2354df1d2c91e6c3"
+  name = "github.com/nu7hatch/gouuid"
+
+[[constraint]]
+  name = "github.com/onsi/ginkgo"
+  version = "1.5.0"
+
+[[constraint]]
+  name = "github.com/onsi/gomega"
+  version = "1.4.0"
+
+[[constraint]]
+  name = "github.com/opencontainers/go-digest"
+  version = "1.0.0-rc1"
+
+[[constraint]]
+  name = "github.com/opencontainers/image-spec"
+  version = "1.0.1"
+
+[[constraint]]
+  name = "github.com/opencontainers/runc"
+  revision = "ec9bf5058614525576e60e210a4e645bbd4d8335"
+
+[[constraint]]
+  name = "github.com/opencontainers/runtime-spec"
+  version = "1.0.1"
+
+[[constraint]]
+  name = "github.com/pkg/errors"
+  version = "0.8.0"
+
+[[constraint]]
+  name = "github.com/sirupsen/logrus"
+  version = "1.0.5"
+
+[[constraint]]
+  name = "github.com/st3v/glager"
+  version = "0.3.0"
+
+[[constraint]]
+  revision = "e89a512c3162f0e5762a0948ace8509995e9820d"
+  name = "github.com/tedsuo/ifrit"
+
+[[constraint]]
+  revision = "b0fb43b018612a8bd982718843b52dac263a21a8"
+  name = "github.com/tscolari/lagregator"
+
+[[constraint]]
+  name = "github.com/urfave/cli"
+  version = "1.20.0"
+
+[[constraint]]
+  name = "github.com/vishvananda/netlink"
+  version = "1.0.0"
+
+[[constraint]]
+  revision = "be1fbeda19366dea804f00efff2dd73a1642fdcc"
+  name = "github.com/vishvananda/netns"
+
+[[constraint]]
+  revision ="c11f84a56e43e20a78cee75a7c034031ecf57d1f"
+  name = "golang.org/x/sys"
+
+[[constraint]]
+  name = "gopkg.in/yaml.v2"
+  version = "2.2.1"
+
+[prune]
+  go-tests = true
+  unused-packages = true

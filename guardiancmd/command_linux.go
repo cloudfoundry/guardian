@@ -218,7 +218,7 @@ func wireMounts() bundlerules.Mounts {
 	return bundlerules.Mounts{
 		MountOptionsGetter: rundmc.GetMountOptions,
 		MountInfosProvider: func() ([]*mount.Info, error) {
-			return mount.GetMounts(nil)
+			return mount.GetMounts()
 		},
 	}
 }

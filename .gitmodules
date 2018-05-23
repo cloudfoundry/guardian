@@ -1,0 +1,4 @@
+[submodule "vendor/code.cloudfoundry.org/garden-shed"]
+	path = vendor/code.cloudfoundry.org/garden-shed
+	url = https://github.com/cloudfoundry/garden-shed
+	branch = wip-extra-deps

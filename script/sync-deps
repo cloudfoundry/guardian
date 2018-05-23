@@ -1,0 +1,4 @@
+#!/bin/bash
+
+dep ensure -v
+git submodule update --init --recursive

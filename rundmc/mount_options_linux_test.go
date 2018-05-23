@@ -22,7 +22,7 @@ var _ = Describe("Mount options", func() {
 	)
 
 	JustBeforeEach(func() {
-		mountInfos, err := mount.GetMounts(nil)
+		mountInfos, err := mount.GetMounts()
 		Expect(err).NotTo(HaveOccurred())
 		mountOptions, getMountOptionsErr = rundmc.GetMountOptions(mountPoint, mountInfos)
 	})

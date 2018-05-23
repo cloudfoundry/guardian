@@ -48,18 +48,16 @@ func TestNerd(t *testing.T) {
 		cgroupsPath = filepath.Join(os.TempDir(), "cgroups")
 		setupCgroups(cgroupsPath)
 
-		bins := getContainerdBinaries()
-
 		runDir, err := ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		containerdConfig := containerdrunner.ContainerdConfig(runDir)
-		containerdSession = containerdrunner.NewSession(runDir, bins, containerdConfig)
+		containerdSession = containerdrunner.NewSession(runDir, containerdConfig)
 
 		testConfig := &TestConfig{
 			RunDir: runDir,
 			Socket: containerdConfig.GRPC.Address,
-			CtrBin: bins.Ctr,
+			CtrBin: "ctr",
 		}
 		return jsonMarshal(testConfig)
 	}, func(data []byte) {
@@ -124,23 +122,6 @@ func teardownCgroups(cgroupsRoot string) {
 
 	Expect(unix.Unmount(cgroupsRoot, 0)).To(Succeed())
 	Expect(os.Remove(cgroupsRoot)).To(Succeed())
-}
-
-func getContainerdBinaries() containerdrunner.Binaries {
-	containerdBin := makeContainerd()
-	return containerdrunner.Binaries{
-		Dir:        containerdBin,
-		Containerd: filepath.Join(containerdBin, "containerd"),
-		Ctr:        filepath.Join(containerdBin, "ctr"),
-	}
-}
-
-func makeContainerd() string {
-	containerdPath := filepath.Join(mustGetEnv("GOPATH"), filepath.FromSlash("src/github.com/containerd/containerd"))
-	makeContainerdCommand := exec.Command("make")
-	makeContainerdCommand.Env = append(os.Environ(), "BUILDTAGS=no_btrfs")
-	runCommandInDir(makeContainerdCommand, containerdPath)
-	return filepath.Join(containerdPath, "bin")
 }
 
 func mustGetEnv(env string) string {

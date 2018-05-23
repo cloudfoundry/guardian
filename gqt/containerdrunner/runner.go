@@ -12,12 +12,6 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-type Binaries struct {
-	Dir        string
-	Containerd string
-	Ctr        string
-}
-
 type Config struct {
 	Root      string      `toml:"root"`
 	State     string      `toml:"state"`
@@ -26,10 +20,7 @@ type Config struct {
 	GRPC      GRPCConfig  `toml:"grpc"`
 	Debug     DebugConfig `toml:"debug"`
 
-	BinariesDir   string
-	ContainerdBin string
-	CtrBin        string
-	RunDir        string
+	RunDir string
 }
 
 type GRPCConfig struct {
@@ -57,14 +48,14 @@ func ContainerdConfig(containerdDataDir string) Config {
 	}
 }
 
-func NewSession(runDir string, bins Binaries, config Config) *gexec.Session {
+func NewSession(runDir string, config Config) *gexec.Session {
 	configFile, err := os.OpenFile(filepath.Join(runDir, "containerd.toml"), os.O_TRUNC|os.O_WRONLY|os.O_CREATE, os.ModePerm)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(toml.NewEncoder(configFile).Encode(&config)).To(Succeed())
 	Expect(configFile.Close()).To(Succeed())
 
-	cmd := exec.Command(bins.Containerd, "--config", configFile.Name())
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PATH=%s", fmt.Sprintf("%s:%s", os.Getenv("PATH"), bins.Dir)))
+	cmd := exec.Command("containerd", "--config", configFile.Name())
+	cmd.Env = append(os.Environ(), fmt.Sprintf("PATH=%s", fmt.Sprintf("%s:%s", os.Getenv("PATH"), "/usr/local/bin")))
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	return session

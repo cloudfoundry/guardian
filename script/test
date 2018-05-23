@@ -4,20 +4,22 @@ set -e
 
 ARGS=$@
 
+GRR_ROOT=$HOME/workspace/garden-runc-release
+
 DIRS=$(for d in $ARGS; do [ -d "$d" ] && echo "$d"; done)
 
-TASK=ci/unit-tests/guardian.yml
+TASK="$GRR_ROOT"/ci/unit-tests/guardian.yml
 if [ "$TAG" == "xenial" ]; then
-  TASK=ci/unit-tests/guardian-xenial.yml
+  TASK="$GRR_ROOT"/ci/unit-tests/guardian-xenial.yml
 fi
 if [ "$GOOS" == "windows" ]; then
-  TASK=ci/unit-tests/guardian-windows.yml
+  TASK="$GRR_ROOT"/ci/unit-tests/guardian-windows.yml
 fi
 
 if egrep -q gqt <(echo "$ARGS"); then
-   (cd ../../..; ./scripts/remote-fly $TASK -- $ARGS)
+  "$GRR_ROOT"/scripts/remote-fly $TASK -- $ARGS
 elif [ "$(find $DIRS -maxdepth 1 -name '*_linux_test.go')" != "" ]; then
-   (cd ../../..; ./scripts/remote-fly $TASK -- $ARGS)
+  "$GRR_ROOT"/scripts/remote-fly $TASK -- $ARGS
 else
   ginkgo -race -nodes=8 -failOnPending -randomizeAllSpecs -randomizeSuites $ARGS
 fi
