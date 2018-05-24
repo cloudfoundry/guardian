@@ -132,8 +132,8 @@ func (cmd *SetupCommand) WireCgroupsStarter(logger lager.Logger) gardener.Starte
 }
 
 func createCgroupsStarter(logger lager.Logger, tag, cgroupRoot string, mountPointChecker rundmc.MountPointChecker) *cgroups.CgroupStarter {
-	cgroupsMountpoint := cgroups.CgroupRoot
-	gardenCgroup := cgroups.GardenCgroup
+	cgroupsMountpoint := cgroups.Root
+	gardenCgroup := cgroups.Garden
 	if tag != "" {
 		gardenCgroup = fmt.Sprintf("%s-%s", gardenCgroup, tag)
 	}

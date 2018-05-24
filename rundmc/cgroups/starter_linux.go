@@ -20,9 +20,9 @@ import (
 )
 
 const (
-	CgroupRoot    = "/sys/fs/cgroup"
-	GardenCgroup  = "garden"
-	cgroupsHeader = "#subsys_name hierarchy num_cgroups enabled"
+	Root   = "/sys/fs/cgroup"
+	Garden = "garden"
+	Header = "#subsys_name hierarchy num_cgroups enabled"
 )
 
 type CgroupsFormatError struct {
@@ -111,7 +111,7 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		return CgroupsFormatError{Content: "(empty)"}
 	}
 
-	if _, err := fmt.Sscanf(scanner.Text(), cgroupsHeader); err != nil {
+	if _, err := fmt.Sscanf(scanner.Text(), Header); err != nil {
 		return CgroupsFormatError{Content: scanner.Text()}
 	}
 

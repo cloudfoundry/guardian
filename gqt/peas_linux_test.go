@@ -117,7 +117,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 
 				firstCgroupProcLine := strings.Split(string(stdout.Contents()), "\n")[0]
 				cgroupRelativePath := strings.Split(firstCgroupProcLine, ":")[2]
-				cgroupPath = filepath.Join(cgroups.CgroupRoot,
+				cgroupPath = filepath.Join(cgroups.Root,
 					"cpu", cgroupRelativePath)
 			})
 
