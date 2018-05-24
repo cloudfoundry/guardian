@@ -1,9 +1,7 @@
 package gqt_test
 
 import (
-	"fmt"
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -21,65 +19,41 @@ import (
 
 var _ = Describe("gdn setup", func() {
 	var (
-		tmpDir       string
 		setupArgs    []string
 		tag          string
+		cgroupsRoot  string
 		setupProcess *gexec.Session
 	)
 
 	BeforeEach(func() {
-		tag = fmt.Sprintf("%d", GinkgoParallelNode())
-		tmpDir = filepath.Join(
-			os.TempDir(),
-			fmt.Sprintf("test-garden-%s", tag),
-		)
+		// We want to test that "gdn setup" can mount the cgroup hierarchy.
+		// "gdn server" without --skip-setup does this too, and most gqts implicitly
+		// rely on it.
+		// We need a new test "environment" regardless of what tests have previously
+		// run with the same GinkgoParallelNode.
+		// There is also a 1 character limit on the tag due to iptables rule length
+		// limitations.
+		tag = nodeToString(GinkgoParallelNode())
 		setupArgs = []string{"setup", "--tag", tag}
+		cgroupsRoot = runner.CgroupsRootPath(tag)
+		assertNotMounted(cgroupsRoot)
 	})
 
 	JustBeforeEach(func() {
 		var err error
 
 		cmd := exec.Command(binaries.Gdn, setupArgs...)
-		cmd.Env = append(
-			[]string{
-				fmt.Sprintf("TMPDIR=%s", tmpDir),
-				fmt.Sprintf("TEMP=%s", tmpDir),
-				fmt.Sprintf("TMP=%s", tmpDir),
-			},
-			os.Environ()...,
-		)
 		setupProcess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
+
 		Eventually(setupProcess, 10*time.Second).Should(gexec.Exit(0))
 	})
 
+	AfterEach(func() {
+		Expect(cgrouper.CleanGardenCgroups(cgroupsRoot, tag)).To(Succeed())
+	})
+
 	Describe("cgroups", func() {
-		var cgroupsRoot string
-
-		BeforeEach(func() {
-			// We want to test that "gdn setup" can mount the cgroup hierarchy.
-			// "gdn server" without --skip-setup does this too, and most gqts implicitly
-			// rely on it.
-			// We need a new test "environment" regardless of what tests have previously
-			// run with the same GinkgoParallelNode.
-			// There is also a 1 character limit on the tag due to iptables rule length
-			// limitations.
-			tag = nodeToString(GinkgoParallelNode())
-
-			tmpDir = filepath.Join(
-				os.TempDir(),
-				fmt.Sprintf("test-garden-%s", tag),
-			)
-			cgroupsRoot = filepath.Join(tmpDir, fmt.Sprintf("cgroups-foobar-%s", tag))
-			assertNotMounted(cgroupsRoot)
-			setupArgs = []string{"setup", "--tag", tag, "--cgroup-root", cgroupsRoot}
-		})
-
-		AfterEach(func() {
-			Expect(cgrouper.CleanGardenCgroups(cgroupsRoot, tag)).To(Succeed())
-			Expect(cgrouper.UnmountCgroups(cgroupsRoot)).To(Succeed())
-		})
-
 		It("sets up cgroups", func() {
 			mountpointCmd := exec.Command("mountpoint", "-q", cgroupsRoot+"/")
 			mountpointCmd.Stdout = GinkgoWriter
@@ -147,6 +121,11 @@ var _ = Describe("gdn setup", func() {
 
 		AfterEach(func() {
 			Expect(server.DestroyAndStop()).To(Succeed())
+
+			// Allow a sec for server to "fully" stop and cleanup cgroups.
+			// Without this, the cgrouper.CleanGardenCgroups() call in the AfterEach
+			// can sometimes flake with "device or resource busy" ...
+			time.Sleep(time.Second)
 		})
 
 		Context("when the server is running as root", func() {

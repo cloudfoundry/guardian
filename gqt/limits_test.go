@@ -37,7 +37,7 @@ var _ = Describe("Limits", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		parentPath, err := cgrouper.GetCGroupPath(config.CgroupRoot, cgroupType, config.Tag, privileged)
+		parentPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), cgroupType, config.Tag, privileged)
 		Expect(err).NotTo(HaveOccurred())
 		cgroupPath = filepath.Join(parentPath, container.Handle())
 	})

@@ -17,7 +17,6 @@ import (
 
 	"code.cloudfoundry.org/garden/client"
 	"code.cloudfoundry.org/garden/client/connection"
-	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -30,7 +29,6 @@ type GdnRunnerConfig struct {
 	TmpDir         string
 	User           UserCredential
 	ConfigFilePath string
-	CgroupRoot     string
 
 	Socket2meBin        string
 	Socket2meSocketPath string
@@ -207,7 +205,6 @@ func init() {
 func DefaultGdnRunnerConfig(binaries Binaries) GdnRunnerConfig {
 	var config GdnRunnerConfig
 	config.Tag = fmt.Sprintf("%d", GinkgoParallelNode())
-	config.CgroupRoot = "/sys/fs/cgroup"
 
 	var err error
 	config.TmpDir, err = ioutil.TempDir("", fmt.Sprintf("test-garden-%s-", config.Tag))
@@ -339,16 +336,20 @@ func (r *RunningGarden) forceStop() error {
 		}
 	}
 
-	if err := cgrouper.CleanGardenCgroups(r.CgroupRoot, r.Tag); err != nil {
-		return err
-	}
-
 	if err := r.removeTempDirContentsPreservingGrootFSStores(); err != nil {
-		fmt.Printf("error on r.removeTempDirContentsPreservingMounts() during forceStop: %s\n", err.Error())
+		fmt.Printf("error on r.removeTempDirContentsPreservingGrootFSStore() during forceStop: %s\n", err.Error())
 		return err
 	}
 
 	return nil
+}
+
+func (r *RunningGarden) CgroupsRootPath() string {
+	return CgroupsRootPath(r.Tag)
+}
+
+func CgroupsRootPath(tag string) string {
+	return filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", tag))
 }
 
 func (r *RunningGarden) removeTempDirContentsPreservingGrootFSStores() error {

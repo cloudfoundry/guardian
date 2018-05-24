@@ -1,31 +1,34 @@
 package cgrouper
 
 import (
+	"fmt"
 	"io/ioutil"
-	"strings"
+	"os"
+	"path/filepath"
 
 	"golang.org/x/sys/unix"
 )
 
-func UnmountCgroups(cgroupsRoot string) error {
-	mountsFileContent, err := ioutil.ReadFile("/proc/self/mounts")
+func CleanGardenCgroups(cgroupsRootPath, tag string) error {
+	subsystems, err := ioutil.ReadDir(cgroupsRootPath)
 	if err != nil {
 		return err
 	}
 
-	mountInfos := strings.Split(string(mountsFileContent), "\n")
-	for _, info := range mountInfos {
-		if info == "" {
-			continue
-		}
-
-		fields := strings.Fields(info)
-		if fields[2] == "cgroup" && strings.Contains(fields[1], cgroupsRoot) {
-			if err := unix.Unmount(fields[1], unix.MNT_DETACH); err != nil {
-				return err
-			}
+	for _, subsystem := range subsystems {
+		if err := unmountIfExists(filepath.Join(cgroupsRootPath, subsystem.Name())); err != nil {
+			return err
 		}
 	}
 
-	return unix.Unmount(cgroupsRoot, 0)
+	return unmountIfExists(cgroupsRootPath)
+}
+
+func unmountIfExists(unmountPath string) error {
+	unmountErr := unix.Unmount(unmountPath, unix.MNT_FORCE)
+	if unmountErr != nil && !os.IsNotExist(unmountErr) {
+		return fmt.Errorf("Failed to unmount %s: %s", unmountPath, unmountErr)
+	}
+
+	return nil
 }

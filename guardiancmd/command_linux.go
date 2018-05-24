@@ -114,11 +114,11 @@ func (f *LinuxFactory) WireExecRunner(runMode, runcRoot string) runrunc.ExecRunn
 }
 
 func (f *LinuxFactory) WireCgroupsStarter(logger lager.Logger) gardener.Starter {
-	return createCgroupsStarter(logger, f.config.Server.Tag, "", rundmc.IsMountPoint)
+	return createCgroupsStarter(logger, f.config.Server.Tag, rundmc.IsMountPoint)
 }
 
 func (cmd *SetupCommand) WireCgroupsStarter(logger lager.Logger) gardener.Starter {
-	starter := createCgroupsStarter(logger, cmd.Tag, cmd.CgroupRoot, rundmc.IsMountPoint)
+	starter := createCgroupsStarter(logger, cmd.Tag, rundmc.IsMountPoint)
 
 	if cmd.RootlessUID != nil {
 		starter = starter.WithUID(*cmd.RootlessUID)
@@ -131,14 +131,13 @@ func (cmd *SetupCommand) WireCgroupsStarter(logger lager.Logger) gardener.Starte
 	return starter
 }
 
-func createCgroupsStarter(logger lager.Logger, tag, cgroupRoot string, mountPointChecker rundmc.MountPointChecker) *cgroups.CgroupStarter {
+func createCgroupsStarter(logger lager.Logger, tag string, mountPointChecker rundmc.MountPointChecker) *cgroups.CgroupStarter {
 	cgroupsMountpoint := cgroups.Root
 	gardenCgroup := cgroups.Garden
+
 	if tag != "" {
+		cgroupsMountpoint = filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", tag))
 		gardenCgroup = fmt.Sprintf("%s-%s", gardenCgroup, tag)
-	}
-	if cgroupRoot != "" {
-		cgroupsMountpoint = cgroupRoot
 	}
 
 	return cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"),

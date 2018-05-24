@@ -11,7 +11,6 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
-	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -117,7 +116,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 
 				firstCgroupProcLine := strings.Split(string(stdout.Contents()), "\n")[0]
 				cgroupRelativePath := strings.Split(firstCgroupProcLine, ":")[2]
-				cgroupPath = filepath.Join(cgroups.Root,
+				cgroupPath = filepath.Join(gdn.CgroupsRootPath(),
 					"cpu", cgroupRelativePath)
 			})
 
