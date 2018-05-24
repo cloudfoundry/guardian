@@ -2,11 +2,7 @@ package devices
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
-	"path/filepath"
-	"strconv"
-	"strings"
 
 	"github.com/vishvananda/netlink"
 )
@@ -113,20 +109,6 @@ func (Link) List() (names []string, err error) {
 	}
 
 	return names, nil
-}
-
-func intfStat(intf, statFile string) (stat uint64, err error) {
-	data, err := ioutil.ReadFile(filepath.Join("/sys/class/net", intf, "statistics", statFile))
-	if err != nil {
-		return 0, err
-	}
-
-	stat, err = strconv.ParseUint(strings.TrimSpace(string(data)), 10, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	return stat, nil
 }
 
 func errF(err error) error {

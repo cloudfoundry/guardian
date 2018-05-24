@@ -11,9 +11,6 @@ const DefaultPath = "PATH=/usr/local/bin:/usr/bin:/bin"
 
 // da doo
 type RunRunc struct {
-	commandRunner commandrunner.CommandRunner
-	runc          RuncBinary
-
 	*Execer
 	*Creator
 	*OomWatcher

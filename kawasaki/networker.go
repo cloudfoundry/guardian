@@ -356,13 +356,6 @@ func save(config ConfigStore, handle string, netConfig NetworkConfig) {
 	config.Set(handle, hostEntriesKey, strings.Join(netConfig.AdditionalHostEntries, ", "))
 }
 
-func appendIfNotNil(errors []error, err error) []error {
-	if err != nil {
-		return append(errors, err)
-	}
-	return errors
-}
-
 func load(config ConfigStore, handle string) (NetworkConfig, error) {
 	vals, err := getAll(config, handle, hostIntfKey, containerIntfKey, bridgeIntfKey, bridgeIpKey, containerIpKey, subnetKey, iptablePrefixKey, iptableInstanceKey, mtuKey, externalIpKey, dnsServerKey, hostEntriesKey)
 

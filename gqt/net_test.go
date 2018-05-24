@@ -1165,16 +1165,6 @@ func hostIfName(container garden.Container) string {
 	return properties["kawasaki.host-interface"]
 }
 
-func getFlagValue(contentFile, flagName string) func() []byte {
-	re := regexp.MustCompile(fmt.Sprintf("%s (.*)", flagName))
-	return func() []byte {
-		content := getContent(contentFile)()
-		matches := re.FindSubmatch(content)
-		Expect(matches).To(HaveLen(2))
-		return matches[1]
-	}
-}
-
 func readResolvConf(container garden.Container) string {
 	stdout := gbytes.NewBuffer()
 

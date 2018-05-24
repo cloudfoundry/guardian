@@ -4,7 +4,6 @@ import (
 	"net"
 	"os"
 
-	"code.cloudfoundry.org/guardian/kawasaki/netns"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -18,7 +17,6 @@ type configurer struct {
 	hostConfigurer       HostConfigurer
 	containerConfigurer  ContainerConfigurer
 	instanceChainCreator InstanceChainCreator
-	fileOpener           netns.Opener
 }
 
 //go:generate counterfeiter . HostConfigurer

@@ -650,34 +650,11 @@ func should(matchers ...types.GomegaMatcher) func(actual interface{}) {
 	}
 }
 
-func shouldNot(matchers ...types.GomegaMatcher) func(actual interface{}) {
-	return func(actual interface{}) {
-		for _, matcher := range matchers {
-			Expect(actual).ToNot(matcher)
-		}
-	}
-}
-
 func spec(path string, args ...string) garden.ProcessSpec {
 	return garden.ProcessSpec{
 		Path: path,
 		Args: args,
 	}
-}
-
-func filesInDir(path string) []string {
-	files := make([]string, 0)
-	Expect(filepath.Walk(path, func(p string, i os.FileInfo, err error) error {
-		Expect(err).NotTo(HaveOccurred())
-		if i.IsDir() {
-			return nil
-		}
-
-		files = append(files, p)
-
-		return nil
-	})).To(Succeed())
-	return files
 }
 
 func ttySpec(path string, args ...string) garden.ProcessSpec {

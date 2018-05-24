@@ -33,7 +33,6 @@ var (
 	config             runner.GdnRunnerConfig
 	binaries           runner.Binaries
 	containerdBinaries containerdrunner.Binaries
-	gqtStartTime       time.Time
 	defaultTestRootFS  string
 )
 
