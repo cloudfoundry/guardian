@@ -34,7 +34,7 @@ var _ = Describe("Containerd", func() {
 		Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
 	})
 
-	Describe("creating a container", func() {
+	Describe("creating containers", func() {
 		It("creates a containerd container with running init task", func() {
 			container, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
@@ -46,6 +46,28 @@ var _ = Describe("Containerd", func() {
 			Eventually(session).Should(gbytes.Say(container.Handle()))
 			Eventually(session).Should(gexec.Exit(0))
 		})
+
+		Context("when creating more containers than the maxkeyring limit", func() {
+			BeforeEach(func() {
+				Expect(ioutil.WriteFile("/proc/sys/kernel/keys/maxkeys", []byte("1"), 0644)).To(Succeed())
+			})
+
+			AfterEach(func() {
+				Expect(ioutil.WriteFile("/proc/sys/kernel/keys/maxkeys", []byte("200"), 0644)).To(Succeed())
+			})
+
+			It("works", func() {
+				c1, err := client.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				c2, err := client.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(client.Destroy(c1.Handle())).To(Succeed())
+				Expect(client.Destroy(c2.Handle())).To(Succeed())
+			})
+		})
+
 	})
 
 	Describe("destroying a container", func() {

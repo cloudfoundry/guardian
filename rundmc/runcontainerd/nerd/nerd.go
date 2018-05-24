@@ -7,6 +7,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
+	"github.com/containerd/containerd/linux/runctypes"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -22,6 +23,11 @@ func New(client *containerd.Client, context context.Context) *Nerd {
 	}
 }
 
+func WithNoNewKeyring(ctx context.Context, c *containerd.Client, ti *containerd.TaskInfo) error {
+	ti.Options = &runctypes.CreateOptions{NoNewKeyring: true}
+	return nil
+}
+
 func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec) error {
 	log.Debug("creating-container", lager.Data{"id": containerID})
 	container, err := n.client.NewContainer(n.context, containerID, containerd.WithSpec(spec))
@@ -30,7 +36,7 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec) er
 	}
 
 	log.Debug("creating-task", lager.Data{"id": containerID})
-	task, err := container.NewTask(n.context, cio.NullIO)
+	task, err := container.NewTask(n.context, cio.NullIO, WithNoNewKeyring)
 	if err != nil {
 		return err
 	}

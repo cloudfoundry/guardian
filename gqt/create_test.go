@@ -560,15 +560,14 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		It("works", func() {
-			containers := make([]garden.Container, 2)
-			for i := 0; i < 2; i++ {
-				c, err := client.Create(garden.ContainerSpec{})
-				Expect(err).ToNot(HaveOccurred())
-				containers[i] = c
-			}
-			for i := 0; i < 2; i++ {
-				client.Destroy(containers[i].Handle())
-			}
+			c1, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			c2, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(client.Destroy(c1.Handle())).To(Succeed())
+			Expect(client.Destroy(c2.Handle())).To(Succeed())
 		})
 	})
 
