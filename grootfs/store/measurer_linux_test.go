@@ -49,34 +49,6 @@ var _ = Describe("Measurer", func() {
 		Expect(os.RemoveAll(storePath)).To(Succeed())
 	})
 
-	Describe("Usage", func() {
-		It("measures space used by the volumes and images", func() {
-			volPath := filepath.Join(storePath, store.VolumesDirName, "sha256:fake")
-			Expect(os.MkdirAll(volPath, 0744)).To(Succeed())
-			Expect(writeFile(filepath.Join(volPath, "my-file"), 2048*1024)).To(Succeed())
-
-			imagePath := filepath.Join(storePath, store.ImageDirName, "my-image")
-			Expect(os.MkdirAll(imagePath, 0744)).To(Succeed())
-			Expect(writeFile(filepath.Join(imagePath, "my-file"), 2048*1024)).To(Succeed())
-
-			storeSize, err := storeMeasurer.Usage(logger)
-			Expect(err).NotTo(HaveOccurred())
-			xfsMetadataSize := 33755136
-			Expect(storeSize).To(BeNumerically("~", 4096*1024+xfsMetadataSize, 256*1024))
-		})
-
-		Context("when the store does not exist", func() {
-			BeforeEach(func() {
-				storeMeasurer = store.NewStoreMeasurer("/path/to/non/existent/store", volumeDriver, unusedVolumeGetter)
-			})
-
-			It("returns a useful error", func() {
-				_, err := storeMeasurer.Usage(logger)
-				Expect(err).To(MatchError(ContainSubstring("/path/to/non/existent/store")))
-			})
-		})
-	})
-
 	Describe("TotalVolumesSize", func() {
 		BeforeEach(func() {
 			volumeDriver.VolumeSizeReturns(2048, nil)

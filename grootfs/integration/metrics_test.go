@@ -96,21 +96,6 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
 
-		It("emits store usage", func() {
-			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
-			Expect(err).NotTo(HaveOccurred())
-
-			var metrics []events.ValueMetric
-			Eventually(func() []events.ValueMetric {
-				metrics = fakeMetron.ValueMetricsFor("StoreUsage")
-				return metrics
-			}).Should(HaveLen(1))
-
-			Expect(*metrics[0].Name).To(Equal("StoreUsage"))
-			Expect(*metrics[0].Unit).To(Equal("bytes"))
-			Expect(*metrics[0].Value).NotTo(BeZero())
-		})
-
 		It("emits grootfs unused layers size", func() {
 			spec.BaseImageURL = integration.String2URL("docker:///cfgarden/garden-busybox")
 			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
@@ -279,22 +264,6 @@ var _ = Describe("Metrics", func() {
 
 			Expect(*metrics[0].Name).To(Equal("ExclusiveLockingTime"))
 			Expect(*metrics[0].Unit).To(Equal("nanos"))
-			Expect(*metrics[0].Value).NotTo(BeZero())
-		})
-
-		It("emits store usage", func() {
-			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-				Clean(0)
-			Expect(err).NotTo(HaveOccurred())
-
-			var metrics []events.ValueMetric
-			Eventually(func() []events.ValueMetric {
-				metrics = fakeMetron.ValueMetricsFor("StoreUsage")
-				return metrics
-			}).Should(HaveLen(1))
-
-			Expect(*metrics[0].Name).To(Equal("StoreUsage"))
-			Expect(*metrics[0].Unit).To(Equal("bytes"))
 			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
 

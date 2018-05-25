@@ -37,20 +37,6 @@ func NewStoreMeasurer(storePath string, volumeDriver VolumeDriver, unusedVolumeG
 	}
 }
 
-func (s *StoreMeasurer) Usage(logger lager.Logger) (int64, error) {
-	logger = logger.Session("measuring-store", lager.Data{"storePath": s.storePath})
-	logger.Debug("starting")
-	defer logger.Debug("ending")
-
-	_, used, err := s.pathStats(s.storePath)
-	if err != nil {
-		return 0, errorspkg.Wrapf(err, "Invalid path %s", s.storePath)
-	}
-
-	logger.Debug("store-usage", lager.Data{"bytes": used})
-	return used, nil
-}
-
 func (s *StoreMeasurer) UnusedVolumesSize(logger lager.Logger) (int64, error) {
 	unusedVols, err := s.unusedVolumeGetter.UnusedVolumes(logger)
 	if err != nil {

@@ -259,12 +259,6 @@ var CreateCommand = cli.Command{
 }
 
 func emitMetrics(logger lager.Logger, metricsEmitter *metrics.Emitter, sm *storepkg.StoreMeasurer) {
-	usage, err := sm.Usage(logger)
-	if err != nil {
-		logger.Info(fmt.Sprintf("measuring-store: %s", err))
-	}
-	metricsEmitter.TryEmitUsage(logger, "StoreUsage", usage, "bytes")
-
 	unusedVolumesSize, err := sm.UnusedVolumesSize(logger)
 	if err != nil {
 		logger.Info(fmt.Sprintf("getting-unused-layers-size: %s", err))

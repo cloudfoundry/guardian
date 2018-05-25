@@ -107,13 +107,6 @@ var CleanCommand = cli.Command{
 
 		fmt.Println("clean completed")
 
-		usage, err := sm.Usage(logger)
-		if err != nil {
-			logger.Error("measuring-store", err)
-			return cli.NewExitError(err.Error(), 1)
-		}
-
-		metricsEmitter.TryEmitUsage(logger, "StoreUsage", usage, "bytes")
 		return nil
 	},
 }
