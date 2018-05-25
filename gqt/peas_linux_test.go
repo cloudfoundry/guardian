@@ -114,8 +114,15 @@ var _ = Describe("Partially shared containers (peas)", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(stdout).Should(gbytes.Say("done"))
 
-				firstCgroupProcLine := strings.Split(string(stdout.Contents()), "\n")[0]
-				cgroupRelativePath := strings.Split(firstCgroupProcLine, ":")[2]
+				cgroupProcLines := strings.Split(string(stdout.Contents()), "\n")
+				var cgroupRelativePath string
+				for _, procLine := range cgroupProcLines {
+					procLineSections := strings.Split(procLine, ":")
+					if procLineSections[1] == "memory" {
+						cgroupRelativePath = procLineSections[2]
+						break
+					}
+				}
 				cgroupPath = filepath.Join(gdn.CgroupsRootPath(),
 					"cpu", cgroupRelativePath)
 			})
