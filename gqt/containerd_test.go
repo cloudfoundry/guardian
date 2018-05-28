@@ -32,6 +32,7 @@ var _ = Describe("Containerd", func() {
 
 	AfterEach(func() {
 		Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
+		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
 	Describe("creating containers", func() {
