@@ -39,6 +39,7 @@ var _ = Describe("ExternalNetworker", func() {
 		resolvConfigurer     *kawasakifakes.FakeDnsResolvConfigurer
 		pluginOutput         string
 		pluginErr            error
+		pluginStderr         string
 		dnsServers           = []net.IP{net.ParseIP("8.8.8.8"), net.ParseIP("9.9.9.9")}
 		additionalDNSServers = []net.IP{net.ParseIP("11.11.11.11")}
 	)
@@ -74,11 +75,12 @@ var _ = Describe("ExternalNetworker", func() {
 		)
 
 		pluginErr = nil
+		pluginStderr = "some-stderr-bytes"
 		fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: "some/path",
 		}, func(cmd *exec.Cmd) error {
 			cmd.Stdout.Write([]byte(pluginOutput))
-			cmd.Stderr.Write([]byte("some-stderr-bytes"))
+			cmd.Stderr.Write([]byte(pluginStderr))
 			return pluginErr
 		})
 	})
@@ -212,6 +214,32 @@ var _ = Describe("ExternalNetworker", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(logger).To(gbytes.Say("result.*some-stderr-bytes"))
+		})
+
+		Context("when plugin outputs stderr", func() {
+			BeforeEach(func() {
+				pluginStderr = "some-stderr-bytes"
+			})
+
+			It("collects and logs the stderr from the plugin to log level info", func() {
+				err := plugin.Network(logger, containerSpec, 42)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(logger).To(gbytes.Say(`result.*"log_level":1.*some-stderr-bytes`))
+			})
+		})
+
+		Context("when plugin doesn't output any stderr", func() {
+			BeforeEach(func() {
+				pluginStderr = ""
+			})
+
+			It("doesn't output stderr log to log level info", func() {
+				err := plugin.Network(logger, containerSpec, 42)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(logger).NotTo(gbytes.Say(`result.*"log_level":1.*some-stderr-bytes`))
+			})
 		})
 
 		Describe("DNS configuration inside the container", func() {

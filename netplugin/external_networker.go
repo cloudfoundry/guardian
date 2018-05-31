@@ -265,6 +265,11 @@ func (p *externalBinaryNetworker) exec(log lager.Logger, action, handle string,
 		}
 	}
 
+	if stderr.Len() > 0 {
+		log.Info("external-networker-result", lager.Data{"stderr": stderr.String()})
+	}
+
 	log.Debug("external-networker-result", logData)
+
 	return nil
 }
