@@ -389,19 +389,15 @@
     "internal/leafnodes",
     "internal/remote",
     "internal/spec",
-    "internal/spec_iterator",
     "internal/specrunner",
     "internal/suite",
     "internal/testingtproxy",
     "internal/writer",
     "reporters",
     "reporters/stenographer",
-    "reporters/stenographer/support/go-colorable",
-    "reporters/stenographer/support/go-isatty",
     "types"
   ]
-  revision = "fa5fabab2a1bfbd924faf4c067d07ae414e2aedf"
-  version = "v1.5.0"
+  revision = "059cec02d342bab423425a99b191186a03255e9e"
 
 [[projects]]
   name = "github.com/onsi/gomega"
@@ -421,8 +417,7 @@
     "matchers/support/goraph/util",
     "types"
   ]
-  revision = "62bff4df71bdbc266561a0caee19f0594b17c240"
-  version = "v1.4.0"
+  revision = "0df7b7fdb38123c12a1f569f0affb2c2a7bd72cf"
 
 [[projects]]
   name = "github.com/opencontainers/go-digest"
@@ -550,9 +545,6 @@
   packages = [
     "context",
     "context/ctxhttp",
-    "html",
-    "html/atom",
-    "html/charset",
     "http/httpguts",
     "http2",
     "http2/hpack",
@@ -583,24 +575,12 @@
   packages = [
     "collate",
     "collate/build",
-    "encoding",
-    "encoding/charmap",
-    "encoding/htmlindex",
-    "encoding/internal",
-    "encoding/internal/identifier",
-    "encoding/japanese",
-    "encoding/korean",
-    "encoding/simplifiedchinese",
-    "encoding/traditionalchinese",
-    "encoding/unicode",
     "internal/colltab",
     "internal/gen",
     "internal/tag",
     "internal/triegen",
     "internal/ucd",
-    "internal/utf8internal",
     "language",
-    "runes",
     "secure/bidirule",
     "transform",
     "unicode/bidi",
@@ -658,6 +638,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b53ff82e3579d09269e0af628ee244a494f466c1496f3cae63d74f1cf0cc2370"
+  inputs-digest = "1746cde1e9e34e9637c927a80e01efa61ad091ec46c0b744e25aeee0c91413f5"
   solver-name = "gps-cdcl"
   solver-version = 1

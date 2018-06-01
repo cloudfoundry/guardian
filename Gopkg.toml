@@ -116,11 +116,11 @@ ignored = ["code.cloudfoundry.org/garden-shed*"]
 
 [[constraint]]
   name = "github.com/onsi/ginkgo"
-  version = "1.5.0"
+  revision = "059cec02d342bab423425a99b191186a03255e9e"
 
 [[constraint]]
   name = "github.com/onsi/gomega"
-  version = "1.4.0"
+  revision = "0df7b7fdb38123c12a1f569f0affb2c2a7bd72cf"
 
 [[constraint]]
   name = "github.com/opencontainers/go-digest"
