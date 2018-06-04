@@ -157,7 +157,7 @@ var _ = Describe("Surviving Restarts", func() {
 				})
 
 				It("destroys the pea container", func() {
-					Expect(filepath.Join("/run/runc", processID)).NotTo(BeADirectory())
+					Expect(filepath.Join(getRuncRoot(), processID)).NotTo(BeADirectory())
 				})
 			})
 

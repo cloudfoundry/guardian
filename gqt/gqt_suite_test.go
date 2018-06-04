@@ -336,3 +336,17 @@ func jsonMarshal(v interface{}) []byte {
 func jsonUnmarshal(data []byte, v interface{}) {
 	Expect(toml.Unmarshal(data, v)).To(Succeed())
 }
+
+func skipIfContainerd() {
+	if config.ContainerdSocket != "" {
+		Skip("irrelevant test for containerd mode")
+	}
+}
+
+func getRuncRoot() string {
+	if config.ContainerdSocket != "" {
+		return "/run/containerd/runc/garden"
+	}
+
+	return "/run/runc"
+}

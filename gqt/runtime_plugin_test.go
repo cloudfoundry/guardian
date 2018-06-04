@@ -92,7 +92,7 @@ var _ = Describe("Runtime Plugin", func() {
 				procId := process.ID()
 				Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
 					binaries.RuntimePlugin,
-					"--root", "/run/runc",
+					"--root", getRuncRoot(),
 					"--debug",
 					"--log", MatchRegexp(`/proc/\d+/fd/4`),
 					"--log-format", "json",
@@ -231,7 +231,7 @@ var _ = Describe("Runtime Plugin", func() {
 		It("executes the plugin, passing the correct args for exec", func() {
 			pluginArgs := []interface{}{
 				binaries.RuntimePlugin,
-				"--root", "/run/runc",
+				"--root", getRuncRoot(),
 				"--debug",
 				"--log", MatchRegexp(".*"),
 				"--log-format", "json",
@@ -363,7 +363,7 @@ var _ = Describe("Runtime Plugin", func() {
 				binaries.RuntimePlugin,
 				"--debug",
 				"--root",
-				"/run/runc",
+				getRuncRoot(),
 				"--log", MatchRegexp(".*"),
 				"--log-format", "json",
 				"delete",

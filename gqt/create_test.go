@@ -114,12 +114,14 @@ var _ = Describe("Creating a Container", func() {
 
 		Context("because runc doesn't exist", func() {
 			BeforeEach(func() {
+				skipIfContainerd()
 				config.RuntimePluginBin = "/tmp/does/not/exist"
 			})
 
 			It("returns a sensible error", func() {
 				_, err := client.Create(garden.ContainerSpec{})
-				Expect(err).To(MatchError("no such file or directory"))
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("no such file or directory"))
 			})
 		})
 	})
@@ -610,14 +612,14 @@ var _ = Describe("Creating a Container", func() {
 })
 
 func initProcessPID(handle string) int {
-	Eventually(fmt.Sprintf("/run/runc/%s/state.json", handle)).Should(BeAnExistingFile())
+	Eventually(fmt.Sprintf("%s/%s/state.json", getRuncRoot(), handle)).Should(BeAnExistingFile())
 
 	state := struct {
 		Pid int `json:"init_process_pid"`
 	}{}
 
 	Eventually(func() error {
-		stateFile, err := os.Open(fmt.Sprintf("/run/runc/%s/state.json", handle))
+		stateFile, err := os.Open(fmt.Sprintf("%s/%s/state.json", getRuncRoot(), handle))
 		Expect(err).NotTo(HaveOccurred())
 		defer stateFile.Close()
 
