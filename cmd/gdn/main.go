@@ -10,9 +10,19 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
+// version is overwritten at compile time by passing
+// -ldflags -X main.version=<version>
+var version = "dev"
+
 func main() {
 	configFilePath := flag.String("config", "", "config file path")
+	printVersion := flag.Bool("v", false, "print version")
 	flag.Parse()
+
+	if *printVersion {
+		fmt.Println(version)
+		os.Exit(0)
+	}
 
 	cmd := &guardiancmd.GdnCommand{}
 

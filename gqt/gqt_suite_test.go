@@ -100,7 +100,7 @@ var _ = AfterEach(func() {
 func getGardenBinaries() runner.Binaries {
 	gardenBinaries := runner.Binaries{
 		Tar:           os.Getenv("GARDEN_TAR_PATH"),
-		Gdn:           goCompile("code.cloudfoundry.org/guardian/cmd/gdn", "-tags", "daemon", "-ldflags", "-extldflags '-static'"),
+		Gdn:           CompileGdn(),
 		NetworkPlugin: goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_network_plugin"),
 		ImagePlugin:   goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_image_plugin"),
 		RuntimePlugin: goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_runtime_plugin"),
@@ -128,6 +128,13 @@ func getGardenBinaries() runner.Binaries {
 	}
 
 	return gardenBinaries
+}
+
+func CompileGdn(additionalCompileArgs ...string) string {
+	defaultCompileArgs := []string{"-tags", "daemon"}
+	compileArgs := append(defaultCompileArgs, additionalCompileArgs...)
+
+	return goCompile("code.cloudfoundry.org/guardian/cmd/gdn", compileArgs...)
 }
 
 func initGrootStore(grootBin, storePath string, idMappings []string) {
