@@ -14,7 +14,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 )
 
-var _ = Describe("graph flags", func() {
+var _ = Describe("deprecated graph tests (aka garden-shed)", func() {
 	var (
 		client               *runner.RunningGarden
 		layersPath           string
@@ -79,6 +79,10 @@ var _ = Describe("graph flags", func() {
 	}
 
 	BeforeEach(func() {
+		if runningOnXenial() {
+			Skip("garden-shed not supported on xenial")
+		}
+
 		var err error
 		nonDefaultRootfsPath, err = ioutil.TempDir("", "tmpRootfs")
 		Expect(err).ToNot(HaveOccurred())
@@ -310,3 +314,11 @@ var _ = Describe("graph flags", func() {
 		})
 	})
 })
+
+// runningOnXenial() checks the /etc/os-release file to determine the current
+// OS. It will only return true if the /etc/os-release file exists and contains
+// the string "Xenial".
+func runningOnXenial() bool {
+	checkCmd := exec.Command("grep", "Xenial", filepath.Join("/", "etc", "os-release"))
+	return checkCmd.Run() == nil
+}
