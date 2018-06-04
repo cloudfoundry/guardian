@@ -119,7 +119,7 @@ var _ = Describe("Creating a Container", func() {
 
 			It("returns a sensible error", func() {
 				_, err := client.Create(garden.ContainerSpec{})
-				Expect(err.Error()).To(ContainSubstring("no such file or directory"))
+				Expect(err).To(MatchError("no such file or directory"))
 			})
 		})
 	})
