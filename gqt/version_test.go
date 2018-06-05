@@ -1,12 +1,13 @@
 package gqt_test
 
 import (
+	"os"
+	"path/filepath"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"os/exec"
-
-	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("gdn -v", func() {
@@ -31,7 +32,7 @@ var _ = Describe("gdn -v", func() {
 	})
 
 	AfterEach(func() {
-		gexec.CleanupBuildArtifacts()
+		os.RemoveAll(filepath.Dir(pathToGdn))
 	})
 
 	It("reports 'dev' as the version by default", func() {
