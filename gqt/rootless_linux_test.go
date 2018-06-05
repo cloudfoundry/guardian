@@ -30,6 +30,8 @@ var _ = Describe("rootless containers", func() {
 	)
 
 	BeforeEach(func() {
+		skipIfContainerd()
+
 		setupArgs := []string{"setup",
 			"--tag", config.Tag,
 			"--rootless-uid", idToStr(unprivilegedUID),

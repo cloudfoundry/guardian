@@ -1,11 +1,9 @@
 package gqt_test
 
 import (
-	"io/ioutil"
 	"os/exec"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/guardian/gqt/containerdrunner"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,22 +14,15 @@ import (
 var _ = Describe("Containerd", func() {
 
 	var (
-		client            *runner.RunningGarden
-		containerdSession *gexec.Session
+		client *runner.RunningGarden
 	)
 
 	BeforeEach(func() {
-		runDir, err := ioutil.TempDir("", "")
-		Expect(err).NotTo(HaveOccurred())
-		containerdConfig := containerdrunner.ContainerdConfig(runDir)
-		containerdSession = containerdrunner.NewSession(runDir, containerdConfig)
-
-		config.ContainerdSocket = containerdConfig.GRPC.Address
+		skipIfNotContainerd()
 		client = runner.Start(config)
 	})
 
 	AfterEach(func() {
-		Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
@@ -47,28 +38,6 @@ var _ = Describe("Containerd", func() {
 			Eventually(session).Should(gbytes.Say(container.Handle()))
 			Eventually(session).Should(gexec.Exit(0))
 		})
-
-		Context("when creating more containers than the maxkeyring limit", func() {
-			BeforeEach(func() {
-				Expect(ioutil.WriteFile("/proc/sys/kernel/keys/maxkeys", []byte("1"), 0644)).To(Succeed())
-			})
-
-			AfterEach(func() {
-				Expect(ioutil.WriteFile("/proc/sys/kernel/keys/maxkeys", []byte("200"), 0644)).To(Succeed())
-			})
-
-			It("works", func() {
-				c1, err := client.Create(garden.ContainerSpec{})
-				Expect(err).NotTo(HaveOccurred())
-
-				c2, err := client.Create(garden.ContainerSpec{})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(client.Destroy(c1.Handle())).To(Succeed())
-				Expect(client.Destroy(c2.Handle())).To(Succeed())
-			})
-		})
-
 	})
 
 	Describe("destroying a container", func() {
@@ -109,7 +78,6 @@ var _ = Describe("Containerd", func() {
 
 		AfterEach(func() {
 			Expect(client.Destroy(container.Handle())).To(Succeed())
-			Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
 		})
 
 		It("succeeds", func() {

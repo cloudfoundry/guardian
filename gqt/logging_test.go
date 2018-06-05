@@ -16,6 +16,10 @@ var _ = Describe("runC Logging", func() {
 		logLevel string
 	)
 
+	BeforeEach(func() {
+		skipIfContainerd()
+	})
+
 	JustBeforeEach(func() {
 		binPath, err := gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc")
 		Expect(err).NotTo(HaveOccurred())

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gqt/containerdrunner"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 	"code.cloudfoundry.org/guardian/pkg/locksmith"
@@ -28,6 +29,10 @@ var (
 	// the unprivileged user is baked into the cfgarden/garden-ci-ubuntu image
 	unprivilegedUID = uint32(5000)
 	unprivilegedGID = uint32(5000)
+
+	containerdConfig  containerdrunner.Config
+	containerdSession *gexec.Session
+	containerdRunDir  string
 
 	config            runner.GdnRunnerConfig
 	binaries          runner.Binaries
@@ -84,6 +89,13 @@ var _ = BeforeEach(func() {
 	}
 
 	config = defaultConfig()
+	if isContainerd() {
+		var err error
+		containerdRunDir, err = ioutil.TempDir("", "")
+		Expect(err).NotTo(HaveOccurred())
+		containerdSession = startContainerd(containerdRunDir)
+	}
+
 	if runtime.GOOS == "linux" {
 		initGrootStore(config.ImagePluginBin, config.StorePath, []string{"0:4294967294:1", "1:65536:4294901758"})
 		initGrootStore(config.PrivilegedImagePluginBin, config.PrivilegedStorePath, nil)
@@ -91,6 +103,11 @@ var _ = BeforeEach(func() {
 })
 
 var _ = AfterEach(func() {
+	if isContainerd() {
+		Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
+		Expect(os.RemoveAll(containerdRunDir)).To(Succeed())
+	}
+
 	// Windows worker is not containerised and therefore the test needs to take care to delete the temporary folder
 	if runtime.GOOS == "windows" {
 		Expect(os.RemoveAll(config.TmpDir)).To(Succeed())
@@ -337,9 +354,19 @@ func jsonUnmarshal(data []byte, v interface{}) {
 	Expect(toml.Unmarshal(data, v)).To(Succeed())
 }
 
+func isContainerd() bool {
+	return os.Getenv("CONTAINERD_ENABLED") == "true"
+}
+
 func skipIfContainerd() {
-	if config.ContainerdSocket != "" {
+	if isContainerd() {
 		Skip("irrelevant test for containerd mode")
+	}
+}
+
+func skipIfNotContainerd() {
+	if !isContainerd() {
+		Skip("containerd not enabled")
 	}
 }
 
@@ -349,4 +376,10 @@ func getRuncRoot() string {
 	}
 
 	return "/run/runc"
+}
+
+func startContainerd(runDir string) *gexec.Session {
+	containerdConfig := containerdrunner.ContainerdConfig(runDir)
+	config.ContainerdSocket = containerdConfig.GRPC.Address
+	return containerdrunner.NewSession(runDir, containerdConfig)
 }

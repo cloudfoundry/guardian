@@ -26,6 +26,7 @@ var _ = Describe("Runtime Plugin", func() {
 	)
 
 	BeforeEach(func() {
+		skipIfContainerd()
 		handle = fmt.Sprintf("runtime-plugin-test-handle-%s", config.Tag)
 		config.RuntimePluginBin = binaries.RuntimePlugin
 		config.NetworkPluginBin = binaries.NetworkPlugin

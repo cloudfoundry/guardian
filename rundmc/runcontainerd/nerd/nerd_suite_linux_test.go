@@ -38,48 +38,52 @@ var (
 	testConfig        *TestConfig
 	containerdClient  *containerd.Client
 	containerdContext context.Context
-
 	containerdSession *gexec.Session
 )
 
 func TestNerd(t *testing.T) {
 	RegisterFailHandler(Fail)
-	SynchronizedBeforeSuite(func() []byte {
-		cgroupsPath = filepath.Join(os.TempDir(), "cgroups")
-		setupCgroups(cgroupsPath)
-
-		runDir, err := ioutil.TempDir("", "")
-		Expect(err).NotTo(HaveOccurred())
-
-		containerdConfig := containerdrunner.ContainerdConfig(runDir)
-		containerdSession = containerdrunner.NewSession(runDir, containerdConfig)
-
-		testConfig := &TestConfig{
-			RunDir: runDir,
-			Socket: containerdConfig.GRPC.Address,
-			CtrBin: "ctr",
-		}
-		return jsonMarshal(testConfig)
-	}, func(data []byte) {
-		testConfig = &TestConfig{}
-		jsonUnmarshal(data, testConfig)
-
-		var err error
-		containerdClient, err = containerd.New(testConfig.Socket)
-		Expect(err).NotTo(HaveOccurred())
-
-		containerdContext = namespaces.WithNamespace(context.Background(), fmt.Sprintf("nerdspace%d", GinkgoParallelNode()))
-	})
-
-	SynchronizedAfterSuite(func() {}, func() {
-		Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
-		Expect(os.RemoveAll(testConfig.RunDir)).To(Succeed())
-		teardownCgroups(cgroupsPath)
-		gexec.CleanupBuildArtifacts()
-	})
-
 	RunSpecs(t, "Nerd Suite")
 }
+
+var _ = SynchronizedBeforeSuite(func() []byte {
+	cgroupsPath = filepath.Join(os.TempDir(), "cgroups")
+	setupCgroups(cgroupsPath)
+	return nil
+}, func(_ []byte) {})
+
+var _ = BeforeEach(func() {
+	if !isContainerd() {
+		Skip("containerd not enabled")
+	}
+
+	runDir, err := ioutil.TempDir("", "")
+	Expect(err).NotTo(HaveOccurred())
+
+	containerdConfig := containerdrunner.ContainerdConfig(runDir)
+	containerdSession = containerdrunner.NewSession(runDir, containerdConfig)
+
+	containerdClient, err = containerd.New(containerdConfig.GRPC.Address)
+	Expect(err).NotTo(HaveOccurred())
+
+	containerdContext = namespaces.WithNamespace(context.Background(), fmt.Sprintf("nerdspace%d", GinkgoParallelNode()))
+
+	testConfig = &TestConfig{
+		RunDir: runDir,
+		Socket: containerdConfig.GRPC.Address,
+		CtrBin: "ctr",
+	}
+})
+
+var _ = AfterEach(func() {
+	Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
+	Expect(os.RemoveAll(testConfig.RunDir)).To(Succeed())
+	gexec.CleanupBuildArtifacts()
+})
+
+var _ = SynchronizedAfterSuite(func() {}, func() {
+	teardownCgroups(cgroupsPath)
+})
 
 func setupCgroups(cgroupsRoot string) {
 	logger := lagertest.NewTestLogger("test")
@@ -152,4 +156,8 @@ func jsonMarshal(v interface{}) []byte {
 
 func jsonUnmarshal(data []byte, v interface{}) {
 	Expect(toml.Unmarshal(data, v)).To(Succeed())
+}
+
+func isContainerd() bool {
+	return os.Getenv("CONTAINERD_ENABLED") == "true"
 }
