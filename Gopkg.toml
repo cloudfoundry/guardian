@@ -116,7 +116,7 @@ ignored = ["code.cloudfoundry.org/garden-shed*"]
 
 [[constraint]]
   name = "github.com/onsi/ginkgo"
-  revision = "059cec02d342bab423425a99b191186a03255e9e"
+  revision = "v1.5.0"
 
 [[constraint]]
   name = "github.com/onsi/gomega"

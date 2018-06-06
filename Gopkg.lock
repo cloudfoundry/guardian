@@ -389,15 +389,18 @@
     "internal/leafnodes",
     "internal/remote",
     "internal/spec",
+    "internal/spec_iterator",
     "internal/specrunner",
     "internal/suite",
     "internal/testingtproxy",
     "internal/writer",
     "reporters",
     "reporters/stenographer",
+    "reporters/stenographer/support/go-colorable",
+    "reporters/stenographer/support/go-isatty",
     "types"
   ]
-  revision = "059cec02d342bab423425a99b191186a03255e9e"
+  revision = "v1.5.0"
 
 [[projects]]
   name = "github.com/onsi/gomega"
@@ -653,6 +656,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4150c44f6743ad996c468e3ade92439b92e328625132959a5ae5176a717ce1e4"
+  inputs-digest = "e5c55fab2de8d17e9d11391e96bed90c8b8f9d833d59f269752ae47eaf29f48c"
   solver-name = "gps-cdcl"
   solver-version = 1
