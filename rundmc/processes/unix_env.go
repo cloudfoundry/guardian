@@ -1,10 +1,14 @@
-package runrunc
+package processes
 
 import (
 	"regexp"
 
 	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 )
+
+const DefaultRootPath = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+const DefaultPath = "PATH=/usr/local/bin:/usr/bin:/bin"
 
 func envWithDefaultPath(defaultPath string, env []string) []string {
 	pathRegexp := regexp.MustCompile("^PATH=.*$")
@@ -28,12 +32,12 @@ func envWithUser(env []string, user string) []string {
 
 	if user != "" {
 		return append(env, "USER="+user)
-	} else {
-		return append(env, "USER=root")
 	}
+
+	return append(env, "USER=root")
 }
 
-func UnixEnvFor(bndl goci.Bndl, spec ProcessSpec) []string {
+func UnixEnvFor(bndl goci.Bndl, spec runrunc.ProcessSpec) []string {
 	requestedEnv := append(bndl.Spec.Process.Env, spec.Env...)
 
 	defaultPath := DefaultPath

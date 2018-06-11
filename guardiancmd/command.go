@@ -35,6 +35,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/peas/privchecker"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
+	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/pid"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
@@ -849,7 +850,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	depot := cmd.wireDepot(template, bundleSaver, bindMountSourceCreator)
 
 	bndlLoader := &goci.BndlLoader{}
-	processBuilder := runrunc.NewProcessBuilder(wireEnvFunc(), nonRootMaxCaps)
+	processBuilder := processes.NewBuilder(wireEnvFunc(), nonRootMaxCaps)
 
 	cmdRunner := factory.CommandRunner()
 	runcLogRunner := runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile)

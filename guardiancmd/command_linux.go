@@ -20,6 +20,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
+	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
@@ -83,8 +84,8 @@ func (f *LinuxFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 	return gardener.NewVolumeProvider(shed, shed, gardener.CommandFactory(preparerootfs.Command), f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
 }
 
-func wireEnvFunc() runrunc.EnvFunc {
-	return runrunc.EnvFunc(runrunc.UnixEnvFor)
+func wireEnvFunc() processes.EnvFunc {
+	return processes.UnixEnvFor
 }
 
 func (f *LinuxFactory) WireMkdirer() runrunc.Mkdirer {

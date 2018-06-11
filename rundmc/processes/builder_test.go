@@ -1,10 +1,11 @@
-package runrunc_test
+package processes_test
 
 import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/rundmc/processes"
+	fakes "code.cloudfoundry.org/guardian/rundmc/processes/processesfakes"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	fakes "code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -15,7 +16,7 @@ var _ = Describe("ProcBuilder", func() {
 		envDeterminer  *fakes.FakeEnvDeterminer
 		nonRootMaxCaps = []string{"CAP_FOO", "CAP_BAZ"}
 
-		procBuilder *runrunc.ProcBuilder
+		procBuilder *processes.ProcBuilder
 
 		bndl        goci.Bndl
 		processSpec runrunc.ProcessSpec
@@ -25,7 +26,7 @@ var _ = Describe("ProcBuilder", func() {
 		envDeterminer = new(fakes.FakeEnvDeterminer)
 		envDeterminer.EnvForReturns([]string{"ENV"})
 
-		procBuilder = runrunc.NewProcessBuilder(envDeterminer, nonRootMaxCaps)
+		procBuilder = processes.NewBuilder(envDeterminer, nonRootMaxCaps)
 
 		bndl = goci.Bundle().
 			WithHostname("some-hostname").

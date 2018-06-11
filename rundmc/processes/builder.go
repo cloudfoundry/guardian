@@ -1,23 +1,35 @@
-package runrunc
+package processes
 
 import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
+
+//go:generate counterfeiter . EnvDeterminer
+type EnvDeterminer interface {
+	EnvFor(bndl goci.Bndl, spec runrunc.ProcessSpec) []string
+}
+
+type EnvFunc func(bndl goci.Bndl, spec runrunc.ProcessSpec) []string
+
+func (fn EnvFunc) EnvFor(bndl goci.Bndl, spec runrunc.ProcessSpec) []string {
+	return fn(bndl, spec)
+}
 
 type ProcBuilder struct {
 	envDeterminer  EnvDeterminer
 	nonRootMaxCaps []string
 }
 
-func NewProcessBuilder(envDeterminer EnvDeterminer, nonRootMaxCaps []string) *ProcBuilder {
+func NewBuilder(envDeterminer EnvDeterminer, nonRootMaxCaps []string) *ProcBuilder {
 	return &ProcBuilder{
 		envDeterminer:  envDeterminer,
 		nonRootMaxCaps: nonRootMaxCaps,
 	}
 }
 
-func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec ProcessSpec) *specs.Process {
+func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec runrunc.ProcessSpec) *specs.Process {
 	return &specs.Process{
 		Args:        append([]string{spec.Path}, spec.Args...),
 		ConsoleSize: console(spec),
@@ -54,7 +66,7 @@ func (p *ProcBuilder) capabilities(bndl goci.Bndl, containerUID int) *specs.Linu
 	return nil
 }
 
-func console(spec ProcessSpec) *specs.Box {
+func console(spec runrunc.ProcessSpec) *specs.Box {
 	consoleBox := &specs.Box{
 		Width:  80,
 		Height: 24,
@@ -64,4 +76,16 @@ func console(spec ProcessSpec) *specs.Box {
 		consoleBox.Height = uint(spec.TTY.WindowSize.Rows)
 	}
 	return consoleBox
+}
+
+func intersect(l1 []string, l2 []string) (result []string) {
+	for _, a := range l1 {
+		for _, b := range l2 {
+			if a == b {
+				result = append(result, a)
+			}
+		}
+	}
+
+	return result
 }

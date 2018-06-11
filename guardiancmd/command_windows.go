@@ -16,6 +16,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
+	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 	"github.com/docker/docker/pkg/mount"
@@ -98,8 +99,8 @@ func (f *WindowsFactory) WireMkdirer() runrunc.Mkdirer {
 	return mkdirer{}
 }
 
-func wireEnvFunc() runrunc.EnvFunc {
-	return runrunc.EnvFunc(runrunc.WindowsEnvFor)
+func wireEnvFunc() processes.EnvFunc {
+	return processes.WindowsEnvFor
 }
 
 func wireMounts() bundlerules.Mounts {

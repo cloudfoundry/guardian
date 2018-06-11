@@ -1,4 +1,4 @@
-package runrunc
+package processes
 
 import (
 	"code.cloudfoundry.org/garden"

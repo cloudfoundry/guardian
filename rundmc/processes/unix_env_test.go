@@ -1,8 +1,9 @@
-package runrunc_test
+package processes_test
 
 import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -14,7 +15,7 @@ var _ = Describe("UnixEnvFor", func() {
 	Context("when the user is specified in the process spec", func() {
 		DescribeTable("appends the correct USER env var", func(specEnv, expectedEnv []string) {
 			bundle := goci.Bundle()
-			env := runrunc.UnixEnvFor(bundle, runrunc.ProcessSpec{
+			env := processes.UnixEnvFor(bundle, runrunc.ProcessSpec{
 				ProcessSpec: garden.ProcessSpec{
 					User: "spiderman",
 					Env:  specEnv,
@@ -80,7 +81,7 @@ var _ = Describe("UnixEnvFor", func() {
 	Context("when the user is not specified in the process spec", func() {
 		DescribeTable("appends the correct USER env var", func(specEnv, expectedEnv []string) {
 			bundle := goci.Bundle()
-			env := runrunc.UnixEnvFor(bundle, runrunc.ProcessSpec{
+			env := processes.UnixEnvFor(bundle, runrunc.ProcessSpec{
 				ProcessSpec: garden.ProcessSpec{
 					Env: specEnv,
 				},
@@ -145,7 +146,7 @@ var _ = Describe("UnixEnvFor", func() {
 	Context("when the environment already contains a PATH", func() {
 		It("passes the environment variables", func() {
 			bundle := goci.Bundle()
-			env := runrunc.UnixEnvFor(bundle, runrunc.ProcessSpec{
+			env := processes.UnixEnvFor(bundle, runrunc.ProcessSpec{
 				ProcessSpec: garden.ProcessSpec{
 					Env: []string{"a=1", "b=3", "c=4", "PATH=a"},
 				},
@@ -159,7 +160,7 @@ var _ = Describe("UnixEnvFor", func() {
 	Context("when the environment does not already contain a PATH", func() {
 		DescribeTable("appends a default PATH", func(procUser string, uid int, specEnv, expectedEnv []string) {
 			bundle := goci.Bundle()
-			env := runrunc.UnixEnvFor(bundle, runrunc.ProcessSpec{
+			env := processes.UnixEnvFor(bundle, runrunc.ProcessSpec{
 				ProcessSpec: garden.ProcessSpec{
 					Env:  specEnv,
 					User: procUser,
@@ -239,7 +240,7 @@ var _ = Describe("UnixEnvFor", func() {
 		JustBeforeEach(func() {
 			bundle = goci.Bundle().WithProcess(specs.Process{Env: containerEnv})
 
-			env = runrunc.UnixEnvFor(bundle, runrunc.ProcessSpec{
+			env = processes.UnixEnvFor(bundle, runrunc.ProcessSpec{
 				ProcessSpec: garden.ProcessSpec{
 					Env: processEnv,
 				},
@@ -253,7 +254,7 @@ var _ = Describe("UnixEnvFor", func() {
 
 			bundle.Spec.Process.Env = []string{}
 
-			env = runrunc.UnixEnvFor(bundle, runrunc.ProcessSpec{
+			env = processes.UnixEnvFor(bundle, runrunc.ProcessSpec{
 				ProcessSpec: garden.ProcessSpec{
 					Env: processEnv,
 				},
