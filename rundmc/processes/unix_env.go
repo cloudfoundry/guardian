@@ -3,8 +3,8 @@ package processes
 import (
 	"regexp"
 
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 )
 
 const DefaultRootPath = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -37,11 +37,11 @@ func envWithUser(env []string, user string) []string {
 	return append(env, "USER=root")
 }
 
-func UnixEnvFor(bndl goci.Bndl, spec runrunc.ProcessSpec) []string {
+func UnixEnvFor(bndl goci.Bndl, spec garden.ProcessSpec, containerUID int) []string {
 	requestedEnv := append(bndl.Spec.Process.Env, spec.Env...)
 
 	defaultPath := DefaultPath
-	if spec.ContainerUID == 0 {
+	if containerUID == 0 {
 		defaultPath = DefaultRootPath
 	}
 

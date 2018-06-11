@@ -1,20 +1,20 @@
 package processes
 
 import (
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 //go:generate counterfeiter . EnvDeterminer
 type EnvDeterminer interface {
-	EnvFor(bndl goci.Bndl, spec runrunc.ProcessSpec) []string
+	EnvFor(bndl goci.Bndl, spec garden.ProcessSpec, containerUID int) []string
 }
 
-type EnvFunc func(bndl goci.Bndl, spec runrunc.ProcessSpec) []string
+type EnvFunc func(bndl goci.Bndl, spec garden.ProcessSpec, containerUID int) []string
 
-func (fn EnvFunc) EnvFor(bndl goci.Bndl, spec runrunc.ProcessSpec) []string {
-	return fn(bndl, spec)
+func (fn EnvFunc) EnvFor(bndl goci.Bndl, spec garden.ProcessSpec, containerUID int) []string {
+	return fn(bndl, spec, containerUID)
 }
 
 type ProcBuilder struct {
@@ -29,19 +29,19 @@ func NewBuilder(envDeterminer EnvDeterminer, nonRootMaxCaps []string) *ProcBuild
 	}
 }
 
-func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec runrunc.ProcessSpec) *specs.Process {
+func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, uid, gid int) *specs.Process {
 	return &specs.Process{
 		Args:        append([]string{spec.Path}, spec.Args...),
 		ConsoleSize: console(spec),
-		Env:         p.envDeterminer.EnvFor(bndl, spec),
+		Env:         p.envDeterminer.EnvFor(bndl, spec, uid),
 		User: specs.User{
-			UID:            uint32(spec.ContainerUID),
-			GID:            uint32(spec.ContainerGID),
+			UID:            uint32(uid),
+			GID:            uint32(gid),
 			AdditionalGids: []uint32{},
 			Username:       spec.User,
 		},
 		Cwd:             spec.Dir,
-		Capabilities:    p.capabilities(bndl, spec.ContainerUID),
+		Capabilities:    p.capabilities(bndl, uid),
 		Rlimits:         toRlimits(spec.Limits),
 		Terminal:        spec.TTY != nil,
 		ApparmorProfile: bndl.Process().ApparmorProfile,
@@ -66,7 +66,7 @@ func (p *ProcBuilder) capabilities(bndl goci.Bndl, containerUID int) *specs.Linu
 	return nil
 }
 
-func console(spec runrunc.ProcessSpec) *specs.Box {
+func console(spec garden.ProcessSpec) *specs.Box {
 	consoleBox := &specs.Box{
 		Width:  80,
 		Height: 24,

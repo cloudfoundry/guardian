@@ -4,17 +4,18 @@ package processesfakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 )
 
 type FakeEnvDeterminer struct {
-	EnvForStub        func(bndl goci.Bndl, spec runrunc.ProcessSpec) []string
+	EnvForStub        func(bndl goci.Bndl, spec garden.ProcessSpec, containerUID int) []string
 	envForMutex       sync.RWMutex
 	envForArgsForCall []struct {
-		bndl goci.Bndl
-		spec runrunc.ProcessSpec
+		bndl         goci.Bndl
+		spec         garden.ProcessSpec
+		containerUID int
 	}
 	envForReturns struct {
 		result1 []string
@@ -26,17 +27,18 @@ type FakeEnvDeterminer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeEnvDeterminer) EnvFor(bndl goci.Bndl, spec runrunc.ProcessSpec) []string {
+func (fake *FakeEnvDeterminer) EnvFor(bndl goci.Bndl, spec garden.ProcessSpec, containerUID int) []string {
 	fake.envForMutex.Lock()
 	ret, specificReturn := fake.envForReturnsOnCall[len(fake.envForArgsForCall)]
 	fake.envForArgsForCall = append(fake.envForArgsForCall, struct {
-		bndl goci.Bndl
-		spec runrunc.ProcessSpec
-	}{bndl, spec})
-	fake.recordInvocation("EnvFor", []interface{}{bndl, spec})
+		bndl         goci.Bndl
+		spec         garden.ProcessSpec
+		containerUID int
+	}{bndl, spec, containerUID})
+	fake.recordInvocation("EnvFor", []interface{}{bndl, spec, containerUID})
 	fake.envForMutex.Unlock()
 	if fake.EnvForStub != nil {
-		return fake.EnvForStub(bndl, spec)
+		return fake.EnvForStub(bndl, spec, containerUID)
 	}
 	if specificReturn {
 		return ret.result1
@@ -50,10 +52,10 @@ func (fake *FakeEnvDeterminer) EnvForCallCount() int {
 	return len(fake.envForArgsForCall)
 }
 
-func (fake *FakeEnvDeterminer) EnvForArgsForCall(i int) (goci.Bndl, runrunc.ProcessSpec) {
+func (fake *FakeEnvDeterminer) EnvForArgsForCall(i int) (goci.Bndl, garden.ProcessSpec, int) {
 	fake.envForMutex.RLock()
 	defer fake.envForMutex.RUnlock()
-	return fake.envForArgsForCall[i].bndl, fake.envForArgsForCall[i].spec
+	return fake.envForArgsForCall[i].bndl, fake.envForArgsForCall[i].spec, fake.envForArgsForCall[i].containerUID
 }
 
 func (fake *FakeEnvDeterminer) EnvForReturns(result1 []string) {

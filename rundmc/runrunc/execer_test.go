@@ -129,13 +129,11 @@ var _ = Describe("Execer", func() {
 
 		It("builds a process", func() {
 			Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-			actualBundle, actualProcessSpec := processBuilder.BuildProcessArgsForCall(0)
+			actualBundle, actualProcessSpec, actualContainerUID, actualContainerGID := processBuilder.BuildProcessArgsForCall(0)
 			Expect(actualBundle).To(Equal(bndl))
-			Expect(actualProcessSpec).To(Equal(runrunc.ProcessSpec{
-				ProcessSpec:  spec,
-				ContainerUID: user.Uid,
-				ContainerGID: user.Gid,
-			}))
+			Expect(actualProcessSpec).To(Equal(spec))
+			Expect(actualContainerUID).To(Equal(user.Uid))
+			Expect(actualContainerGID).To(Equal(user.Gid))
 		})
 
 		It("does not generate an ID for the process if one is specified", func() {
@@ -200,7 +198,7 @@ var _ = Describe("Execer", func() {
 
 			It("defaults the workdir to the user's home when building a process", func() {
 				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-				_, actualProcessSpec := processBuilder.BuildProcessArgsForCall(0)
+				_, actualProcessSpec, _, _ := processBuilder.BuildProcessArgsForCall(0)
 				Expect(actualProcessSpec.Dir).To(Equal(user.Home))
 			})
 		})

@@ -4,17 +4,20 @@ package runruncfakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type FakeProcessBuilder struct {
-	BuildProcessStub        func(bndl goci.Bndl, processSpec runrunc.ProcessSpec) *specs.Process
+	BuildProcessStub        func(bndl goci.Bndl, processSpec garden.ProcessSpec, containerUID, containerGID int) *specs.Process
 	buildProcessMutex       sync.RWMutex
 	buildProcessArgsForCall []struct {
-		bndl        goci.Bndl
-		processSpec runrunc.ProcessSpec
+		bndl         goci.Bndl
+		processSpec  garden.ProcessSpec
+		containerUID int
+		containerGID int
 	}
 	buildProcessReturns struct {
 		result1 *specs.Process
@@ -26,17 +29,19 @@ type FakeProcessBuilder struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeProcessBuilder) BuildProcess(bndl goci.Bndl, processSpec runrunc.ProcessSpec) *specs.Process {
+func (fake *FakeProcessBuilder) BuildProcess(bndl goci.Bndl, processSpec garden.ProcessSpec, containerUID int, containerGID int) *specs.Process {
 	fake.buildProcessMutex.Lock()
 	ret, specificReturn := fake.buildProcessReturnsOnCall[len(fake.buildProcessArgsForCall)]
 	fake.buildProcessArgsForCall = append(fake.buildProcessArgsForCall, struct {
-		bndl        goci.Bndl
-		processSpec runrunc.ProcessSpec
-	}{bndl, processSpec})
-	fake.recordInvocation("BuildProcess", []interface{}{bndl, processSpec})
+		bndl         goci.Bndl
+		processSpec  garden.ProcessSpec
+		containerUID int
+		containerGID int
+	}{bndl, processSpec, containerUID, containerGID})
+	fake.recordInvocation("BuildProcess", []interface{}{bndl, processSpec, containerUID, containerGID})
 	fake.buildProcessMutex.Unlock()
 	if fake.BuildProcessStub != nil {
-		return fake.BuildProcessStub(bndl, processSpec)
+		return fake.BuildProcessStub(bndl, processSpec, containerUID, containerGID)
 	}
 	if specificReturn {
 		return ret.result1
@@ -50,10 +55,10 @@ func (fake *FakeProcessBuilder) BuildProcessCallCount() int {
 	return len(fake.buildProcessArgsForCall)
 }
 
-func (fake *FakeProcessBuilder) BuildProcessArgsForCall(i int) (goci.Bndl, runrunc.ProcessSpec) {
+func (fake *FakeProcessBuilder) BuildProcessArgsForCall(i int) (goci.Bndl, garden.ProcessSpec, int, int) {
 	fake.buildProcessMutex.RLock()
 	defer fake.buildProcessMutex.RUnlock()
-	return fake.buildProcessArgsForCall[i].bndl, fake.buildProcessArgsForCall[i].processSpec
+	return fake.buildProcessArgsForCall[i].bndl, fake.buildProcessArgsForCall[i].processSpec, fake.buildProcessArgsForCall[i].containerUID, fake.buildProcessArgsForCall[i].containerGID
 }
 
 func (fake *FakeProcessBuilder) BuildProcessReturns(result1 *specs.Process) {

@@ -13,7 +13,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/peas/peasfakes"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -238,13 +237,11 @@ var _ = Describe("PeaCreator", func() {
 
 		It("builds a process", func() {
 			Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-			actualBundle, actualProcessSpec := processBuilder.BuildProcessArgsForCall(0)
+			actualBundle, actualProcessSpec, actualContainerUID, actualContainerGID := processBuilder.BuildProcessArgsForCall(0)
 			Expect(actualBundle).To(Equal(generatedBundle))
-			Expect(actualProcessSpec).To(Equal(runrunc.ProcessSpec{
-				ProcessSpec:  processSpec,
-				ContainerUID: 4,
-				ContainerGID: 5,
-			}))
+			Expect(actualProcessSpec).To(Equal(processSpec))
+			Expect(actualContainerUID).To(Equal(4))
+			Expect(actualContainerGID).To(Equal(5))
 		})
 
 		It("saves the bundle (containing the built process) to disk", func() {
@@ -309,7 +306,7 @@ var _ = Describe("PeaCreator", func() {
 
 			It("defaults to /", func() {
 				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-				_, actualProcessSpec := processBuilder.BuildProcessArgsForCall(0)
+				_, actualProcessSpec, _, _ := processBuilder.BuildProcessArgsForCall(0)
 				Expect(actualProcessSpec.Dir).To(Equal("/"))
 			})
 		})
@@ -321,9 +318,9 @@ var _ = Describe("PeaCreator", func() {
 
 			It("defaults to 0:0", func() {
 				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-				_, actualProcessSpec := processBuilder.BuildProcessArgsForCall(0)
-				Expect(actualProcessSpec.ContainerUID).To(Equal(0))
-				Expect(actualProcessSpec.ContainerGID).To(Equal(0))
+				_, _, actualContainerUID, actualContainerGID := processBuilder.BuildProcessArgsForCall(0)
+				Expect(actualContainerUID).To(Equal(0))
+				Expect(actualContainerGID).To(Equal(0))
 			})
 		})
 

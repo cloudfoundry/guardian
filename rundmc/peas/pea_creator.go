@@ -90,7 +90,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	if processSpec.Dir == "" {
 		processSpec.Dir = "/"
 	}
-	uid, gid, err := parseUser(processSpec.User)
+	userUID, userGID, err := parseUser(processSpec.User)
 	if err != nil {
 		return errs("parse-user", err)
 	}
@@ -141,11 +141,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		return errs("generating-bundle", multierror.Append(genErr, destroyErr))
 	}
 
-	preparedProcess := p.ProcessBuilder.BuildProcess(bndl, runrunc.ProcessSpec{
-		ProcessSpec:  processSpec,
-		ContainerUID: uid,
-		ContainerGID: gid,
-	})
+	preparedProcess := p.ProcessBuilder.BuildProcess(bndl, processSpec, userUID, userGID)
 
 	bndl = bndl.WithProcess(*preparedProcess)
 	if saveErr := p.BundleSaver.Save(bndl, peaBundlePath); saveErr != nil {

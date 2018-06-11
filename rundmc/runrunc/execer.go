@@ -76,11 +76,7 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec g
 		return nil, err
 	}
 
-	preparedSpec := e.processBuilder.BuildProcess(bundle, ProcessSpec{
-		ProcessSpec:  spec,
-		ContainerUID: user.Uid,
-		ContainerGID: user.Gid,
-	})
+	preparedSpec := e.processBuilder.BuildProcess(bundle, spec, user.Uid, user.Gid)
 
 	processesPath := filepath.Join(bundlePath, "processes")
 

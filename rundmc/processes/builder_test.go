@@ -5,7 +5,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
 	fakes "code.cloudfoundry.org/guardian/rundmc/processes/processesfakes"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -18,8 +17,10 @@ var _ = Describe("ProcBuilder", func() {
 
 		procBuilder *processes.ProcBuilder
 
-		bndl        goci.Bndl
-		processSpec runrunc.ProcessSpec
+		bndl         goci.Bndl
+		processSpec  garden.ProcessSpec
+		containerUID int
+		containerGID int
 	)
 
 	BeforeEach(func() {
@@ -44,40 +45,38 @@ var _ = Describe("ProcBuilder", func() {
 				ApparmorProfile: "default-profile",
 			}).
 			WithCapabilities("CAP_FOO", "CAP_BAR")
-		processSpec = runrunc.ProcessSpec{
-			ProcessSpec: garden.ProcessSpec{
-				Path: "program",
-				Args: []string{"and", "args"},
-				User: "Froderick",
-				Dir:  "dir",
-				Limits: garden.ResourceLimits{
-					As:         ptr(12),
-					Core:       ptr(24),
-					Cpu:        ptr(36),
-					Data:       ptr(99),
-					Fsize:      ptr(101),
-					Locks:      ptr(111),
-					Memlock:    ptr(987),
-					Msgqueue:   ptr(777),
-					Nice:       ptr(111),
-					Nofile:     ptr(222),
-					Nproc:      ptr(1234),
-					Rss:        ptr(888),
-					Rtprio:     ptr(254),
-					Sigpending: ptr(101),
-					Stack:      ptr(44),
-				},
+		processSpec = garden.ProcessSpec{
+			Path: "program",
+			Args: []string{"and", "args"},
+			User: "Froderick",
+			Dir:  "dir",
+			Limits: garden.ResourceLimits{
+				As:         ptr(12),
+				Core:       ptr(24),
+				Cpu:        ptr(36),
+				Data:       ptr(99),
+				Fsize:      ptr(101),
+				Locks:      ptr(111),
+				Memlock:    ptr(987),
+				Msgqueue:   ptr(777),
+				Nice:       ptr(111),
+				Nofile:     ptr(222),
+				Nproc:      ptr(1234),
+				Rss:        ptr(888),
+				Rtprio:     ptr(254),
+				Sigpending: ptr(101),
+				Stack:      ptr(44),
 			},
-			ContainerUID: 1,
-			ContainerGID: 2,
 		}
+		containerUID = 1
+		containerGID = 2
 	})
 
 	Describe("the built process", func() {
 		var preparedProc *specs.Process
 
 		JustBeforeEach(func() {
-			preparedProc = procBuilder.BuildProcess(bndl, processSpec)
+			preparedProc = procBuilder.BuildProcess(bndl, processSpec, containerUID, containerGID)
 		})
 
 		It("merges the path and args to create the argv", func() {
@@ -142,8 +141,8 @@ var _ = Describe("ProcBuilder", func() {
 
 				Context("when the user is root", func() {
 					BeforeEach(func() {
-						processSpec.ContainerUID = 0
-						processSpec.ContainerGID = 0
+						containerUID = 0
+						containerGID = 0
 					})
 
 					It("passes the specified capabilities", func() {
@@ -196,9 +195,10 @@ var _ = Describe("ProcBuilder", func() {
 
 				It("passes the environment from the EnvDeterminer", func() {
 					Expect(envDeterminer.EnvForCallCount()).To(Equal(1))
-					actualBndl, actualSpec := envDeterminer.EnvForArgsForCall(0)
+					actualBndl, actualSpec, actualContainerUID := envDeterminer.EnvForArgsForCall(0)
 					Expect(actualBndl).To(Equal(bndl))
 					Expect(actualSpec).To(Equal(processSpec))
+					Expect(actualContainerUID).To(Equal(containerUID))
 					Expect(preparedProc.Env).To(ConsistOf("ENV"))
 				})
 			})

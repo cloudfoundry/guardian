@@ -54,13 +54,7 @@ type ExecRunner interface {
 
 //go:generate counterfeiter . ProcessBuilder
 type ProcessBuilder interface {
-	BuildProcess(bndl goci.Bndl, processSpec ProcessSpec) *specs.Process
-}
-
-type ProcessSpec struct {
-	garden.ProcessSpec
-	ContainerUID int
-	ContainerGID int
+	BuildProcess(bndl goci.Bndl, processSpec garden.ProcessSpec, containerUID, containerGID int) *specs.Process
 }
 
 //go:generate counterfeiter . Waiter
