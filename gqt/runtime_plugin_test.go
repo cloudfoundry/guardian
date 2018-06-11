@@ -12,10 +12,10 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("Runtime Plugin", func() {
@@ -266,7 +266,7 @@ var _ = Describe("Runtime Plugin", func() {
 			processSpecFilePath := filepath.Join(client.TmpDir, "exec-process-spec")
 			Eventually(processSpecFilePath).Should(BeAnExistingFile())
 
-			var processSpec runrunc.PreparedSpec
+			var processSpec specs.Process
 			readProcessSpec := func() error {
 				processSpecContent, err := ioutil.ReadFile(processSpecFilePath)
 				if err != nil {
@@ -275,7 +275,7 @@ var _ = Describe("Runtime Plugin", func() {
 				return json.Unmarshal(processSpecContent, &processSpec)
 			}
 			Eventually(readProcessSpec).Should(Succeed())
-			Expect(processSpec.Process.Args[0]).To(Equal("some-idiosyncratic-binary"))
+			Expect(processSpec.Args[0]).To(Equal("some-idiosyncratic-binary"))
 		})
 
 		Describe("runtime plugin stdio", func() {

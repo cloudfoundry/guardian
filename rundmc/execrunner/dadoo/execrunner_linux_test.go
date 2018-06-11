@@ -71,7 +71,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		Expect(os.MkdirAll(processPath, 0700)).To(Succeed())
 
 		runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root",
-			signallerFactory, fakeCommandRunner, false, "exec")
+			signallerFactory, fakeCommandRunner, false, "exec", 5, 6)
 		log = lagertest.NewTestLogger("test")
 
 		runcReturns = 0
@@ -216,7 +216,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			)
 
 			BeforeEach(func() {
-				_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 5, 6, defaultProcessIO(), false, nil, nil)
+				_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				otherProcessPath, err = ioutil.TempDir("", "execrunner-tests")
@@ -224,13 +224,13 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			})
 
 			It("succeeds", func() {
-				_, err := runner.Run(log, processID, otherProcessPath, "some-handle", bundlePath, 5, 6, defaultProcessIO(), false, nil, nil)
+				_, err := runner.Run(log, processID, otherProcessPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
 		It("executes the dadoo binary with the correct arguments", func() {
-			_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 5, 6, defaultProcessIO(), false, nil, nil)
+			_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCommandRunner.StartedCommands()[0].Args).To(
@@ -245,11 +245,11 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		Context("when the exec mode is 'run'", func() {
 			BeforeEach(func() {
 				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root",
-					signallerFactory, fakeCommandRunner, false, "run")
+					signallerFactory, fakeCommandRunner, false, "run", 5, 6)
 			})
 
 			It("executes the dadoo binary with the correct arguments", func() {
-				_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 5, 6, defaultProcessIO(), false, nil, nil)
+				_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeCommandRunner.StartedCommands()[0].Args).To(
@@ -264,7 +264,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		Context("when TTY is requested", func() {
 			It("executed the dadoo binary with the correct arguments", func() {
-				runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), true, nil, nil)
+				runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), true, nil, nil)
 
 				Expect(fakeCommandRunner.StartedCommands()[0].Args).To(
 					Equal([]string{
@@ -289,7 +289,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			runReturns := make(chan struct{})
 			go func(runner *dadoo.ExecRunner) {
 				defer GinkgoRecover()
-				runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+				runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 				close(runReturns)
 			}(runner)
 
@@ -301,14 +301,14 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		})
 
 		It("passes the encoded process spec on STDIN of dadoo", func() {
-			runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, bytes.NewBufferString("stdin"), nil)
+			runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, bytes.NewBufferString("stdin"), nil)
 			Expect(string(receivedStdinContents)).To(Equal("stdin"))
 		})
 
 		Describe("extra cleanup", func() {
 			It("performs extra cleanup after Wait returns", func() {
 				called := false
-				proc, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, bytes.NewBufferString("stdin"), func() error {
+				proc, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, bytes.NewBufferString("stdin"), func() error {
 					called = true
 					return nil
 				})
@@ -320,7 +320,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 			Context("when the extra cleanup returns an error", func() {
 				It("logs the error", func() {
-					proc, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, bytes.NewBufferString("stdin"), func() error {
+					proc, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, bytes.NewBufferString("stdin"), func() error {
 						return errors.New("a-cleanup-error")
 					})
 					Expect(err).NotTo(HaveOccurred())
@@ -334,11 +334,11 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		Context("when cleanupProcessDirsOnWait is true", func() {
 			BeforeEach(func() {
 				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root",
-					signallerFactory, fakeCommandRunner, true, "exec")
+					signallerFactory, fakeCommandRunner, true, "exec", 5, 6)
 			})
 
 			It("cleans up the processes dir after Wait returns", func() {
-				process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+				process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(processPath).To(BeAnExistingFile())
@@ -353,11 +353,11 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		Context("when cleanupProcessDirsOnWait is false", func() {
 			BeforeEach(func() {
 				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root",
-					signallerFactory, fakeCommandRunner, false, "exec")
+					signallerFactory, fakeCommandRunner, false, "exec", 5, 6)
 			})
 
 			It("does not clean up the processes dir after Wait returns", func() {
-				process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+				process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(processPath).To(BeAnExistingFile())
@@ -373,7 +373,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			It("returns a nice error", func() {
 				dadooReturns = errors.New("boom")
 
-				_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+				_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 				Expect(err).To(MatchError(ContainSubstring("boom")))
 			})
 		})
@@ -394,7 +394,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					updatedProcessIO := defaultProcessIO()
 					updatedProcessIO.Stderr = new(bytes.Buffer)
 					_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath,
-						123, 456, updatedProcessIO, false, nil, nil)
+						updatedProcessIO, false, nil, nil)
 					Expect(err).To(MatchError(ContainSubstring("exit status 3")))
 
 					close(done)
@@ -408,7 +408,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					})
 
 					It("Returns a garden.RequestedBinaryNotFoundError error", func() {
-						_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+						_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 
 						message := `starting container process caused "exec: \"potato\": executable file not found in $PATH"`
 						expectedErr := garden.ExecutableNotFoundError{Message: message}
@@ -423,7 +423,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					})
 
 					It("Returns a garden.RequestedBinaryNotFoundError error", func() {
-						_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+						_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 
 						message := `starting container process caused "exec: \"/bin/potato\": stat /bin/potato: no such file or directory"`
 						expectedErr := garden.ExecutableNotFoundError{Message: message}
@@ -440,7 +440,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			})
 
 			It("returns a meaningful error", func() {
-				_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+				_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 				Expect(err).To(MatchError(ContainSubstring("failed to read runc exit code")))
 
 			})
@@ -448,7 +448,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		Describe("Logging", func() {
 			It("sends all the runc logs to the logger", func() {
-				_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+				_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				runcLogs := make([]lager.LogFormat, 0)
@@ -463,7 +463,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			})
 
 			It("sends all the dadoo logs to the logger after dadoo exits", func() {
-				process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+				process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 				_, err = process.Wait()
 				Expect(err).NotTo(HaveOccurred())
@@ -478,7 +478,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				})
 
 				It("return an error including the last log line when runC fails to start the container", func() {
-					_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+					_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 					Expect(err).To(MatchError("runc exec: exit status 3: Container start failed: [10] System error: fork/exec POTATO: no such file or directory"))
 				})
 
@@ -489,13 +489,13 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					})
 
 					It("logs an error including the log line", func() {
-						_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+						_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 						Expect(err).To(HaveOccurred())
 						Expect(log.Buffer()).To(gbytes.Say("foobarbaz"))
 					})
 
 					It("returns an error with only the exit status if the log can't be parsed", func() {
-						_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+						_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 						Expect(err).To(MatchError(ContainSubstring("runc exec: exit status 3")))
 					})
 				})
@@ -509,7 +509,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				It("still forwards runc logs in real time", func() {
 					go func(log lager.Logger, processID, bundlePath, processPath string) {
 						defer GinkgoRecover()
-						runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+						runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 					}(log, processID, bundlePath, processPath)
 
 					var firstRuncLogLine lager.LogFormat
@@ -531,7 +531,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		Describe("the returned garden.Process", func() {
 			Context("when a non-empty process ID is passed", func() {
 				It("has the passed ID", func() {
-					process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+					process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(process.ID()).To(Equal(processID))
@@ -559,7 +559,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 						close(received)
 					}
 
-					process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), true, nil, nil)
+					process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), true, nil, nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					process.SetTTY(garden.TTYSpec{WindowSize: &garden.WindowSize{Columns: 53, Rows: 59}})
@@ -576,7 +576,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 			Describe("Signal", func() {
 				It("reads the PID from the pid file", func() {
-					process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+					process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					process.Signal(garden.SignalTerminate)
@@ -589,7 +589,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					})
 
 					It("returns an appropriate error", func() {
-						process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+						process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(process.Signal(garden.SignalTerminate)).To(MatchError("fetching-pid: Unable to get PID"))
@@ -613,7 +613,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					})
 
 					It("gets signalled", func() {
-						process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+						process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						fakePidGetter.PidReturns(cmd.Process.Pid, nil)
@@ -629,7 +629,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					})
 
 					It("forwards the error", func() {
-						process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+						process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(process.Signal(garden.SignalTerminate)).To(MatchError("os: process not initialized"))
@@ -644,7 +644,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					})
 
 					It("does not return until the exit pipe is closed", func() {
-						process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+						process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						done := make(chan struct{})
@@ -662,7 +662,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				It("returns the exit code of the dadoo process", func() {
 					dadooWritesExitCode = []byte("42")
 
-					process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+					process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(process.Wait()).To(Equal(42))
@@ -672,7 +672,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					It("returns an error", func() {
 						dadooWritesExitCode = []byte("")
 
-						process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+						process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						_, err = process.Wait()
@@ -684,7 +684,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					It("returns an error", func() {
 						dadooWritesExitCode = nil
 
-						process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+						process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						_, err = process.Wait()
@@ -696,7 +696,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					It("returns an error", func() {
 						dadooWritesExitCode = []byte("potato")
 
-						process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+						process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						_, err = process.Wait()
@@ -709,7 +709,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		It("can get stdout/err from the spawned process via named pipes", func() {
 			stdout := gbytes.NewBuffer()
 			stderr := gbytes.NewBuffer()
-			process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, garden.ProcessIO{
+			process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, garden.ProcessIO{
 				Stdout: stdout,
 				Stderr: stderr,
 				Stdin:  strings.NewReader("omg"),
@@ -729,7 +729,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			It("multiplexes stdout and stderr", func() {
 				runStdout := gbytes.NewBuffer()
 				runStderr := gbytes.NewBuffer()
-				process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, garden.ProcessIO{
+				process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, garden.ProcessIO{
 					Stdout: runStdout,
 					Stderr: runStderr,
 					Stdin:  strings.NewReader("omg"),
@@ -752,7 +752,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			It("cleans up the map entry but not the process path", func() {
 				runStdout := gbytes.NewBuffer()
 				runStderr := gbytes.NewBuffer()
-				process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, garden.ProcessIO{
+				process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, garden.ProcessIO{
 					Stdout: runStdout,
 					Stderr: runStderr,
 					Stdin:  strings.NewReader("omg"),
@@ -769,13 +769,13 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			Context("when cleanupProcessDirsOnWait is true", func() {
 				JustBeforeEach(func() {
 					runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root",
-						signallerFactory, fakeCommandRunner, true, "exec")
+						signallerFactory, fakeCommandRunner, true, "exec", 5, 6)
 				})
 
 				It("cleans up the map entry and the process path", func() {
 					runStdout := gbytes.NewBuffer()
 					runStderr := gbytes.NewBuffer()
-					process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, garden.ProcessIO{
+					process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, garden.ProcessIO{
 						Stdout: runStdout,
 						Stderr: runStderr,
 						Stdin:  strings.NewReader("omg"),
@@ -793,7 +793,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		It("closed stdin when the stdin stream ends", func() {
 			stdout := gbytes.NewBuffer()
 			stderr := gbytes.NewBuffer()
-			process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, garden.ProcessIO{
+			process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, garden.ProcessIO{
 				Stdout: stdout,
 				Stderr: stderr,
 				Stdin:  strings.NewReader("omg"),
@@ -810,7 +810,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 			stdout := gbytes.NewBuffer()
 			stderr := gbytes.NewBuffer()
-			process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, garden.ProcessIO{
+			process, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, garden.ProcessIO{
 				Stdout: stdout,
 				Stderr: stderr,
 				Stdin:  stdinR,
@@ -832,11 +832,11 @@ var _ = Describe("Dadoo ExecRunner", func() {
 	Describe("Attach after Run", func() {
 		Context("when cleanupProcessDirsOnWait is true", func() {
 			BeforeEach(func() {
-				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root", signallerFactory, fakeCommandRunner, true, "exec")
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root", signallerFactory, fakeCommandRunner, true, "exec", 5, 6)
 			})
 
 			It("cleans up the processes dir after Wait returns", func() {
-				_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+				_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 				process, err := runner.Attach(log, processID, defaultProcessIO(), filepath.Dir(processPath))
 				Expect(err).NotTo(HaveOccurred())
@@ -852,11 +852,11 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		Context("when cleanupProcessDirsOnWait is false", func() {
 			BeforeEach(func() {
-				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root", signallerFactory, fakeCommandRunner, false, "exec")
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root", signallerFactory, fakeCommandRunner, false, "exec", 5, 6)
 			})
 
 			It("does not clean up the processes dir after Wait returns", func() {
-				_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+				_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 				process, err := runner.Attach(log, processID, defaultProcessIO(), filepath.Dir(processPath))
 				Expect(err).NotTo(HaveOccurred())
@@ -1020,7 +1020,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		Context("when no process with the specified ID exists", func() {
 			BeforeEach(func() {
-				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root", signallerFactory, fakeCommandRunner, true, "exec")
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root", signallerFactory, fakeCommandRunner, true, "exec", 5, 6)
 			})
 
 			It("returns ProcessNotFoundError", func() {

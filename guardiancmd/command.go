@@ -123,7 +123,7 @@ type GardenFactory interface {
 	CommandRunner() commandrunner.CommandRunner
 	WireVolumizer(logger lager.Logger) gardener.Volumizer
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
-	WireExecRunner(runMode, runcRoot string) runrunc.ExecRunner
+	WireExecRunner(runMode, runcRoot string, containerRootUID, containerRootGID uint32) runrunc.ExecRunner
 	WireRootfsFileCreator() rundmc.RootfsFileCreator
 }
 
@@ -866,7 +866,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 
 	wireExecerFunc := func(pidGetter runrunc.PidGetter) *runrunc.Execer {
 		return runrunc.NewExecer(bndlLoader, processBuilder, factory.WireMkdirer(),
-			runrunc.LookupFunc(runrunc.LookupUser), factory.WireExecRunner("exec", runcRoot), wireUIDGenerator(), pidGetter)
+			runrunc.LookupFunc(runrunc.LookupUser), factory.WireExecRunner("exec", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0))), wireUIDGenerator(), pidGetter)
 	}
 
 	statser := runrunc.NewStatser(runcLogRunner, runcBinary)
@@ -901,7 +901,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		BundleGenerator:        template,
 		ProcessBuilder:         processBuilder,
 		BundleSaver:            bundleSaver,
-		ExecRunner:             factory.WireExecRunner("run", runcRoot),
+		ExecRunner:             factory.WireExecRunner("run", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0))),
 		RuncDeleter:            runcDeleter,
 		PeaCleaner:             peaCleaner,
 	}

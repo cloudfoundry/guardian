@@ -97,14 +97,13 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec g
 		return nil, err
 	}
 
-	encodedSpec, err := json.Marshal(preparedSpec.Process)
+	encodedSpec, err := json.Marshal(preparedSpec)
 	if err != nil {
 		return nil, err // this could *almost* be a panic: a valid spec should always encode (but out of caution we'll error)
 	}
 
 	return e.runner.Run(
-		log, processID, processPath, sandboxHandle, bundlePath, preparedSpec.ContainerRootHostUID,
-		preparedSpec.ContainerRootHostGID, io, preparedSpec.Terminal, bytes.NewReader(encodedSpec), nil,
+		log, processID, processPath, sandboxHandle, bundlePath, io, preparedSpec.Terminal, bytes.NewReader(encodedSpec), nil,
 	)
 }
 

@@ -17,26 +17,22 @@ func NewProcessBuilder(envDeterminer EnvDeterminer, nonRootMaxCaps []string) *Pr
 	}
 }
 
-func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec ProcessSpec) *PreparedSpec {
-	return &PreparedSpec{
-		ContainerRootHostUID: containerRootHostID(bndl.Spec.Linux.UIDMappings),
-		ContainerRootHostGID: containerRootHostID(bndl.Spec.Linux.GIDMappings),
-		Process: specs.Process{
-			Args:        append([]string{spec.Path}, spec.Args...),
-			ConsoleSize: console(spec),
-			Env:         p.envDeterminer.EnvFor(bndl, spec),
-			User: specs.User{
-				UID:            uint32(spec.ContainerUID),
-				GID:            uint32(spec.ContainerGID),
-				AdditionalGids: []uint32{},
-				Username:       spec.User,
-			},
-			Cwd:             spec.Dir,
-			Capabilities:    p.capabilities(bndl, spec.ContainerUID),
-			Rlimits:         toRlimits(spec.Limits),
-			Terminal:        spec.TTY != nil,
-			ApparmorProfile: bndl.Process().ApparmorProfile,
+func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec ProcessSpec) *specs.Process {
+	return &specs.Process{
+		Args:        append([]string{spec.Path}, spec.Args...),
+		ConsoleSize: console(spec),
+		Env:         p.envDeterminer.EnvFor(bndl, spec),
+		User: specs.User{
+			UID:            uint32(spec.ContainerUID),
+			GID:            uint32(spec.ContainerGID),
+			AdditionalGids: []uint32{},
+			Username:       spec.User,
 		},
+		Cwd:             spec.Dir,
+		Capabilities:    p.capabilities(bndl, spec.ContainerUID),
+		Rlimits:         toRlimits(spec.Limits),
+		Terminal:        spec.TTY != nil,
+		ApparmorProfile: bndl.Process().ApparmorProfile,
 	}
 }
 
@@ -68,13 +64,4 @@ func console(spec ProcessSpec) *specs.Box {
 		consoleBox.Height = uint(spec.TTY.WindowSize.Rows)
 	}
 	return consoleBox
-}
-
-func containerRootHostID(mappings []specs.LinuxIDMapping) uint32 {
-	for _, mapping := range mappings {
-		if mapping.ContainerID == 0 {
-			return mapping.HostID
-		}
-	}
-	return 0
 }

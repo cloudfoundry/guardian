@@ -53,7 +53,7 @@ var _ = Describe("PeaCreator", func() {
 			DstPath: "/some/dest2",
 			Mode:    garden.BindMountModeRW,
 		}}
-		builtProcess *runrunc.PreparedSpec
+		builtProcess *specs.Process
 		processSpec  garden.ProcessSpec
 		pio          = garden.ProcessIO{Stdin: bytes.NewBufferString("something")}
 	)
@@ -73,11 +73,7 @@ var _ = Describe("PeaCreator", func() {
 		bundleSaver = new(depotfakes.FakeBundleSaver)
 
 		processBuilder = new(runruncfakes.FakeProcessBuilder)
-		builtProcess = &runrunc.PreparedSpec{
-			Process:              specs.Process{Cwd: "some-cwd"},
-			ContainerRootHostUID: 42,
-			ContainerRootHostGID: 1337,
-		}
+		builtProcess = &specs.Process{Cwd: "some-cwd"}
 		processBuilder.BuildProcessReturns(builtProcess)
 
 		execRunner = new(runruncfakes.FakeExecRunner)
@@ -262,14 +258,11 @@ var _ = Describe("PeaCreator", func() {
 		It("creates a runc container based on the bundle", func() {
 			Eventually(execRunner.RunCallCount()).Should(Equal(1))
 			_, actualProcessID, actualProcessPath, actualSandboxHandle, actualSandboxBundlePath,
-				actualContainerRootHostUID, actualContainerRootHostGID, actualPio, actualTTY,
-				actualProcJSON, _ := execRunner.RunArgsForCall(0)
+				actualPio, actualTTY, actualProcJSON, _ := execRunner.RunArgsForCall(0)
 			Expect(actualProcessID).To(Equal(processSpec.ID))
 			Expect(actualProcessPath).To(Equal(filepath.Join(ctrBundleDir, "processes", processSpec.ID)))
 			Expect(actualSandboxHandle).To(Equal(ctrHandle))
 			Expect(actualSandboxBundlePath).To(Equal(ctrBundleDir))
-			Expect(actualContainerRootHostUID).To(Equal(builtProcess.ContainerRootHostUID))
-			Expect(actualContainerRootHostGID).To(Equal(builtProcess.ContainerRootHostGID))
 			Expect(actualPio).To(Equal(pio))
 			Expect(actualTTY).To(BeFalse())
 			Expect(actualProcJSON).To(BeNil())
@@ -282,14 +275,14 @@ var _ = Describe("PeaCreator", func() {
 
 			It("runs with one", func() {
 				Eventually(execRunner.RunCallCount()).Should(Equal(1))
-				_, _, _, _, _, _, _, _, actualTTY, _, _ := execRunner.RunArgsForCall(0)
+				_, _, _, _, _, _, actualTTY, _, _ := execRunner.RunArgsForCall(0)
 				Expect(actualTTY).To(BeTrue())
 			})
 		})
 
 		It("cleans up the pea", func() {
 			Eventually(execRunner.RunCallCount()).Should(Equal(1))
-			_, _, _, _, _, _, _, _, _, _, cleanup := execRunner.RunArgsForCall(0)
+			_, _, _, _, _, _, _, _, cleanup := execRunner.RunArgsForCall(0)
 			Expect(cleanup()).To(Succeed())
 			Expect(peaCleaner.CleanCallCount()).To(Equal(1))
 			_, processID := peaCleaner.CleanArgsForCall(0)
@@ -307,11 +300,7 @@ var _ = Describe("PeaCreator", func() {
 				Expect(processDirs).To(HaveLen(1))
 			})
 		})
-		builtProcess = &runrunc.PreparedSpec{
-			Process:              specs.Process{Cwd: "some-cwd"},
-			ContainerRootHostUID: 42,
-			ContainerRootHostGID: 1337,
-		}
+		builtProcess = &specs.Process{Cwd: "some-cwd"}
 
 		Context("when no working dir is specified", func() {
 			BeforeEach(func() {

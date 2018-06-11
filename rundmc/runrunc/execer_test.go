@@ -52,7 +52,7 @@ var _ = Describe("Execer", func() {
 				HostID:      20,
 				Size:        100,
 			})
-		preparedProc *runrunc.PreparedSpec
+		preparedProc *specs.Process
 	)
 
 	BeforeEach(func() {
@@ -69,11 +69,7 @@ var _ = Describe("Execer", func() {
 			TTY:  &garden.TTYSpec{WindowSize: &garden.WindowSize{Rows: 42}},
 		}
 
-		preparedProc = &runrunc.PreparedSpec{
-			ContainerRootHostUID: 1000,
-			ContainerRootHostGID: 1001,
-			Process:              specs.Process{Cwd: "some-cwd"},
-		}
+		preparedProc = &specs.Process{Cwd: "some-cwd"}
 
 		bundleLoader = new(fakes.FakeBundleLoader)
 		bundleLoader.LoadReturns(bndl, nil)
@@ -163,32 +159,30 @@ var _ = Describe("Execer", func() {
 		It("runs the process", func() {
 			Expect(execRunner.RunCallCount()).To(Equal(1))
 			_, processID, actualProcessPath, actualSandboxHandle, actualSandboxBundlePath,
-				actualContainerRootHostUID, actualContainerRootHostGID, actualPIO, actualTTY,
-				actualProcJSON, _ := execRunner.RunArgsForCall(0)
+				actualPIO, actualTTY, actualProcJSON, _ := execRunner.RunArgsForCall(0)
 			Expect(processID).To(Equal(spec.ID))
 			Expect(actualProcessPath).To(Equal(filepath.Join(bundlePath, "processes", processID)))
 			Expect(actualSandboxHandle).To(Equal(id))
 			Expect(actualSandboxBundlePath).To(Equal(bundlePath))
-			Expect(actualContainerRootHostUID).To(Equal(preparedProc.ContainerRootHostUID))
-			Expect(actualContainerRootHostGID).To(Equal(preparedProc.ContainerRootHostGID))
+
 			Expect(actualPIO).To(Equal(pio))
 			Expect(actualTTY).To(BeFalse())
 
 			actualProcJSONBytes, err := ioutil.ReadAll(actualProcJSON)
 			Expect(err).NotTo(HaveOccurred())
-			procJSONBytes, err := json.Marshal(preparedProc.Process)
+			procJSONBytes, err := json.Marshal(preparedProc)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(actualProcJSONBytes)).To(Equal(string(procJSONBytes)))
 		})
 
 		Context("when the process has a terminal", func() {
 			BeforeEach(func() {
-				preparedProc.Process.Terminal = true
+				preparedProc.Terminal = true
 			})
 
 			It("runs the process, specifying a TTY", func() {
 				Expect(execRunner.RunCallCount()).To(Equal(1))
-				_, _, _, _, _, _, _, _, actualTTY, _, _ := execRunner.RunArgsForCall(0)
+				_, _, _, _, _, _, actualTTY, _, _ := execRunner.RunArgsForCall(0)
 				Expect(actualTTY).To(BeTrue())
 			})
 		})

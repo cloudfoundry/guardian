@@ -101,7 +101,7 @@ func (NoopMkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode
 	return nil
 }
 
-func (f *LinuxFactory) WireExecRunner(runMode, runcRoot string) runrunc.ExecRunner {
+func (f *LinuxFactory) WireExecRunner(runMode, runcRoot string, containerRootHostUID, containerRootHostGID uint32) runrunc.ExecRunner {
 	return dadoo.NewExecRunner(
 		f.config.Bin.Dadoo.Path(),
 		f.config.Runtime.Plugin,
@@ -110,6 +110,8 @@ func (f *LinuxFactory) WireExecRunner(runMode, runcRoot string) runrunc.ExecRunn
 		f.commandRunner,
 		f.config.Containers.CleanupProcessDirsOnWait,
 		runMode,
+		containerRootHostUID,
+		containerRootHostGID,
 	)
 }
 

@@ -32,11 +32,13 @@ type ExecRunner struct {
 	processes                map[string]*process
 	processesMutex           *sync.Mutex
 	runMode                  string
+	containerRootHostUID     uint32
+	containerRootHostGID     uint32
 }
 
 func NewExecRunner(
 	dadooPath, runcPath, runcRoot string, signallerFactory *signals.SignallerFactory,
-	commandRunner commandrunner.CommandRunner, shouldCleanup bool, runMode string,
+	commandRunner commandrunner.CommandRunner, shouldCleanup bool, runMode string, containerRootHostUID, containerRootHostGID uint32,
 ) *ExecRunner {
 	return &ExecRunner{
 		dadooPath:                dadooPath,
@@ -48,13 +50,14 @@ func NewExecRunner(
 		processes:                map[string]*process{},
 		processesMutex:           new(sync.Mutex),
 		runMode:                  runMode,
+		containerRootHostUID:     containerRootHostUID,
+		containerRootHostGID:     containerRootHostGID,
 	}
 }
 
 func (d *ExecRunner) Run(
 	log lager.Logger, processID, processPath, sandboxHandle, sandboxBundlePath string,
-	containerRootHostUID, containerRootHostGID uint32, pio garden.ProcessIO, tty bool,
-	procJSON io.Reader, extraCleanup func() error,
+	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 ) (proc garden.Process, theErr error) {
 	log = log.Session("execrunner")
 
@@ -80,7 +83,7 @@ func (d *ExecRunner) Run(
 	defer syncr.Close()
 
 	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"), extraCleanup)
-	if err := process.mkfifos(containerRootHostUID, containerRootHostGID); err != nil {
+	if err := process.mkfifos(d.containerRootHostUID, d.containerRootHostGID); err != nil {
 		return nil, err
 	}
 

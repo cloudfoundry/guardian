@@ -6,26 +6,27 @@ import (
 
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type FakeProcessBuilder struct {
-	BuildProcessStub        func(bndl goci.Bndl, processSpec runrunc.ProcessSpec) *runrunc.PreparedSpec
+	BuildProcessStub        func(bndl goci.Bndl, processSpec runrunc.ProcessSpec) *specs.Process
 	buildProcessMutex       sync.RWMutex
 	buildProcessArgsForCall []struct {
 		bndl        goci.Bndl
 		processSpec runrunc.ProcessSpec
 	}
 	buildProcessReturns struct {
-		result1 *runrunc.PreparedSpec
+		result1 *specs.Process
 	}
 	buildProcessReturnsOnCall map[int]struct {
-		result1 *runrunc.PreparedSpec
+		result1 *specs.Process
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeProcessBuilder) BuildProcess(bndl goci.Bndl, processSpec runrunc.ProcessSpec) *runrunc.PreparedSpec {
+func (fake *FakeProcessBuilder) BuildProcess(bndl goci.Bndl, processSpec runrunc.ProcessSpec) *specs.Process {
 	fake.buildProcessMutex.Lock()
 	ret, specificReturn := fake.buildProcessReturnsOnCall[len(fake.buildProcessArgsForCall)]
 	fake.buildProcessArgsForCall = append(fake.buildProcessArgsForCall, struct {
@@ -55,22 +56,22 @@ func (fake *FakeProcessBuilder) BuildProcessArgsForCall(i int) (goci.Bndl, runru
 	return fake.buildProcessArgsForCall[i].bndl, fake.buildProcessArgsForCall[i].processSpec
 }
 
-func (fake *FakeProcessBuilder) BuildProcessReturns(result1 *runrunc.PreparedSpec) {
+func (fake *FakeProcessBuilder) BuildProcessReturns(result1 *specs.Process) {
 	fake.BuildProcessStub = nil
 	fake.buildProcessReturns = struct {
-		result1 *runrunc.PreparedSpec
+		result1 *specs.Process
 	}{result1}
 }
 
-func (fake *FakeProcessBuilder) BuildProcessReturnsOnCall(i int, result1 *runrunc.PreparedSpec) {
+func (fake *FakeProcessBuilder) BuildProcessReturnsOnCall(i int, result1 *specs.Process) {
 	fake.BuildProcessStub = nil
 	if fake.buildProcessReturnsOnCall == nil {
 		fake.buildProcessReturnsOnCall = make(map[int]struct {
-			result1 *runrunc.PreparedSpec
+			result1 *specs.Process
 		})
 	}
 	fake.buildProcessReturnsOnCall[i] = struct {
-		result1 *runrunc.PreparedSpec
+		result1 *specs.Process
 	}{result1}
 }
 

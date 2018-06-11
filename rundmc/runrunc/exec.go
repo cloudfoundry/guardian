@@ -59,21 +59,14 @@ type BundleLoader interface {
 type ExecRunner interface {
 	Run(
 		log lager.Logger, processID, processPath, sandboxHandle, sandboxBundlePath string,
-		containerRootHostUID, containerRootHostGID uint32, pio garden.ProcessIO, tty bool,
-		procJSON io.Reader, extraCleanup func() error,
+		pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 	) (garden.Process, error)
 	Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error)
 }
 
-type PreparedSpec struct {
-	specs.Process
-	ContainerRootHostUID uint32
-	ContainerRootHostGID uint32
-}
-
 //go:generate counterfeiter . ProcessBuilder
 type ProcessBuilder interface {
-	BuildProcess(bndl goci.Bndl, processSpec ProcessSpec) *PreparedSpec
+	BuildProcess(bndl goci.Bndl, processSpec ProcessSpec) *specs.Process
 }
 
 type ProcessSpec struct {

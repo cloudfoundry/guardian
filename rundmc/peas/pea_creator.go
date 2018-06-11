@@ -147,7 +147,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		ContainerGID: gid,
 	})
 
-	bndl = bndl.WithProcess(preparedProcess.Process)
+	bndl = bndl.WithProcess(*preparedProcess)
 	if saveErr := p.BundleSaver.Save(bndl, peaBundlePath); saveErr != nil {
 		destroyErr := p.Volumizer.Destroy(log, processID)
 		return errs("saving-bundle", multierror.Append(saveErr, destroyErr))
@@ -156,10 +156,10 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	extraCleanup := func() error {
 		return p.PeaCleaner.Clean(log, processID)
 	}
+
 	proc, runErr := p.ExecRunner.Run(
 		log, processID, peaBundlePath, sandboxHandle, sandboxBundlePath,
-		preparedProcess.ContainerRootHostUID, preparedProcess.ContainerRootHostGID,
-		procIO, preparedProcess.Process.Terminal, nil, extraCleanup,
+		procIO, preparedProcess.Terminal, nil, extraCleanup,
 	)
 	if runErr != nil {
 		destroyErr := p.Volumizer.Destroy(log, processID)

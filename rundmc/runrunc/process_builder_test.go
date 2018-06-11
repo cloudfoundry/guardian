@@ -73,7 +73,7 @@ var _ = Describe("ProcBuilder", func() {
 	})
 
 	Describe("the built process", func() {
-		var preparedProc *runrunc.PreparedSpec
+		var preparedProc *specs.Process
 
 		JustBeforeEach(func() {
 			preparedProc = procBuilder.BuildProcess(bndl, processSpec)
@@ -83,24 +83,14 @@ var _ = Describe("ProcBuilder", func() {
 			Expect(preparedProc.Args).To(Equal([]string{"program", "and", "args"}))
 		})
 
-		It("returns the host mappings for container root in the returned spec", func() {
-			Expect(preparedProc.ContainerRootHostUID).To(Equal(uint32(10)))
-			Expect(preparedProc.ContainerRootHostGID).To(Equal(uint32(20)))
-		})
-
 		Context("when the bundle has no mappings for host root (container is privileged)", func() {
 			BeforeEach(func() {
 				bndl.Spec.Linux.UIDMappings = nil
 				bndl.Spec.Linux.GIDMappings = nil
 			})
 
-			It("returns 0 for container root's host UID and GID", func() {
-				Expect(preparedProc.ContainerRootHostUID).To(BeEquivalentTo(0))
-				Expect(preparedProc.ContainerRootHostGID).To(BeEquivalentTo(0))
-			})
-
 			It("sets the rlimits correctly", func() {
-				Expect(preparedProc.Process.Rlimits).To(ConsistOf(
+				Expect(preparedProc.Rlimits).To(ConsistOf(
 					specs.POSIXRlimit{Type: "RLIMIT_AS", Hard: 12, Soft: 12},
 					specs.POSIXRlimit{Type: "RLIMIT_CORE", Hard: 24, Soft: 24},
 					specs.POSIXRlimit{Type: "RLIMIT_CPU", Hard: 36, Soft: 36},
@@ -125,8 +115,8 @@ var _ = Describe("ProcBuilder", func() {
 				})
 
 				It("sets a default console size anyway, which will not be used", func() {
-					Expect(preparedProc.Process.ConsoleSize.Height).To(BeEquivalentTo(24))
-					Expect(preparedProc.Process.ConsoleSize.Width).To(BeEquivalentTo(80))
+					Expect(preparedProc.ConsoleSize.Height).To(BeEquivalentTo(24))
+					Expect(preparedProc.ConsoleSize.Width).To(BeEquivalentTo(80))
 				})
 			})
 
@@ -141,8 +131,8 @@ var _ = Describe("ProcBuilder", func() {
 				})
 
 				It("sets the console size", func() {
-					Expect(preparedProc.Process.ConsoleSize.Width).To(BeEquivalentTo(25))
-					Expect(preparedProc.Process.ConsoleSize.Height).To(BeEquivalentTo(81))
+					Expect(preparedProc.ConsoleSize.Width).To(BeEquivalentTo(25))
+					Expect(preparedProc.ConsoleSize.Height).To(BeEquivalentTo(81))
 				})
 
 				It("sets terminal to false", func() {
@@ -157,22 +147,22 @@ var _ = Describe("ProcBuilder", func() {
 
 					It("passes the specified capabilities", func() {
 						caps := []string{"CAP_FOO", "CAP_BAR"}
-						Expect(preparedProc.Process.Capabilities.Effective).To(BeEmpty())
-						Expect(preparedProc.Process.Capabilities.Bounding).To(Equal(caps))
-						Expect(preparedProc.Process.Capabilities.Inheritable).To(Equal(caps))
-						Expect(preparedProc.Process.Capabilities.Permitted).To(Equal(caps))
-						Expect(preparedProc.Process.Capabilities.Ambient).To(BeEmpty())
+						Expect(preparedProc.Capabilities.Effective).To(BeEmpty())
+						Expect(preparedProc.Capabilities.Bounding).To(Equal(caps))
+						Expect(preparedProc.Capabilities.Inheritable).To(Equal(caps))
+						Expect(preparedProc.Capabilities.Permitted).To(Equal(caps))
+						Expect(preparedProc.Capabilities.Ambient).To(BeEmpty())
 					})
 				})
 
 				Context("when the user is not root", func() {
 					It("passes the intersection of the specified capabilites and the non-root max capabilities", func() {
 						caps := []string{"CAP_FOO"}
-						Expect(preparedProc.Process.Capabilities.Effective).To(BeEmpty())
-						Expect(preparedProc.Process.Capabilities.Bounding).To(Equal(caps))
-						Expect(preparedProc.Process.Capabilities.Inheritable).To(Equal(caps))
-						Expect(preparedProc.Process.Capabilities.Permitted).To(Equal(caps))
-						Expect(preparedProc.Process.Capabilities.Ambient).To(BeEmpty())
+						Expect(preparedProc.Capabilities.Effective).To(BeEmpty())
+						Expect(preparedProc.Capabilities.Bounding).To(Equal(caps))
+						Expect(preparedProc.Capabilities.Inheritable).To(Equal(caps))
+						Expect(preparedProc.Capabilities.Permitted).To(Equal(caps))
+						Expect(preparedProc.Capabilities.Ambient).To(BeEmpty())
 					})
 				})
 
@@ -182,12 +172,12 @@ var _ = Describe("ProcBuilder", func() {
 					})
 
 					It("does not set the capabilities object on the process", func() {
-						Expect(preparedProc.Process.Capabilities).To(BeNil())
+						Expect(preparedProc.Capabilities).To(BeNil())
 					})
 				})
 
 				It("passes the AppArmor profile", func() {
-					Expect(preparedProc.Process.ApparmorProfile).To(Equal("default-profile"))
+					Expect(preparedProc.ApparmorProfile).To(Equal("default-profile"))
 				})
 
 				It("passes the UID and GID", func() {

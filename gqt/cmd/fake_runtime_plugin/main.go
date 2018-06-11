@@ -11,8 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
 )
 
@@ -206,7 +205,7 @@ var ExecCommand = cli.Command{
 		copyFile(ctx.String("p"), procSpecFilePath)
 		writeArgs("exec")
 
-		var procSpec runrunc.PreparedSpec
+		var procSpec specs.Process
 		procSpecFile, err := os.Open(procSpecFilePath)
 		mustNot(err)
 		defer procSpecFile.Close()
