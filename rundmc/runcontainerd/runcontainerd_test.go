@@ -19,21 +19,24 @@ import (
 
 var _ = Describe("Runcontainerd", func() {
 	var (
-		logger        lager.Logger
-		nerd          *runcontainerdfakes.FakeNerdContainerizer
-		bundleLoader  *runcontainerdfakes.FakeBundleLoader
-		runContainerd *runcontainerd.RunContainerd
-		execer        *runcontainerdfakes.FakeExecer
-		statser       *runcontainerdfakes.FakeStatser
+		logger         lager.Logger
+		nerd           *runcontainerdfakes.FakeNerdContainerizer
+		bundleLoader   *runcontainerdfakes.FakeBundleLoader
+		runContainerd  *runcontainerd.RunContainerd
+		execer         *runcontainerdfakes.FakeExecer
+		statser        *runcontainerdfakes.FakeStatser
+		processBuilder *runcontainerdfakes.FakeProcessBuilder
 	)
 
 	BeforeEach(func() {
-		logger = lagertest.NewTestLogger("potato")
+		logger = lagertest.NewTestLogger("test-logger")
 		nerd = new(runcontainerdfakes.FakeNerdContainerizer)
 		bundleLoader = new(runcontainerdfakes.FakeBundleLoader)
 		execer = new(runcontainerdfakes.FakeExecer)
 		statser = new(runcontainerdfakes.FakeStatser)
-		runContainerd = runcontainerd.New(nerd, bundleLoader, execer, statser)
+		processBuilder = new(runcontainerdfakes.FakeProcessBuilder)
+
+		runContainerd = runcontainerd.New(nerd, bundleLoader, processBuilder, execer, statser, false)
 	})
 
 	Describe("Create", func() {
@@ -160,36 +163,48 @@ var _ = Describe("Runcontainerd", func() {
 
 	Describe("Exec", func() {
 		var (
-			spec    garden.ProcessSpec
-			io      garden.ProcessIO
-			process *gardenfakes.FakeProcess
-
+			containerID string
+			bundlePath  string
+			processSpec garden.ProcessSpec
+			execErr     error
+			bundle      goci.Bndl
+			fakeProcess *gardenfakes.FakeProcess
 			execProcess garden.Process
-			execError   error
 		)
 
 		BeforeEach(func() {
-			spec = garden.ProcessSpec{ID: "process-id"}
-			io = garden.ProcessIO{}
-			process = new(gardenfakes.FakeProcess)
-			execer.ExecReturns(process, nil)
+			fakeProcess = new(gardenfakes.FakeProcess)
+			execer.ExecReturns(fakeProcess, nil)
+			containerID = "container-id"
+			bundlePath = "bundle-path"
+			processSpec = garden.ProcessSpec{
+				ID: "test-process-id",
+			}
+			processBuilder.BuildProcessReturns(&specs.Process{
+				Args: []string{"test-binary"},
+			})
+			bundle = goci.Bndl{Spec: specs.Spec{Hostname: "test-hostname"}}
+			bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
+				if path == bundlePath {
+					return bundle, nil
+				}
+				return goci.Bndl{}, nil
+			}
 		})
 
 		JustBeforeEach(func() {
-			execProcess, execError = runContainerd.Exec(logger, "bundle-path", "some-id", spec, io)
+			execProcess, execErr = runContainerd.Exec(logger, bundlePath, containerID, processSpec, garden.ProcessIO{})
 		})
 
 		It("delegates to execer", func() {
-			Expect(execError).NotTo(HaveOccurred())
-			Expect(execProcess).To(BeIdenticalTo(process))
-
 			Expect(execer.ExecCallCount()).To(Equal(1))
-			actualLogger, actualBundlePath, actualID, actualSpec, actualIO := execer.ExecArgsForCall(0)
+			actualLogger, actualBundlePath, actualSandboxHandle, actualProcessSpec, actualIO := execer.ExecArgsForCall(0)
 			Expect(actualLogger).To(Equal(logger))
-			Expect(actualBundlePath).To(Equal("bundle-path"))
-			Expect(actualID).To(Equal("some-id"))
-			Expect(actualSpec).To(Equal(spec))
-			Expect(actualIO).To(Equal(io))
+			Expect(actualBundlePath).To(Equal(bundlePath))
+			Expect(actualSandboxHandle).To(Equal(containerID))
+			Expect(actualProcessSpec).To(Equal(processSpec))
+			Expect(actualIO).To(Equal(garden.ProcessIO{}))
+			Expect(execProcess).To(Equal(fakeProcess))
 		})
 
 		Context("when the execer fails", func() {
@@ -198,7 +213,64 @@ var _ = Describe("Runcontainerd", func() {
 			})
 
 			It("returns the execer error", func() {
-				Expect(execError).To(MatchError("execer-failed"))
+				Expect(execErr).To(MatchError("execer-failed"))
+			})
+		})
+
+		Context("when use_containerd_for_processes is enabled", func() {
+			BeforeEach(func() {
+				runContainerd = runcontainerd.New(nerd, bundleLoader, processBuilder, execer, statser, true)
+			})
+
+			It("passes the logger through", func() {
+				Expect(nerd.ExecCallCount()).To(Equal(1))
+				actualLogger, _, _, _ := nerd.ExecArgsForCall(0)
+				Expect(actualLogger).To(Equal(logger))
+			})
+
+			It("creates the process on the passed container", func() {
+				Expect(nerd.ExecCallCount()).To(Equal(1))
+				_, actualContainerID, _, _ := nerd.ExecArgsForCall(0)
+				Expect(actualContainerID).To(Equal(containerID))
+			})
+
+			It("creates the process with the provided processID", func() {
+				Expect(nerd.ExecCallCount()).To(Equal(1))
+				_, _, actualProcessID, _ := nerd.ExecArgsForCall(0)
+				Expect(actualProcessID).To(Equal(processSpec.ID))
+			})
+
+			It("converts the garden process to an OCI process", func() {
+				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
+				passedBundle, passedGardenProcessSpec, _, _ := processBuilder.BuildProcessArgsForCall(0)
+				Expect(passedBundle).To(Equal(bundle))
+				Expect(passedGardenProcessSpec).To(Equal(processSpec))
+			})
+
+			It("creates the process with the converted process spec", func() {
+				Expect(nerd.ExecCallCount()).To(Equal(1))
+				_, _, _, actualProcessSpec := nerd.ExecArgsForCall(0)
+				Expect(actualProcessSpec.Args).To(Equal([]string{"test-binary"}))
+			})
+
+			Context("when bundleLoader returns an error", func() {
+				BeforeEach(func() {
+					bundleLoader.LoadReturns(goci.Bndl{}, errors.New("error-loading-bundle"))
+				})
+
+				It("returns the error", func() {
+					Expect(execErr).To(MatchError("error-loading-bundle"))
+				})
+			})
+
+			Context("when nerd returns an error", func() {
+				BeforeEach(func() {
+					nerd.ExecReturns(errors.New("error-execing"))
+				})
+
+				It("returns the error", func() {
+					Expect(execErr).To(MatchError("error-execing"))
+				})
 			})
 		})
 	})

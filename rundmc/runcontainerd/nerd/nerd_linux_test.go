@@ -34,52 +34,77 @@ var _ = Describe("Nerd", func() {
 
 	Describe("Create", func() {
 		AfterEach(func() {
-			cnerd.Delete(testLogger, "test-id")
+			cnerd.Delete(testLogger, "test-container-id")
 		})
 
 		It("creates the containerd container by id", func() {
-			spec := generateSpec(containerdContext, containerdClient, "test-id")
-			Expect(cnerd.Create(testLogger, "test-id", spec)).To(Succeed())
+			spec := generateSpec(containerdContext, containerdClient, "test-container-id")
+			Expect(cnerd.Create(testLogger, "test-container-id", spec)).To(Succeed())
 
 			containers := listContainers(testConfig.CtrBin, testConfig.Socket)
-			Expect(containers).To(ContainSubstring("test-id"))
+			Expect(containers).To(ContainSubstring("test-container-id"))
 		})
 
 		It("starts an init process in the container", func() {
-			spec := generateSpec(containerdContext, containerdClient, "test-id")
-			Expect(cnerd.Create(testLogger, "test-id", spec)).To(Succeed())
+			spec := generateSpec(containerdContext, containerdClient, "test-container-id")
+			Expect(cnerd.Create(testLogger, "test-container-id", spec)).To(Succeed())
 
-			containers := listProcesses(testConfig.CtrBin, testConfig.Socket, "test-id")
-			Expect(containers).To(ContainSubstring("test-id"))
+			containers := listProcesses(testConfig.CtrBin, testConfig.Socket, "test-container-id")
+			Expect(containers).To(ContainSubstring("test-container-id"))
+		})
+	})
+
+	Describe("Exec", func() {
+		BeforeEach(func() {
+			spec := generateSpec(containerdContext, containerdClient, "test-container-id")
+			Expect(cnerd.Create(testLogger, "test-container-id", spec)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			cnerd.Delete(testLogger, "test-container-id")
+		})
+
+		It("execs a process in the container", func() {
+			processSpec := &specs.Process{
+				Args: []string{"/bin/sleep", "30"},
+				User: specs.User{UID: 0, GID: 0},
+				Cwd:  "/",
+			}
+
+			Expect(cnerd.Exec(testLogger, "test-container-id", "test-process-id", processSpec)).To(Succeed())
+
+			containers := listProcesses(testConfig.CtrBin, testConfig.Socket, "test-container-id")
+			Expect(containers).To(ContainSubstring("test-container-id")) // init process
+			Expect(containers).To(ContainSubstring("test-process-id"))   // execed process
 		})
 	})
 
 	Describe("Delete", func() {
 		BeforeEach(func() {
-			spec := generateSpec(containerdContext, containerdClient, "test-id")
-			Expect(cnerd.Create(testLogger, "test-id", spec)).To(Succeed())
+			spec := generateSpec(containerdContext, containerdClient, "test-container-id")
+			Expect(cnerd.Create(testLogger, "test-container-id", spec)).To(Succeed())
 		})
 
 		It("deletes the containerd container by id", func() {
-			Expect(cnerd.Delete(testLogger, "test-id")).To(Succeed())
+			Expect(cnerd.Delete(testLogger, "test-container-id")).To(Succeed())
 
 			containers := listContainers(testConfig.CtrBin, testConfig.Socket)
-			Expect(containers).NotTo(ContainSubstring("test-id"))
+			Expect(containers).NotTo(ContainSubstring("test-container-id"))
 		})
 	})
 
 	Describe("State", func() {
 		BeforeEach(func() {
-			spec := generateSpec(containerdContext, containerdClient, "test-id")
-			Expect(cnerd.Create(testLogger, "test-id", spec)).To(Succeed())
+			spec := generateSpec(containerdContext, containerdClient, "test-container-id")
+			Expect(cnerd.Create(testLogger, "test-container-id", spec)).To(Succeed())
 		})
 
 		AfterEach(func() {
-			cnerd.Delete(testLogger, "test-id")
+			cnerd.Delete(testLogger, "test-container-id")
 		})
 
 		It("gets the pid and status of a running task", func() {
-			pid, status, err := cnerd.State(testLogger, "test-id")
+			pid, status, err := cnerd.State(testLogger, "test-container-id")
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(pid).NotTo(BeZero())

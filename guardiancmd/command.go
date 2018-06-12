@@ -281,7 +281,8 @@ type ServerCommand struct {
 	} `group:"Metrics"`
 
 	Containerd struct {
-		Socket string `long:"containerd-socket" description:"Path to a containerd socket."`
+		Socket                    string `long:"containerd-socket" description:"Path to a containerd socket."`
+		UseContainerdForProcesses bool   `long:"use-containerd-for-processes" description:"Use containerd to run processes in containers."`
 	} `group:"Containerd"`
 }
 
@@ -874,7 +875,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 
 	if cmd.useContainerd() {
 		var err error
-		runner, pidGetter, err = wireContainerd(cmd.Containerd.Socket, bndlLoader, wireExecerFunc, statser)
+		runner, pidGetter, err = wireContainerd(cmd.Containerd.Socket, bndlLoader, processBuilder, wireExecerFunc, statser, cmd.Containerd.UseContainerdForProcesses)
 		if err != nil {
 			return nil, err
 		}

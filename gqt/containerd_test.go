@@ -7,18 +7,19 @@ import (
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("Containerd", func() {
-
 	var (
 		client *runner.RunningGarden
 	)
 
 	BeforeEach(func() {
 		skipIfNotContainerd()
+	})
+
+	JustBeforeEach(func() {
 		client = runner.Start(config)
 	})
 
@@ -31,12 +32,8 @@ var _ = Describe("Containerd", func() {
 			container, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
-			lookupCommand := exec.Command("ctr", "--address", config.ContainerdSocket, "--namespace", "garden", "tasks", "ps", container.Handle())
-
-			session, err := gexec.Start(lookupCommand, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(session).Should(gbytes.Say(container.Handle()))
-			Eventually(session).Should(gexec.Exit(0))
+			containers := listContainers("ctr", config.ContainerdSocket)
+			Expect(containers).To(ContainSubstring(container.Handle()))
 		})
 	})
 
@@ -45,7 +42,7 @@ var _ = Describe("Containerd", func() {
 			container garden.Container
 		)
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			var err error
 			container, err = client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
@@ -55,12 +52,8 @@ var _ = Describe("Containerd", func() {
 			err := client.Destroy(container.Handle())
 			Expect(err).NotTo(HaveOccurred())
 
-			lookupCommand := exec.Command("ctr", "--address", config.ContainerdSocket, "--namespace", "garden", "containers", "list")
-
-			session, err := gexec.Start(lookupCommand, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Consistently(session).ShouldNot(gbytes.Say(container.Handle()))
-			Eventually(session).Should(gexec.Exit(0))
+			containers := listContainers("ctr", config.ContainerdSocket)
+			Expect(containers).NotTo(ContainSubstring(container.Handle()))
 		})
 	})
 
@@ -70,7 +63,7 @@ var _ = Describe("Containerd", func() {
 			container garden.Container
 		)
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			var err error
 			container, err = client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
@@ -106,5 +99,43 @@ var _ = Describe("Containerd", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCode).To(Equal(13))
 		})
+
+		Context("when use_containerd_for_processes is enabled", func() {
+			BeforeEach(func() {
+				config.UseContainerdForProcesses = boolptr(true)
+			})
+
+			It("is known about by containerd", func() {
+				_, err := container.Run(garden.ProcessSpec{
+					ID:   "ctrd-process-id",
+					Path: "/bin/sleep",
+					Args: []string{"10"},
+					Dir:  "/",
+				}, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+
+				processes := listProcesses("ctr", config.ContainerdSocket, container.Handle())
+				Expect(processes).To(ContainSubstring("ctrd-process-id"))
+			})
+		})
 	})
 })
+
+func listContainers(ctr, socket string) string {
+	return runCtr(ctr, socket, []string{"containers", "list"})
+}
+
+func listProcesses(ctr, socket, containerID string) string {
+	return runCtr(ctr, socket, []string{"tasks", "ps", containerID})
+}
+
+func runCtr(ctr, socket string, args []string) string {
+	defaultArgs := []string{"--address", socket, "--namespace", "garden"}
+	cmd := exec.Command(ctr, append(defaultArgs, args...)...)
+
+	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+	Eventually(session).Should(gexec.Exit(0))
+
+	return string(session.Out.Contents())
+}

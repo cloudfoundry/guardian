@@ -17,12 +17,19 @@ type NerdContainerizer interface {
 	Create(log lager.Logger, containerID string, spec *specs.Spec) error
 	Delete(log lager.Logger, containerID string) error
 
+	Exec(log lager.Logger, containerID, processID string, spec *specs.Process) error
+
 	State(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error)
 }
 
 //go:generate counterfeiter . BundleLoader
 type BundleLoader interface {
 	Load(string) (goci.Bndl, error)
+}
+
+//go:generate counterfeiter . ProcessBuilder
+type ProcessBuilder interface {
+	BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, uid, gid int) *specs.Process
 }
 
 //go:generate counterfeiter . Execer
@@ -37,18 +44,29 @@ type Statser interface {
 }
 
 type RunContainerd struct {
-	nerd         NerdContainerizer
-	bundleLoader BundleLoader
-	execer       Execer
-	statser      Statser
+	nerd                      NerdContainerizer
+	bundleLoader              BundleLoader
+	processBuilder            ProcessBuilder
+	execer                    Execer
+	statser                   Statser
+	useContainerdForProcesses bool
 }
 
-func New(nerdulator NerdContainerizer, bundleLoader BundleLoader, execer Execer, statser Statser) *RunContainerd {
+type process struct{}
+
+func (p *process) ID() string                  { return "" }
+func (p *process) Wait() (int, error)          { return 0, nil }
+func (p *process) SetTTY(garden.TTYSpec) error { return nil }
+func (p *process) Signal(garden.Signal) error  { return nil }
+
+func New(nerdulator NerdContainerizer, bundleLoader BundleLoader, processBuilder ProcessBuilder, execer Execer, statser Statser, useContainerdForProcesses bool) *RunContainerd {
 	return &RunContainerd{
-		nerd:         nerdulator,
-		bundleLoader: bundleLoader,
-		execer:       execer,
-		statser:      statser,
+		nerd:                      nerdulator,
+		bundleLoader:              bundleLoader,
+		processBuilder:            processBuilder,
+		execer:                    execer,
+		statser:                   statser,
+		useContainerdForProcesses: useContainerdForProcesses,
 	}
 }
 
@@ -61,8 +79,18 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 	return r.nerd.Create(log, id, &bundle.Spec)
 }
 
-func (r *RunContainerd) Exec(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
-	return r.execer.Exec(log, bundlePath, id, spec, io)
+func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, gardenProcessSpec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+	if !r.useContainerdForProcesses {
+		return r.execer.Exec(log, bundlePath, containerID, gardenProcessSpec, io)
+	}
+
+	bundle, err := r.bundleLoader.Load(bundlePath)
+	if err != nil {
+		return nil, err
+	}
+
+	ociProcessSpec := r.processBuilder.BuildProcess(bundle, gardenProcessSpec, 0, 0)
+	return &process{}, r.nerd.Exec(log, containerID, gardenProcessSpec.ID, ociProcessSpec)
 }
 
 func (r *RunContainerd) Attach(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error) {
