@@ -226,7 +226,7 @@ func wireMounts() bundlerules.Mounts {
 	}
 }
 
-func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder runcontainerd.ProcessBuilder, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, useContainerdForProcesses bool) (rundmc.OCIRuntime, peas.PidGetter, error) {
+func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, useContainerdForProcesses bool) (rundmc.OCIRuntime, peas.PidGetter, error) {
 	containerdClient, err := containerd.New(socket)
 	if err != nil {
 		return nil, nil, err
