@@ -1,4 +1,4 @@
-package runrunc
+package users
 
 import (
 	"path/filepath"
@@ -7,8 +7,6 @@ import (
 )
 
 const (
-	DefaultUID  int    = 0
-	DefaultGID  int    = 0
 	DefaultHome string = "/root"
 )
 

@@ -1,11 +1,11 @@
-package runrunc_test
+package users_test
 
 import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/rundmc/users"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -27,11 +27,11 @@ var _ = Describe("LookupUser", func() {
 		Context("when we try to get the UID, GID and HOME of the empty string", func() {
 			It("returns the default UID, GID and HOME", func() {
 				rootFsPath = "some path"
-				user, err := runrunc.LookupUser(rootFsPath, "")
+				user, err := users.LookupUser(rootFsPath, "")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(user.Uid).To(BeEquivalentTo(runrunc.DefaultUID))
-				Expect(user.Gid).To(BeEquivalentTo(runrunc.DefaultGID))
-				Expect(user.Home).To(Equal(runrunc.DefaultHome))
+				Expect(user.Uid).To(BeEquivalentTo(users.DefaultUID))
+				Expect(user.Gid).To(BeEquivalentTo(users.DefaultGID))
+				Expect(user.Home).To(Equal(users.DefaultHome))
 			})
 		})
 
@@ -48,7 +48,7 @@ _dovecot:*:214:6:Dovecot Administrator:/var/empty:/usr/bin/false`,
 			})
 
 			It("gets the user ID from /etc/passwd", func() {
-				user, err := runrunc.LookupUser(rootFsPath, "devil")
+				user, err := users.LookupUser(rootFsPath, "devil")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(user.Uid).To(BeEquivalentTo(666))             // the UID of the beast
 				Expect(user.Gid).To(BeEquivalentTo(777))             // the GID of the beast
@@ -60,14 +60,14 @@ _dovecot:*:214:6:Dovecot Administrator:/var/empty:/usr/bin/false`,
 			It("returns an error", func() {
 				Expect(ioutil.WriteFile(filepath.Join(rootFsPath, "etc", "passwd"), []byte{}, 0777)).To(Succeed())
 
-				_, err := runrunc.LookupUser(rootFsPath, "unknownUser")
+				_, err := users.LookupUser(rootFsPath, "unknownUser")
 				Expect(err).To(MatchError(ContainSubstring("unable to find")))
 			})
 		})
 
 		DescribeTable("when /etc/passwd cannot be parsed", func(breakEtcPasswd func()) {
 			breakEtcPasswd()
-			_, err := runrunc.LookupUser(rootFsPath, "devil")
+			_, err := users.LookupUser(rootFsPath, "devil")
 			Expect(err).To(MatchError(ContainSubstring("unable to find")))
 		},
 			Entry("because it doesn't exist", func() {}),

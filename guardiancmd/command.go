@@ -39,6 +39,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/pid"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
+	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/guardian/sysinfo"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
@@ -868,7 +869,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 
 	wireExecerFunc := func(pidGetter runrunc.PidGetter) *runrunc.Execer {
 		return runrunc.NewExecer(bndlLoader, processBuilder, factory.WireMkdirer(),
-			runrunc.LookupFunc(runrunc.LookupUser), factory.WireExecRunner("exec", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0))), wireUIDGenerator(), pidGetter)
+			runrunc.LookupFunc(users.LookupUser), factory.WireExecRunner("exec", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0))), wireUIDGenerator(), pidGetter)
 	}
 
 	statser := runrunc.NewStatser(runcLogRunner, runcBinary)
@@ -912,7 +913,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		PidGetter:    pidFileReader,
 		PeaCreator:   peaCreator,
 		Loader:       bndlLoader,
-		UserLookuper: runrunc.LookupFunc(runrunc.LookupUser),
+		UserLookuper: runrunc.LookupFunc(users.LookupUser),
 	}
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)

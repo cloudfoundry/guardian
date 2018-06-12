@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	fakes "code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
+	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -36,7 +37,7 @@ var _ = Describe("Execer", func() {
 		spec       garden.ProcessSpec
 		pio        = garden.ProcessIO{Stdin: bytes.NewBufferString("some-stdin")}
 
-		user = &runrunc.ExecUser{
+		user = &users.ExecUser{
 			Uid:  1,
 			Gid:  2,
 			Home: "/some/home",

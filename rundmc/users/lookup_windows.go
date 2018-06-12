@@ -1,10 +1,8 @@
-package runrunc
+package users
 
 import "fmt"
 
 const (
-	DefaultUID  int    = 0
-	DefaultGID  int    = 0
 	DefaultHome string = `C:\\Users\\ContainerAdministrator`
 )
 

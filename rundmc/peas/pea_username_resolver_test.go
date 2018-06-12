@@ -11,8 +11,8 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/peas/peasfakes"
 	"code.cloudfoundry.org/guardian/rundmc/rundmcfakes"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
+	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -59,7 +59,7 @@ var _ = Describe("PeaUsernameResolver", func() {
 		userResolveProcess.IDReturns("peaid")
 		peaCreator.CreatePeaReturns(userResolveProcess, nil)
 
-		userLookuper.LookupReturns(&runrunc.ExecUser{Uid: 1, Gid: 2}, nil)
+		userLookuper.LookupReturns(&users.ExecUser{Uid: 1, Gid: 2}, nil)
 
 		pidGetter.PidReturns(42, nil)
 

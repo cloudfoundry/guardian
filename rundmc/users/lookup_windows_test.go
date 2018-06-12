@@ -1,4 +1,4 @@
-package runrunc_test
+package users_test
 
 import (
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
