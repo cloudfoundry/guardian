@@ -13,6 +13,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	fakes "code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
 	"code.cloudfoundry.org/guardian/rundmc/users"
+	"code.cloudfoundry.org/guardian/rundmc/users/usersfakes"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,7 +25,7 @@ var _ = Describe("Execer", func() {
 		bundleLoader       *fakes.FakeBundleLoader
 		processBuilder     *fakes.FakeProcessBuilder
 		mkdirer            *fakes.FakeMkdirer
-		userLookuper       *fakes.FakeUserLookupper
+		userLookuper       *usersfakes.FakeUserLookupper
 		processIDGenerator *fakes.FakeUidGenerator
 		execRunner         *fakes.FakeExecRunner
 		pidGetter          *fakes.FakePidGetter
@@ -77,7 +78,7 @@ var _ = Describe("Execer", func() {
 		processBuilder = new(fakes.FakeProcessBuilder)
 		processBuilder.BuildProcessReturns(preparedProc)
 		mkdirer = new(fakes.FakeMkdirer)
-		userLookuper = new(fakes.FakeUserLookupper)
+		userLookuper = new(usersfakes.FakeUserLookupper)
 		userLookuper.LookupReturns(user, nil)
 		processIDGenerator = new(fakes.FakeUidGenerator)
 		execRunner = new(fakes.FakeExecRunner)

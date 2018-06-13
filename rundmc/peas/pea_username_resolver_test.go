@@ -11,8 +11,8 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/peas/peasfakes"
 	"code.cloudfoundry.org/guardian/rundmc/rundmcfakes"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
 	"code.cloudfoundry.org/guardian/rundmc/users"
+	"code.cloudfoundry.org/guardian/rundmc/users/usersfakes"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -30,7 +30,7 @@ var _ = Describe("PeaUsernameResolver", func() {
 		pidGetter          *peasfakes.FakeProcessPidGetter
 		peaCreator         *rundmcfakes.FakePeaCreator
 		loader             *rundmcfakes.FakeBundleLoader
-		userLookuper       *runruncfakes.FakeUserLookupper
+		userLookuper       *usersfakes.FakeUserLookupper
 		userResolveProcess *gardenfakes.FakeProcess
 
 		resolver peas.PeaUsernameResolver
@@ -40,7 +40,7 @@ var _ = Describe("PeaUsernameResolver", func() {
 		pidGetter = new(peasfakes.FakeProcessPidGetter)
 		peaCreator = new(rundmcfakes.FakePeaCreator)
 		loader = new(rundmcfakes.FakeBundleLoader)
-		userLookuper = new(runruncfakes.FakeUserLookupper)
+		userLookuper = new(usersfakes.FakeUserLookupper)
 		userResolveProcess = new(gardenfakes.FakeProcess)
 
 		bundle = goci.Bndl{

@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 )
@@ -19,13 +20,13 @@ type Execer struct {
 	bundleLoader   BundleLoader
 	processBuilder ProcessBuilder
 	mkdirer        Mkdirer
-	userLookuper   UserLookupper
+	userLookuper   users.UserLookupper
 	runner         ExecRunner
 	processIDGen   UidGenerator
 	pidGetter      PidGetter
 }
 
-func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookuper UserLookupper, runner ExecRunner, processIDGen UidGenerator, pidGetter PidGetter) *Execer {
+func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookuper users.UserLookupper, runner ExecRunner, processIDGen UidGenerator, pidGetter PidGetter) *Execer {
 	return &Execer{
 		bundleLoader:   bundleLoader,
 		processBuilder: processBuilder,

@@ -7,7 +7,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -21,7 +21,7 @@ type PeaUsernameResolver struct {
 	PidGetter    ProcessPidGetter
 	PeaCreator   rundmc.PeaCreator
 	Loader       rundmc.BundleLoader
-	UserLookuper runrunc.UserLookupper
+	UserLookuper users.UserLookupper
 }
 
 func (r *PeaUsernameResolver) ResolveUser(log lager.Logger, bundlePath, handle string, image garden.ImageRef, username string) (int, int, error) {
