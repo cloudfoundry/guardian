@@ -3,6 +3,7 @@ package nerd_test
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -13,9 +14,11 @@ import (
 	"github.com/containerd/containerd/oci"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -71,11 +74,60 @@ var _ = Describe("Nerd", func() {
 				Cwd:  "/",
 			}
 
-			Expect(cnerd.Exec(testLogger, "test-container-id", "test-process-id", processSpec)).To(Succeed())
+			Expect(cnerd.Exec(testLogger, "test-container-id", "test-process-id", processSpec, garden.ProcessIO{})).To(Succeed())
 
 			containers := listProcesses(testConfig.CtrBin, testConfig.Socket, "test-container-id")
 			Expect(containers).To(ContainSubstring("test-container-id")) // init process
 			Expect(containers).To(ContainSubstring("test-process-id"))   // execed process
+		})
+
+		It("processes can write to stdout", func() {
+			processSpec := &specs.Process{
+				Args: []string{"/bin/echo", "hello nerd"},
+				User: specs.User{UID: 0, GID: 0},
+				Cwd:  "/",
+			}
+
+			stdout := gbytes.NewBuffer()
+			processIO := garden.ProcessIO{
+				Stdin:  gbytes.NewBuffer(),
+				Stdout: io.MultiWriter(stdout, GinkgoWriter),
+				Stderr: GinkgoWriter,
+			}
+			Expect(cnerd.Exec(testLogger, "test-container-id", "test-process-id", processSpec, processIO)).To(Succeed())
+			Eventually(stdout).Should(gbytes.Say("hello nerd"))
+		})
+
+		It("processes can read from stdin", func() {
+			processSpec := &specs.Process{
+				Args: []string{"/bin/cat", "/proc/self/fd/0"},
+				User: specs.User{UID: 0, GID: 0},
+				Cwd:  "/",
+			}
+
+			stdout := gbytes.NewBuffer()
+			processIO := garden.ProcessIO{
+				Stdin:  gbytes.BufferWithBytes([]byte("hello nerd")),
+				Stdout: io.MultiWriter(stdout, GinkgoWriter),
+				Stderr: GinkgoWriter,
+			}
+			Expect(cnerd.Exec(testLogger, "test-container-id", "test-process-id", processSpec, processIO)).To(Succeed())
+			Eventually(stdout).Should(gbytes.Say("hello nerd"))
+		})
+
+		It("processes can write to stderr", func() {
+			processSpec := &specs.Process{
+				Args: []string{"/bin/cat", "notafile.txt"},
+				User: specs.User{UID: 0, GID: 0},
+				Cwd:  "/",
+			}
+
+			stderr := gbytes.NewBuffer()
+			processIO := garden.ProcessIO{
+				Stderr: io.MultiWriter(stderr, GinkgoWriter),
+			}
+			Expect(cnerd.Exec(testLogger, "test-container-id", "test-process-id", processSpec, processIO)).To(Succeed())
+			Eventually(stderr).Should(gbytes.Say("No such file"))
 		})
 	})
 

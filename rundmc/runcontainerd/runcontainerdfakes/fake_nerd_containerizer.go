@@ -4,6 +4,7 @@ package runcontainerdfakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
@@ -36,13 +37,14 @@ type FakeNerdContainerizer struct {
 	deleteReturnsOnCall map[int]struct {
 		result1 error
 	}
-	ExecStub        func(log lager.Logger, containerID, processID string, spec *specs.Process) error
+	ExecStub        func(log lager.Logger, containerID, processID string, spec *specs.Process, io garden.ProcessIO) error
 	execMutex       sync.RWMutex
 	execArgsForCall []struct {
 		log         lager.Logger
 		containerID string
 		processID   string
 		spec        *specs.Process
+		io          garden.ProcessIO
 	}
 	execReturns struct {
 		result1 error
@@ -169,7 +171,7 @@ func (fake *FakeNerdContainerizer) DeleteReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeNerdContainerizer) Exec(log lager.Logger, containerID string, processID string, spec *specs.Process) error {
+func (fake *FakeNerdContainerizer) Exec(log lager.Logger, containerID string, processID string, spec *specs.Process, io garden.ProcessIO) error {
 	fake.execMutex.Lock()
 	ret, specificReturn := fake.execReturnsOnCall[len(fake.execArgsForCall)]
 	fake.execArgsForCall = append(fake.execArgsForCall, struct {
@@ -177,11 +179,12 @@ func (fake *FakeNerdContainerizer) Exec(log lager.Logger, containerID string, pr
 		containerID string
 		processID   string
 		spec        *specs.Process
-	}{log, containerID, processID, spec})
-	fake.recordInvocation("Exec", []interface{}{log, containerID, processID, spec})
+		io          garden.ProcessIO
+	}{log, containerID, processID, spec, io})
+	fake.recordInvocation("Exec", []interface{}{log, containerID, processID, spec, io})
 	fake.execMutex.Unlock()
 	if fake.ExecStub != nil {
-		return fake.ExecStub(log, containerID, processID, spec)
+		return fake.ExecStub(log, containerID, processID, spec, io)
 	}
 	if specificReturn {
 		return ret.result1
@@ -195,10 +198,10 @@ func (fake *FakeNerdContainerizer) ExecCallCount() int {
 	return len(fake.execArgsForCall)
 }
 
-func (fake *FakeNerdContainerizer) ExecArgsForCall(i int) (lager.Logger, string, string, *specs.Process) {
+func (fake *FakeNerdContainerizer) ExecArgsForCall(i int) (lager.Logger, string, string, *specs.Process, garden.ProcessIO) {
 	fake.execMutex.RLock()
 	defer fake.execMutex.RUnlock()
-	return fake.execArgsForCall[i].log, fake.execArgsForCall[i].containerID, fake.execArgsForCall[i].processID, fake.execArgsForCall[i].spec
+	return fake.execArgsForCall[i].log, fake.execArgsForCall[i].containerID, fake.execArgsForCall[i].processID, fake.execArgsForCall[i].spec, fake.execArgsForCall[i].io
 }
 
 func (fake *FakeNerdContainerizer) ExecReturns(result1 error) {

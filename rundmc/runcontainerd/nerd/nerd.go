@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
@@ -91,7 +92,7 @@ func (n *Nerd) State(log lager.Logger, containerID string) (int, containerd.Proc
 	return int(task.Pid()), status.Status, nil
 }
 
-func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs.Process) error {
+func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs.Process, io garden.ProcessIO) error {
 	log.Debug("loading-container", lager.Data{"containerID": containerID})
 	container, err := n.client.LoadContainer(n.context, containerID)
 	if err != nil {
@@ -105,10 +106,26 @@ func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs
 	}
 
 	log.Debug("execing-task", lager.Data{"containerID": containerID, "processID": processID})
-	process, err := task.Exec(n.context, processID, spec, cio.NullIO)
+	process, err := task.Exec(n.context, processID, spec, cio.NewCreator(cio.WithStdio, withGardenProcessIO(io)))
 	if err != nil {
 		return err
 	}
 
 	return process.Start(n.context)
+}
+
+func withGardenProcessIO(io garden.ProcessIO) cio.Opt {
+	return func(opt *cio.Streams) {
+		if io.Stdin != nil {
+			opt.Stdin = io.Stdin
+		}
+
+		if io.Stdout != nil {
+			opt.Stdout = io.Stdout
+		}
+
+		if io.Stderr != nil {
+			opt.Stderr = io.Stderr
+		}
+	}
 }

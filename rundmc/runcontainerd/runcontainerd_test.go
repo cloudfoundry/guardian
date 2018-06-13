@@ -14,6 +14,7 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -170,6 +171,7 @@ var _ = Describe("Runcontainerd", func() {
 			bundle      goci.Bndl
 			fakeProcess *gardenfakes.FakeProcess
 			execProcess garden.Process
+			processIO   garden.ProcessIO
 		)
 
 		BeforeEach(func() {
@@ -190,10 +192,13 @@ var _ = Describe("Runcontainerd", func() {
 				}
 				return goci.Bndl{}, nil
 			}
+			processIO = garden.ProcessIO{
+				Stdout: gbytes.NewBuffer(),
+			}
 		})
 
 		JustBeforeEach(func() {
-			execProcess, execErr = runContainerd.Exec(logger, bundlePath, containerID, processSpec, garden.ProcessIO{})
+			execProcess, execErr = runContainerd.Exec(logger, bundlePath, containerID, processSpec, processIO)
 		})
 
 		It("delegates to execer", func() {
@@ -203,7 +208,7 @@ var _ = Describe("Runcontainerd", func() {
 			Expect(actualBundlePath).To(Equal(bundlePath))
 			Expect(actualSandboxHandle).To(Equal(containerID))
 			Expect(actualProcessSpec).To(Equal(processSpec))
-			Expect(actualIO).To(Equal(garden.ProcessIO{}))
+			Expect(actualIO).To(Equal(processIO))
 			Expect(execProcess).To(Equal(fakeProcess))
 		})
 
@@ -224,19 +229,25 @@ var _ = Describe("Runcontainerd", func() {
 
 			It("passes the logger through", func() {
 				Expect(nerd.ExecCallCount()).To(Equal(1))
-				actualLogger, _, _, _ := nerd.ExecArgsForCall(0)
+				actualLogger, _, _, _, _ := nerd.ExecArgsForCall(0)
 				Expect(actualLogger).To(Equal(logger))
+			})
+
+			It("passes the io through", func() {
+				Expect(nerd.ExecCallCount()).To(Equal(1))
+				_, _, _, _, actualIO := nerd.ExecArgsForCall(0)
+				Expect(actualIO).To(Equal(processIO))
 			})
 
 			It("creates the process on the passed container", func() {
 				Expect(nerd.ExecCallCount()).To(Equal(1))
-				_, actualContainerID, _, _ := nerd.ExecArgsForCall(0)
+				_, actualContainerID, _, _, _ := nerd.ExecArgsForCall(0)
 				Expect(actualContainerID).To(Equal(containerID))
 			})
 
 			It("creates the process with the provided processID", func() {
 				Expect(nerd.ExecCallCount()).To(Equal(1))
-				_, _, actualProcessID, _ := nerd.ExecArgsForCall(0)
+				_, _, actualProcessID, _, _ := nerd.ExecArgsForCall(0)
 				Expect(actualProcessID).To(Equal(processSpec.ID))
 			})
 
@@ -249,7 +260,7 @@ var _ = Describe("Runcontainerd", func() {
 
 			It("creates the process with the converted process spec", func() {
 				Expect(nerd.ExecCallCount()).To(Equal(1))
-				_, _, _, actualProcessSpec := nerd.ExecArgsForCall(0)
+				_, _, _, actualProcessSpec, _ := nerd.ExecArgsForCall(0)
 				Expect(actualProcessSpec.Args).To(Equal([]string{"test-binary"}))
 			})
 

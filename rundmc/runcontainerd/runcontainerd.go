@@ -17,7 +17,7 @@ type NerdContainerizer interface {
 	Create(log lager.Logger, containerID string, spec *specs.Spec) error
 	Delete(log lager.Logger, containerID string) error
 
-	Exec(log lager.Logger, containerID, processID string, spec *specs.Process) error
+	Exec(log lager.Logger, containerID, processID string, spec *specs.Process, io garden.ProcessIO) error
 
 	State(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error)
 }
@@ -90,7 +90,7 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, g
 	}
 
 	ociProcessSpec := r.processBuilder.BuildProcess(bundle, gardenProcessSpec, 0, 0)
-	return &process{}, r.nerd.Exec(log, containerID, gardenProcessSpec.ID, ociProcessSpec)
+	return &process{}, r.nerd.Exec(log, containerID, gardenProcessSpec.ID, ociProcessSpec, io)
 }
 
 func (r *RunContainerd) Attach(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error) {
