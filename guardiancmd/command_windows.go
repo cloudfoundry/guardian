@@ -18,6 +18,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/lager"
 	"github.com/docker/docker/pkg/mount"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -153,7 +154,8 @@ func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
 	panic("this should be unreachable: no sockets on Windows")
 }
 
-func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser *runrunc.Statser, useContainerdForProcesses bool) (rundmc.OCIRuntime, peas.PidGetter, error) {
+func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper,
+	wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser *runrunc.Statser, useContainerdForProcesses bool) (rundmc.OCIRuntime, peas.PidGetter, error) {
 	return nil, nil, errors.New("containerd not impletemented on windows")
 }
 

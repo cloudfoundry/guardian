@@ -18,10 +18,10 @@ type ProcessPidGetter interface {
 }
 
 type PeaUsernameResolver struct {
-	PidGetter    ProcessPidGetter
-	PeaCreator   rundmc.PeaCreator
-	Loader       rundmc.BundleLoader
-	UserLookuper users.UserLookupper
+	PidGetter     ProcessPidGetter
+	PeaCreator    rundmc.PeaCreator
+	Loader        rundmc.BundleLoader
+	UserLookupper users.UserLookupper
 }
 
 func (r *PeaUsernameResolver) ResolveUser(log lager.Logger, bundlePath, handle string, image garden.ImageRef, username string) (int, int, error) {
@@ -63,7 +63,7 @@ func (r *PeaUsernameResolver) ResolveUser(log lager.Logger, bundlePath, handle s
 		return -1, -1, err
 	}
 
-	lookedupUser, err := r.UserLookuper.Lookup(filepath.Join("/proc", strconv.Itoa(resolveUserPeaPid), "root"), username)
+	lookedupUser, err := r.UserLookupper.Lookup(filepath.Join("/proc", strconv.Itoa(resolveUserPeaPid), "root"), username)
 	if err != nil {
 		return -1, -1, err
 	}

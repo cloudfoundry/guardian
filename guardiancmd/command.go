@@ -867,16 +867,18 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	var pidGetter peas.PidGetter
 	var peaCreator *peas.PeaCreator
 
+	userLookupper := users.LookupFunc(users.LookupUser)
+
 	wireExecerFunc := func(pidGetter runrunc.PidGetter) *runrunc.Execer {
 		return runrunc.NewExecer(bndlLoader, processBuilder, factory.WireMkdirer(),
-			runrunc.LookupFunc(users.LookupUser), factory.WireExecRunner("exec", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0))), wireUIDGenerator(), pidGetter)
+			userLookupper, factory.WireExecRunner("exec", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0))), wireUIDGenerator(), pidGetter)
 	}
 
 	statser := runrunc.NewStatser(runcLogRunner, runcBinary)
 
 	if cmd.useContainerd() {
 		var err error
-		runner, pidGetter, err = wireContainerd(cmd.Containerd.Socket, bndlLoader, processBuilder, wireExecerFunc, statser, cmd.Containerd.UseContainerdForProcesses)
+		runner, pidGetter, err = wireContainerd(cmd.Containerd.Socket, bndlLoader, processBuilder, userLookupper, wireExecerFunc, statser, cmd.Containerd.UseContainerdForProcesses)
 		if err != nil {
 			return nil, err
 		}
@@ -910,10 +912,10 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	}
 
 	peaUsernameResolver := &peas.PeaUsernameResolver{
-		PidGetter:    pidFileReader,
-		PeaCreator:   peaCreator,
-		Loader:       bndlLoader,
-		UserLookuper: runrunc.LookupFunc(users.LookupUser),
+		PidGetter:     pidFileReader,
+		PeaCreator:    peaCreator,
+		Loader:        bndlLoader,
+		UserLookupper: users.LookupFunc(users.LookupUser),
 	}
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)

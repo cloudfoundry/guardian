@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/containers"
@@ -161,6 +162,24 @@ var _ = Describe("Nerd", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(pid).NotTo(BeZero())
 			Expect(status).To(Equal(containerd.Running))
+		})
+	})
+
+	Describe("GetContainerPID", func() {
+		BeforeEach(func() {
+			spec := generateSpec(containerdContext, containerdClient, "test-container-id")
+			Expect(cnerd.Create(testLogger, "test-container-id", spec)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			cnerd.Delete(testLogger, "test-container-id")
+		})
+
+		It("gets the container init process pid", func() {
+			procls := listProcesses(testConfig.CtrBin, testConfig.Socket, "test-container-id")
+			containerPid, err := cnerd.GetContainerPID(testLogger, "test-container-id")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(procls).To(ContainSubstring(strconv.Itoa(int(containerPid))))
 		})
 	})
 })

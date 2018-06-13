@@ -1,12 +1,14 @@
 package gqt_test
 
 import (
+	"io"
 	"os/exec"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -116,6 +118,20 @@ var _ = Describe("Containerd", func() {
 
 				processes := listProcesses("ctr", config.ContainerdSocket, container.Handle())
 				Expect(processes).To(ContainSubstring("ctrd-process-id"))
+			})
+
+			It("can resolve the user of the process", func() {
+				stdout := gbytes.NewBuffer()
+				_, err := container.Run(garden.ProcessSpec{
+					ID:   "ctrd-process-id",
+					Path: "/bin/ps",
+					User: "1000",
+					Dir:  "/",
+				}, garden.ProcessIO{
+					Stdout: io.MultiWriter(GinkgoWriter, stdout),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(stdout).Should(gbytes.Say("alice"))
 			})
 		})
 	})

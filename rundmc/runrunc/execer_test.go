@@ -25,7 +25,7 @@ var _ = Describe("Execer", func() {
 		bundleLoader       *fakes.FakeBundleLoader
 		processBuilder     *fakes.FakeProcessBuilder
 		mkdirer            *fakes.FakeMkdirer
-		userLookuper       *usersfakes.FakeUserLookupper
+		userLookupper      *usersfakes.FakeUserLookupper
 		processIDGenerator *fakes.FakeUidGenerator
 		execRunner         *fakes.FakeExecRunner
 		pidGetter          *fakes.FakePidGetter
@@ -78,8 +78,8 @@ var _ = Describe("Execer", func() {
 		processBuilder = new(fakes.FakeProcessBuilder)
 		processBuilder.BuildProcessReturns(preparedProc)
 		mkdirer = new(fakes.FakeMkdirer)
-		userLookuper = new(usersfakes.FakeUserLookupper)
-		userLookuper.LookupReturns(user, nil)
+		userLookupper = new(usersfakes.FakeUserLookupper)
+		userLookupper.LookupReturns(user, nil)
 		processIDGenerator = new(fakes.FakeUidGenerator)
 		execRunner = new(fakes.FakeExecRunner)
 		pidGetter = new(fakes.FakePidGetter)
@@ -89,7 +89,7 @@ var _ = Describe("Execer", func() {
 			bundleLoader,
 			processBuilder,
 			mkdirer,
-			userLookuper,
+			userLookupper,
 			execRunner,
 			processIDGenerator,
 			pidGetter,
@@ -107,8 +107,8 @@ var _ = Describe("Execer", func() {
 		})
 
 		It("looks up the user", func() {
-			Expect(userLookuper.LookupCallCount()).To(Equal(1))
-			rootfsPath, username := userLookuper.LookupArgsForCall(0)
+			Expect(userLookupper.LookupCallCount()).To(Equal(1))
+			rootfsPath, username := userLookupper.LookupArgsForCall(0)
 			Expect(rootfsPath).To(Equal(filepath.Join("/proc", "1234", "root")))
 			Expect(username).To(Equal(spec.User))
 		})
@@ -215,7 +215,7 @@ var _ = Describe("Execer", func() {
 
 		Context("when user lookup fails", func() {
 			BeforeEach(func() {
-				userLookuper.LookupReturns(nil, errors.New("user-lookup"))
+				userLookupper.LookupReturns(nil, errors.New("user-lookup"))
 			})
 
 			It("returns an error", func() {

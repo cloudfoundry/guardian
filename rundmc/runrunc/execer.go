@@ -20,18 +20,18 @@ type Execer struct {
 	bundleLoader   BundleLoader
 	processBuilder ProcessBuilder
 	mkdirer        Mkdirer
-	userLookuper   users.UserLookupper
+	userLookupper  users.UserLookupper
 	runner         ExecRunner
 	processIDGen   UidGenerator
 	pidGetter      PidGetter
 }
 
-func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookuper users.UserLookupper, runner ExecRunner, processIDGen UidGenerator, pidGetter PidGetter) *Execer {
+func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookupper users.UserLookupper, runner ExecRunner, processIDGen UidGenerator, pidGetter PidGetter) *Execer {
 	return &Execer{
 		bundleLoader:   bundleLoader,
 		processBuilder: processBuilder,
 		mkdirer:        mkdirer,
-		userLookuper:   userLookuper,
+		userLookupper:  userLookupper,
 		runner:         runner,
 		processIDGen:   processIDGen,
 		pidGetter:      pidGetter,
@@ -52,7 +52,7 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec g
 	}
 
 	rootfsPath := filepath.Join("/proc", strconv.Itoa(ctrInitPid), "root")
-	user, err := e.userLookuper.Lookup(rootfsPath, spec.User)
+	user, err := e.userLookupper.Lookup(rootfsPath, spec.User)
 	if err != nil {
 		log.Error("user-lookup-failed", err)
 		return nil, err

@@ -10,6 +10,8 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/runcontainerdfakes"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/rundmc/users"
+	"code.cloudfoundry.org/guardian/rundmc/users/usersfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -27,6 +29,7 @@ var _ = Describe("Runcontainerd", func() {
 		execer         *runcontainerdfakes.FakeExecer
 		statser        *runcontainerdfakes.FakeStatser
 		processBuilder *runcontainerdfakes.FakeProcessBuilder
+		userLookupper  *usersfakes.FakeUserLookupper
 	)
 
 	BeforeEach(func() {
@@ -36,8 +39,9 @@ var _ = Describe("Runcontainerd", func() {
 		execer = new(runcontainerdfakes.FakeExecer)
 		statser = new(runcontainerdfakes.FakeStatser)
 		processBuilder = new(runcontainerdfakes.FakeProcessBuilder)
+		userLookupper = new(usersfakes.FakeUserLookupper)
 
-		runContainerd = runcontainerd.New(nerd, bundleLoader, processBuilder, execer, statser, false)
+		runContainerd = runcontainerd.New(nerd, bundleLoader, processBuilder, userLookupper, execer, statser, false)
 	})
 
 	Describe("Create", func() {
@@ -180,7 +184,8 @@ var _ = Describe("Runcontainerd", func() {
 			containerID = "container-id"
 			bundlePath = "bundle-path"
 			processSpec = garden.ProcessSpec{
-				ID: "test-process-id",
+				ID:   "test-process-id",
+				User: "alice",
 			}
 			processBuilder.BuildProcessReturns(&specs.Process{
 				Args: []string{"test-binary"},
@@ -224,7 +229,14 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("when use_containerd_for_processes is enabled", func() {
 			BeforeEach(func() {
-				runContainerd = runcontainerd.New(nerd, bundleLoader, processBuilder, execer, statser, true)
+				user := users.ExecUser{
+					Uid: 1000,
+					Gid: 1001,
+				}
+				userLookupper.LookupReturns(&user, nil)
+
+				nerd.GetContainerPIDReturns(1234, nil)
+				runContainerd = runcontainerd.New(nerd, bundleLoader, processBuilder, userLookupper, execer, statser, true)
 			})
 
 			It("passes the logger through", func() {
@@ -262,6 +274,41 @@ var _ = Describe("Runcontainerd", func() {
 				Expect(nerd.ExecCallCount()).To(Equal(1))
 				_, _, _, actualProcessSpec, _ := nerd.ExecArgsForCall(0)
 				Expect(actualProcessSpec.Args).To(Equal([]string{"test-binary"}))
+			})
+
+			It("create the process with the resolved user", func() {
+				_, actualContainerId := nerd.GetContainerPIDArgsForCall(0)
+				Expect(actualContainerId).To(Equal("container-id"))
+
+				Expect(userLookupper.LookupCallCount()).To(Equal(1))
+				passedRootfs, passedUserId := userLookupper.LookupArgsForCall(0)
+				Expect(passedUserId).To(Equal("alice"))
+				Expect(passedRootfs).To(Equal("/proc/1234/root"))
+
+				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
+				_, _, ociProcessUid, ociProcessGid := processBuilder.BuildProcessArgsForCall(0)
+				Expect(ociProcessUid).To(Equal(1000))
+				Expect(ociProcessGid).To(Equal(1001))
+			})
+
+			Context("when the user lookupper fails", func() {
+				BeforeEach(func() {
+					userLookupper.LookupReturns(nil, errors.New("user-lookup-failure"))
+				})
+
+				It("returns the error", func() {
+					Expect(execErr).To(MatchError("user-lookup-failure"))
+				})
+			})
+
+			Context("when getting the container PID fails", func() {
+				BeforeEach(func() {
+					nerd.GetContainerPIDReturns(0, errors.New("get-container-pid-failure"))
+				})
+
+				It("returns the error", func() {
+					Expect(execErr).To(MatchError("get-container-pid-failure"))
+				})
 			})
 
 			Context("when bundleLoader returns an error", func() {

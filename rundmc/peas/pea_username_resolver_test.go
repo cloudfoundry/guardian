@@ -30,7 +30,7 @@ var _ = Describe("PeaUsernameResolver", func() {
 		pidGetter          *peasfakes.FakeProcessPidGetter
 		peaCreator         *rundmcfakes.FakePeaCreator
 		loader             *rundmcfakes.FakeBundleLoader
-		userLookuper       *usersfakes.FakeUserLookupper
+		userLookupper      *usersfakes.FakeUserLookupper
 		userResolveProcess *gardenfakes.FakeProcess
 
 		resolver peas.PeaUsernameResolver
@@ -40,7 +40,7 @@ var _ = Describe("PeaUsernameResolver", func() {
 		pidGetter = new(peasfakes.FakeProcessPidGetter)
 		peaCreator = new(rundmcfakes.FakePeaCreator)
 		loader = new(rundmcfakes.FakeBundleLoader)
-		userLookuper = new(usersfakes.FakeUserLookupper)
+		userLookupper = new(usersfakes.FakeUserLookupper)
 		userResolveProcess = new(gardenfakes.FakeProcess)
 
 		bundle = goci.Bndl{
@@ -59,15 +59,15 @@ var _ = Describe("PeaUsernameResolver", func() {
 		userResolveProcess.IDReturns("peaid")
 		peaCreator.CreatePeaReturns(userResolveProcess, nil)
 
-		userLookuper.LookupReturns(&users.ExecUser{Uid: 1, Gid: 2}, nil)
+		userLookupper.LookupReturns(&users.ExecUser{Uid: 1, Gid: 2}, nil)
 
 		pidGetter.PidReturns(42, nil)
 
 		resolver = peas.PeaUsernameResolver{
-			PidGetter:    pidGetter,
-			PeaCreator:   peaCreator,
-			Loader:       loader,
-			UserLookuper: userLookuper,
+			PidGetter:     pidGetter,
+			PeaCreator:    peaCreator,
+			Loader:        loader,
+			UserLookupper: userLookupper,
 		}
 	})
 
@@ -82,8 +82,8 @@ var _ = Describe("PeaUsernameResolver", func() {
 	})
 
 	It("resolves username against correct rootfs", func() {
-		Expect(userLookuper.LookupCallCount()).To(Equal(1))
-		rootfs, username := userLookuper.LookupArgsForCall(0)
+		Expect(userLookupper.LookupCallCount()).To(Equal(1))
+		rootfs, username := userLookupper.LookupArgsForCall(0)
 		Expect(rootfs).To(Equal(toFilePath("/proc/42/root")))
 		Expect(username).To(Equal("foobar"))
 
@@ -157,7 +157,7 @@ var _ = Describe("PeaUsernameResolver", func() {
 
 	Context("when user cannot be looked up", func() {
 		BeforeEach(func() {
-			userLookuper.LookupReturns(nil, errors.New("user-lookup-failure"))
+			userLookupper.LookupReturns(nil, errors.New("user-lookup-failure"))
 		})
 
 		It("returns an error", func() {

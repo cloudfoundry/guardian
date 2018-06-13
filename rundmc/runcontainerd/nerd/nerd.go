@@ -47,14 +47,7 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec) er
 }
 
 func (n *Nerd) Delete(log lager.Logger, containerID string) error {
-	log.Debug("loading-container", lager.Data{"containerID": containerID})
-	container, err := n.client.LoadContainer(n.context, containerID)
-	if err != nil {
-		return err
-	}
-
-	log.Debug("loading-task", lager.Data{"containerID": containerID})
-	task, err := container.Task(n.context, nil)
+	container, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
 		return err
 	}
@@ -70,14 +63,7 @@ func (n *Nerd) Delete(log lager.Logger, containerID string) error {
 }
 
 func (n *Nerd) State(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error) {
-	log.Debug("loading-container", lager.Data{"containerID": containerID})
-	container, err := n.client.LoadContainer(n.context, containerID)
-	if err != nil {
-		return 0, "", err
-	}
-
-	log.Debug("loading-task", lager.Data{"containerID": containerID})
-	task, err := container.Task(n.context, nil)
+	_, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
 		return 0, "", err
 	}
@@ -93,14 +79,7 @@ func (n *Nerd) State(log lager.Logger, containerID string) (int, containerd.Proc
 }
 
 func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs.Process, io garden.ProcessIO) error {
-	log.Debug("loading-container", lager.Data{"containerID": containerID})
-	container, err := n.client.LoadContainer(n.context, containerID)
-	if err != nil {
-		return err
-	}
-
-	log.Debug("loading-task", lager.Data{"containerID": containerID})
-	task, err := container.Task(n.context, nil)
+	_, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
 		return err
 	}
@@ -112,6 +91,15 @@ func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs
 	}
 
 	return process.Start(n.context)
+}
+
+func (n *Nerd) GetContainerPID(log lager.Logger, containerID string) (uint32, error) {
+	_, task, err := n.loadContainerAndTask(log, containerID)
+	if err != nil {
+		return 0, err
+	}
+
+	return task.Pid(), nil
 }
 
 func withGardenProcessIO(io garden.ProcessIO) cio.Opt {
@@ -128,4 +116,20 @@ func withGardenProcessIO(io garden.ProcessIO) cio.Opt {
 			opt.Stderr = io.Stderr
 		}
 	}
+}
+
+func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (containerd.Container, containerd.Task, error) {
+	log.Debug("loading-container", lager.Data{"containerID": containerID})
+	container, err := n.client.LoadContainer(n.context, containerID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	log.Debug("loading-task", lager.Data{"containerID": containerID})
+	task, err := container.Task(n.context, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return container, task, nil
 }

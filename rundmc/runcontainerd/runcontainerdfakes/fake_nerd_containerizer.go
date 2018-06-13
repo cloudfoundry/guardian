@@ -68,6 +68,20 @@ type FakeNerdContainerizer struct {
 		result2 containerd.ProcessStatus
 		result3 error
 	}
+	GetContainerPIDStub        func(log lager.Logger, containerID string) (uint32, error)
+	getContainerPIDMutex       sync.RWMutex
+	getContainerPIDArgsForCall []struct {
+		log         lager.Logger
+		containerID string
+	}
+	getContainerPIDReturns struct {
+		result1 uint32
+		result2 error
+	}
+	getContainerPIDReturnsOnCall map[int]struct {
+		result1 uint32
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -278,6 +292,58 @@ func (fake *FakeNerdContainerizer) StateReturnsOnCall(i int, result1 int, result
 	}{result1, result2, result3}
 }
 
+func (fake *FakeNerdContainerizer) GetContainerPID(log lager.Logger, containerID string) (uint32, error) {
+	fake.getContainerPIDMutex.Lock()
+	ret, specificReturn := fake.getContainerPIDReturnsOnCall[len(fake.getContainerPIDArgsForCall)]
+	fake.getContainerPIDArgsForCall = append(fake.getContainerPIDArgsForCall, struct {
+		log         lager.Logger
+		containerID string
+	}{log, containerID})
+	fake.recordInvocation("GetContainerPID", []interface{}{log, containerID})
+	fake.getContainerPIDMutex.Unlock()
+	if fake.GetContainerPIDStub != nil {
+		return fake.GetContainerPIDStub(log, containerID)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.getContainerPIDReturns.result1, fake.getContainerPIDReturns.result2
+}
+
+func (fake *FakeNerdContainerizer) GetContainerPIDCallCount() int {
+	fake.getContainerPIDMutex.RLock()
+	defer fake.getContainerPIDMutex.RUnlock()
+	return len(fake.getContainerPIDArgsForCall)
+}
+
+func (fake *FakeNerdContainerizer) GetContainerPIDArgsForCall(i int) (lager.Logger, string) {
+	fake.getContainerPIDMutex.RLock()
+	defer fake.getContainerPIDMutex.RUnlock()
+	return fake.getContainerPIDArgsForCall[i].log, fake.getContainerPIDArgsForCall[i].containerID
+}
+
+func (fake *FakeNerdContainerizer) GetContainerPIDReturns(result1 uint32, result2 error) {
+	fake.GetContainerPIDStub = nil
+	fake.getContainerPIDReturns = struct {
+		result1 uint32
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeNerdContainerizer) GetContainerPIDReturnsOnCall(i int, result1 uint32, result2 error) {
+	fake.GetContainerPIDStub = nil
+	if fake.getContainerPIDReturnsOnCall == nil {
+		fake.getContainerPIDReturnsOnCall = make(map[int]struct {
+			result1 uint32
+			result2 error
+		})
+	}
+	fake.getContainerPIDReturnsOnCall[i] = struct {
+		result1 uint32
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeNerdContainerizer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -289,6 +355,8 @@ func (fake *FakeNerdContainerizer) Invocations() map[string][][]interface{} {
 	defer fake.execMutex.RUnlock()
 	fake.stateMutex.RLock()
 	defer fake.stateMutex.RUnlock()
+	fake.getContainerPIDMutex.RLock()
+	defer fake.getContainerPIDMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
