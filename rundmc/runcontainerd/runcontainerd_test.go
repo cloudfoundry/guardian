@@ -293,6 +293,18 @@ var _ = Describe("Runcontainerd", func() {
 				Expect(ociProcessGid).To(Equal(1001))
 			})
 
+			Context("if spec ID is empty", func() {
+				BeforeEach(func() {
+					processSpec.ID = ""
+				})
+
+				It("generates an ID if none is supplied", func() {
+					Expect(nerd.ExecCallCount()).To(Equal(1))
+					_, _, actualProcessID, _, _ := nerd.ExecArgsForCall(0)
+					Expect(actualProcessID).NotTo(Equal(""))
+				})
+			})
+
 			Context("when the user lookupper fails", func() {
 				BeforeEach(func() {
 					userLookupper.LookupReturns(nil, errors.New("user-lookup-failure"))

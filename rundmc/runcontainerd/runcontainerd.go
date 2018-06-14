@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
+	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -105,6 +106,14 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, g
 
 	if gardenProcessSpec.Dir == "" {
 		gardenProcessSpec.Dir = resolvedUser.Home
+	}
+
+	if gardenProcessSpec.ID == "" {
+		randomID, err := uuid.NewV4()
+		if err != nil {
+			return nil, err
+		}
+		gardenProcessSpec.ID = fmt.Sprintf("%s", randomID)
 	}
 
 	ociProcessSpec := r.processBuilder.BuildProcess(bundle, gardenProcessSpec, resolvedUser.Uid, resolvedUser.Gid)

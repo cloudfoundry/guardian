@@ -14,6 +14,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
+	uuid "github.com/nu7hatch/gouuid"
 )
 
 type Execer struct {
@@ -22,18 +23,16 @@ type Execer struct {
 	mkdirer        Mkdirer
 	userLookupper  users.UserLookupper
 	runner         ExecRunner
-	processIDGen   UidGenerator
 	pidGetter      PidGetter
 }
 
-func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookupper users.UserLookupper, runner ExecRunner, processIDGen UidGenerator, pidGetter PidGetter) *Execer {
+func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookupper users.UserLookupper, runner ExecRunner, pidGetter PidGetter) *Execer {
 	return &Execer{
 		bundleLoader:   bundleLoader,
 		processBuilder: processBuilder,
 		mkdirer:        mkdirer,
 		userLookupper:  userLookupper,
 		runner:         runner,
-		processIDGen:   processIDGen,
 		pidGetter:      pidGetter,
 	}
 }
@@ -83,7 +82,11 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec g
 
 	processID := spec.ID
 	if processID == "" {
-		processID = e.processIDGen.Generate()
+		randomID, err := uuid.NewV4()
+		if err != nil {
+			return nil, err
+		}
+		processID = fmt.Sprintf("%s", randomID)
 	}
 	processPath := filepath.Join(processesPath, processID)
 	if _, err := os.Stat(processPath); err == nil {

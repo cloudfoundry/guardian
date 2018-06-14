@@ -135,17 +135,30 @@ var _ = Describe("Containerd", func() {
 			})
 
 			It("can resolve the home directory of the user if none was specified", func() {
-				stdoutPwd := gbytes.NewBuffer()
+				stdout := gbytes.NewBuffer()
 				_, err := container.Run(garden.ProcessSpec{
 					ID:   "ctrd-process-pwd",
 					Path: "/bin/pwd",
 					User: "alice",
 				}, garden.ProcessIO{
-					Stdout: io.MultiWriter(GinkgoWriter, stdoutPwd),
+					Stdout: io.MultiWriter(GinkgoWriter, stdout),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Eventually(stdoutPwd).Should(gbytes.Say("/home/alice"))
+				Eventually(stdout).Should(gbytes.Say("/home/alice"))
+			})
+
+			It("can generate an ID if no ID is specified", func() {
+				stdout := gbytes.NewBuffer()
+				_, err := container.Run(garden.ProcessSpec{
+					Path: "/bin/echo",
+					Args: []string{"hello alice"},
+				}, garden.ProcessIO{
+					Stdout: io.MultiWriter(GinkgoWriter, stdout),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(stdout).Should(gbytes.Say("hello alice"))
 			})
 		})
 	})

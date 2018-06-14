@@ -91,7 +91,6 @@ var _ = Describe("Execer", func() {
 			mkdirer,
 			userLookupper,
 			execRunner,
-			processIDGenerator,
 			pidGetter,
 		)
 	})
@@ -148,7 +147,9 @@ var _ = Describe("Execer", func() {
 			})
 
 			It("generates one", func() {
-				Expect(processIDGenerator.GenerateCallCount()).To(Equal(1))
+				Expect(execRunner.RunCallCount()).To(Equal(1))
+				_, processID, _, _, _, _, _, _, _ := execRunner.RunArgsForCall(0)
+				Expect(processID).NotTo(Equal(""))
 			})
 		})
 
