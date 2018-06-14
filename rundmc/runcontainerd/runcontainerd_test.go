@@ -230,8 +230,9 @@ var _ = Describe("Runcontainerd", func() {
 		Context("when use_containerd_for_processes is enabled", func() {
 			BeforeEach(func() {
 				user := users.ExecUser{
-					Uid: 1000,
-					Gid: 1001,
+					Uid:  1000,
+					Gid:  1001,
+					Home: "/home/alice",
 				}
 				userLookupper.LookupReturns(&user, nil)
 
@@ -267,6 +268,7 @@ var _ = Describe("Runcontainerd", func() {
 				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
 				passedBundle, passedGardenProcessSpec, _, _ := processBuilder.BuildProcessArgsForCall(0)
 				Expect(passedBundle).To(Equal(bundle))
+				passedGardenProcessSpec.Dir = processSpec.Dir
 				Expect(passedGardenProcessSpec).To(Equal(processSpec))
 			})
 
@@ -328,6 +330,18 @@ var _ = Describe("Runcontainerd", func() {
 
 				It("returns the error", func() {
 					Expect(execErr).To(MatchError("error-execing"))
+				})
+			})
+
+			Context("when a working directory is not specified", func() {
+				BeforeEach(func() {
+					processSpec.Dir = ""
+				})
+
+				It("sets the spec dir to the user home dir if no dir specified", func() {
+					Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
+					_, actualProcessSpec, _, _ := processBuilder.BuildProcessArgsForCall(0)
+					Expect(actualProcessSpec.Dir).To(Equal("/home/alice"))
 				})
 			})
 		})

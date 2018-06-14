@@ -103,6 +103,10 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, g
 		return nil, err
 	}
 
+	if gardenProcessSpec.Dir == "" {
+		gardenProcessSpec.Dir = resolvedUser.Home
+	}
+
 	ociProcessSpec := r.processBuilder.BuildProcess(bundle, gardenProcessSpec, resolvedUser.Uid, resolvedUser.Gid)
 	return &process{}, r.nerd.Exec(log, containerID, gardenProcessSpec.ID, ociProcessSpec, io)
 }
