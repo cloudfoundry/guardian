@@ -58,7 +58,7 @@ func NewExecRunner(
 func (d *ExecRunner) Run(
 	log lager.Logger, processID, processPath, sandboxHandle, sandboxBundlePath string,
 	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
-) (proc garden.Process, theErr error) {
+) (_ garden.Process, theErr error) {
 	log = log.Session("execrunner")
 
 	log.Info("start")
@@ -82,8 +82,17 @@ func (d *ExecRunner) Run(
 	}
 	defer syncr.Close()
 
-	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"), extraCleanup)
-	if err := process.mkfifos(d.containerRootHostUID, d.containerRootHostGID); err != nil {
+	proc := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"), extraCleanup)
+
+	defer func(p *process) {
+		if theErr != nil {
+			if err := p.cleanup(true); err != nil {
+				log.Error("failed-to-cleanup-process", err, lager.Data{"processId": p.id})
+			}
+		}
+	}(proc)
+
+	if err := proc.mkfifos(d.containerRootHostUID, d.containerRootHostGID); err != nil {
 		return nil, err
 	}
 
@@ -116,7 +125,7 @@ func (d *ExecRunner) Run(
 	logw.Close()
 	syncw.Close()
 
-	stdin, stdout, stderr, err := process.openPipes(pio)
+	stdin, stdout, stderr, err := proc.openPipes(pio)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +136,7 @@ func (d *ExecRunner) Run(
 		return nil, err
 	}
 
-	process.streamData(pio, stdin, stdout, stderr)
+	proc.streamData(pio, stdin, stdout, stderr)
 
 	doneReadingRuncLogs := make(chan []byte)
 	go func(log lager.Logger, logs io.Reader, logTag string, done chan<- []byte) {
@@ -166,7 +175,7 @@ func (d *ExecRunner) Run(
 		return nil, fmt.Errorf("exit status %d", runcExitStatus[0])
 	}
 
-	return process, nil
+	return proc, nil
 }
 
 func isNoSuchExecutable(logLine []byte) bool {
@@ -218,7 +227,7 @@ type process struct {
 	stdin, stdout, stderr, exit, winsz, exitcode string
 	ioWg                                         *sync.WaitGroup
 	winszCh                                      chan garden.WindowSize
-	cleanup                                      func() error
+	cleanup                                      func(force bool) error
 	stdoutWriter                                 *execrunner.DynamicMultiWriter
 	stderrWriter                                 *execrunner.DynamicMultiWriter
 	streamMutex                                  *sync.Mutex
@@ -234,7 +243,7 @@ func (d *ExecRunner) getProcess(log lager.Logger, id, processPath, pidFilePath s
 		return existingProcess
 	}
 
-	cleanupFunc := func() error {
+	cleanupFunc := func(force bool) error {
 		d.processesMutex.Lock()
 		delete(d.processes, processPath)
 		d.processesMutex.Unlock()
@@ -245,7 +254,7 @@ func (d *ExecRunner) getProcess(log lager.Logger, id, processPath, pidFilePath s
 			}
 		}
 
-		if d.cleanupProcessDirsOnWait {
+		if force || d.cleanupProcessDirsOnWait {
 			return os.RemoveAll(processPath)
 		}
 		return nil
@@ -394,7 +403,7 @@ func (p process) Wait() (int, error) {
 		return 1, fmt.Errorf("failed to parse exit code: %s", err.Error())
 	}
 
-	if err := p.cleanup(); err != nil {
+	if err := p.cleanup(false); err != nil {
 		p.logger.Error("process-cleanup", err)
 	}
 

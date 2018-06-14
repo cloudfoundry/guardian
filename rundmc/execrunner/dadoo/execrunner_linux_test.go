@@ -383,6 +383,13 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				runcReturns = 3
 			})
 
+			It("cleans up the process dir", func() {
+				_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, defaultProcessIO(), false, nil, nil)
+				Expect(err).To(HaveOccurred())
+
+				Expect(processPath).NotTo(BeAnExistingFile())
+			})
+
 			Context("when runc writes a lot of data to stderr", func() {
 				BeforeEach(func() {
 					for i := 0; i < 5000; i++ {
