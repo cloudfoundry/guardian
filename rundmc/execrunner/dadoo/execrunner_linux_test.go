@@ -165,12 +165,15 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					}
 				}
 
-				// return exit status of runc on fd3
-				if !dadooPanicsBeforeReportingRuncExitCode {
-					// if dadooPanics then closes the pipe without writing a value
-					_, err = fd3.Write([]byte{runcReturns})
-					Expect(err).NotTo(HaveOccurred())
+				if dadooPanicsBeforeReportingRuncExitCode {
+					fd3.Close()
+					return
 				}
+
+				// return exit status of runc on fd3
+				_, err = fd3.Write([]byte{runcReturns})
+				Expect(err).NotTo(HaveOccurred())
+
 				fd3.Close()
 				// write exit code of actual process to $processdir/exitcode file
 				if exitCode != nil {
@@ -381,6 +384,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		Context("when runc exec fails", func() {
 			BeforeEach(func() {
 				runcReturns = 3
+				dadooWritesExitCode = nil
 			})
 
 			It("cleans up the process dir", func() {
@@ -482,6 +486,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			Context("when `runC exec` fails", func() {
 				BeforeEach(func() {
 					runcReturns = 3
+					dadooWritesExitCode = nil
 				})
 
 				It("return an error including the last log line when runC fails to start the container", func() {
