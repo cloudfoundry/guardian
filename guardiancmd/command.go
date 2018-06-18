@@ -987,6 +987,8 @@ func defaultMaskedPaths() []string {
 		"/proc/scsi",
 		"/proc/timer_list",
 		"/proc/timer_stats",
+		"/proc/keys",
+		"/sys/firmware",
 	}
 }
 
