@@ -54,6 +54,10 @@ func (r *PeaUsernameResolver) ResolveUser(log lager.Logger, bundlePath, handle s
 	defer func() {
 		if killErr := resolveUserPea.Signal(garden.SignalKill); killErr != nil {
 			log.Error("resolve-user-pea-signal-failed", killErr)
+			return
+		}
+		if _, waitErr := resolveUserPea.Wait(); err != nil {
+			log.Error("resolve-user-pea-wait-failed", waitErr)
 		}
 	}()
 

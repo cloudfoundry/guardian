@@ -55,6 +55,10 @@ var _ = Describe("Partially shared containers (peas)", func() {
 	})
 
 	Context("when run with /etc/passwd username", func() {
+		BeforeEach(func() {
+			config.CleanupProcessDirsOnWait = boolptr(true)
+		})
+
 		It("should not leak username resolving peas", func() {
 			ctr.Run(garden.ProcessSpec{
 				User:  "alice",
@@ -66,6 +70,36 @@ var _ = Describe("Partially shared containers (peas)", func() {
 			for _, pid := range collectPeaPids(ctr.Handle()) {
 				Eventually("/proc/"+pid, "10s").ShouldNot(BeAnExistingFile())
 			}
+		})
+
+		It("should not leak process dirs", func() {
+			numProcessDirsBefore := numProcessDirs(ctr.Handle())
+
+			process, err := ctr.Run(garden.ProcessSpec{
+				User:  "alice",
+				Path:  "echo",
+				Args:  []string{"hello"},
+				Image: garden.ImageRef{URI: "raw://" + peaRootfs},
+			}, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(process.Wait()).To(Equal(0))
+
+			Expect(numProcessDirs(ctr.Handle())).To(Equal(numProcessDirsBefore))
+		})
+
+		It("should not leak image dirs", func() {
+			numImageDirsBefore := numImageDirs()
+
+			process, err := ctr.Run(garden.ProcessSpec{
+				User:  "alice",
+				Path:  "echo",
+				Args:  []string{"hello"},
+				Image: garden.ImageRef{URI: createPeaRootfsTar()},
+			}, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(process.Wait()).To(Equal(0))
+
+			Expect(numImageDirs()).To(Equal(numImageDirsBefore))
 		})
 	})
 
@@ -298,4 +332,19 @@ func collectPeaPids(handle string) []string {
 	})
 	Expect(err).NotTo(HaveOccurred())
 	return peaPids
+}
+
+func numProcessDirs(handle string) int {
+	processDirs, err := ioutil.ReadDir(filepath.Join(config.DepotDir, handle, "processes"))
+	if os.IsNotExist(err) {
+		return 0
+	}
+	Expect(err).ToNot(HaveOccurred())
+	return len(processDirs)
+}
+
+func numImageDirs() int {
+	imagesDirs, err := ioutil.ReadDir(filepath.Join(config.StorePath, "images"))
+	Expect(err).ToNot(HaveOccurred())
+	return len(imagesDirs)
 }

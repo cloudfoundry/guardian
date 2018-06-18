@@ -303,6 +303,10 @@ func createPeaRootfs() string {
 	}, 0777)
 }
 
+func createPeaRootfsTar() string {
+	return tarUpDir(createPeaRootfs())
+}
+
 func createRootfsTar(modifyRootfs func(string)) string {
 	return tarUpDir(createRootfs(modifyRootfs, 0755))
 }

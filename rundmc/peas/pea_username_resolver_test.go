@@ -114,6 +114,10 @@ var _ = Describe("PeaUsernameResolver", func() {
 		Expect(signal).To(Equal(garden.SignalKill))
 	})
 
+	It("waits on the resolution pea", func() {
+		Expect(userResolveProcess.WaitCallCount()).To(Equal(1))
+	})
+
 	Context("when bundle cannot be loaded", func() {
 		BeforeEach(func() {
 			loader.LoadReturns(goci.Bndl{}, errors.New("bundle-load-failure"))
@@ -162,6 +166,16 @@ var _ = Describe("PeaUsernameResolver", func() {
 
 		It("returns an error", func() {
 			Expect(resolveErr).To(MatchError("user-lookup-failure"))
+		})
+	})
+
+	Context("when killing the resolve user pea fails", func() {
+		BeforeEach(func() {
+			userResolveProcess.SignalReturns(errors.New("signal-failure"))
+		})
+
+		It("does not wait for it ", func() {
+			Expect(userResolveProcess.WaitCallCount()).To(Equal(0))
 		})
 	})
 })
