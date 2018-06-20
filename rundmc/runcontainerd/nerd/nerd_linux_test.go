@@ -174,6 +174,11 @@ var _ = Describe("Nerd", func() {
 		It("returns the exit code", func() {
 			Expect(exitCode).To(Equal(17))
 		})
+
+		It("removes process metadata after finishing", func() {
+			_, retryWaitErr := cnerd.Wait(testLogger, containerID, processID)
+			Expect(retryWaitErr).To(MatchError(ContainSubstring("no running process found")))
+		})
 	})
 
 	Describe("Delete", func() {

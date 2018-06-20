@@ -159,5 +159,10 @@ func (n *Nerd) Wait(log lager.Logger, containerID, processID string) (int, error
 		return 0, exitStatus.Error()
 	}
 
+	_, err = process.Delete(n.context)
+	if err != nil {
+		return 0, err
+	}
+
 	return int(exitStatus.ExitCode()), nil
 }

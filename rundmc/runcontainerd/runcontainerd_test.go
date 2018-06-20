@@ -20,7 +20,7 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-var _ = FDescribe("Runcontainerd", func() {
+var _ = Describe("Runcontainerd", func() {
 	var (
 		logger           lager.Logger
 		containerManager *runcontainerdfakes.FakeContainerManager
