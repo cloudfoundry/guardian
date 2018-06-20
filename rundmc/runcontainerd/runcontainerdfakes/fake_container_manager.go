@@ -7,7 +7,6 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/lager"
-	"github.com/containerd/containerd"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -52,7 +51,7 @@ type FakeContainerManager struct {
 	execReturnsOnCall map[int]struct {
 		result1 error
 	}
-	StateStub        func(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error)
+	StateStub        func(log lager.Logger, containerID string) (int, string, error)
 	stateMutex       sync.RWMutex
 	stateArgsForCall []struct {
 		log         lager.Logger
@@ -60,12 +59,12 @@ type FakeContainerManager struct {
 	}
 	stateReturns struct {
 		result1 int
-		result2 containerd.ProcessStatus
+		result2 string
 		result3 error
 	}
 	stateReturnsOnCall map[int]struct {
 		result1 int
-		result2 containerd.ProcessStatus
+		result2 string
 		result3 error
 	}
 	GetContainerPIDStub        func(log lager.Logger, containerID string) (uint32, error)
@@ -237,7 +236,7 @@ func (fake *FakeContainerManager) ExecReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeContainerManager) State(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error) {
+func (fake *FakeContainerManager) State(log lager.Logger, containerID string) (int, string, error) {
 	fake.stateMutex.Lock()
 	ret, specificReturn := fake.stateReturnsOnCall[len(fake.stateArgsForCall)]
 	fake.stateArgsForCall = append(fake.stateArgsForCall, struct {
@@ -267,27 +266,27 @@ func (fake *FakeContainerManager) StateArgsForCall(i int) (lager.Logger, string)
 	return fake.stateArgsForCall[i].log, fake.stateArgsForCall[i].containerID
 }
 
-func (fake *FakeContainerManager) StateReturns(result1 int, result2 containerd.ProcessStatus, result3 error) {
+func (fake *FakeContainerManager) StateReturns(result1 int, result2 string, result3 error) {
 	fake.StateStub = nil
 	fake.stateReturns = struct {
 		result1 int
-		result2 containerd.ProcessStatus
+		result2 string
 		result3 error
 	}{result1, result2, result3}
 }
 
-func (fake *FakeContainerManager) StateReturnsOnCall(i int, result1 int, result2 containerd.ProcessStatus, result3 error) {
+func (fake *FakeContainerManager) StateReturnsOnCall(i int, result1 int, result2 string, result3 error) {
 	fake.StateStub = nil
 	if fake.stateReturnsOnCall == nil {
 		fake.stateReturnsOnCall = make(map[int]struct {
 			result1 int
-			result2 containerd.ProcessStatus
+			result2 string
 			result3 error
 		})
 	}
 	fake.stateReturnsOnCall[i] = struct {
 		result1 int
-		result2 containerd.ProcessStatus
+		result2 string
 		result3 error
 	}{result1, result2, result3}
 }

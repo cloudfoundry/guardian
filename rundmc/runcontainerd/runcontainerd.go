@@ -9,7 +9,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/lager"
-	"github.com/containerd/containerd"
 	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -21,7 +20,7 @@ type ContainerManager interface {
 
 	Exec(log lager.Logger, containerID, processID string, spec *specs.Process, io garden.ProcessIO) error
 
-	State(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error)
+	State(log lager.Logger, containerID string) (int, string, error)
 	GetContainerPID(log lager.Logger, containerID string) (uint32, error)
 }
 

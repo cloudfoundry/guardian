@@ -205,7 +205,7 @@ var _ = Describe("Nerd", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(pid).NotTo(BeZero())
-			Expect(status).To(Equal(containerd.Running))
+			Expect(status).To(BeEquivalentTo(containerd.Running))
 		})
 	})
 

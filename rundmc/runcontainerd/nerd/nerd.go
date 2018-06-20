@@ -63,7 +63,7 @@ func (n *Nerd) Delete(log lager.Logger, containerID string) error {
 	return container.Delete(n.context)
 }
 
-func (n *Nerd) State(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error) {
+func (n *Nerd) State(log lager.Logger, containerID string) (int, string, error) {
 	_, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
 		return 0, "", err
@@ -76,7 +76,7 @@ func (n *Nerd) State(log lager.Logger, containerID string) (int, containerd.Proc
 	}
 
 	log.Debug("task-result", lager.Data{"containerID": containerID, "pid": strconv.Itoa(int(task.Pid())), "status": string(status.Status)})
-	return int(task.Pid()), status.Status, nil
+	return int(task.Pid()), string(status.Status), nil
 }
 
 func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs.Process, io garden.ProcessIO) error {
