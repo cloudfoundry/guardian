@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	DefaultHome string = "/root"
+	DefaultHome string = "/"
 )
 
 func LookupUser(rootFsPath, userName string) (*ExecUser, error) {
