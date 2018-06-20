@@ -71,7 +71,7 @@ var _ = Describe("Dadoo", func() {
 					ConsoleSize: &specs.Box{},
 				},
 			).
-			WithRootFS(path.Join(bundlePath, "root")).
+			WithRootFS(&specs.Root{Path: path.Join(bundlePath, "root")}).
 			WithNamespace(goci.UserNamespace).
 			WithUIDMappings(specs.LinuxIDMapping{HostID: 1, ContainerID: 0, Size: 100}).
 			WithGIDMappings(specs.LinuxIDMapping{HostID: 1, ContainerID: 0, Size: 100})

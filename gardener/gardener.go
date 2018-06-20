@@ -213,6 +213,16 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 		return nil, err
 	}
 
+	runtimeSpec.Root.Readonly = containerSpec.Readonly
+	for _, rwPath := range containerSpec.ReadWritePaths {
+		runtimeSpec.Mounts = append(runtimeSpec.Mounts, specs.Mount{
+			Destination: rwPath,
+			Source:      "tmpfs",
+			Type:        "tmpfs",
+			Options:     []string{"rw"},
+		})
+	}
+
 	desiredSpec := spec.DesiredContainerSpec{
 		Handle:     containerSpec.Handle,
 		Hostname:   containerSpec.Handle,
@@ -222,6 +232,7 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 		Limits:     containerSpec.Limits,
 		BaseConfig: runtimeSpec,
 	}
+
 	if err := g.Containerizer.Create(log, desiredSpec); err != nil {
 		return nil, err
 	}

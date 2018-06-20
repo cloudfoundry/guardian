@@ -13,7 +13,7 @@ type RootFS struct {
 }
 
 func (r RootFS) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) (goci.Bndl, error) {
-	return bndl.WithRootFS(spec.BaseConfig.Root.Path), nil
+	return bndl.WithRootFS(spec.BaseConfig.Root), nil
 }
 
 type MkdirChowner struct {

@@ -165,6 +165,10 @@ type ContainerSpec struct {
 	// If a container port is not given, the port will be the same as the
 	// host port.
 	NetIn []NetIn `json:"netin,omitempty"`
+
+	Readonly bool `json:"readonly,omitempty"`
+
+	ReadWritePaths []string `json:"readwrite_paths,omitempty"`
 }
 
 type ImageRef struct {

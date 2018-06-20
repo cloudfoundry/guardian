@@ -609,6 +609,53 @@ var _ = Describe("Creating a Container", func() {
 			})
 		})
 	})
+
+	Describe("read only containers", func() {
+		It("cannot write to the rootfs", func() {
+			var err error
+			container, err = client.Create(garden.ContainerSpec{Readonly: true})
+			Expect(err).NotTo(HaveOccurred())
+
+			stderr := gbytes.NewBuffer()
+			process, err := container.Run(
+				garden.ProcessSpec{
+					Path: "/bin/sh",
+					Args: []string{"-c", "echo test > /testfile"},
+				},
+				garden.ProcessIO{
+					Stdout: GinkgoWriter,
+					Stderr: io.MultiWriter(GinkgoWriter, stderr),
+				},
+			)
+			// time.Sleep(30 * time.Minute)
+			Expect(err).NotTo(HaveOccurred())
+
+			exitCode, err := process.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCode).NotTo(Equal(0))
+
+			Expect(stderr).To(gbytes.Say("Read-only file system"))
+		})
+
+		It("can write to read-write paths", func() {
+			var err error
+			container, err = client.Create(garden.ContainerSpec{Readonly: true, ReadWritePaths: []string{"/etc"}})
+			Expect(err).NotTo(HaveOccurred())
+
+			process, err := container.Run(
+				garden.ProcessSpec{
+					Path: "/bin/sh",
+					Args: []string{"-c", "echo test > /etc/testfile"},
+				},
+				ginkgoIO)
+			// time.Sleep(30 * time.Minute)
+			Expect(err).NotTo(HaveOccurred())
+
+			exitCode, err := process.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCode).To(Equal(0))
+		})
+	})
 })
 
 func initProcessPID(handle string) int {

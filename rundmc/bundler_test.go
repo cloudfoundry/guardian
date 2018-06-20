@@ -29,7 +29,7 @@ var _ = Describe("BundleTemplate", func() {
 		})
 
 		It("returns the bundle from the first rule", func() {
-			returnedSpec := goci.Bndl{}.WithRootFS("something")
+			returnedSpec := goci.Bndl{}.WithRootFS(&specs.Root{Path: "something"})
 			rule.ApplyStub = func(bndle goci.Bndl, spec spec.DesiredContainerSpec, containerDir string) (goci.Bndl, error) {
 				Expect(spec.BaseConfig.Root.Path).To(Equal("the-rootfs"))
 				return returnedSpec, nil

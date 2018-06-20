@@ -82,7 +82,7 @@ var _ = Describe("Bundle", func() {
 
 	Describe("WithRootFS", func() {
 		It("sets the rootfs path in the spec", func() {
-			returnedBundle := initialBundle.WithRootFS("/foo/bar/baz")
+			returnedBundle := initialBundle.WithRootFS(&specs.Root{Path: "/foo/bar/baz"})
 			Expect(returnedBundle.RootFS()).To(Equal("/foo/bar/baz"))
 		})
 	})

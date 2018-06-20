@@ -67,8 +67,8 @@ func (b Bndl) WithApparmorProfile(profile string) Bndl {
 	return b
 }
 
-func (b Bndl) WithRootFS(absolutePath string) Bndl {
-	b.Spec.Root = &specs.Root{Path: absolutePath}
+func (b Bndl) WithRootFS(rootfs *specs.Root) Bndl {
+	b.Spec.Root = &specs.Root{Path: rootfs.Path, Readonly: rootfs.Readonly}
 	return b
 }
 

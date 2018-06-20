@@ -789,7 +789,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 
 	baseBundle := goci.Bundle().
 		WithNamespaces(PrivilegedContainerNamespaces...).
-		WithRootFS(cmd.Containers.DefaultRootFS).
+		WithRootFS(&specs.Root{Path: cmd.Containers.DefaultRootFS}).
 		WithProcess(baseProcess).
 		WithRootFSPropagation("private")
 
