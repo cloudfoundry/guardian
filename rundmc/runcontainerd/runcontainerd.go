@@ -14,8 +14,8 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-//go:generate counterfeiter . NerdContainerizer
-type NerdContainerizer interface {
+//go:generate counterfeiter . ContainerManager
+type ContainerManager interface {
 	Create(log lager.Logger, containerID string, spec *specs.Spec) error
 	Delete(log lager.Logger, containerID string) error
 
@@ -23,6 +23,11 @@ type NerdContainerizer interface {
 
 	State(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error)
 	GetContainerPID(log lager.Logger, containerID string) (uint32, error)
+}
+
+//go:generate counterfeiter . ProcessManager
+type ProcessManager interface {
+	Wait(log lager.Logger, containerdID, processID string) (int, error)
 }
 
 //go:generate counterfeiter . BundleLoader
@@ -47,7 +52,8 @@ type Statser interface {
 }
 
 type RunContainerd struct {
-	nerd                      NerdContainerizer
+	containerManager          ContainerManager
+	processManager            ProcessManager
 	bundleLoader              BundleLoader
 	processBuilder            ProcessBuilder
 	execer                    Execer
@@ -56,16 +62,10 @@ type RunContainerd struct {
 	userLookupper             users.UserLookupper
 }
 
-type process struct{}
-
-func (p *process) ID() string                  { return "" }
-func (p *process) Wait() (int, error)          { return 0, nil }
-func (p *process) SetTTY(garden.TTYSpec) error { return nil }
-func (p *process) Signal(garden.Signal) error  { return nil }
-
-func New(nerdulator NerdContainerizer, bundleLoader BundleLoader, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool) *RunContainerd {
+func New(containerManager ContainerManager, processManager ProcessManager, bundleLoader BundleLoader, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool) *RunContainerd {
 	return &RunContainerd{
-		nerd:                      nerdulator,
+		containerManager:          containerManager,
+		processManager:            processManager,
 		bundleLoader:              bundleLoader,
 		processBuilder:            processBuilder,
 		execer:                    execer,
@@ -81,7 +81,7 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 		return err
 	}
 
-	return r.nerd.Create(log, id, &bundle.Spec)
+	return r.containerManager.Create(log, id, &bundle.Spec)
 }
 
 func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, gardenProcessSpec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
@@ -94,7 +94,7 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, g
 		return nil, err
 	}
 
-	containerPid, err := r.nerd.GetContainerPID(log, containerID)
+	containerPid, err := r.containerManager.GetContainerPID(log, containerID)
 	if err != nil {
 		return nil, err
 	}
@@ -108,6 +108,7 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, g
 		gardenProcessSpec.Dir = resolvedUser.Home
 	}
 
+	// TODO: use the uidgenerator
 	if gardenProcessSpec.ID == "" {
 		randomID, err := uuid.NewV4()
 		if err != nil {
@@ -117,7 +118,11 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, g
 	}
 
 	ociProcessSpec := r.processBuilder.BuildProcess(bundle, gardenProcessSpec, resolvedUser.Uid, resolvedUser.Gid)
-	return &process{}, r.nerd.Exec(log, containerID, gardenProcessSpec.ID, ociProcessSpec, io)
+	if err = r.containerManager.Exec(log, containerID, gardenProcessSpec.ID, ociProcessSpec, io); err != nil {
+		return nil, err
+	}
+
+	return NewProcess(log, containerID, gardenProcessSpec.ID, r.processManager), nil
 }
 
 func (r *RunContainerd) Attach(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error) {
@@ -129,11 +134,11 @@ func (r *RunContainerd) Kill(log lager.Logger, bundlePath string) error {
 }
 
 func (r *RunContainerd) Delete(log lager.Logger, force bool, id string) error {
-	return r.nerd.Delete(log, id)
+	return r.containerManager.Delete(log, id)
 }
 
 func (r *RunContainerd) State(log lager.Logger, id string) (runrunc.State, error) {
-	pid, status, err := r.nerd.State(log, id)
+	pid, status, err := r.containerManager.State(log, id)
 	if err != nil {
 		return runrunc.State{}, err
 	}

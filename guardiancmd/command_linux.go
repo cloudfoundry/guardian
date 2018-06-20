@@ -236,7 +236,7 @@ func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *
 	nerd := nerd.New(containerdClient, ctx)
 	pidGetter := &runcontainerd.PidGetter{Nerd: nerd}
 
-	return runcontainerd.New(nerd, bndlLoader, processBuilder, userLookupper, wireExecer(pidGetter), statser, useContainerdForProcesses), pidGetter, nil
+	return runcontainerd.New(nerd, nerd, bndlLoader, processBuilder, userLookupper, wireExecer(pidGetter), statser, useContainerdForProcesses), pidGetter, nil
 }
 
 func containerdRuncRoot() string {

@@ -148,7 +148,7 @@ var _ = Describe("Containerd", func() {
 				Eventually(stdout).Should(gbytes.Say("/home/alice"))
 			})
 
-			It("can generate an ID if no ID is specified", func() {
+			It("can run a process without providing an ID", func() {
 				stdout := gbytes.NewBuffer()
 				_, err := container.Run(garden.ProcessSpec{
 					Path: "/bin/echo",
@@ -159,6 +159,19 @@ var _ = Describe("Containerd", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(stdout).Should(gbytes.Say("hello alice"))
+			})
+
+			It("can get the exit code of a process", func() {
+				process, err := container.Run(garden.ProcessSpec{
+					Path: "/bin/sh",
+					Args: []string{"-c", "exit 17"},
+				}, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+
+				exitCode, err := process.Wait()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(exitCode).To(Equal(17))
 			})
 		})
 	})

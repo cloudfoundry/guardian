@@ -16,13 +16,13 @@ var _ = Describe("Pidgetter", func() {
 	var (
 		pidgetter PidGetter
 		logger    lager.Logger
-		nerd      *runcontainerdfakes.FakeNerdContainerizer
+		nerd      *runcontainerdfakes.FakeContainerManager
 		pid       int
 		pidError  error
 	)
 
 	BeforeEach(func() {
-		nerd = new(runcontainerdfakes.FakeNerdContainerizer)
+		nerd = new(runcontainerdfakes.FakeContainerManager)
 		nerd.StateReturns(1234, "", nil)
 		pidgetter = PidGetter{Nerd: nerd}
 		logger = lagertest.NewTestLogger("banana")

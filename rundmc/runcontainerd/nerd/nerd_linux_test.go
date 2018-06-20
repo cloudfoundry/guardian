@@ -79,64 +79,100 @@ var _ = Describe("Nerd", func() {
 		It("execs a process in the container", func() {
 			processSpec := &specs.Process{
 				Args: []string{"/bin/sleep", "30"},
-				User: specs.User{UID: 0, GID: 0},
 				Cwd:  "/",
 			}
 
-			Expect(cnerd.Exec(testLogger, containerID, processID, processSpec, garden.ProcessIO{})).To(Succeed())
+			err := cnerd.Exec(testLogger, containerID, processID, processSpec, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
 
 			containers := listProcesses(testConfig.CtrBin, testConfig.Socket, containerID)
 			Expect(containers).To(ContainSubstring(containerID)) // init process
 			Expect(containers).To(ContainSubstring(processID))   // execed process
 		})
 
-		It("processes can write to stdout", func() {
+		Describe("process IO", func() {
+			It("reads from stdin", func() {
+				processSpec := &specs.Process{
+					Args: []string{"/bin/cat", "/proc/self/fd/0"},
+					Cwd:  "/",
+				}
+
+				stdout := gbytes.NewBuffer()
+				processIO := garden.ProcessIO{
+					Stdin:  gbytes.BufferWithBytes([]byte("hello nerd")),
+					Stdout: io.MultiWriter(stdout, GinkgoWriter),
+				}
+
+				err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(stdout).Should(gbytes.Say("hello nerd"))
+			})
+
+			It("writes to stdout", func() {
+				processSpec := &specs.Process{
+					Args: []string{"/bin/echo", "hello nerd"},
+					Cwd:  "/",
+				}
+
+				stdout := gbytes.NewBuffer()
+				processIO := garden.ProcessIO{
+					Stdout: io.MultiWriter(stdout, GinkgoWriter),
+				}
+
+				err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(stdout).Should(gbytes.Say("hello nerd"))
+			})
+
+			It("writes to stderr", func() {
+				processSpec := &specs.Process{
+					Args: []string{"/bin/cat", "notafile.txt"},
+					Cwd:  "/",
+				}
+
+				stderr := gbytes.NewBuffer()
+				processIO := garden.ProcessIO{
+					Stderr: io.MultiWriter(stderr, GinkgoWriter),
+				}
+
+				err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(stderr).Should(gbytes.Say("No such file"))
+			})
+		})
+	})
+
+	Describe("Wait", func() {
+		var (
+			exitCode int
+			waitErr  error
+		)
+
+		BeforeEach(func() {
+			spec := generateSpec(containerdContext, containerdClient, containerID)
+			Expect(cnerd.Create(testLogger, containerID, spec)).To(Succeed())
+
 			processSpec := &specs.Process{
-				Args: []string{"/bin/echo", "hello nerd"},
-				User: specs.User{UID: 0, GID: 0},
+				Args: []string{"/bin/sh", "-c", "exit 17"},
 				Cwd:  "/",
 			}
 
-			stdout := gbytes.NewBuffer()
-			processIO := garden.ProcessIO{
-				Stdin:  gbytes.NewBuffer(),
-				Stdout: io.MultiWriter(stdout, GinkgoWriter),
-				Stderr: GinkgoWriter,
-			}
-			Expect(cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)).To(Succeed())
-			Eventually(stdout).Should(gbytes.Say("hello nerd"))
+			err := cnerd.Exec(testLogger, containerID, processID, processSpec, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
+
+			exitCode, waitErr = cnerd.Wait(testLogger, containerID, processID)
 		})
 
-		It("processes can read from stdin", func() {
-			processSpec := &specs.Process{
-				Args: []string{"/bin/cat", "/proc/self/fd/0"},
-				User: specs.User{UID: 0, GID: 0},
-				Cwd:  "/",
-			}
-
-			stdout := gbytes.NewBuffer()
-			processIO := garden.ProcessIO{
-				Stdin:  gbytes.BufferWithBytes([]byte("hello nerd")),
-				Stdout: io.MultiWriter(stdout, GinkgoWriter),
-				Stderr: GinkgoWriter,
-			}
-			Expect(cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)).To(Succeed())
-			Eventually(stdout).Should(gbytes.Say("hello nerd"))
+		AfterEach(func() {
+			cnerd.Delete(testLogger, containerID)
 		})
 
-		It("processes can write to stderr", func() {
-			processSpec := &specs.Process{
-				Args: []string{"/bin/cat", "notafile.txt"},
-				User: specs.User{UID: 0, GID: 0},
-				Cwd:  "/",
-			}
+		It("succeeds", func() {
+			Expect(waitErr).NotTo(HaveOccurred())
+		})
 
-			stderr := gbytes.NewBuffer()
-			processIO := garden.ProcessIO{
-				Stderr: io.MultiWriter(stderr, GinkgoWriter),
-			}
-			Expect(cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)).To(Succeed())
-			Eventually(stderr).Should(gbytes.Say("No such file"))
+		It("returns the exit code", func() {
+			Expect(exitCode).To(Equal(17))
 		})
 	})
 

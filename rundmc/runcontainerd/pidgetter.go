@@ -5,7 +5,7 @@ import (
 )
 
 type PidGetter struct {
-	Nerd NerdContainerizer
+	Nerd ContainerManager
 }
 
 func (p *PidGetter) GetPid(logger lager.Logger, containerHandle string) (int, error) {

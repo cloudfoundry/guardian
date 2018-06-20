@@ -11,7 +11,7 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-type FakeNerdContainerizer struct {
+type FakeContainerManager struct {
 	CreateStub        func(log lager.Logger, containerID string, spec *specs.Spec) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
@@ -86,7 +86,7 @@ type FakeNerdContainerizer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeNerdContainerizer) Create(log lager.Logger, containerID string, spec *specs.Spec) error {
+func (fake *FakeContainerManager) Create(log lager.Logger, containerID string, spec *specs.Spec) error {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
@@ -105,26 +105,26 @@ func (fake *FakeNerdContainerizer) Create(log lager.Logger, containerID string, 
 	return fake.createReturns.result1
 }
 
-func (fake *FakeNerdContainerizer) CreateCallCount() int {
+func (fake *FakeContainerManager) CreateCallCount() int {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeNerdContainerizer) CreateArgsForCall(i int) (lager.Logger, string, *specs.Spec) {
+func (fake *FakeContainerManager) CreateArgsForCall(i int) (lager.Logger, string, *specs.Spec) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].containerID, fake.createArgsForCall[i].spec
 }
 
-func (fake *FakeNerdContainerizer) CreateReturns(result1 error) {
+func (fake *FakeContainerManager) CreateReturns(result1 error) {
 	fake.CreateStub = nil
 	fake.createReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeNerdContainerizer) CreateReturnsOnCall(i int, result1 error) {
+func (fake *FakeContainerManager) CreateReturnsOnCall(i int, result1 error) {
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {
@@ -136,7 +136,7 @@ func (fake *FakeNerdContainerizer) CreateReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeNerdContainerizer) Delete(log lager.Logger, containerID string) error {
+func (fake *FakeContainerManager) Delete(log lager.Logger, containerID string) error {
 	fake.deleteMutex.Lock()
 	ret, specificReturn := fake.deleteReturnsOnCall[len(fake.deleteArgsForCall)]
 	fake.deleteArgsForCall = append(fake.deleteArgsForCall, struct {
@@ -154,26 +154,26 @@ func (fake *FakeNerdContainerizer) Delete(log lager.Logger, containerID string) 
 	return fake.deleteReturns.result1
 }
 
-func (fake *FakeNerdContainerizer) DeleteCallCount() int {
+func (fake *FakeContainerManager) DeleteCallCount() int {
 	fake.deleteMutex.RLock()
 	defer fake.deleteMutex.RUnlock()
 	return len(fake.deleteArgsForCall)
 }
 
-func (fake *FakeNerdContainerizer) DeleteArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeContainerManager) DeleteArgsForCall(i int) (lager.Logger, string) {
 	fake.deleteMutex.RLock()
 	defer fake.deleteMutex.RUnlock()
 	return fake.deleteArgsForCall[i].log, fake.deleteArgsForCall[i].containerID
 }
 
-func (fake *FakeNerdContainerizer) DeleteReturns(result1 error) {
+func (fake *FakeContainerManager) DeleteReturns(result1 error) {
 	fake.DeleteStub = nil
 	fake.deleteReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeNerdContainerizer) DeleteReturnsOnCall(i int, result1 error) {
+func (fake *FakeContainerManager) DeleteReturnsOnCall(i int, result1 error) {
 	fake.DeleteStub = nil
 	if fake.deleteReturnsOnCall == nil {
 		fake.deleteReturnsOnCall = make(map[int]struct {
@@ -185,7 +185,7 @@ func (fake *FakeNerdContainerizer) DeleteReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeNerdContainerizer) Exec(log lager.Logger, containerID string, processID string, spec *specs.Process, io garden.ProcessIO) error {
+func (fake *FakeContainerManager) Exec(log lager.Logger, containerID string, processID string, spec *specs.Process, io garden.ProcessIO) error {
 	fake.execMutex.Lock()
 	ret, specificReturn := fake.execReturnsOnCall[len(fake.execArgsForCall)]
 	fake.execArgsForCall = append(fake.execArgsForCall, struct {
@@ -206,26 +206,26 @@ func (fake *FakeNerdContainerizer) Exec(log lager.Logger, containerID string, pr
 	return fake.execReturns.result1
 }
 
-func (fake *FakeNerdContainerizer) ExecCallCount() int {
+func (fake *FakeContainerManager) ExecCallCount() int {
 	fake.execMutex.RLock()
 	defer fake.execMutex.RUnlock()
 	return len(fake.execArgsForCall)
 }
 
-func (fake *FakeNerdContainerizer) ExecArgsForCall(i int) (lager.Logger, string, string, *specs.Process, garden.ProcessIO) {
+func (fake *FakeContainerManager) ExecArgsForCall(i int) (lager.Logger, string, string, *specs.Process, garden.ProcessIO) {
 	fake.execMutex.RLock()
 	defer fake.execMutex.RUnlock()
 	return fake.execArgsForCall[i].log, fake.execArgsForCall[i].containerID, fake.execArgsForCall[i].processID, fake.execArgsForCall[i].spec, fake.execArgsForCall[i].io
 }
 
-func (fake *FakeNerdContainerizer) ExecReturns(result1 error) {
+func (fake *FakeContainerManager) ExecReturns(result1 error) {
 	fake.ExecStub = nil
 	fake.execReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeNerdContainerizer) ExecReturnsOnCall(i int, result1 error) {
+func (fake *FakeContainerManager) ExecReturnsOnCall(i int, result1 error) {
 	fake.ExecStub = nil
 	if fake.execReturnsOnCall == nil {
 		fake.execReturnsOnCall = make(map[int]struct {
@@ -237,7 +237,7 @@ func (fake *FakeNerdContainerizer) ExecReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeNerdContainerizer) State(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error) {
+func (fake *FakeContainerManager) State(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error) {
 	fake.stateMutex.Lock()
 	ret, specificReturn := fake.stateReturnsOnCall[len(fake.stateArgsForCall)]
 	fake.stateArgsForCall = append(fake.stateArgsForCall, struct {
@@ -255,19 +255,19 @@ func (fake *FakeNerdContainerizer) State(log lager.Logger, containerID string) (
 	return fake.stateReturns.result1, fake.stateReturns.result2, fake.stateReturns.result3
 }
 
-func (fake *FakeNerdContainerizer) StateCallCount() int {
+func (fake *FakeContainerManager) StateCallCount() int {
 	fake.stateMutex.RLock()
 	defer fake.stateMutex.RUnlock()
 	return len(fake.stateArgsForCall)
 }
 
-func (fake *FakeNerdContainerizer) StateArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeContainerManager) StateArgsForCall(i int) (lager.Logger, string) {
 	fake.stateMutex.RLock()
 	defer fake.stateMutex.RUnlock()
 	return fake.stateArgsForCall[i].log, fake.stateArgsForCall[i].containerID
 }
 
-func (fake *FakeNerdContainerizer) StateReturns(result1 int, result2 containerd.ProcessStatus, result3 error) {
+func (fake *FakeContainerManager) StateReturns(result1 int, result2 containerd.ProcessStatus, result3 error) {
 	fake.StateStub = nil
 	fake.stateReturns = struct {
 		result1 int
@@ -276,7 +276,7 @@ func (fake *FakeNerdContainerizer) StateReturns(result1 int, result2 containerd.
 	}{result1, result2, result3}
 }
 
-func (fake *FakeNerdContainerizer) StateReturnsOnCall(i int, result1 int, result2 containerd.ProcessStatus, result3 error) {
+func (fake *FakeContainerManager) StateReturnsOnCall(i int, result1 int, result2 containerd.ProcessStatus, result3 error) {
 	fake.StateStub = nil
 	if fake.stateReturnsOnCall == nil {
 		fake.stateReturnsOnCall = make(map[int]struct {
@@ -292,7 +292,7 @@ func (fake *FakeNerdContainerizer) StateReturnsOnCall(i int, result1 int, result
 	}{result1, result2, result3}
 }
 
-func (fake *FakeNerdContainerizer) GetContainerPID(log lager.Logger, containerID string) (uint32, error) {
+func (fake *FakeContainerManager) GetContainerPID(log lager.Logger, containerID string) (uint32, error) {
 	fake.getContainerPIDMutex.Lock()
 	ret, specificReturn := fake.getContainerPIDReturnsOnCall[len(fake.getContainerPIDArgsForCall)]
 	fake.getContainerPIDArgsForCall = append(fake.getContainerPIDArgsForCall, struct {
@@ -310,19 +310,19 @@ func (fake *FakeNerdContainerizer) GetContainerPID(log lager.Logger, containerID
 	return fake.getContainerPIDReturns.result1, fake.getContainerPIDReturns.result2
 }
 
-func (fake *FakeNerdContainerizer) GetContainerPIDCallCount() int {
+func (fake *FakeContainerManager) GetContainerPIDCallCount() int {
 	fake.getContainerPIDMutex.RLock()
 	defer fake.getContainerPIDMutex.RUnlock()
 	return len(fake.getContainerPIDArgsForCall)
 }
 
-func (fake *FakeNerdContainerizer) GetContainerPIDArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeContainerManager) GetContainerPIDArgsForCall(i int) (lager.Logger, string) {
 	fake.getContainerPIDMutex.RLock()
 	defer fake.getContainerPIDMutex.RUnlock()
 	return fake.getContainerPIDArgsForCall[i].log, fake.getContainerPIDArgsForCall[i].containerID
 }
 
-func (fake *FakeNerdContainerizer) GetContainerPIDReturns(result1 uint32, result2 error) {
+func (fake *FakeContainerManager) GetContainerPIDReturns(result1 uint32, result2 error) {
 	fake.GetContainerPIDStub = nil
 	fake.getContainerPIDReturns = struct {
 		result1 uint32
@@ -330,7 +330,7 @@ func (fake *FakeNerdContainerizer) GetContainerPIDReturns(result1 uint32, result
 	}{result1, result2}
 }
 
-func (fake *FakeNerdContainerizer) GetContainerPIDReturnsOnCall(i int, result1 uint32, result2 error) {
+func (fake *FakeContainerManager) GetContainerPIDReturnsOnCall(i int, result1 uint32, result2 error) {
 	fake.GetContainerPIDStub = nil
 	if fake.getContainerPIDReturnsOnCall == nil {
 		fake.getContainerPIDReturnsOnCall = make(map[int]struct {
@@ -344,7 +344,7 @@ func (fake *FakeNerdContainerizer) GetContainerPIDReturnsOnCall(i int, result1 u
 	}{result1, result2}
 }
 
-func (fake *FakeNerdContainerizer) Invocations() map[string][][]interface{} {
+func (fake *FakeContainerManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.createMutex.RLock()
@@ -364,7 +364,7 @@ func (fake *FakeNerdContainerizer) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *FakeNerdContainerizer) recordInvocation(key string, args []interface{}) {
+func (fake *FakeContainerManager) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -376,4 +376,4 @@ func (fake *FakeNerdContainerizer) recordInvocation(key string, args []interface
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ runcontainerd.NerdContainerizer = new(FakeNerdContainerizer)
+var _ runcontainerd.ContainerManager = new(FakeContainerManager)

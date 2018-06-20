@@ -20,28 +20,30 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-var _ = Describe("Runcontainerd", func() {
+var _ = FDescribe("Runcontainerd", func() {
 	var (
-		logger         lager.Logger
-		nerd           *runcontainerdfakes.FakeNerdContainerizer
-		bundleLoader   *runcontainerdfakes.FakeBundleLoader
-		runContainerd  *runcontainerd.RunContainerd
-		execer         *runcontainerdfakes.FakeExecer
-		statser        *runcontainerdfakes.FakeStatser
-		processBuilder *runcontainerdfakes.FakeProcessBuilder
-		userLookupper  *usersfakes.FakeUserLookupper
+		logger           lager.Logger
+		containerManager *runcontainerdfakes.FakeContainerManager
+		processManager   *runcontainerdfakes.FakeProcessManager
+		bundleLoader     *runcontainerdfakes.FakeBundleLoader
+		runContainerd    *runcontainerd.RunContainerd
+		execer           *runcontainerdfakes.FakeExecer
+		statser          *runcontainerdfakes.FakeStatser
+		processBuilder   *runcontainerdfakes.FakeProcessBuilder
+		userLookupper    *usersfakes.FakeUserLookupper
 	)
 
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("test-logger")
-		nerd = new(runcontainerdfakes.FakeNerdContainerizer)
+		containerManager = new(runcontainerdfakes.FakeContainerManager)
+		processManager = new(runcontainerdfakes.FakeProcessManager)
 		bundleLoader = new(runcontainerdfakes.FakeBundleLoader)
 		execer = new(runcontainerdfakes.FakeExecer)
 		statser = new(runcontainerdfakes.FakeStatser)
 		processBuilder = new(runcontainerdfakes.FakeProcessBuilder)
 		userLookupper = new(usersfakes.FakeUserLookupper)
 
-		runContainerd = runcontainerd.New(nerd, bundleLoader, processBuilder, userLookupper, execer, statser, false)
+		runContainerd = runcontainerd.New(containerManager, processManager, bundleLoader, processBuilder, userLookupper, execer, statser, false)
 	})
 
 	Describe("Create", func() {
@@ -74,14 +76,14 @@ var _ = Describe("Runcontainerd", func() {
 		})
 
 		It("creates the container with the passed containerID", func() {
-			Expect(nerd.CreateCallCount()).To(Equal(1))
-			_, actualID, _ := nerd.CreateArgsForCall(0)
+			Expect(containerManager.CreateCallCount()).To(Equal(1))
+			_, actualID, _ := containerManager.CreateArgsForCall(0)
 			Expect(actualID).To(Equal(id))
 		})
 
 		It("creates the container using the spec from the loaded bundle", func() {
-			Expect(nerd.CreateCallCount()).To(Equal(1))
-			_, _, actualSpec := nerd.CreateArgsForCall(0)
+			Expect(containerManager.CreateCallCount()).To(Equal(1))
+			_, _, actualSpec := containerManager.CreateArgsForCall(0)
 			Expect(actualSpec).To(Equal(&bundle.Spec))
 		})
 
@@ -97,7 +99,7 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("when creating the container returns an error", func() {
 			BeforeEach(func() {
-				nerd.CreateReturns(errors.New("EXPLODE"))
+				containerManager.CreateReturns(errors.New("EXPLODE"))
 			})
 
 			It("bubbles up that", func() {
@@ -114,14 +116,14 @@ var _ = Describe("Runcontainerd", func() {
 		})
 
 		It("deletes the containerd container with the passed id", func() {
-			Expect(nerd.DeleteCallCount()).To(Equal(1))
-			_, actualID := nerd.DeleteArgsForCall(0)
+			Expect(containerManager.DeleteCallCount()).To(Equal(1))
+			_, actualID := containerManager.DeleteArgsForCall(0)
 			Expect(actualID).To(Equal("container-id"))
 		})
 
 		Context("when deleting a containerd container errors", func() {
 			BeforeEach(func() {
-				nerd.DeleteReturns(errors.New("could not delete"))
+				containerManager.DeleteReturns(errors.New("could not delete"))
 			})
 
 			It("bubbles up that error", func() {
@@ -138,7 +140,7 @@ var _ = Describe("Runcontainerd", func() {
 		)
 
 		BeforeEach(func() {
-			nerd.StateReturns(1, "running", nil)
+			containerManager.StateReturns(1, "running", nil)
 		})
 
 		JustBeforeEach(func() {
@@ -147,8 +149,8 @@ var _ = Describe("Runcontainerd", func() {
 
 		It("fetches the container's state, with the correct args", func() {
 			Expect(stateErr).NotTo(HaveOccurred())
-			Expect(nerd.StateCallCount()).To(Equal(1))
-			_, actualID := nerd.StateArgsForCall(0)
+			Expect(containerManager.StateCallCount()).To(Equal(1))
+			_, actualID := containerManager.StateArgsForCall(0)
 			Expect(actualID).To(Equal("some-id"))
 
 			Expect(state.Pid).To(Equal(1))
@@ -157,7 +159,7 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("when getting the state fails", func() {
 			BeforeEach(func() {
-				nerd.StateReturns(0, "", errors.New("BOOM"))
+				containerManager.StateReturns(0, "", errors.New("BOOM"))
 			})
 
 			It("bubbles up that error", func() {
@@ -236,31 +238,32 @@ var _ = Describe("Runcontainerd", func() {
 				}
 				userLookupper.LookupReturns(&user, nil)
 
-				nerd.GetContainerPIDReturns(1234, nil)
-				runContainerd = runcontainerd.New(nerd, bundleLoader, processBuilder, userLookupper, execer, statser, true)
+				containerManager.GetContainerPIDReturns(1234, nil)
+				containerManager.ExecReturns(nil)
+				runContainerd = runcontainerd.New(containerManager, processManager, bundleLoader, processBuilder, userLookupper, execer, statser, true)
 			})
 
 			It("passes the logger through", func() {
-				Expect(nerd.ExecCallCount()).To(Equal(1))
-				actualLogger, _, _, _, _ := nerd.ExecArgsForCall(0)
+				Expect(containerManager.ExecCallCount()).To(Equal(1))
+				actualLogger, _, _, _, _ := containerManager.ExecArgsForCall(0)
 				Expect(actualLogger).To(Equal(logger))
 			})
 
 			It("passes the io through", func() {
-				Expect(nerd.ExecCallCount()).To(Equal(1))
-				_, _, _, _, actualIO := nerd.ExecArgsForCall(0)
+				Expect(containerManager.ExecCallCount()).To(Equal(1))
+				_, _, _, _, actualIO := containerManager.ExecArgsForCall(0)
 				Expect(actualIO).To(Equal(processIO))
 			})
 
 			It("creates the process on the passed container", func() {
-				Expect(nerd.ExecCallCount()).To(Equal(1))
-				_, actualContainerID, _, _, _ := nerd.ExecArgsForCall(0)
+				Expect(containerManager.ExecCallCount()).To(Equal(1))
+				_, actualContainerID, _, _, _ := containerManager.ExecArgsForCall(0)
 				Expect(actualContainerID).To(Equal(containerID))
 			})
 
 			It("creates the process with the provided processID", func() {
-				Expect(nerd.ExecCallCount()).To(Equal(1))
-				_, _, actualProcessID, _, _ := nerd.ExecArgsForCall(0)
+				Expect(containerManager.ExecCallCount()).To(Equal(1))
+				_, _, actualProcessID, _, _ := containerManager.ExecArgsForCall(0)
 				Expect(actualProcessID).To(Equal(processSpec.ID))
 			})
 
@@ -273,13 +276,13 @@ var _ = Describe("Runcontainerd", func() {
 			})
 
 			It("creates the process with the converted process spec", func() {
-				Expect(nerd.ExecCallCount()).To(Equal(1))
-				_, _, _, actualProcessSpec, _ := nerd.ExecArgsForCall(0)
+				Expect(containerManager.ExecCallCount()).To(Equal(1))
+				_, _, _, actualProcessSpec, _ := containerManager.ExecArgsForCall(0)
 				Expect(actualProcessSpec.Args).To(Equal([]string{"test-binary"}))
 			})
 
-			It("create the process with the resolved user", func() {
-				_, actualContainerId := nerd.GetContainerPIDArgsForCall(0)
+			It("creates the process with the resolved user", func() {
+				_, actualContainerId := containerManager.GetContainerPIDArgsForCall(0)
 				Expect(actualContainerId).To(Equal("container-id"))
 
 				Expect(userLookupper.LookupCallCount()).To(Equal(1))
@@ -293,15 +296,43 @@ var _ = Describe("Runcontainerd", func() {
 				Expect(ociProcessGid).To(Equal(1001))
 			})
 
-			Context("if spec ID is empty", func() {
+			Context("when processSpec.ID is not set", func() {
 				BeforeEach(func() {
 					processSpec.ID = ""
 				})
 
-				It("generates an ID if none is supplied", func() {
-					Expect(nerd.ExecCallCount()).To(Equal(1))
-					_, _, actualProcessID, _, _ := nerd.ExecArgsForCall(0)
+				It("generates an ID", func() {
+					Expect(containerManager.ExecCallCount()).To(Equal(1))
+					_, _, actualProcessID, _, _ := containerManager.ExecArgsForCall(0)
 					Expect(actualProcessID).NotTo(Equal(""))
+				})
+			})
+
+			Describe("the process itself", func() {
+				BeforeEach(func() {
+					processManager.WaitReturns(17, nil)
+				})
+
+				It("collects the exit code from the process manager", func() {
+					exitStatus, err := execProcess.Wait()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(exitStatus).To(Equal(17))
+
+					Expect(processManager.WaitCallCount()).NotTo(BeZero())
+					_, actualContainerID, actualProcessID := processManager.WaitArgsForCall(0)
+					Expect(actualContainerID).To(Equal("container-id"))
+					Expect(actualProcessID).To(Equal("test-process-id"))
+				})
+
+				Context("when waiting on the process fails", func() {
+					BeforeEach(func() {
+						processManager.WaitReturns(17, errors.New("Oh no."))
+					})
+
+					It("propogates the error", func() {
+						_, err := execProcess.Wait()
+						Expect(err).To(MatchError("Oh no."))
+					})
 				})
 			})
 
@@ -317,7 +348,7 @@ var _ = Describe("Runcontainerd", func() {
 
 			Context("when getting the container PID fails", func() {
 				BeforeEach(func() {
-					nerd.GetContainerPIDReturns(0, errors.New("get-container-pid-failure"))
+					containerManager.GetContainerPIDReturns(0, errors.New("get-container-pid-failure"))
 				})
 
 				It("returns the error", func() {
@@ -335,9 +366,9 @@ var _ = Describe("Runcontainerd", func() {
 				})
 			})
 
-			Context("when nerd returns an error", func() {
+			Context("when containerManager returns an error", func() {
 				BeforeEach(func() {
-					nerd.ExecReturns(errors.New("error-execing"))
+					containerManager.ExecReturns(errors.New("error-execing"))
 				})
 
 				It("returns the error", func() {
