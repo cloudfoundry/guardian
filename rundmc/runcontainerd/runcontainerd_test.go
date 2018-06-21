@@ -2,6 +2,7 @@ package runcontainerd_test
 
 import (
 	"errors"
+	"syscall"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden/gardenfakes"
@@ -330,6 +331,20 @@ var _ = Describe("Runcontainerd", func() {
 					Expect(actualProcessID).To(Equal("test-process-id"))
 				})
 
+				It("converts and forwards signals to the process manager", func() {
+					Expect(execProcess.Signal(garden.SignalTerminate)).To(Succeed())
+					Expect(execProcess.Signal(garden.SignalKill)).To(Succeed())
+
+					Expect(processManager.SignalCallCount()).To(Equal(2))
+					_, firstActualContainerID, firstActualProcessID, firstActualSignal := processManager.SignalArgsForCall(0)
+					Expect(firstActualContainerID).To(Equal("container-id"))
+					Expect(firstActualProcessID).To(Equal("test-process-id"))
+					Expect(firstActualSignal).To(Equal(syscall.SIGTERM))
+
+					_, _, _, secondActualSignal := processManager.SignalArgsForCall(1)
+					Expect(secondActualSignal).To(Equal(syscall.SIGKILL))
+				})
+
 				Context("when waiting on the process fails", func() {
 					BeforeEach(func() {
 						processManager.WaitReturns(17, errors.New("Oh no."))
@@ -338,6 +353,24 @@ var _ = Describe("Runcontainerd", func() {
 					It("propogates the error", func() {
 						_, err := execProcess.Wait()
 						Expect(err).To(MatchError("Oh no."))
+					})
+				})
+
+				Context("when sending a signal that doesn't exist", func() {
+					It("returns an appropriate error", func() {
+						err := execProcess.Signal(-1)
+						Expect(err).To(MatchError("Cannot convert garden signal -1 to syscall.Signal"))
+					})
+				})
+
+				Context("when signalling the process fails", func() {
+					BeforeEach(func() {
+						processManager.SignalReturns(errors.New("EXPLODE"))
+					})
+
+					It("propagates error", func() {
+						err := execProcess.Signal(garden.SignalTerminate)
+						Expect(err).To(MatchError("EXPLODE"))
 					})
 				})
 			})

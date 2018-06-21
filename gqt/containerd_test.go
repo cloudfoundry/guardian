@@ -216,6 +216,40 @@ var _ = Describe("Containerd", func() {
 					Eventually(stderr).Should(gbytes.Say("hello error"))
 				})
 			})
+
+			Describe("Signalling", func() {
+				It("forwards signals to the process", func() {
+					buffer := gbytes.NewBuffer()
+					proc, err := container.Run(garden.ProcessSpec{
+						Path: "sh",
+						Args: []string{"-c", `
+					trap 'exit 42' TERM
+
+					while true; do
+					  echo 'sleeping'
+					  sleep 1
+					done
+				`},
+					}, garden.ProcessIO{
+						Stdout: buffer,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Eventually(buffer).Should(gbytes.Say("sleeping"))
+
+					err = proc.Signal(garden.SignalTerminate)
+					Expect(err).NotTo(HaveOccurred())
+
+					status := make(chan int)
+					go func() {
+						exit, err := proc.Wait()
+						Expect(err).NotTo(HaveOccurred())
+						status <- exit
+					}()
+
+					Eventually(status).Should(Receive(BeEquivalentTo(42)))
+				})
+			})
 		})
 	})
 })

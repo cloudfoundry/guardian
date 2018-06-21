@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/containerd/containerd"
@@ -186,6 +187,52 @@ var _ = Describe("Nerd", func() {
 			_, retryWaitErr := cnerd.Wait(testLogger, containerID, processID)
 			Expect(retryWaitErr).To(MatchError(ContainSubstring("no running process found")))
 		})
+	})
+
+	Describe("Signal", func() {
+		BeforeEach(func() {
+			spec := generateSpec(containerdContext, containerdClient, containerID)
+			Expect(cnerd.Create(testLogger, containerID, spec)).To(Succeed())
+			stdoutBuffer := gbytes.NewBuffer()
+			processIO = func() (io.Reader, io.Writer, io.Writer) {
+				return nil, stdoutBuffer, nil
+			}
+
+			processSpec := &specs.Process{
+				Args: []string{"/bin/sh", "-c", `
+					trap 'exit 42' TERM
+
+					while true; do
+					  echo 'sleeping'
+					  sleep 1
+					done
+				`},
+				Cwd: "/",
+			}
+
+			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(stdoutBuffer).Should(gbytes.Say("sleeping"))
+		})
+
+		AfterEach(func() {
+			cnerd.Delete(testLogger, containerID)
+		})
+
+		It("should forward signals to the process", func() {
+			Expect(cnerd.Signal(testLogger, containerID, processID, syscall.SIGTERM)).To(Succeed())
+
+			status := make(chan int)
+			go func() {
+				exit, err := cnerd.Wait(testLogger, containerID, processID)
+				Expect(err).NotTo(HaveOccurred())
+				status <- exit
+			}()
+
+			Eventually(status).Should(Receive(BeEquivalentTo(42)))
+		})
+
 	})
 
 	Describe("Delete", func() {

@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"strconv"
+	"syscall"
 
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
@@ -174,4 +175,19 @@ func (n *Nerd) Wait(log lager.Logger, containerID, processID string) (int, error
 	}
 
 	return int(exitStatus.ExitCode()), nil
+}
+
+func (n *Nerd) Signal(log lager.Logger, containerID, processID string, signal syscall.Signal) error {
+	log.Debug("signalling-process", lager.Data{"containerID": containerID, "processID": processID, "signal": signal})
+	_, task, err := n.loadContainerAndTask(log, containerID)
+	if err != nil {
+		return err
+	}
+
+	process, err := task.LoadProcess(n.context, processID, nil)
+	if err != nil {
+		return err
+	}
+
+	return process.Kill(n.context, signal)
 }

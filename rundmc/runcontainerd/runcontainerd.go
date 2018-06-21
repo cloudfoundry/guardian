@@ -3,6 +3,7 @@ package runcontainerd
 import (
 	"fmt"
 	"io"
+	"syscall"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -27,7 +28,8 @@ type ContainerManager interface {
 
 //go:generate counterfeiter . ProcessManager
 type ProcessManager interface {
-	Wait(log lager.Logger, containerdID, processID string) (int, error)
+	Wait(log lager.Logger, containerID, processID string) (int, error)
+	Signal(log lager.Logger, containerID, processID string, signal syscall.Signal) error
 }
 
 //go:generate counterfeiter . BundleLoader
