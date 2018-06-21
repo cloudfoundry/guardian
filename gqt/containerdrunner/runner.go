@@ -13,12 +13,13 @@ import (
 )
 
 type Config struct {
-	Root      string      `toml:"root"`
-	State     string      `toml:"state"`
-	Subreaper bool        `toml:"subreaper"`
-	OomScore  int         `toml:"oom_score"`
-	GRPC      GRPCConfig  `toml:"grpc"`
-	Debug     DebugConfig `toml:"debug"`
+	Root            string      `toml:"root"`
+	State           string      `toml:"state"`
+	Subreaper       bool        `toml:"subreaper"`
+	OomScore        int         `toml:"oom_score"`
+	GRPC            GRPCConfig  `toml:"grpc"`
+	Debug           DebugConfig `toml:"debug"`
+	DisabledPlugins []string    `toml:"disabled_plugins"`
 
 	RunDir string
 }
@@ -44,6 +45,9 @@ func ContainerdConfig(containerdDataDir string) Config {
 		Debug: DebugConfig{
 			Address: filepath.Join(containerdDataDir, "debug.sock"),
 			Level:   "info",
+		},
+		DisabledPlugins: []string{
+			"cri",
 		},
 	}
 }
