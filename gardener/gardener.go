@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
@@ -222,6 +223,45 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 			Options:     []string{"rw"},
 		})
 	}
+
+	isStaging := false
+	for _, m := range containerSpec.BindMounts {
+		if strings.Contains(m.DstPath, "buildpack") {
+			isStaging = true
+			break
+		}
+	}
+
+	isHealthCheck := strings.Contains(containerSpec.Handle, "healthcheck")
+
+	if isStaging || isHealthCheck {
+		log.Error("this-is-staging-or-healthcheck", errors.New("WTF"), lager.Data{"container-spec": containerSpec})
+	} else {
+		runtimeSpec.Root.Readonly = true
+		log.Error("this-is-staging-not", errors.New("WTF"), lager.Data{"container-spec": containerSpec})
+	}
+
+	// if !strings.Contains(containerSpec.Handle, "healthcheck") {
+	// 	runtimeSpec.Root.Readonly = true
+	// runtimeSpec.Mounts = append(runtimeSpec.Mounts, specs.Mount{
+	// 	Destination: "/home/vcap/app",
+	// 	Source:      "tmpfs",
+	// 	Type:        "tmpfs",
+	// 	Options:     []string{"rw"},
+	// })
+	// runtimeSpec.Mounts = append(runtimeSpec.Mounts, specs.Mount{
+	// 	Destination: "/app",
+	// 	Source:      "tmpfs",
+	// 	Type:        "tmpfs",
+	// 	Options:     []string{"rw"},
+	// })
+	// runtimeSpec.Mounts = append(runtimeSpec.Mounts, specs.Mount{
+	// 	Destination: "/tmp",
+	// 	Source:      "tmpfs",
+	// 	Type:        "tmpfs",
+	// 	Options:     []string{"rw"},
+	// })
+	// }
 
 	desiredSpec := spec.DesiredContainerSpec{
 		Handle:     containerSpec.Handle,
