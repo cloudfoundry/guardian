@@ -200,7 +200,9 @@ var _ = Describe("Runcontainerd", func() {
 				return goci.Bndl{}, nil
 			}
 			processIO = garden.ProcessIO{
+				Stdin:  gbytes.NewBuffer(),
 				Stdout: gbytes.NewBuffer(),
+				Stderr: gbytes.NewBuffer(),
 			}
 		})
 
@@ -251,8 +253,12 @@ var _ = Describe("Runcontainerd", func() {
 
 			It("passes the io through", func() {
 				Expect(containerManager.ExecCallCount()).To(Equal(1))
-				_, _, _, _, actualIO := containerManager.ExecArgsForCall(0)
-				Expect(actualIO).To(Equal(processIO))
+				_, _, _, _, actualIOFunc := containerManager.ExecArgsForCall(0)
+				actualIn, actualOut, actualErr := actualIOFunc()
+
+				Expect(actualIn).To(Equal(processIO.Stdin))
+				Expect(actualOut).To(Equal(processIO.Stdout))
+				Expect(actualErr).To(Equal(processIO.Stderr))
 			})
 
 			It("creates the process on the passed container", func() {

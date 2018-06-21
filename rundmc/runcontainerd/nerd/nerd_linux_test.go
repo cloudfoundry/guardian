@@ -21,7 +21,6 @@ import (
 	"github.com/onsi/gomega/gexec"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
-	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -33,12 +32,16 @@ var _ = Describe("Nerd", func() {
 		cnerd       *nerd.Nerd
 		containerID string
 		processID   string
+		processIO   func() (io.Reader, io.Writer, io.Writer)
 	)
 
 	BeforeEach(func() {
 		rand.Seed(time.Now().UnixNano())
 		containerID = fmt.Sprintf("test-container-%s", randomString(10))
 		processID = fmt.Sprintf("test-process-%s", randomString(10))
+		processIO = func() (io.Reader, io.Writer, io.Writer) {
+			return nil, nil, nil
+		}
 
 		testLogger = lagertest.NewTestLogger("nerd-test")
 		cnerd = nerd.New(containerdClient, containerdContext)
@@ -82,7 +85,7 @@ var _ = Describe("Nerd", func() {
 				Cwd:  "/",
 			}
 
-			err := cnerd.Exec(testLogger, containerID, processID, processSpec, garden.ProcessIO{})
+			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 			Expect(err).NotTo(HaveOccurred())
 
 			containers := listProcesses(testConfig.CtrBin, testConfig.Socket, containerID)
@@ -98,9 +101,11 @@ var _ = Describe("Nerd", func() {
 				}
 
 				stdout := gbytes.NewBuffer()
-				processIO := garden.ProcessIO{
-					Stdin:  gbytes.BufferWithBytes([]byte("hello nerd")),
-					Stdout: io.MultiWriter(stdout, GinkgoWriter),
+				processIO = func() (io.Reader, io.Writer, io.Writer) {
+					stdin := gbytes.BufferWithBytes([]byte("hello nerd"))
+					stdout := io.MultiWriter(stdout, GinkgoWriter)
+
+					return stdin, stdout, nil
 				}
 
 				err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
@@ -115,8 +120,9 @@ var _ = Describe("Nerd", func() {
 				}
 
 				stdout := gbytes.NewBuffer()
-				processIO := garden.ProcessIO{
-					Stdout: io.MultiWriter(stdout, GinkgoWriter),
+				processIO = func() (io.Reader, io.Writer, io.Writer) {
+					stdout := io.MultiWriter(stdout, GinkgoWriter)
+					return nil, stdout, nil
 				}
 
 				err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
@@ -131,8 +137,9 @@ var _ = Describe("Nerd", func() {
 				}
 
 				stderr := gbytes.NewBuffer()
-				processIO := garden.ProcessIO{
-					Stderr: io.MultiWriter(stderr, GinkgoWriter),
+				processIO = func() (io.Reader, io.Writer, io.Writer) {
+					stderr := io.MultiWriter(stderr, GinkgoWriter)
+					return nil, nil, stderr
 				}
 
 				err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
@@ -157,7 +164,7 @@ var _ = Describe("Nerd", func() {
 				Cwd:  "/",
 			}
 
-			err := cnerd.Exec(testLogger, containerID, processID, processSpec, garden.ProcessIO{})
+			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 			Expect(err).NotTo(HaveOccurred())
 
 			exitCode, waitErr = cnerd.Wait(testLogger, containerID, processID)

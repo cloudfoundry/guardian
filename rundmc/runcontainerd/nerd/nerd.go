@@ -1,10 +1,12 @@
 package nerd
 
 import (
+	"bytes"
 	"context"
+	"io"
+	"io/ioutil"
 	"strconv"
 
-	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
@@ -79,20 +81,43 @@ func (n *Nerd) State(log lager.Logger, containerID string) (int, string, error) 
 	return int(task.Pid()), string(status.Status), nil
 }
 
-func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs.Process, io garden.ProcessIO) error {
+func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer)) error {
 	_, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
 		return err
 	}
 
 	log.Debug("execing-task", lager.Data{"containerID": containerID, "processID": processID})
-	process, err := task.Exec(n.context, processID, spec, cio.NewCreator(cio.WithStdio, withGardenProcessIO(io)))
+	process, err := task.Exec(n.context, processID, spec, cio.NewCreator(withProcessIO(processIO)))
 	if err != nil {
 		return err
 	}
 
 	log.Debug("starting-task", lager.Data{"containerID": containerID, "processID": processID})
 	return process.Start(n.context)
+}
+
+func withProcessIO(processIO func() (io.Reader, io.Writer, io.Writer)) cio.Opt {
+	return func(opt *cio.Streams) {
+		stdIn, stdOut, stdErr := processIO()
+		if stdIn != nil {
+			opt.Stdin = stdIn
+		} else {
+			opt.Stdin = bytes.NewBuffer(nil)
+		}
+
+		if stdOut != nil {
+			opt.Stdout = stdOut
+		} else {
+			opt.Stdout = ioutil.Discard
+		}
+
+		if stdErr != nil {
+			opt.Stderr = stdErr
+		} else {
+			opt.Stderr = ioutil.Discard
+		}
+	}
 }
 
 func (n *Nerd) GetContainerPID(log lager.Logger, containerID string) (uint32, error) {
@@ -102,22 +127,6 @@ func (n *Nerd) GetContainerPID(log lager.Logger, containerID string) (uint32, er
 	}
 
 	return task.Pid(), nil
-}
-
-func withGardenProcessIO(io garden.ProcessIO) cio.Opt {
-	return func(opt *cio.Streams) {
-		if io.Stdin != nil {
-			opt.Stdin = io.Stdin
-		}
-
-		if io.Stdout != nil {
-			opt.Stdout = io.Stdout
-		}
-
-		if io.Stderr != nil {
-			opt.Stderr = io.Stderr
-		}
-	}
 }
 
 func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (containerd.Container, containerd.Task, error) {

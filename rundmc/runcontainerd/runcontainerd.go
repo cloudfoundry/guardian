@@ -2,6 +2,7 @@ package runcontainerd
 
 import (
 	"fmt"
+	"io"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -18,7 +19,7 @@ type ContainerManager interface {
 	Create(log lager.Logger, containerID string, spec *specs.Spec) error
 	Delete(log lager.Logger, containerID string) error
 
-	Exec(log lager.Logger, containerID, processID string, spec *specs.Process, io garden.ProcessIO) error
+	Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer)) error
 
 	State(log lager.Logger, containerID string) (int, string, error)
 	GetContainerPID(log lager.Logger, containerID string) (uint32, error)
@@ -83,9 +84,9 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 	return r.containerManager.Create(log, id, &bundle.Spec)
 }
 
-func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, gardenProcessSpec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, gardenProcessSpec garden.ProcessSpec, gardenIO garden.ProcessIO) (garden.Process, error) {
 	if !r.useContainerdForProcesses {
-		return r.execer.Exec(log, bundlePath, containerID, gardenProcessSpec, io)
+		return r.execer.Exec(log, bundlePath, containerID, gardenProcessSpec, gardenIO)
 	}
 
 	bundle, err := r.bundleLoader.Load(bundlePath)
@@ -116,8 +117,12 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, g
 		gardenProcessSpec.ID = fmt.Sprintf("%s", randomID)
 	}
 
+	processIO := func() (io.Reader, io.Writer, io.Writer) {
+		return gardenIO.Stdin, gardenIO.Stdout, gardenIO.Stderr
+	}
+
 	ociProcessSpec := r.processBuilder.BuildProcess(bundle, gardenProcessSpec, resolvedUser.Uid, resolvedUser.Gid)
-	if err = r.containerManager.Exec(log, containerID, gardenProcessSpec.ID, ociProcessSpec, io); err != nil {
+	if err = r.containerManager.Exec(log, containerID, gardenProcessSpec.ID, ociProcessSpec, processIO); err != nil {
 		return nil, err
 	}
 
