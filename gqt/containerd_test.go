@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"bytes"
 	"io"
 	"os/exec"
 
@@ -172,6 +173,48 @@ var _ = Describe("Containerd", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(exitCode).To(Equal(17))
+			})
+
+			Describe("Stdio", func() {
+				It("connects stdin", func() {
+					stdout := gbytes.NewBuffer()
+					stdin := bytes.NewBufferString("hello from stdin")
+					_, err := container.Run(garden.ProcessSpec{
+						Path: "cat",
+					}, garden.ProcessIO{
+						Stdin:  stdin,
+						Stdout: io.MultiWriter(GinkgoWriter, stdout),
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Eventually(stdout).Should(gbytes.Say("hello from stdin"))
+				})
+
+				It("connects stdout", func() {
+					stdout := gbytes.NewBuffer()
+					_, err := container.Run(garden.ProcessSpec{
+						Path: "/bin/echo",
+						Args: []string{"hello world"},
+					}, garden.ProcessIO{
+						Stdout: io.MultiWriter(GinkgoWriter, stdout),
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Eventually(stdout).Should(gbytes.Say("hello world"))
+				})
+
+				It("connects stderr", func() {
+					stderr := gbytes.NewBuffer()
+					_, err := container.Run(garden.ProcessSpec{
+						Path: "/bin/sh",
+						Args: []string{"-c", "/bin/echo hello error 1>&2"},
+					}, garden.ProcessIO{
+						Stderr: io.MultiWriter(GinkgoWriter, stderr),
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Eventually(stderr).Should(gbytes.Say("hello error"))
+				})
 			})
 		})
 	})
