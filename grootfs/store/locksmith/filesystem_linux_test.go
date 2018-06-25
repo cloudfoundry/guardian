@@ -59,6 +59,15 @@ var _ = Describe("Filesystem", func() {
 		})
 
 		Describe("Lock", func() {
+			It("creates the lock path when it does not exist", func() {
+				Expect(os.RemoveAll(path)).To(Succeed())
+				Expect(path).ToNot(BeAnExistingFile())
+
+				_, err := exclusiveLocksmith.Lock("key")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(path).To(BeAnExistingFile())
+			})
+
 			It("creates the lock file in the lock path when it does not exist", func() {
 				lockFile := filepath.Join(path, "key.lock")
 
@@ -93,20 +102,6 @@ var _ = Describe("Filesystem", func() {
 
 					Expect(metricName).To(Equal(locksmith.ExclusiveMetricsLockingTime))
 					Expect(fromTime.Unix()).To(BeNumerically("~", startTime.Unix(), 1))
-				})
-			})
-
-			Context("when creating the lock file fails", func() {
-				BeforeEach(func() {
-					path = "/not/real"
-				})
-
-				It("returns an error", func() {
-					lockFile := filepath.Join(path, "key")
-
-					_, err := exclusiveLocksmith.Lock("key")
-					Expect(err).To(MatchError(ContainSubstring("creating lock file for key `key`:")))
-					Expect(lockFile).ToNot(BeAnExistingFile())
 				})
 			})
 
@@ -204,20 +199,6 @@ var _ = Describe("Filesystem", func() {
 
 					Expect(metricName).To(Equal(locksmith.SharedMetricsLockingTime))
 					Expect(fromTime.Unix()).To(BeNumerically("~", startTime.Unix(), 1))
-				})
-			})
-
-			Context("when creating the lock file fails", func() {
-				BeforeEach(func() {
-					path = "/not/real"
-				})
-
-				It("returns an error", func() {
-					lockFile := filepath.Join(path, "key")
-
-					_, err := sharedLocksmith.Lock("key")
-					Expect(err).To(MatchError(ContainSubstring("creating lock file for key `key`:")))
-					Expect(lockFile).ToNot(BeAnExistingFile())
 				})
 			})
 

@@ -52,6 +52,9 @@ func (l *FileSystem) Lock(key string) (*os.File, error) {
 		defer l.metricsEmitter.TryEmitDurationFrom(lager.NewLogger("nil"), l.metricName, time.Now())
 	}
 
+	if err := os.MkdirAll(l.locksDir, 0755); err != nil {
+		return nil, err
+	}
 	key = strings.Replace(key, "/", "", -1)
 	lockFile, err := os.OpenFile(l.path(key), os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
