@@ -76,7 +76,7 @@ var _ = Describe("Dadoo", func() {
 			WithUIDMappings(specs.LinuxIDMapping{HostID: 1, ContainerID: 0, Size: 100}).
 			WithGIDMappings(specs.LinuxIDMapping{HostID: 1, ContainerID: 0, Size: 100})
 
-		SetDefaultEventuallyTimeout(10 * time.Second)
+		SetDefaultEventuallyTimeout(time.Minute)
 	})
 
 	JustBeforeEach(func() {
