@@ -5,6 +5,7 @@ import (
 	"io"
 	"sync"
 
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -80,6 +81,19 @@ type FakeContainerManager struct {
 	getContainerPIDReturnsOnCall map[int]struct {
 		result1 uint32
 		result2 error
+	}
+	UpdateLimitsStub        func(log lager.Logger, handle string, limits garden.Limits) error
+	updateLimitsMutex       sync.RWMutex
+	updateLimitsArgsForCall []struct {
+		log    lager.Logger
+		handle string
+		limits garden.Limits
+	}
+	updateLimitsReturns struct {
+		result1 error
+	}
+	updateLimitsReturnsOnCall map[int]struct {
+		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -343,6 +357,56 @@ func (fake *FakeContainerManager) GetContainerPIDReturnsOnCall(i int, result1 ui
 	}{result1, result2}
 }
 
+func (fake *FakeContainerManager) UpdateLimits(log lager.Logger, handle string, limits garden.Limits) error {
+	fake.updateLimitsMutex.Lock()
+	ret, specificReturn := fake.updateLimitsReturnsOnCall[len(fake.updateLimitsArgsForCall)]
+	fake.updateLimitsArgsForCall = append(fake.updateLimitsArgsForCall, struct {
+		log    lager.Logger
+		handle string
+		limits garden.Limits
+	}{log, handle, limits})
+	fake.recordInvocation("UpdateLimits", []interface{}{log, handle, limits})
+	fake.updateLimitsMutex.Unlock()
+	if fake.UpdateLimitsStub != nil {
+		return fake.UpdateLimitsStub(log, handle, limits)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.updateLimitsReturns.result1
+}
+
+func (fake *FakeContainerManager) UpdateLimitsCallCount() int {
+	fake.updateLimitsMutex.RLock()
+	defer fake.updateLimitsMutex.RUnlock()
+	return len(fake.updateLimitsArgsForCall)
+}
+
+func (fake *FakeContainerManager) UpdateLimitsArgsForCall(i int) (lager.Logger, string, garden.Limits) {
+	fake.updateLimitsMutex.RLock()
+	defer fake.updateLimitsMutex.RUnlock()
+	return fake.updateLimitsArgsForCall[i].log, fake.updateLimitsArgsForCall[i].handle, fake.updateLimitsArgsForCall[i].limits
+}
+
+func (fake *FakeContainerManager) UpdateLimitsReturns(result1 error) {
+	fake.UpdateLimitsStub = nil
+	fake.updateLimitsReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeContainerManager) UpdateLimitsReturnsOnCall(i int, result1 error) {
+	fake.UpdateLimitsStub = nil
+	if fake.updateLimitsReturnsOnCall == nil {
+		fake.updateLimitsReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.updateLimitsReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeContainerManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -356,6 +420,8 @@ func (fake *FakeContainerManager) Invocations() map[string][][]interface{} {
 	defer fake.stateMutex.RUnlock()
 	fake.getContainerPIDMutex.RLock()
 	defer fake.getContainerPIDMutex.RUnlock()
+	fake.updateLimitsMutex.RLock()
+	defer fake.updateLimitsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

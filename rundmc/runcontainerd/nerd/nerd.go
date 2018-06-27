@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"syscall"
 
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
@@ -190,4 +191,14 @@ func (n *Nerd) Signal(log lager.Logger, containerID, processID string, signal sy
 	}
 
 	return process.Kill(n.context, signal)
+}
+
+func (n *Nerd) UpdateLimits(log lager.Logger, containerID string, limits garden.Limits) error {
+	log.Debug("updating-container-limits", lager.Data{"containerID": containerID, "limits": limits})
+	_, task, err := n.loadContainerAndTask(log, containerID)
+	if err != nil {
+		return err
+	}
+
+	return task.Update(n.context, containerd.WithResources(&specs.LinuxResources{CPU: &specs.LinuxCPU{Quota: &limits.CPU.Quota, Period: &limits.CPU.Period}}))
 }

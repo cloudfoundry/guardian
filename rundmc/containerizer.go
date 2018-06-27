@@ -48,6 +48,7 @@ type OCIRuntime interface {
 	State(log lager.Logger, id string) (runrunc.State, error)
 	Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error)
 	WatchEvents(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error
+	UpdateLimits(log lager.Logger, handle string, limits garden.Limits) error
 }
 
 type PeaCreator interface {
@@ -145,6 +146,10 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 	}()
 
 	return nil
+}
+
+func (c *Containerizer) UpdateLimits(logger lager.Logger, handle string, limits garden.Limits) error {
+	return c.runtime.UpdateLimits(logger, handle, limits)
 }
 
 // Run runs a process inside a running container

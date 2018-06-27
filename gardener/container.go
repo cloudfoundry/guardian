@@ -114,6 +114,10 @@ func (c *container) LimitMemory(limits garden.MemoryLimits) error {
 	return nil
 }
 
+func (c *container) UpdateLimits(limits garden.Limits) error {
+	return c.containerizer.UpdateLimits(c.logger, c.handle, limits)
+}
+
 func (c *container) CurrentMemoryLimits() (garden.MemoryLimits, error) {
 	info, err := c.containerizer.Info(c.logger, c.handle)
 	return info.Limits.Memory, err

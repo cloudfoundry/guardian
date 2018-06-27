@@ -126,6 +126,19 @@ type FakeOCIRuntime struct {
 	watchEventsReturnsOnCall map[int]struct {
 		result1 error
 	}
+	UpdateLimitsStub        func(log lager.Logger, handle string, limits garden.Limits) error
+	updateLimitsMutex       sync.RWMutex
+	updateLimitsArgsForCall []struct {
+		log    lager.Logger
+		handle string
+		limits garden.Limits
+	}
+	updateLimitsReturns struct {
+		result1 error
+	}
+	updateLimitsReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -544,6 +557,56 @@ func (fake *FakeOCIRuntime) WatchEventsReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakeOCIRuntime) UpdateLimits(log lager.Logger, handle string, limits garden.Limits) error {
+	fake.updateLimitsMutex.Lock()
+	ret, specificReturn := fake.updateLimitsReturnsOnCall[len(fake.updateLimitsArgsForCall)]
+	fake.updateLimitsArgsForCall = append(fake.updateLimitsArgsForCall, struct {
+		log    lager.Logger
+		handle string
+		limits garden.Limits
+	}{log, handle, limits})
+	fake.recordInvocation("UpdateLimits", []interface{}{log, handle, limits})
+	fake.updateLimitsMutex.Unlock()
+	if fake.UpdateLimitsStub != nil {
+		return fake.UpdateLimitsStub(log, handle, limits)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.updateLimitsReturns.result1
+}
+
+func (fake *FakeOCIRuntime) UpdateLimitsCallCount() int {
+	fake.updateLimitsMutex.RLock()
+	defer fake.updateLimitsMutex.RUnlock()
+	return len(fake.updateLimitsArgsForCall)
+}
+
+func (fake *FakeOCIRuntime) UpdateLimitsArgsForCall(i int) (lager.Logger, string, garden.Limits) {
+	fake.updateLimitsMutex.RLock()
+	defer fake.updateLimitsMutex.RUnlock()
+	return fake.updateLimitsArgsForCall[i].log, fake.updateLimitsArgsForCall[i].handle, fake.updateLimitsArgsForCall[i].limits
+}
+
+func (fake *FakeOCIRuntime) UpdateLimitsReturns(result1 error) {
+	fake.UpdateLimitsStub = nil
+	fake.updateLimitsReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeOCIRuntime) UpdateLimitsReturnsOnCall(i int, result1 error) {
+	fake.UpdateLimitsStub = nil
+	if fake.updateLimitsReturnsOnCall == nil {
+		fake.updateLimitsReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.updateLimitsReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeOCIRuntime) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -563,6 +626,8 @@ func (fake *FakeOCIRuntime) Invocations() map[string][][]interface{} {
 	defer fake.statsMutex.RUnlock()
 	fake.watchEventsMutex.RLock()
 	defer fake.watchEventsMutex.RUnlock()
+	fake.updateLimitsMutex.RLock()
+	defer fake.updateLimitsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

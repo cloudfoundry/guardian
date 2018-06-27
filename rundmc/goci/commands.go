@@ -65,6 +65,11 @@ func (runc RuncBinary) DeleteCommand(id string, force bool, logFile string) *exe
 	return exec.Command(runc.Path, append(deleteArgs, id)...)
 }
 
+func (runc RuncBinary) UpdateCommand(id string, logFile string) *exec.Cmd {
+	updateArgs := runc.addGlobalFlags([]string{"update"}, logFile)
+	return exec.Command(runc.Path, append(updateArgs, "-r", "-", id)...)
+}
+
 func (runc RuncBinary) addGlobalFlags(args []string, logFile string) []string {
 	baseFlags := append([]string{"--debug", "--log", logFile, "--log-format", "json"}, args...)
 	return runc.addRootFlagIfNeeded(baseFlags)

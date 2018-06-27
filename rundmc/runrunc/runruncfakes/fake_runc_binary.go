@@ -83,6 +83,18 @@ type FakeRuncBinary struct {
 	deleteCommandReturnsOnCall map[int]struct {
 		result1 *exec.Cmd
 	}
+	UpdateCommandStub        func(id string, logFile string) *exec.Cmd
+	updateCommandMutex       sync.RWMutex
+	updateCommandArgsForCall []struct {
+		id      string
+		logFile string
+	}
+	updateCommandReturns struct {
+		result1 *exec.Cmd
+	}
+	updateCommandReturnsOnCall map[int]struct {
+		result1 *exec.Cmd
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -383,6 +395,55 @@ func (fake *FakeRuncBinary) DeleteCommandReturnsOnCall(i int, result1 *exec.Cmd)
 	}{result1}
 }
 
+func (fake *FakeRuncBinary) UpdateCommand(id string, logFile string) *exec.Cmd {
+	fake.updateCommandMutex.Lock()
+	ret, specificReturn := fake.updateCommandReturnsOnCall[len(fake.updateCommandArgsForCall)]
+	fake.updateCommandArgsForCall = append(fake.updateCommandArgsForCall, struct {
+		id      string
+		logFile string
+	}{id, logFile})
+	fake.recordInvocation("UpdateCommand", []interface{}{id, logFile})
+	fake.updateCommandMutex.Unlock()
+	if fake.UpdateCommandStub != nil {
+		return fake.UpdateCommandStub(id, logFile)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.updateCommandReturns.result1
+}
+
+func (fake *FakeRuncBinary) UpdateCommandCallCount() int {
+	fake.updateCommandMutex.RLock()
+	defer fake.updateCommandMutex.RUnlock()
+	return len(fake.updateCommandArgsForCall)
+}
+
+func (fake *FakeRuncBinary) UpdateCommandArgsForCall(i int) (string, string) {
+	fake.updateCommandMutex.RLock()
+	defer fake.updateCommandMutex.RUnlock()
+	return fake.updateCommandArgsForCall[i].id, fake.updateCommandArgsForCall[i].logFile
+}
+
+func (fake *FakeRuncBinary) UpdateCommandReturns(result1 *exec.Cmd) {
+	fake.UpdateCommandStub = nil
+	fake.updateCommandReturns = struct {
+		result1 *exec.Cmd
+	}{result1}
+}
+
+func (fake *FakeRuncBinary) UpdateCommandReturnsOnCall(i int, result1 *exec.Cmd) {
+	fake.UpdateCommandStub = nil
+	if fake.updateCommandReturnsOnCall == nil {
+		fake.updateCommandReturnsOnCall = make(map[int]struct {
+			result1 *exec.Cmd
+		})
+	}
+	fake.updateCommandReturnsOnCall[i] = struct {
+		result1 *exec.Cmd
+	}{result1}
+}
+
 func (fake *FakeRuncBinary) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -398,6 +459,8 @@ func (fake *FakeRuncBinary) Invocations() map[string][][]interface{} {
 	defer fake.killCommandMutex.RUnlock()
 	fake.deleteCommandMutex.RLock()
 	defer fake.deleteCommandMutex.RUnlock()
+	fake.updateCommandMutex.RLock()
+	defer fake.updateCommandMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

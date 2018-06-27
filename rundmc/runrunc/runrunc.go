@@ -15,6 +15,7 @@ type RunRunc struct {
 	*Stater
 	*Killer
 	*Deleter
+	*Updater
 }
 
 //go:generate counterfeiter . RuncBinary
@@ -25,6 +26,7 @@ type RuncBinary interface {
 	StatsCommand(id, logFile string) *exec.Cmd
 	KillCommand(id, signal, logFile string) *exec.Cmd
 	DeleteCommand(id string, force bool, logFile string) *exec.Cmd
+	UpdateCommand(id string, logFile string) *exec.Cmd
 }
 
 func New(
@@ -39,5 +41,6 @@ func New(
 		Stater:     NewStater(runcCmdRunner, runc),
 		Killer:     NewKiller(runcCmdRunner, runc),
 		Deleter:    NewDeleter(runcCmdRunner, runc),
+		Updater:    NewUpdater(runcCmdRunner, runc),
 	}
 }

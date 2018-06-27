@@ -24,6 +24,7 @@ type ContainerManager interface {
 
 	State(log lager.Logger, containerID string) (int, string, error)
 	GetContainerPID(log lager.Logger, containerID string) (uint32, error)
+	UpdateLimits(log lager.Logger, handle string, limits garden.Limits) error
 }
 
 //go:generate counterfeiter . ProcessManager
@@ -158,4 +159,8 @@ func (r *RunContainerd) Stats(log lager.Logger, id string) (gardener.ActualConta
 
 func (r *RunContainerd) WatchEvents(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error {
 	return fmt.Errorf("WatchEvents is not implemented yet")
+}
+
+func (r *RunContainerd) UpdateLimits(log lager.Logger, handle string, limits garden.Limits) error {
+	return r.containerManager.UpdateLimits(log, handle, limits)
 }

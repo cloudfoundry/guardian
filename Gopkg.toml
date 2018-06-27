@@ -43,7 +43,7 @@ ignored = ["code.cloudfoundry.org/garden-shed*"]
   name = "code.cloudfoundry.org/debugserver"
 
 [[constraint]]
-  branch = "master"
+  branch = "wip-cpu-burst"
   name = "code.cloudfoundry.org/garden"
 
 [[constraint]]

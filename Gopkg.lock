@@ -31,7 +31,7 @@
   revision = "70715da12ee9e99858f2ba1013334776c73b6922"
 
 [[projects]]
-  branch = "master"
+  branch = "wip-cpu-burst"
   name = "code.cloudfoundry.org/garden"
   packages = [
     ".",
@@ -45,7 +45,7 @@
     "server/timebomb",
     "transport"
   ]
-  revision = "b9b9389605dafb65bf2a1d5db93019cb39fdf7cb"
+  revision = "be7d5f9dd54530c57bf709d93e7e0d624d97f331"
 
 [[projects]]
   branch = "master"
@@ -656,6 +656,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e5c55fab2de8d17e9d11391e96bed90c8b8f9d833d59f269752ae47eaf29f48c"
+  inputs-digest = "9caf800c4d7a4bf34aae54c3a17ced726cbfdbe91e1f0fd14aa5d87febec5fb4"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -54,6 +54,7 @@ type Containerizer interface {
 
 	Info(log lager.Logger, handle string) (spec.ActualContainerSpec, error)
 	Metrics(log lager.Logger, handle string) (ActualContainerMetrics, error)
+	UpdateLimits(log lager.Logger, handle string, limits garden.Limits) error
 }
 
 type Networker interface {
