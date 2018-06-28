@@ -14,9 +14,9 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
-	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
+	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/lager"
@@ -155,8 +155,8 @@ func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
 }
 
 func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper,
-	wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser *runrunc.Statser, useContainerdForProcesses bool) (rundmc.OCIRuntime, peas.PidGetter, error) {
-	return nil, nil, errors.New("containerd not impletemented on windows")
+	wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser *runrunc.Statser, useContainerdForProcesses bool) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, error) {
+	return nil, nil, nil, errors.New("containerd not impletemented on windows")
 }
 
 func containerdRuncRoot() string {

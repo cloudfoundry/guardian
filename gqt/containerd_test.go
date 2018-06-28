@@ -250,6 +250,25 @@ var _ = Describe("Containerd", func() {
 					Eventually(status).Should(Receive(BeEquivalentTo(42)))
 				})
 			})
+
+			Describe("creating a pea", func() {
+				It("creates a containerd container with running init task", func() {
+					_, err := container.Run(garden.ProcessSpec{
+						ID:    "ctrd-pea-id",
+						Image: garden.ImageRef{URI: createPeaRootfsTar()},
+						Path:  "/bin/sleep",
+						Args:  []string{"10"},
+						Dir:   "/",
+					}, garden.ProcessIO{})
+					Expect(err).NotTo(HaveOccurred())
+
+					containers := listContainers("ctr", config.ContainerdSocket)
+					Expect(containers).To(ContainSubstring("ctrd-pea-id"))
+
+					processes := listProcesses("ctr", config.ContainerdSocket, "ctrd-pea-id")
+					Expect(processes).To(ContainSubstring("ctrd-pea-id"))
+				})
+			})
 		})
 	})
 })
