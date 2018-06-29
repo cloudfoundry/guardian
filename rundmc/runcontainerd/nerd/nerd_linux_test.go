@@ -230,7 +230,7 @@ var _ = Describe("Nerd", func() {
 				status <- exit
 			}()
 
-			Eventually(status).Should(Receive(BeEquivalentTo(42)))
+			Eventually(status, 5*time.Second).Should(Receive(BeEquivalentTo(42)))
 		})
 
 	})
