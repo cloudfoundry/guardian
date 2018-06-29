@@ -14,7 +14,8 @@ import (
 
 //go:generate counterfeiter . ProcessPidGetter
 type ProcessPidGetter interface {
-	Pid(pidFilePath string) (int, error)
+	GetPid(log lager.Logger, handle string) (int, error)
+	GetPeaPid(log lager.Logger, handle, peaID string) (int, error)
 }
 
 type PeaUsernameResolver struct {
@@ -61,8 +62,7 @@ func (r *PeaUsernameResolver) ResolveUser(log lager.Logger, bundlePath, handle s
 		}
 	}()
 
-	pidFilePath := filepath.Join(bundlePath, "processes", resolveUserPea.ID(), "pidfile")
-	resolveUserPeaPid, err := r.PidGetter.Pid(pidFilePath)
+	resolveUserPeaPid, err := r.PidGetter.GetPeaPid(log, handle, resolveUserPea.ID())
 	if err != nil {
 		return -1, -1, err
 	}

@@ -28,28 +28,57 @@ var _ = Describe("Pidgetter", func() {
 		logger = lagertest.NewTestLogger("banana")
 	})
 
-	JustBeforeEach(func() {
-		pid, pidError = pidgetter.GetPid(logger, "container-handle")
-	})
-
-	It("returns the pid", func() {
-		Expect(pid).To(Equal(1234))
-	})
-
-	It("gets the container state", func() {
-		Expect(nerd.StateCallCount()).To(Equal(1))
-		actualLogger, actualContainerID := nerd.StateArgsForCall(0)
-		Expect(actualLogger).To(Equal(logger))
-		Expect(actualContainerID).To(Equal("container-handle"))
-	})
-
-	Context("when getting the container state fails", func() {
-		BeforeEach(func() {
-			nerd.StateReturns(-1, "", errors.New("get-state-failure"))
+	Describe("GetPid", func() {
+		JustBeforeEach(func() {
+			pid, pidError = pidgetter.GetPid(logger, "container-handle")
 		})
 
-		It("returns the error", func() {
-			Expect(pidError).To(MatchError("get-state-failure"))
+		It("gets the container state", func() {
+			Expect(nerd.StateCallCount()).To(Equal(1))
+			actualLogger, actualContainerID := nerd.StateArgsForCall(0)
+			Expect(actualLogger).To(Equal(logger))
+			Expect(actualContainerID).To(Equal("container-handle"))
+		})
+
+		It("returns the pid", func() {
+			Expect(pid).To(Equal(1234))
+		})
+
+		When("getting the container state errors", func() {
+			BeforeEach(func() {
+				nerd.StateReturns(-1, "", errors.New("get-state-failure"))
+			})
+
+			It("returns the error", func() {
+				Expect(pidError).To(MatchError("get-state-failure"))
+			})
+		})
+	})
+
+	Describe("GetPeaPid", func() {
+		JustBeforeEach(func() {
+			pid, pidError = pidgetter.GetPeaPid(logger, "", "pea-id")
+		})
+
+		It("gets the pea container state", func() {
+			Expect(nerd.StateCallCount()).To(Equal(1))
+			actualLogger, actualContainerID := nerd.StateArgsForCall(0)
+			Expect(actualLogger).To(Equal(logger))
+			Expect(actualContainerID).To(Equal("pea-id"))
+		})
+
+		It("returns the pid", func() {
+			Expect(pid).To(Equal(1234))
+		})
+
+		When("getting the container state errors", func() {
+			BeforeEach(func() {
+				nerd.StateReturns(-1, "", errors.New("get-state-failure"))
+			})
+
+			It("returns the error", func() {
+				Expect(pidError).To(MatchError("get-state-failure"))
+			})
 		})
 	})
 })

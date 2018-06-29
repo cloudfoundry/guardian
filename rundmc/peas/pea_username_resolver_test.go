@@ -61,7 +61,7 @@ var _ = Describe("PeaUsernameResolver", func() {
 
 		userLookupper.LookupReturns(&users.ExecUser{Uid: 1, Gid: 2}, nil)
 
-		pidGetter.PidReturns(42, nil)
+		pidGetter.GetPeaPidReturns(42, nil)
 
 		resolver = peas.PeaUsernameResolver{
 			PidGetter:     pidGetter,
@@ -87,9 +87,9 @@ var _ = Describe("PeaUsernameResolver", func() {
 		Expect(rootfs).To(Equal(toFilePath("/proc/42/root")))
 		Expect(username).To(Equal("foobar"))
 
-		Expect(pidGetter.PidCallCount()).To(Equal(1))
-		pidFilePath := pidGetter.PidArgsForCall(0)
-		Expect(pidFilePath).To(Equal(toFilePath("/path/to/bundle/processes/peaid/pidfile")))
+		Expect(pidGetter.GetPeaPidCallCount()).To(Equal(1))
+		_, _, peaid := pidGetter.GetPeaPidArgsForCall(0)
+		Expect(peaid).To(Equal("peaid"))
 	})
 
 	It("creates the resolve user helper pea with the correct params", func() {
@@ -151,7 +151,7 @@ var _ = Describe("PeaUsernameResolver", func() {
 
 	Context("when resolve user helper pea init pid cannot be resolved", func() {
 		BeforeEach(func() {
-			pidGetter.PidReturns(-1, errors.New("get-pid-failure"))
+			pidGetter.GetPeaPidReturns(-1, errors.New("get-pid-failure"))
 		})
 
 		It("returns an error", func() {

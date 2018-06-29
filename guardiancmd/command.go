@@ -865,7 +865,8 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary)
 
 	var runner rundmc.OCIRuntime
-	var pidGetter peas.PidGetter
+	var pidGetter peas.ProcessPidGetter
+	var peaPidGetter peas.ProcessPidGetter = &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}
 	var peaCreator *peas.PeaCreator
 
 	userLookupper := users.LookupFunc(users.LookupUser)
@@ -887,6 +888,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		}
 
 		if cmd.Containerd.UseContainerdForProcesses {
+			peaPidGetter = pidGetter
 			execRunner = peaRunner
 		}
 	} else {
@@ -919,7 +921,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	}
 
 	peaUsernameResolver := &peas.PeaUsernameResolver{
-		PidGetter:     pidFileReader,
+		PidGetter:     peaPidGetter,
 		PeaCreator:    peaCreator,
 		Loader:        bndlLoader,
 		UserLookupper: users.LookupFunc(users.LookupUser),

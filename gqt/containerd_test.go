@@ -3,7 +3,10 @@ package gqt_test
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -258,7 +261,7 @@ var _ = Describe("Containerd", func() {
 						Image: garden.ImageRef{URI: createPeaRootfsTar()},
 						Path:  "/bin/sleep",
 						Args:  []string{"10"},
-						Dir:   "/",
+						User:  "alice",
 					}, garden.ProcessIO{})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -267,6 +270,11 @@ var _ = Describe("Containerd", func() {
 
 					processes := listProcesses("ctr", config.ContainerdSocket, "ctrd-pea-id")
 					Expect(processes).To(ContainSubstring("ctrd-pea-id"))
+
+					peaProcessPid := pidFromProcessesOutput(processes, "ctrd-pea-id")
+					cmdline, err := ioutil.ReadFile(filepath.Join("/", "proc", peaProcessPid, "cmdline"))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(cmdline)).To(ContainSubstring("/bin/sleep"))
 				})
 			})
 		})
@@ -279,6 +287,23 @@ func listContainers(ctr, socket string) string {
 
 func listProcesses(ctr, socket, containerID string) string {
 	return runCtr(ctr, socket, []string{"tasks", "ps", containerID})
+}
+
+func pidFromProcessesOutput(processesOutput, id string) string {
+	// processesOutput expected to be of the form:
+	// PID      INFO
+	// 23296    -
+	// 23437    &ProcessDetails{ExecID:ctrd-pea-id,}
+
+	processesOutputLines := strings.Split(processesOutput, "\n")
+
+	for _, processesOutputLine := range processesOutputLines {
+		if strings.Contains(processesOutputLine, id) {
+			return strings.Split(processesOutputLine, " ")[0]
+		}
+	}
+
+	return "0"
 }
 
 func runCtr(ctr, socket string, args []string) string {

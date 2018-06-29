@@ -29,3 +29,12 @@ func (f *ContainerPidGetter) GetPid(logger lager.Logger, containerHandle string)
 
 	return f.PidFileReader.Pid(filepath.Join(bundlePath, "pidfile"))
 }
+
+func (f *ContainerPidGetter) GetPeaPid(logger lager.Logger, containerHandle, peaID string) (int, error) {
+	bundlePath, err := f.Depot.Lookup(logger, containerHandle)
+	if err != nil {
+		return 0, err
+	}
+
+	return f.PidFileReader.Pid(filepath.Join(bundlePath, "processes", peaID, "pidfile"))
+}

@@ -46,42 +46,85 @@ var _ = Describe("ContainerPidGetter", func() {
 		Expect(os.RemoveAll(bundlePath)).To(Succeed())
 	})
 
-	JustBeforeEach(func() {
-		returnedPid, pidGetErr = pidGetter.GetPid(logger, "container-handle")
-	})
-
-	It("looks up the container bundle path", func() {
-		Expect(depot.LookupCallCount()).To(Equal(1))
-		actualLogger, actualHandle := depot.LookupArgsForCall(0)
-		Expect(actualLogger).To(Equal(logger))
-		Expect(actualHandle).To(Equal("container-handle"))
-	})
-
-	Context("when looking up the container bundle path errors", func() {
-		BeforeEach(func() {
-			depot.LookupReturns("", errors.New("potato"))
+	Describe("GetPid", func() {
+		JustBeforeEach(func() {
+			returnedPid, pidGetErr = pidGetter.GetPid(logger, "container-handle")
 		})
 
-		It("propagates the error", func() {
-			Expect(pidGetErr).To(MatchError("potato"))
+		It("looks up the container bundle path", func() {
+			Expect(depot.LookupCallCount()).To(Equal(1))
+			actualLogger, actualHandle := depot.LookupArgsForCall(0)
+			Expect(actualLogger).To(Equal(logger))
+			Expect(actualHandle).To(Equal("container-handle"))
+		})
+
+		It("gets the pid using the path returned from the depot with '/pidfile' suffixed", func() {
+			Expect(pidFileReader.PidCallCount()).To(Equal(1))
+			actualPidFilePath := pidFileReader.PidArgsForCall(0)
+			Expect(actualPidFilePath).To(Equal(filepath.Join(bundlePath, "pidfile")))
+
+			Expect(returnedPid).To(Equal(1234))
+		})
+
+		When("looking up the container bundle path errors", func() {
+			BeforeEach(func() {
+				depot.LookupReturns("", errors.New("error-looking-up-bundle"))
+			})
+
+			It("propagates the error", func() {
+				Expect(pidGetErr).To(MatchError("error-looking-up-bundle"))
+			})
+		})
+
+		When("reading the pid file errors", func() {
+			BeforeEach(func() {
+				pidFileReader.PidReturns(0, errors.New("error-reading-pid"))
+			})
+
+			It("returns the error", func() {
+				Expect(pidGetErr).To(MatchError("error-reading-pid"))
+			})
 		})
 	})
 
-	It("gets the pid, using the path returned from the depot with pidfile suffixed", func() {
-		Expect(pidFileReader.PidCallCount()).To(Equal(1))
-		actualPidFilePath := pidFileReader.PidArgsForCall(0)
-		Expect(actualPidFilePath).To(Equal(filepath.Join(bundlePath, "pidfile")))
-
-		Expect(returnedPid).To(Equal(1234))
-	})
-
-	Context("when reading the pid file returns an error", func() {
-		BeforeEach(func() {
-			pidFileReader.PidReturns(0, errors.New("error-reading-pid"))
+	Describe("GetPeaPid", func() {
+		JustBeforeEach(func() {
+			returnedPid, pidGetErr = pidGetter.GetPeaPid(logger, "container-handle", "pea-id")
 		})
 
-		It("returns the error", func() {
-			Expect(pidGetErr).To(MatchError("error-reading-pid"))
+		It("looks up the container bundle path", func() {
+			Expect(depot.LookupCallCount()).To(Equal(1))
+			actualLogger, actualHandle := depot.LookupArgsForCall(0)
+			Expect(actualLogger).To(Equal(logger))
+			Expect(actualHandle).To(Equal("container-handle"))
+		})
+
+		It("gets the pid using the path returned from the depot with '/processes/pea-id/pidfile' suffixed", func() {
+			Expect(pidFileReader.PidCallCount()).To(Equal(1))
+			actualPidFilePath := pidFileReader.PidArgsForCall(0)
+			Expect(actualPidFilePath).To(Equal(filepath.Join(bundlePath, "processes", "pea-id", "pidfile")))
+
+			Expect(returnedPid).To(Equal(1234))
+		})
+
+		When("looking up the container bundle path errors", func() {
+			BeforeEach(func() {
+				depot.LookupReturns("", errors.New("error-looking-up-bundle"))
+			})
+
+			It("propagates the error", func() {
+				Expect(pidGetErr).To(MatchError("error-looking-up-bundle"))
+			})
+		})
+
+		When("reading the pid file errors", func() {
+			BeforeEach(func() {
+				pidFileReader.PidReturns(0, errors.New("error-reading-pid"))
+			})
+
+			It("returns the error", func() {
+				Expect(pidGetErr).To(MatchError("error-reading-pid"))
+			})
 		})
 	})
 })
