@@ -146,7 +146,7 @@ func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (conta
 	return container, task, nil
 }
 
-func (n *Nerd) Wait(log lager.Logger, containerID, processID string) (int, error) {
+func (n *Nerd) WaitProcess(log lager.Logger, containerID, processID string) (int, error) {
 	log.Debug("waiting-on-process", lager.Data{"containerID": containerID, "processID": processID})
 	_, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
@@ -157,7 +157,20 @@ func (n *Nerd) Wait(log lager.Logger, containerID, processID string) (int, error
 	if err != nil {
 		return 0, err
 	}
+	return n.wait(process)
+}
 
+func (n *Nerd) WaitTask(log lager.Logger, containerID string) (int, error) {
+	log.Debug("waiting-on-container-task", lager.Data{"containerID": containerID})
+	_, task, err := n.loadContainerAndTask(log, containerID)
+	if err != nil {
+		return 0, err
+	}
+
+	return n.wait(task)
+}
+
+func (n *Nerd) wait(process containerd.Process) (int, error) {
 	exitCh, err := process.Wait(n.context)
 	if err != nil {
 		return 0, err

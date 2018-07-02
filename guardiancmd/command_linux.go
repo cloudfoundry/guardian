@@ -235,11 +235,20 @@ func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *
 	nerd := nerd.New(containerdClient, ctx)
 	pidGetter := &runcontainerd.PidGetter{Nerd: nerd}
 
-	containerdManager := runcontainerd.New(nerd, nerd, bndlLoader, processBuilder, userLookupper, wireExecer(pidGetter), statser, useContainerdForProcesses)
+	containerdManager := runcontainerd.New(
+		nerd,
+		runcontainerd.NewRegularProcessManager(nerd),
+		bndlLoader,
+		processBuilder,
+		userLookupper,
+		wireExecer(pidGetter),
+		statser,
+		useContainerdForProcesses,
+	)
 
 	peaRunner := &runcontainerd.RunContainerPea{
 		Creator:        containerdManager,
-		ProcessManager: nerd,
+		ProcessManager: runcontainerd.NewPeaProcessManager(nerd),
 	}
 
 	return containerdManager, peaRunner, pidGetter, nil

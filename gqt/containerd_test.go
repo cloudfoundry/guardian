@@ -10,6 +10,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	uuid "github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -104,6 +105,24 @@ var _ = Describe("Containerd", func() {
 			exitCode, err := attachedProcess.Wait()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCode).To(Equal(13))
+		})
+
+		Context("when the process is waited for", func() {
+			JustBeforeEach(func() {
+				process, err := container.Run(garden.ProcessSpec{
+					ID:   "ctrd-process-id",
+					Path: "/bin/sh",
+					Args: []string{"-c", "exit 17"},
+				}, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+				_, err = process.Wait()
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("is no longer available in containerd", func() {
+				processes := listProcesses("ctr", config.ContainerdSocket, container.Handle())
+				Expect(processes).NotTo(ContainSubstring("ctrd-process-id"))
+			})
 		})
 
 		Context("when use_containerd_for_processes is enabled", func() {
@@ -275,6 +294,38 @@ var _ = Describe("Containerd", func() {
 					cmdline, err := ioutil.ReadFile(filepath.Join("/", "proc", peaProcessPid, "cmdline"))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(cmdline)).To(ContainSubstring("/bin/sleep"))
+				})
+			})
+
+			Context("when the pea is waited for", func() {
+				var (
+					exitCode  int
+					processID *uuid.UUID
+				)
+
+				JustBeforeEach(func() {
+					var err error
+					processID, err = uuid.NewV4()
+					Expect(err).NotTo(HaveOccurred())
+
+					process, err := container.Run(garden.ProcessSpec{
+						ID:    processID.String(),
+						Image: garden.ImageRef{URI: createPeaRootfsTar()},
+						Path:  "/bin/sh",
+						Args:  []string{"-c", "exit 17"},
+					}, garden.ProcessIO{})
+					Expect(err).NotTo(HaveOccurred())
+					exitCode, err = process.Wait()
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns the process exit code", func() {
+					Expect(exitCode).To(Equal(17))
+				})
+
+				It("is no longer available in containerd", func() {
+					processes := listProcesses("ctr", config.ContainerdSocket, container.Handle())
+					Expect(processes).NotTo(ContainSubstring(processID.String()))
 				})
 			})
 		})

@@ -150,7 +150,31 @@ var _ = Describe("Nerd", func() {
 		})
 	})
 
-	Describe("Wait", func() {
+	Describe("WaitTask", func() {
+		var (
+			exitCode int
+		)
+
+		BeforeEach(func() {
+			spec := generateSpec(containerdContext, containerdClient, containerID)
+			spec.Process.Args = []string{"/bin/sh", "-c", "exit 12"}
+			Expect(cnerd.Create(testLogger, containerID, spec)).To(Succeed())
+
+			var waitErr error
+			exitCode, waitErr = cnerd.WaitTask(testLogger, containerID)
+			Expect(waitErr).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			cnerd.Delete(testLogger, containerID)
+		})
+
+		It("returns the exit code of the task", func() {
+			Expect(exitCode).To(Equal(12))
+		})
+	})
+
+	Describe("WaitProcess", func() {
 		var (
 			exitCode int
 			waitErr  error
@@ -168,7 +192,7 @@ var _ = Describe("Nerd", func() {
 			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 			Expect(err).NotTo(HaveOccurred())
 
-			exitCode, waitErr = cnerd.Wait(testLogger, containerID, processID)
+			exitCode, waitErr = cnerd.WaitProcess(testLogger, containerID, processID)
 		})
 
 		AfterEach(func() {
@@ -184,7 +208,7 @@ var _ = Describe("Nerd", func() {
 		})
 
 		It("removes process metadata after finishing", func() {
-			_, retryWaitErr := cnerd.Wait(testLogger, containerID, processID)
+			_, retryWaitErr := cnerd.WaitProcess(testLogger, containerID, processID)
 			Expect(retryWaitErr).To(MatchError(ContainSubstring("no running process found")))
 		})
 	})
@@ -225,7 +249,7 @@ var _ = Describe("Nerd", func() {
 
 			status := make(chan int)
 			go func() {
-				exit, err := cnerd.Wait(testLogger, containerID, processID)
+				exit, err := cnerd.WaitProcess(testLogger, containerID, processID)
 				Expect(err).NotTo(HaveOccurred())
 				status <- exit
 			}()
