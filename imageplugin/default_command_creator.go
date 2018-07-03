@@ -41,9 +41,16 @@ func (cc *DefaultCommandCreator) CreateCommand(log lager.Logger, handle string, 
 }
 
 func (cc *DefaultCommandCreator) DestroyCommand(log lager.Logger, handle string) *exec.Cmd {
-	return exec.Command(cc.BinPath, append(cc.ExtraArgs, "delete", handle)...)
+	return exec.Command(cc.BinPath, append(clone(cc.ExtraArgs), "delete", handle)...)
 }
 
 func (cc *DefaultCommandCreator) MetricsCommand(log lager.Logger, handle string) *exec.Cmd {
-	return exec.Command(cc.BinPath, append(cc.ExtraArgs, "stats", handle)...)
+	return exec.Command(cc.BinPath, append(clone(cc.ExtraArgs), "stats", handle)...)
+}
+
+// append is not thread safe when operating on shared memory, such as cc.ExtraArgs. We therefore clone the slice and then append additional valies.
+// See https://medium.com/@cep21/gos-append-is-not-always-thread-safe-a3034db7975
+func clone(values []string) []string {
+	clone := make([]string, 0, len(values))
+	return append(clone, values...)
 }
