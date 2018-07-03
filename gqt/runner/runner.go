@@ -19,6 +19,7 @@ import (
 	"code.cloudfoundry.org/garden/client/connection"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
+	multierror "github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/tedsuo/ifrit"
@@ -318,14 +319,14 @@ type ErrGardenStop struct {
 }
 
 func (r *RunningGarden) DestroyAndStop() error {
-	defer r.forceStop()
-
-	return r.DestroyContainers()
+	return multierror.Append(
+		r.DestroyContainers(),
+		r.forceStop(),
+		r.Cleanup(),
+	).ErrorOrNil()
 }
 
 func (r *RunningGarden) forceStop() error {
-	defer r.Cleanup()
-
 	if runtime.GOOS == "windows" {
 		// Windows doesn't support SIGTERM
 		r.Kill()
@@ -399,12 +400,12 @@ func (r *RunningGarden) DestroyContainers() error {
 	}
 
 	for _, container := range containers {
-		if err := r.Destroy(container.Handle()); err != nil {
-			return err
+		if destroyErr := r.Destroy(container.Handle()); destroyErr != nil {
+			err = multierror.Append(destroyErr)
 		}
 	}
 
-	return nil
+	return err
 }
 
 type debugVars struct {

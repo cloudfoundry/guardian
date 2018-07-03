@@ -66,18 +66,21 @@ func (r *GardenRunner) setupDirsForUser() {
 	}
 }
 
-func (r *RunningGarden) Cleanup() {
+func (r *RunningGarden) Cleanup() error {
 	// GROOT CLEANUP
 	storePath := r.GardenRunner.GdnRunnerConfig.StorePath
 	privStorePath := r.GardenRunner.GdnRunnerConfig.PrivilegedStorePath
 
-	clearGrootStore(r.GrootBin, storePath)
-	clearGrootStore(r.GrootBin, privStorePath)
+	if err := clearGrootStore(r.GrootBin, storePath); err != nil {
+		return err
+	}
+	if err := clearGrootStore(r.GrootBin, privStorePath); err != nil {
+		return err
+	}
 
 	// AUFS CLEANUP
 	// TODO: Remove this when we get rid of shed
-	retry := retrier.New(retrier.ConstantBackoff(200, 500*time.Millisecond), nil)
-	Expect(retry.Run(func() error {
+	aufsCleanup := func() error {
 		if err := os.RemoveAll(path.Join(*r.GraphDir, "aufs")); err == nil {
 			return nil // if we can remove it, it's already unmounted
 		}
@@ -88,20 +91,26 @@ func (r *RunningGarden) Cleanup() {
 		}
 
 		return nil
-	})).To(Succeed())
+	}
+	retry := retrier.New(retrier.ConstantBackoff(200, 500*time.Millisecond), nil)
+	if err := retry.Run(aufsCleanup); err != nil {
+		return err
+	}
 
 	MustUnmountTmpfs(*r.GraphDir)
 
 	if err := os.RemoveAll(*r.GraphDir); err != nil {
 		r.logger.Error("remove-graph", err)
+		return err
 	}
+	return nil
 }
 
-func clearGrootStore(grootBin, storePath string) {
+func clearGrootStore(grootBin, storePath string) error {
 	deleteStoreArgs := []string{"--store", storePath, "delete-store"}
 
 	deleteStore := exec.Command(grootBin, deleteStoreArgs...)
 	deleteStore.Stdout = GinkgoWriter
 	deleteStore.Stderr = GinkgoWriter
-	Expect(deleteStore.Run()).To(Succeed())
+	return deleteStore.Run()
 }
