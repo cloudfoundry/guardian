@@ -30,7 +30,8 @@ func (r *RunContainerPea) Run(
 	// This only exists to satisfy integration test (garden server calls wait on a process)
 	return &Process{
 		log:            log,
-		containerID:    processID,
+		containerID:    sandboxHandle,
+		processID:      processID,
 		processManager: r.ProcessManager,
 	}, nil
 }
