@@ -21,8 +21,8 @@ var _ = Describe("Killer", func() {
 		sess2, err := gexec.Start(cmd2, GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 
-		Eventually(sess1).Should(gbytes.Say("trapping"))
-		Eventually(sess2).Should(gbytes.Say("trapping"))
+		Eventually(sess1, "5s").Should(gbytes.Say("trapping"))
+		Eventually(sess2, "5s").Should(gbytes.Say("trapping"))
 
 		stopper.DefaultKiller{}.Kill(syscall.SIGTERM, cmd1.Process.Pid, cmd2.Process.Pid)
 
