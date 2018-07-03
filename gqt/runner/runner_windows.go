@@ -17,11 +17,14 @@ func socket2meCommand(config GdnRunnerConfig) *exec.Cmd {
 
 func (r *GardenRunner) setupDirsForUser() {}
 
-func (r *RunningGarden) Cleanup() {
+func (r *RunningGarden) Cleanup() error {
 	r.logger.Info("cleanup-tempdirs")
 	if err := os.RemoveAll(r.TmpDir); err != nil {
 		r.logger.Error("cleanup-tempdirs-failed", err, lager.Data{"tmpdir": r.TmpDir})
+		return err
 	} else {
 		r.logger.Info("tempdirs-removed")
 	}
+
+	return nil
 }
