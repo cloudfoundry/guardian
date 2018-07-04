@@ -194,29 +194,31 @@ var _ = Describe("Containerd", func() {
 				})
 
 				It("connects stdout", func() {
-					stdout := gbytes.NewBuffer()
-					_, err := container.Run(garden.ProcessSpec{
+					stdout := new(bytes.Buffer)
+					process, err := container.Run(garden.ProcessSpec{
 						Path: "/bin/echo",
-						Args: []string{"hello world"},
+						Args: []string{"-n", "hello world"},
 					}, garden.ProcessIO{
 						Stdout: io.MultiWriter(GinkgoWriter, stdout),
 					})
 					Expect(err).NotTo(HaveOccurred())
+					Expect(process.Wait()).To(Equal(0))
 
-					Eventually(stdout).Should(gbytes.Say("hello world"))
+					Expect(stdout.String()).To(Equal("hello world"))
 				})
 
 				It("connects stderr", func() {
-					stderr := gbytes.NewBuffer()
-					_, err := container.Run(garden.ProcessSpec{
+					stderr := new(bytes.Buffer)
+					process, err := container.Run(garden.ProcessSpec{
 						Path: "/bin/sh",
-						Args: []string{"-c", "/bin/echo hello error 1>&2"},
+						Args: []string{"-c", "/bin/echo -n hello error 1>&2"},
 					}, garden.ProcessIO{
 						Stderr: io.MultiWriter(GinkgoWriter, stderr),
 					})
 					Expect(err).NotTo(HaveOccurred())
+					Expect(process.Wait()).To(Equal(0))
 
-					Eventually(stderr).Should(gbytes.Say("hello error"))
+					Expect(stderr.String()).To(Equal("hello error"))
 				})
 			})
 
