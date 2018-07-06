@@ -83,7 +83,7 @@ var _ = Describe("VolumeProvider", func() {
 					containerSpec = garden.ContainerSpec{
 						Handle: "some-handle",
 						Image: garden.ImageRef{
-							URI:      "docker:///alpine",
+							URI:      "docker:///alpine#3.7",
 							Username: "cakeuser",
 							Password: "cakepassword",
 						},
@@ -104,7 +104,7 @@ var _ = Describe("VolumeProvider", func() {
 					_, handle, rootfsSpec := volumeCreator.CreateArgsForCall(0)
 					Expect(handle).To(Equal("some-handle"))
 
-					parsedRootFS, err := url.Parse("docker:///alpine")
+					parsedRootFS, err := url.Parse("docker:///alpine#3.7")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(rootfsSpec).To(Equal(gardener.RootfsSpec{
 						RootFS:     parsedRootFS,

@@ -135,7 +135,7 @@ var _ = Describe("deprecated graph tests (aka garden-shed)", func() {
 			})
 
 			Context("and we run a pea with another image", func() {
-				peaDoesNotLeaveDebrisInGraphOnExit("docker:///alpine")
+				peaDoesNotLeaveDebrisInGraphOnExit("docker:///alpine#3.7")
 			})
 		})
 
@@ -149,7 +149,7 @@ var _ = Describe("deprecated graph tests (aka garden-shed)", func() {
 			})
 
 			Context("and we run a pea with another image", func() {
-				peaDoesNotLeaveDebrisInGraphOnExit("docker:///alpine")
+				peaDoesNotLeaveDebrisInGraphOnExit("docker:///alpine#3.7")
 			})
 		})
 
