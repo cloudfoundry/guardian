@@ -182,13 +182,14 @@ var _ = Describe("Containerd", func() {
 				It("connects stdin", func() {
 					stdout := gbytes.NewBuffer()
 					stdin := bytes.NewBufferString("hello from stdin")
-					_, err := container.Run(garden.ProcessSpec{
+					process, err := container.Run(garden.ProcessSpec{
 						Path: "cat",
 					}, garden.ProcessIO{
 						Stdin:  stdin,
 						Stdout: io.MultiWriter(GinkgoWriter, stdout),
 					})
 					Expect(err).NotTo(HaveOccurred())
+					Expect(process.Wait()).To(Equal(0))
 
 					Eventually(stdout).Should(gbytes.Say("hello from stdin"))
 				})

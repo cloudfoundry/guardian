@@ -95,7 +95,12 @@ func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs
 	}
 
 	log.Debug("starting-task", lager.Data{"containerID": containerID, "processID": processID})
-	return process.Start(n.context)
+	if err := process.Start(n.context); err != nil {
+		return err
+	}
+
+	log.Debug("closing-stdin", lager.Data{"containerID": containerID, "processID": processID})
+	return process.CloseIO(n.context, containerd.WithStdinCloser)
 }
 
 func withProcessIO(processIO func() (io.Reader, io.Writer, io.Writer)) cio.Opt {
