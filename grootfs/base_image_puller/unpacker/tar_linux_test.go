@@ -1,10 +1,12 @@
 package unpacker_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
@@ -13,7 +15,6 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -22,8 +23,10 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 		tarUnpacker   *unpacker.TarUnpacker
 		logger        lager.Logger
 		baseImagePath string
-		stream        *gbytes.Buffer
+		stream        *os.File
 		targetPath    string
+		tarCommand    *exec.Cmd
+		tarFilePath   string
 	)
 
 	BeforeEach(func() {
@@ -37,19 +40,25 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 		baseImagePath, err = ioutil.TempDir("", "base-image-")
 		Expect(err).NotTo(HaveOccurred())
 
+		tarFilePath = filepath.Join(os.TempDir(), (fmt.Sprintf("unpack-test-%d.tar", GinkgoParallelNode())))
+		tarCommand = exec.Command("tar", "-C", baseImagePath, "-cf", tarFilePath, ".")
+
 		logger = lagertest.NewTestLogger("test-store")
 	})
 
 	JustBeforeEach(func() {
-		stream = gbytes.NewBuffer()
-		sess, err := gexec.Start(exec.Command("tar", "-c", "-C", baseImagePath, "."), stream, nil)
+		var err error
+
+		Expect(tarCommand.Run()).To(Succeed())
+		stream, err = os.OpenFile(tarFilePath, os.O_RDONLY, 0644)
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess).Should(gexec.Exit(0))
 	})
 
 	AfterEach(func() {
+		Expect(stream.Close()).To(Succeed())
 		Expect(os.RemoveAll(baseImagePath)).To(Succeed())
 		Expect(os.RemoveAll(targetPath)).To(Succeed())
+		Expect(os.RemoveAll(tarFilePath)).To(Succeed())
 	})
 
 	Describe("Devices files", func() {
@@ -110,6 +119,31 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 
 			Expect(symlinkTargetFi.ModTime().Unix()).NotTo(Equal(symlinkFi.ModTime().Unix()))
 			Expect(symlinkFi.ModTime().Unix()).To(Equal(symlinkModTime.Unix()))
+		})
+	})
+
+	Describe("unpacking a tar in which parent dirs are not entries in the tar", func() {
+		var subDirPath string
+
+		BeforeEach(func() {
+			subDirPath = filepath.Join(baseImagePath, "parent", "subparent")
+			Expect(os.MkdirAll(subDirPath, 0755)).To(Succeed())
+			f, err := os.Create(filepath.Join(subDirPath, "cake.txt"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Close()).To(Succeed())
+
+			tarCommand = exec.Command("tar", "-cf", tarFilePath, subDirPath)
+		})
+
+		It("unpacks successfully", func() {
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				Stream:     stream,
+				TargetPath: targetPath,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			filePath := path.Join(targetPath, subDirPath, "cake.txt")
+			Expect(filePath).To(BeAnExistingFile())
 		})
 	})
 })

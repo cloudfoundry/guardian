@@ -134,17 +134,6 @@ var _ = Describe("Tar unpacker", func() {
 				filePath := path.Join(targetPath, "/hello/world", "a_file")
 				Expect(filePath).To(BeARegularFile())
 			})
-
-			Context("when the base directory doesn't exist", func() {
-				It("returns an error", func() {
-					_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-						Stream:        stream,
-						TargetPath:    targetPath,
-						BaseDirectory: "/hello/world",
-					})
-					Expect(err).To(MatchError(ContainSubstring("creating directory")))
-				})
-			})
 		})
 
 		Describe("file ownership", func() {

@@ -276,7 +276,7 @@ func (u *TarUnpacker) handleEntry(entryPath string, tarReader *tar.Reader, tarHe
 
 func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header, spec base_image_puller.UnpackSpec) error {
 	if _, err := os.Stat(path); err != nil {
-		if err = os.Mkdir(path, tarHeader.FileInfo().Mode()); err != nil {
+		if err = os.MkdirAll(path, tarHeader.FileInfo().Mode()); err != nil {
 			newErr := errors.Wrapf(err, "creating directory `%s`", path)
 
 			if os.IsPermission(err) {
