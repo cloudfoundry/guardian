@@ -285,6 +285,11 @@ func NewGardenRunner(config GdnRunnerConfig) *GardenRunner {
 }
 
 func Start(config GdnRunnerConfig) *RunningGarden {
+	if runtime.GOOS == "linux" {
+		initGrootStore(config.ImagePluginBin, config.StorePath, []string{"0:4294967294:1", "1:65536:4294901758"})
+		initGrootStore(config.PrivilegedImagePluginBin, config.PrivilegedStorePath, nil)
+	}
+
 	runner := NewGardenRunner(config)
 
 	gdn := &RunningGarden{
@@ -436,4 +441,22 @@ func intptr(i int) *int {
 
 func uint32ptr(i uint32) *uint32 {
 	return &i
+}
+
+func initGrootStore(grootBin, storePath string, idMappings []string) {
+	if filepath.Base(grootBin) != "grootfs" {
+		// Don't initialise the grootfs store for fake image plugins
+		// This is important to prevent loop device leakige!
+		return
+	}
+
+	initStoreArgs := []string{"--store", storePath, "init-store", "--store-size-bytes", fmt.Sprintf("%d", 2*1024*1024*1024)}
+	for _, idMapping := range idMappings {
+		initStoreArgs = append(initStoreArgs, "--uid-mapping", idMapping, "--gid-mapping", idMapping)
+	}
+
+	initStore := exec.Command(grootBin, initStoreArgs...)
+	initStore.Stdout = GinkgoWriter
+	initStore.Stderr = GinkgoWriter
+	Expect(initStore.Run()).To(Succeed())
 }

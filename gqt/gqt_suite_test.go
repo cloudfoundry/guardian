@@ -96,10 +96,6 @@ var _ = BeforeEach(func() {
 		containerdSession = startContainerd(containerdRunDir)
 	}
 
-	if runtime.GOOS == "linux" {
-		initGrootStore(config.ImagePluginBin, config.StorePath, []string{"0:4294967294:1", "1:65536:4294901758"})
-		initGrootStore(config.PrivilegedImagePluginBin, config.PrivilegedStorePath, nil)
-	}
 })
 
 var _ = AfterEach(func() {
@@ -152,18 +148,6 @@ func CompileGdn(additionalCompileArgs ...string) string {
 	compileArgs := append(defaultCompileArgs, additionalCompileArgs...)
 
 	return goCompile("code.cloudfoundry.org/guardian/cmd/gdn", compileArgs...)
-}
-
-func initGrootStore(grootBin, storePath string, idMappings []string) {
-	initStoreArgs := []string{"--store", storePath, "init-store", "--store-size-bytes", fmt.Sprintf("%d", 2*1024*1024*1024)}
-	for _, idMapping := range idMappings {
-		initStoreArgs = append(initStoreArgs, "--uid-mapping", idMapping, "--gid-mapping", idMapping)
-	}
-
-	initStore := exec.Command(grootBin, initStoreArgs...)
-	initStore.Stdout = GinkgoWriter
-	initStore.Stderr = GinkgoWriter
-	Expect(initStore.Run()).To(Succeed())
 }
 
 func runCommandInDir(cmd *exec.Cmd, workingDir string) string {
