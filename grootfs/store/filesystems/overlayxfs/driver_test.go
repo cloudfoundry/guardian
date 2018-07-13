@@ -76,7 +76,7 @@ var _ = Describe("Driver", func() {
 	})
 
 	Describe("InitFilesystem", func() {
-		var fsFile, storePath string
+		var fsFile string
 
 		BeforeEach(func() {
 			tempFile, err := ioutil.TempFile("", "xfs-filesystem")
@@ -148,8 +148,64 @@ var _ = Describe("Driver", func() {
 		})
 	})
 
+	Describe("MountFilesystem", func() {
+		var fsFile string
+
+		BeforeEach(func() {
+			tempFile, err := ioutil.TempFile("", "xfs-filesystem")
+			Expect(err).NotTo(HaveOccurred())
+			fsFile = tempFile.Name()
+			Expect(os.Truncate(fsFile, 1024*1024*1024)).To(Succeed())
+			cmd := exec.Command("mkfs.xfs", "-f", fsFile)
+			Expect(cmd.Run()).To(Succeed())
+
+			storePath, err = ioutil.TempDir("", "store")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			_ = syscall.Unmount(storePath, 0)
+		})
+
+		It("succcesfully mounts the filesystem", func() {
+			Expect(driver.MountFilesystem(logger, fsFile, storePath)).To(Succeed())
+			statfs := syscall.Statfs_t{}
+			Expect(syscall.Statfs(storePath, &statfs)).To(Succeed())
+			Expect(statfs.Type).To(Equal(filesystems.XfsType))
+		})
+
+		It("successfully mounts the filesystem with the correct mount options", func() {
+			Expect(driver.MountFilesystem(logger, fsFile, storePath)).To(Succeed())
+			mountinfo, err := ioutil.ReadFile("/proc/self/mountinfo")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(string(mountinfo)).To(MatchRegexp(fmt.Sprintf("%s[^\n]*noatime[^\n]*nobarrier[^\n]*prjquota", storePath)))
+		})
+
+		Context("when the store is already mounted", func() {
+			BeforeEach(func() {
+				Expect(os.Truncate(fsFile, 200*1024*1024)).To(Succeed())
+				cmd := exec.Command("mkfs.xfs", "-f", fsFile)
+				Expect(cmd.Run()).To(Succeed())
+				cmd = exec.Command("mount", "-o", "loop,pquota,noatime,nobarrier", "-t", "xfs", fsFile, storePath)
+				Expect(cmd.Run()).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				Expect(driver.MountFilesystem(logger, fsFile, storePath)).To(MatchError(ContainSubstring("already mounted")))
+			})
+		})
+
+		Context("when mounting the filesystem fails", func() {
+			It("returns an error", func() {
+				err := driver.MountFilesystem(logger, fsFile, "/tmp/no-valid")
+				Expect(err).To(MatchError(ContainSubstring("Mounting filesystem")))
+			})
+		})
+	})
+
 	Describe("DeInitFilesystem", func() {
-		var fsFile, storePath string
+		var fsFile, deinitStorePath string
 
 		BeforeEach(func() {
 			tempFile, err := ioutil.TempFile("", "xfs-filesystem")
@@ -157,27 +213,27 @@ var _ = Describe("Driver", func() {
 			fsFile = tempFile.Name()
 			Expect(os.Truncate(fsFile, 1024*1024*1024)).To(Succeed())
 
-			storePath, err = ioutil.TempDir("", "store")
+			deinitStorePath, err = ioutil.TempDir("", "store")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(driver.InitFilesystem(logger, fsFile, storePath)).To(Succeed())
-			Expect(testhelpers.XFSMountPoints()).To(ContainElement(storePath))
+			Expect(driver.InitFilesystem(logger, fsFile, deinitStorePath)).To(Succeed())
+			Expect(testhelpers.XFSMountPoints()).To(ContainElement(deinitStorePath))
 		})
 
 		It("succcesfully unmounts a filesystem", func() {
-			Expect(driver.DeInitFilesystem(logger, storePath)).To(Succeed())
-			Expect(testhelpers.XFSMountPoints()).NotTo(ContainElement(storePath))
+			Expect(driver.DeInitFilesystem(logger, deinitStorePath)).To(Succeed())
+			Expect(testhelpers.XFSMountPoints()).NotTo(ContainElement(deinitStorePath))
 		})
 
 		Context("when the store path is not a mountpoint", func() {
 			var newPath string
 			BeforeEach(func() {
-				newPath = path.Join(storePath, "milkyway")
+				newPath = path.Join(deinitStorePath, "milkyway")
 				Expect(os.MkdirAll(newPath, 0755)).To(Succeed())
 			})
 
 			It("succcesfully unmounts a filesystem", func() {
 				Expect(driver.DeInitFilesystem(logger, newPath)).To(Succeed())
-				Expect(testhelpers.XFSMountPoints()).To(ContainElement(storePath))
+				Expect(testhelpers.XFSMountPoints()).To(ContainElement(deinitStorePath))
 			})
 		})
 
@@ -782,10 +838,6 @@ var _ = Describe("Driver", func() {
 		const (
 			currentUID = 2001
 			currentGID = 2002
-		)
-
-		var (
-			storePath string
 		)
 
 		BeforeEach(func() {

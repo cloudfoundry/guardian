@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"syscall"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
@@ -111,6 +112,20 @@ var _ = Describe("Init Store", func() {
 				Expect(runner.WithStderr(logs).InitStore(spec)).To(Succeed())
 
 				Expect(logs).To(gbytes.Say("store-already-initialized"))
+			})
+		})
+
+		Context("but the backing store file is not mounted", func() {
+			BeforeEach(func() {
+				Expect(runner.InitStore(spec)).To(Succeed())
+				Expect(ioutil.WriteFile(filepath.Join(storePath, "test"), []byte{}, 0777)).To(Succeed())
+				Expect(syscall.Unmount(storePath, 0)).To(Succeed())
+				Eventually(queryStoreMountInfo(storePath)).Should(BeEmpty())
+			})
+
+			It("remounts it", func() {
+				Expect(runner.InitStore(spec)).To(Succeed())
+				Expect(filepath.Join(storePath, "test")).To(BeAnExistingFile())
 			})
 		})
 	})
@@ -269,3 +284,10 @@ var _ = Describe("Init Store", func() {
 		})
 	})
 })
+
+func queryStoreMountInfo(path string) func() string {
+	return func() string {
+		outBytes, _ := exec.Command("/bin/sh", "-c", "/bin/cat /proc/self/mountinfo | grep "+path).Output()
+		return string(outBytes)
+	}
+}

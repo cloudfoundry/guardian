@@ -471,6 +471,50 @@ var _ = Describe("Manager", func() {
 				Expect(storeDriver.InitFilesystemCallCount()).To(Equal(0))
 			})
 		})
+
+		When("the backing store exists", func() {
+			BeforeEach(func() {
+				spec.StoreSizeBytes = 10000000000000
+				Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
+				Expect(ioutil.WriteFile(fmt.Sprintf("%s.backing-store", storePath), []byte{}, 0777)).To(Succeed())
+			})
+
+			It("mounts it", func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(storeDriver.MountFilesystemCallCount()).To(Equal(1))
+				_, actualBackingStorePath, actualStorePath := storeDriver.MountFilesystemArgsForCall(0)
+				Expect(actualBackingStorePath).To(Equal(fmt.Sprintf("%s.backing-store", storePath)))
+				Expect(actualStorePath).To(Equal(fmt.Sprintf(storePath)))
+			})
+
+			When("the backing store is already mounted", func() {
+				BeforeEach(func() {
+					storeDriver.MountFilesystemReturns(errors.New("already-mounted"))
+				})
+
+				It("succeeds", func() {
+					Expect(manager.InitStore(logger, spec)).To(Succeed())
+				})
+
+				It("does not reinit the store", func() {
+					Expect(manager.InitStore(logger, spec)).To(Succeed())
+					Expect(storeDriver.InitFilesystemCallCount()).To(Equal(0))
+				})
+			})
+
+			When("mounting the backing store fails for any other reason", func() {
+				BeforeEach(func() {
+					storeDriver.MountFilesystemReturns(errors.New("mount-failure"))
+					// mounting falied => validation fails (due to e.g. corrupted backing store)
+					storeDriver.ValidateFileSystemReturns(errors.New("validation-error"))
+				})
+
+				It("reinits the store", func() {
+					Expect(manager.InitStore(logger, spec)).To(Succeed())
+					Expect(storeDriver.InitFilesystemCallCount()).To(Equal(1))
+				})
+			})
+		})
 	})
 
 	Describe("IsStoreInitialized", func() {

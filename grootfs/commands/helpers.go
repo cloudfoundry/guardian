@@ -26,6 +26,7 @@ type fileSystemDriver interface {
 	ConfigureStore(logger lager.Logger, storePath string, ownerUID, ownerGID int) error
 	ValidateFileSystem(logger lager.Logger, path string) error
 	InitFilesystem(logger lager.Logger, filesystemPath, storePath string) error
+	MountFilesystem(logger lager.Logger, filesystemPath, storePath string) error
 	DeInitFilesystem(logger lager.Logger, storePath string) error
 	VolumePath(logger lager.Logger, id string) (string, error)
 	Volumes(logger lager.Logger) ([]string, error)

@@ -60,6 +60,19 @@ type FakeStoreDriver struct {
 	deInitFilesystemReturnsOnCall map[int]struct {
 		result1 error
 	}
+	MountFilesystemStub        func(logger lager.Logger, filesystemPath, storePath string) error
+	mountFilesystemMutex       sync.RWMutex
+	mountFilesystemArgsForCall []struct {
+		logger         lager.Logger
+		filesystemPath string
+		storePath      string
+	}
+	mountFilesystemReturns struct {
+		result1 error
+	}
+	mountFilesystemReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -263,6 +276,56 @@ func (fake *FakeStoreDriver) DeInitFilesystemReturnsOnCall(i int, result1 error)
 	}{result1}
 }
 
+func (fake *FakeStoreDriver) MountFilesystem(logger lager.Logger, filesystemPath string, storePath string) error {
+	fake.mountFilesystemMutex.Lock()
+	ret, specificReturn := fake.mountFilesystemReturnsOnCall[len(fake.mountFilesystemArgsForCall)]
+	fake.mountFilesystemArgsForCall = append(fake.mountFilesystemArgsForCall, struct {
+		logger         lager.Logger
+		filesystemPath string
+		storePath      string
+	}{logger, filesystemPath, storePath})
+	fake.recordInvocation("MountFilesystem", []interface{}{logger, filesystemPath, storePath})
+	fake.mountFilesystemMutex.Unlock()
+	if fake.MountFilesystemStub != nil {
+		return fake.MountFilesystemStub(logger, filesystemPath, storePath)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.mountFilesystemReturns.result1
+}
+
+func (fake *FakeStoreDriver) MountFilesystemCallCount() int {
+	fake.mountFilesystemMutex.RLock()
+	defer fake.mountFilesystemMutex.RUnlock()
+	return len(fake.mountFilesystemArgsForCall)
+}
+
+func (fake *FakeStoreDriver) MountFilesystemArgsForCall(i int) (lager.Logger, string, string) {
+	fake.mountFilesystemMutex.RLock()
+	defer fake.mountFilesystemMutex.RUnlock()
+	return fake.mountFilesystemArgsForCall[i].logger, fake.mountFilesystemArgsForCall[i].filesystemPath, fake.mountFilesystemArgsForCall[i].storePath
+}
+
+func (fake *FakeStoreDriver) MountFilesystemReturns(result1 error) {
+	fake.MountFilesystemStub = nil
+	fake.mountFilesystemReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeStoreDriver) MountFilesystemReturnsOnCall(i int, result1 error) {
+	fake.MountFilesystemStub = nil
+	if fake.mountFilesystemReturnsOnCall == nil {
+		fake.mountFilesystemReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.mountFilesystemReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeStoreDriver) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -274,6 +337,8 @@ func (fake *FakeStoreDriver) Invocations() map[string][][]interface{} {
 	defer fake.initFilesystemMutex.RUnlock()
 	fake.deInitFilesystemMutex.RLock()
 	defer fake.deInitFilesystemMutex.RUnlock()
+	fake.mountFilesystemMutex.RLock()
+	defer fake.mountFilesystemMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

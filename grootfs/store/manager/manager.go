@@ -22,6 +22,7 @@ type StoreDriver interface {
 	ValidateFileSystem(logger lager.Logger, path string) error
 	InitFilesystem(logger lager.Logger, filesystemPath, storePath string) error
 	DeInitFilesystem(logger lager.Logger, storePath string) error
+	MountFilesystem(logger lager.Logger, filesystemPath, storePath string) error
 }
 
 type Manager struct {
@@ -81,20 +82,24 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) (err error) {
 		}
 	}()
 
-	if err := m.storeDriver.ValidateFileSystem(logger, validationPath); err != nil {
+	if err = m.mountFileSystemIfBackingStoreExists(logger); err != nil {
+		logger.Info(errorspkg.Wrap(err, "existing-backing-store-could-not-be-mounted").Error())
+	}
+
+	if err = m.storeDriver.ValidateFileSystem(logger, validationPath); err != nil {
 		logger.Debug(errorspkg.Wrap(err, "store-could-not-be-validated").Error())
 		if spec.StoreSizeBytes <= 0 {
 			return errorspkg.Wrap(err, "validating store path filesystem")
 		}
 
-		if err := m.createAndMountFilesystem(logger, spec.StoreSizeBytes); err != nil {
+		if err = m.createAndMountFilesystem(logger, spec.StoreSizeBytes); err != nil {
 			return err
 		}
 	} else {
 		logger.Debug("store-already-initialized")
 	}
 
-	if err := os.MkdirAll(filepath.Join(m.storePath, store.MetaDirName), 0755); err != nil {
+	if err = os.MkdirAll(filepath.Join(m.storePath, store.MetaDirName), 0755); err != nil {
 		logger.Error("init-store-failed", err)
 		return errorspkg.Wrap(err, "initializing store")
 	}
@@ -116,6 +121,13 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) (err error) {
 		return errorspkg.Wrap(err, "running filesystem-specific configuration")
 	}
 
+	return nil
+}
+
+func (m *Manager) mountFileSystemIfBackingStoreExists(logger lager.Logger) error {
+	if m.backingStoreFileExists() {
+		return m.storeDriver.MountFilesystem(logger, m.getBackingStoreFilePath(), m.storePath)
+	}
 	return nil
 }
 
@@ -218,7 +230,7 @@ func (m *Manager) createAndMountFilesystem(logger lager.Logger, storeSizeBytes i
 		return errorspkg.Wrap(err, "initializing store")
 	}
 
-	backingStoreFile := fmt.Sprintf("%s.backing-store", m.storePath)
+	backingStoreFile := m.getBackingStoreFilePath()
 	if _, err := os.Stat(backingStoreFile); os.IsNotExist(err) {
 		if err := ioutil.WriteFile(backingStoreFile, []byte{}, 0600); err != nil {
 			logger.Error("writing-backing-store-file", err, lager.Data{"backingstoreFile": backingStoreFile})
@@ -237,6 +249,15 @@ func (m *Manager) createAndMountFilesystem(logger lager.Logger, storeSizeBytes i
 	}
 
 	return nil
+}
+
+func (m *Manager) getBackingStoreFilePath() string {
+	return fmt.Sprintf("%s.backing-store", m.storePath)
+}
+
+func (m *Manager) backingStoreFileExists() bool {
+	_, err := os.Stat(m.getBackingStoreFilePath())
+	return !os.IsNotExist(err)
 }
 
 func (m *Manager) images() ([]string, error) {
