@@ -25,6 +25,12 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
+const (
+	defaultDirectoryFileMode = 0755
+	defaultDirectoryUid      = 0
+	defaultDirectoryGid      = 0
+)
+
 func init() {
 	var fail = func(logger lager.Logger, message string, err error) {
 		logger.Error(message, err)
@@ -245,6 +251,10 @@ func (u *TarUnpacker) unpack(logger lager.Logger, spec base_image_puller.UnpackS
 }
 
 func (u *TarUnpacker) handleEntry(entryPath string, tarReader *tar.Reader, tarHeader *tar.Header, spec base_image_puller.UnpackSpec) (entrySize int64, err error) {
+	if err := ensureParentDir(entryPath); err != nil {
+		return 0, err
+	}
+
 	switch tarHeader.Typeflag {
 	case tar.TypeBlock, tar.TypeChar:
 		// ignore devices
@@ -276,7 +286,7 @@ func (u *TarUnpacker) handleEntry(entryPath string, tarReader *tar.Reader, tarHe
 
 func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header, spec base_image_puller.UnpackSpec) error {
 	if _, err := os.Stat(path); err != nil {
-		if err = os.MkdirAll(path, tarHeader.FileInfo().Mode()); err != nil {
+		if err = os.Mkdir(path, tarHeader.FileInfo().Mode()); err != nil {
 			newErr := errors.Wrapf(err, "creating directory `%s`", path)
 
 			if os.IsPermission(err) {
@@ -337,6 +347,24 @@ func (u *TarUnpacker) createSymlink(path string, tarHeader *tar.Header, spec bas
 
 func (u *TarUnpacker) createLink(path string, tarHeader *tar.Header) error {
 	return os.Link(tarHeader.Linkname, path)
+}
+
+func ensureParentDir(childPath string) error {
+	parentDirPath := filepath.Dir(childPath)
+
+	if _, err := os.Stat(parentDirPath); err != nil {
+		if err := os.MkdirAll(parentDirPath, defaultDirectoryFileMode); err != nil {
+			return errors.Wrapf(err, "creating parent dir `%s`", parentDirPath)
+		}
+
+		if err := os.Chmod(parentDirPath, defaultDirectoryFileMode); err != nil {
+			return err
+		}
+
+		return os.Chown(parentDirPath, defaultDirectoryUid, defaultDirectoryGid)
+	}
+
+	return nil
 }
 
 func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarReader *tar.Reader, spec base_image_puller.UnpackSpec) (int64, error) {

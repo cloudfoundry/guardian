@@ -121,29 +121,4 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 			Expect(symlinkFi.ModTime().Unix()).To(Equal(symlinkModTime.Unix()))
 		})
 	})
-
-	Describe("unpacking a tar in which parent dirs are not entries in the tar", func() {
-		var subDirPath string
-
-		BeforeEach(func() {
-			subDirPath = filepath.Join(baseImagePath, "parent", "subparent")
-			Expect(os.MkdirAll(subDirPath, 0755)).To(Succeed())
-			f, err := os.Create(filepath.Join(subDirPath, "cake.txt"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(f.Close()).To(Succeed())
-
-			tarCommand = exec.Command("tar", "-cf", tarFilePath, subDirPath)
-		})
-
-		It("unpacks successfully", func() {
-			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-				Stream:     stream,
-				TargetPath: targetPath,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			filePath := path.Join(targetPath, subDirPath, "cake.txt")
-			Expect(filePath).To(BeAnExistingFile())
-		})
-	})
 })

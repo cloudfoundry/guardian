@@ -442,6 +442,22 @@ var _ = Describe("Create with OCI images", func() {
 		})
 	})
 
+	Context("when the image does not include entries in the layer tar for parent dirs", func() {
+		BeforeEach(func() {
+			baseImageURL = integration.String2URL(fmt.Sprintf("oci:///%s/assets/oci-test-image/noparents", workDir))
+		})
+
+		It("succeeds", func() {
+			containerSpec, err := runner.Create(groot.CreateSpec{
+				BaseImageURL: baseImageURL,
+				ID:           randomImageID,
+				Mount:        mountByDefault(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
+		})
+	})
+
 	Context("when --skip-layer-validation flag is passed", func() {
 		It("does not validate the checksums for oci image layers", func() {
 			containerSpec, err := runner.SkipLayerCheckSumValidation().Create(groot.CreateSpec{

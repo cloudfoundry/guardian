@@ -38,6 +38,7 @@ var _ = Describe("Tar unpacker", func() {
 		stream             io.ReadWriteCloser
 		targetPath         string
 		whiteoutDevicePath string
+		filepathToTar      string
 	)
 
 	BeforeEach(func() {
@@ -58,11 +59,13 @@ var _ = Describe("Tar unpacker", func() {
 		whiteoutDevicePath = filepath.Join(tmpDir, "whiteout_device")
 
 		Expect(syscall.Mknod(whiteoutDevicePath, syscall.S_IFCHR, 0)).To(Succeed())
+
+		filepathToTar = "."
 	})
 
 	JustBeforeEach(func() {
 		stream = gbytes.NewBuffer()
-		sess, err := gexec.Start(exec.Command("tar", "-c", "-C", baseImagePath, "."), stream, nil)
+		sess, err := gexec.Start(exec.Command("tar", "-c", "-C", baseImagePath, filepathToTar), stream, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
 	})
@@ -213,6 +216,60 @@ var _ = Describe("Tar unpacker", func() {
 				})
 			})
 		})
+
+		Context("when parent directories are not individual entries in the source tar", func() {
+			BeforeEach(func() {
+				Expect(os.MkdirAll(path.Join(baseImagePath, "parentdir1", "parentdir2"), 0755)).To(Succeed())
+				Expect(ioutil.WriteFile(path.Join(baseImagePath, "parentdir1", "parentdir2", "a_file"), []byte("hello-world"), 0600)).To(Succeed())
+
+				// results in a tar of the format:
+				// parentdir1/parentdir2/a_file
+				filepathToTar = filepath.Join("parentdir1", "parentdir2", "a_file")
+			})
+
+			It("succeeds in creating regular files", func() {
+				_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					Stream:     stream,
+					TargetPath: targetPath,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				filePath := path.Join(targetPath, "parentdir1", "parentdir2", "a_file")
+				Expect(filePath).To(BeARegularFile())
+
+				contents, err := ioutil.ReadFile(filePath)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(string(contents)).To(Equal("hello-world"))
+			})
+
+			It("applies default permissions of root:root and 0755 to the parent dirs", func() {
+				_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					Stream:     stream,
+					TargetPath: targetPath,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				parentDirPaths := []string{
+					path.Join(targetPath, "parentdir1"),
+					path.Join(targetPath, "parentdir1", "parentdir2"),
+				}
+
+				for _, parentDirPath := range parentDirPaths {
+					Expect(parentDirPath).To(BeADirectory())
+
+					info, err := os.Stat(parentDirPath)
+					Expect(err).NotTo(HaveOccurred())
+
+					uid := info.Sys().(*syscall.Stat_t).Uid
+					gid := info.Sys().(*syscall.Stat_t).Gid
+
+					Expect(info.Mode().String()).To(Equal("drwxr-xr-x"))
+					Expect(uid).To(Equal(uint32(0)))
+					Expect(gid).To(Equal(uint32(0)))
+				}
+			})
+		})
 	})
 
 	Describe("directories", func() {
@@ -304,6 +361,47 @@ var _ = Describe("Tar unpacker", func() {
 					Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(1000)))
 					Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
 				})
+			})
+		})
+
+		Context("when parent directories are not individual entries in the source tar", func() {
+			BeforeEach(func() {
+				// results in a tar of the format:
+				// subdir/subdir2
+				// subdir/subdir2/another_file
+				filepathToTar = filepath.Join("subdir", "subdir2")
+			})
+
+			It("succeeds in creating directories", func() {
+				_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					Stream:     stream,
+					TargetPath: targetPath,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				filePath := path.Join(targetPath, "subdir", "subdir2")
+				Expect(filePath).To(BeADirectory())
+			})
+
+			It("applies default permissions of root:root and 0755 to the parent dirs", func() {
+				_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					Stream:     stream,
+					TargetPath: targetPath,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				parentDirPath := path.Join(targetPath, "subdir")
+				Expect(parentDirPath).To(BeADirectory())
+
+				info, err := os.Stat(parentDirPath)
+				Expect(err).NotTo(HaveOccurred())
+
+				uid := info.Sys().(*syscall.Stat_t).Uid
+				gid := info.Sys().(*syscall.Stat_t).Gid
+
+				Expect(info.Mode().String()).To(Equal("drwxr-xr-x"))
+				Expect(uid).To(Equal(uint32(0)))
+				Expect(gid).To(Equal(uint32(0)))
 			})
 		})
 	})
