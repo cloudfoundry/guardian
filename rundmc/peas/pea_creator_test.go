@@ -457,6 +457,10 @@ var _ = Describe("PeaCreator", func() {
 				Expect(createErr.Error()).To(ContainSubstring("execrunner-error"))
 			})
 
+			It("does not leak the pea process dir", func() {
+				Expect(filepath.Join(ctrBundleDir, "processes", "some-id")).ToNot(BeADirectory())
+			})
+
 			It("invokes cleanup on the volumizer", func() {
 				Expect(volumizer.DestroyCallCount()).To(Equal(1))
 			})

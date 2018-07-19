@@ -55,7 +55,7 @@ type PeaCreator struct {
 	PeaCleaner             gardener.PeaCleaner
 }
 
-func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error) {
+func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (_ garden.Process, theErr error) {
 	errs := func(action string, err error) (garden.Process, error) {
 		wrappedErr := errorwrapper.Wrap(err, action)
 		log.Error(action, wrappedErr)
@@ -71,11 +71,6 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 
 	log.Info("creating", lager.Data{"process_id": processID})
 	defer log.Info("done")
-
-	peaBundlePath := filepath.Join(sandboxBundlePath, "processes", processID)
-	if mkdirErr := os.MkdirAll(peaBundlePath, 0700); mkdirErr != nil {
-		return nil, err
-	}
 
 	privileged, err := p.PrivilegedGetter.Privileged(sandboxBundlePath)
 	if err != nil {
@@ -140,6 +135,19 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		destroyErr := p.Volumizer.Destroy(log, processID)
 		return errs("generating-bundle", multierror.Append(genErr, destroyErr))
 	}
+
+	peaBundlePath := filepath.Join(sandboxBundlePath, "processes", processID)
+	if mkdirErr := os.MkdirAll(peaBundlePath, 0700); mkdirErr != nil {
+		return nil, err
+	}
+	defer func() {
+		if theErr != nil {
+			err := os.RemoveAll(peaBundlePath)
+			if err != nil {
+				log.Info("failed-to-remove-pea-process-dir: "+err.Error(), lager.Data{"process_id": processID})
+			}
+		}
+	}()
 
 	preparedProcess := p.ProcessBuilder.BuildProcess(bndl, processSpec, userUID, userGID)
 
