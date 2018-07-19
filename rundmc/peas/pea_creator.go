@@ -153,10 +153,16 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		return p.PeaCleaner.Clean(log, processID)
 	}
 
-	return p.ExecRunner.Run(
+	proc, runErr := p.ExecRunner.Run(
 		log, processID, peaBundlePath, sandboxHandle, sandboxBundlePath,
 		procIO, preparedProcess.Terminal, nil, extraCleanup,
 	)
+	if runErr != nil {
+		destroyErr := p.Volumizer.Destroy(log, processID)
+		return nil, multierror.Append(runErr, destroyErr)
+	}
+
+	return proc, nil
 }
 
 func (p *PeaCreator) linuxNamespaces(log lager.Logger, sandboxHandle string, privileged bool) (map[string]string, error) {

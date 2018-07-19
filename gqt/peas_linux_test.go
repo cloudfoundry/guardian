@@ -300,19 +300,6 @@ var _ = Describe("Partially shared containers (peas)", func() {
 			})
 		})
 	})
-
-	Context("when creating a pea fails", func() {
-		It("should cleanup the process dir", func() {
-			_, err := ctr.Run(garden.ProcessSpec{
-				ID:    "failingPea",
-				Path:  "nonexistent",
-				Image: garden.ImageRef{URI: "raw://" + peaRootfs},
-			}, garden.ProcessIO{})
-			Expect(err).To(MatchError(ContainSubstring("executable file not found")))
-
-			Expect(filepath.Join(config.DepotDir, ctr.Handle(), "processes", "failingPea")).NotTo(BeADirectory())
-		})
-	})
 })
 
 func collectPeaPids(handle string) []string {
