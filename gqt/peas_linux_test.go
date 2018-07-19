@@ -202,7 +202,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		})
 	})
 
-	Describe("Process dir", func() {
+	Describe("Process dir cleanup", func() {
 		var processPath string
 
 		JustBeforeEach(func() {
@@ -216,6 +216,10 @@ var _ = Describe("Partially shared containers (peas)", func() {
 			processPath = filepath.Join(gdn.DepotDir, ctr.Handle(), "processes", process.ID())
 		})
 
+		It("should not delete pea process dir", func() {
+			Expect(processPath).To(BeADirectory())
+		})
+
 		Context("when --cleanup-process-dirs-on-wait is set", func() {
 			BeforeEach(func() {
 				config.CleanupProcessDirsOnWait = boolptr(true)
@@ -223,16 +227,6 @@ var _ = Describe("Partially shared containers (peas)", func() {
 
 			It("should delete pea process dir", func() {
 				Expect(processPath).NotTo(BeADirectory())
-			})
-		})
-
-		Context("when --cleanup-process-dirs-on-wait is not set (default)", func() {
-			BeforeEach(func() {
-				config.CleanupProcessDirsOnWait = boolptr(false)
-			})
-
-			It("should not delete pea process dir", func() {
-				Expect(processPath).To(BeADirectory())
 			})
 		})
 	})
