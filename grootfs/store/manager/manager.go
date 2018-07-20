@@ -111,10 +111,6 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) (err error) {
 	}
 
 	ownerUID, ownerGID := m.findStoreOwner(spec.UIDMappings, spec.GIDMappings)
-	if err := os.Chown(m.storePath, ownerUID, ownerGID); err != nil {
-		logger.Error("chowning-store-path-failed", err, lager.Data{"uid": ownerUID, "gid": ownerGID})
-		return errorspkg.Wrap(err, "chowing store")
-	}
 
 	if err := m.configureStore(logger, ownerUID, ownerGID); err != nil {
 		logger.Error("store-filesystem-specific-configuration-failed", err)
@@ -156,11 +152,6 @@ func (m *Manager) configureStore(logger lager.Logger, ownerUID, ownerGID int) er
 	if err := os.Chown(m.storePath, ownerUID, ownerGID); err != nil {
 		logger.Error("store-ownership-change-failed", err, lager.Data{"target-uid": ownerUID, "target-gid": ownerGID})
 		return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", ownerUID, ownerGID, m.storePath)
-	}
-
-	if err := os.Chmod(m.storePath, 0700); err != nil {
-		logger.Error("store-permission-change-failed", err)
-		return errorspkg.Wrapf(err, "changing store permissions %s", m.storePath)
 	}
 
 	for _, folderName := range store.StoreFolders {
@@ -225,7 +216,7 @@ func (m *Manager) DeleteStore(logger lager.Logger) error {
 }
 
 func (m *Manager) createAndMountFilesystem(logger lager.Logger, storeSizeBytes int64) error {
-	if err := os.MkdirAll(m.storePath, 0755); err != nil {
+	if err := os.MkdirAll(m.storePath, 0700); err != nil {
 		logger.Error("init-store-failed", err)
 		return errorspkg.Wrap(err, "initializing store")
 	}
