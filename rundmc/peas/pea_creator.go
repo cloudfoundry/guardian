@@ -141,11 +141,12 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		return nil, err
 	}
 	defer func() {
-		if theErr != nil {
-			err := os.RemoveAll(peaBundlePath)
-			if err != nil {
-				log.Info("failed-to-remove-pea-process-dir: "+err.Error(), lager.Data{"process_id": processID})
-			}
+		if theErr == nil {
+			return
+		}
+
+		if err := os.RemoveAll(peaBundlePath); err != nil {
+			log.Info("failed-to-remove-pea-process-dir: "+err.Error(), lager.Data{"process_id": processID})
 		}
 	}()
 
