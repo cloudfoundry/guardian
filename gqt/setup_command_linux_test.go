@@ -50,7 +50,10 @@ var _ = Describe("gdn setup", func() {
 	})
 
 	AfterEach(func() {
-		Expect(cgrouper.CleanGardenCgroups(cgroupsRoot, tag)).To(Succeed())
+		cleanCgroups := func() error {
+			return cgrouper.CleanGardenCgroups(cgroupsRoot, tag)
+		}
+		Eventually(cleanCgroups, 3*time.Second).Should(Succeed())
 	})
 
 	Describe("cgroups", func() {

@@ -12,23 +12,26 @@ import (
 func CleanGardenCgroups(cgroupsRootPath, tag string) error {
 	subsystems, err := ioutil.ReadDir(cgroupsRootPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("read cgroup root dir %s: %v", cgroupsRootPath, err)
 	}
 
 	for _, subsystem := range subsystems {
-		if err := unmountIfExists(filepath.Join(cgroupsRootPath, subsystem.Name())); err != nil {
-			return err
+		if err = unmountIfExists(filepath.Join(cgroupsRootPath, subsystem.Name())); err != nil {
+			return fmt.Errorf("unmount subsystem %s: %v", subsystem.Name(), err)
 		}
 	}
 
-	return unmountIfExists(cgroupsRootPath)
-}
-
-func unmountIfExists(unmountPath string) error {
-	unmountErr := unix.Unmount(unmountPath, unix.MNT_FORCE)
-	if unmountErr != nil && !os.IsNotExist(unmountErr) {
-		return fmt.Errorf("Failed to unmount %s: %s", unmountPath, unmountErr)
+	if err = unmountIfExists(cgroupsRootPath); err != nil {
+		return fmt.Errorf("unmount cgroup root %s: %v", cgroupsRootPath, err)
 	}
 
 	return nil
+}
+
+func unmountIfExists(unmountPath string) error {
+	err := unix.Unmount(unmountPath, 0)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
 }
