@@ -374,10 +374,13 @@ var _ = Describe("Creating a Container", func() {
 		})
 	})
 
-	Context("when creating a container and specifying CPU limits", func() {
-		createContainerWithCpuShares := func(share uint64) (garden.Container, error) {
+	Context("when creating a container and specifying CPU configuration", func() {
+		createContainerWithCpuConfig := func(weight, shares uint64) (garden.Container, error) {
 			limits := garden.Limits{
-				CPU: garden.CPULimits{LimitInShares: share},
+				CPU: garden.CPULimits{
+					Weight:        weight,
+					LimitInShares: shares,
+				},
 			}
 
 			container, err := client.Create(garden.ContainerSpec{
@@ -398,22 +401,38 @@ var _ = Describe("Creating a Container", func() {
 			Expect(cpuShares).To(Equal(strconv.Itoa(expected)))
 		}
 
+		It("can set the cpu weight", func() {
+			container, err := createContainerWithCpuConfig(2, 0)
+			Expect(err).NotTo(HaveOccurred())
+			checkCPUSharesInContainer(container, client.Pid, 2)
+		})
+
 		It("should return an error when the cpu shares is invalid", func() {
-			_, err := createContainerWithCpuShares(1)
+			_, err := createContainerWithCpuConfig(1, 0)
 
 			Expect(err.Error()).To(ContainSubstring("The minimum allowed cpu-shares is 2"))
 		})
 
-		It("should use the default value when the cpu share is set to zero", func() {
-			container, err := createContainerWithCpuShares(0)
+		It("should use the default weight value when neither the cpu share or weight are set", func() {
+			container, err := createContainerWithCpuConfig(0, 0)
 			Expect(err).NotTo(HaveOccurred())
 			checkCPUSharesInContainer(container, client.Pid, 1024)
 		})
 
-		It("should use the custom cpu shares limit", func() {
-			container, err := createContainerWithCpuShares(2)
-			Expect(err).NotTo(HaveOccurred())
-			checkCPUSharesInContainer(container, client.Pid, 2)
+		Context("when LimitInShares is set", func() {
+			It("creates a container with the shares", func() {
+				container, err := createContainerWithCpuConfig(0, 123)
+				Expect(err).NotTo(HaveOccurred())
+				checkCPUSharesInContainer(container, client.Pid, 123)
+			})
+		})
+
+		Context("when both Weight and LimitInShares are set", func() {
+			It("Weight has precedence", func() {
+				container, err := createContainerWithCpuConfig(123, 456)
+				Expect(err).NotTo(HaveOccurred())
+				checkCPUSharesInContainer(container, client.Pid, 123)
+			})
 		})
 	})
 

@@ -71,7 +71,7 @@ var _ = Describe("LimitsRule", func() {
 	It("sets the correct CPU limit in bundle resources", func() {
 		newBndl, err := bundlerules.Limits{}.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 			Limits: garden.Limits{
-				CPU: garden.CPULimits{LimitInShares: 1},
+				CPU: garden.CPULimits{Weight: 1},
 			},
 		}, "not-needed-path")
 		Expect(err).NotTo(HaveOccurred())
@@ -83,19 +83,19 @@ var _ = Describe("LimitsRule", func() {
 
 	Context("when a positive cpu quota period per share is provided", func() {
 		It("sets the correct CPU limit in bundle resources", func() {
-			var quotaPerShare, limitInShares uint64 = 100, 128
+			var quotaPerShare, weight uint64 = 100, 128
 			limits := bundlerules.Limits{
 				CpuQuotaPerShare: quotaPerShare,
 			}
 			newBndl, err := limits.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 				Limits: garden.Limits{
-					CPU: garden.CPULimits{LimitInShares: limitInShares},
+					CPU: garden.CPULimits{Weight: weight},
 				},
 			}, "not-needed-path")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(*(newBndl.Resources().CPU.Period)).To(BeNumerically("==", 100000))
-			Expect(*(newBndl.Resources().CPU.Quota)).To(BeNumerically("==", limitInShares*quotaPerShare))
+			Expect(*(newBndl.Resources().CPU.Quota)).To(BeNumerically("==", weight*quotaPerShare))
 		})
 	})
 
@@ -106,7 +106,7 @@ var _ = Describe("LimitsRule", func() {
 			}
 			newBndl, err := limits.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 				Limits: garden.Limits{
-					CPU: garden.CPULimits{LimitInShares: 1},
+					CPU: garden.CPULimits{Weight: 1},
 				},
 			}, "not-needed-path")
 			Expect(err).NotTo(HaveOccurred())
@@ -122,7 +122,7 @@ var _ = Describe("LimitsRule", func() {
 			}
 			newBndl, err := limits.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 				Limits: garden.Limits{
-					CPU: garden.CPULimits{LimitInShares: 1},
+					CPU: garden.CPULimits{Weight: 1},
 				},
 			}, "not-needed-path")
 			Expect(err).NotTo(HaveOccurred())
@@ -144,6 +144,32 @@ var _ = Describe("LimitsRule", func() {
 			Expect(*(newBndl.Resources().CPU.Shares)).To(BeNumerically("==", 0))
 			Expect(newBndl.Resources().CPU.Period).To(BeNil())
 			Expect(newBndl.Resources().CPU.Quota).To(BeNil())
+		})
+	})
+
+	Context("when LimitInShares is set", func() {
+		It("sets the CPU shares", func() {
+			newBndl, err := bundlerules.Limits{}.Apply(goci.Bundle(), spec.DesiredContainerSpec{
+				Limits: garden.Limits{
+					CPU: garden.CPULimits{LimitInShares: 1},
+				},
+			}, "not-needed-path")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(*(newBndl.Resources().CPU.Shares)).To(BeNumerically("==", 1))
+		})
+	})
+
+	Context("when both Weight and LimitInShares are set", func() {
+		It("Weight has precedence ", func() {
+			newBndl, err := bundlerules.Limits{}.Apply(goci.Bundle(), spec.DesiredContainerSpec{
+				Limits: garden.Limits{
+					CPU: garden.CPULimits{LimitInShares: 1, Weight: 2},
+				},
+			}, "not-needed-path")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(*(newBndl.Resources().CPU.Shares)).To(BeNumerically("==", 2))
 		})
 	})
 

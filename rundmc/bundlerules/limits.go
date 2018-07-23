@@ -27,6 +27,9 @@ func (l Limits) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) 
 	bndl = bndl.WithMemoryLimit(specs.LinuxMemory{Limit: &limit, Swap: swapLimit, KernelTCP: &l.TCPMemoryLimit})
 
 	shares := uint64(spec.Limits.CPU.LimitInShares)
+	if spec.Limits.CPU.Weight > 0 {
+		shares = uint64(spec.Limits.CPU.Weight)
+	}
 	cpuSpec := specs.LinuxCPU{Shares: &shares}
 	if l.CpuQuotaPerShare > 0 && shares > 0 {
 		cpuSpec.Period = &CpuPeriod
