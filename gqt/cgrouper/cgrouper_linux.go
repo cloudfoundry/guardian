@@ -30,7 +30,8 @@ func CleanGardenCgroups(cgroupsRootPath, tag string) error {
 
 func unmountIfExists(unmountPath string) error {
 	err := unix.Unmount(unmountPath, 0)
-	if os.IsNotExist(err) {
+	// If no flags in unmount, EINVAL can only mean target does not exist
+	if os.IsNotExist(err) || err == unix.EINVAL {
 		return nil
 	}
 	return err
