@@ -122,6 +122,7 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) (err error) {
 
 func (m *Manager) mountFileSystemIfBackingStoreExists(logger lager.Logger) error {
 	if m.backingStoreFileExists() {
+		logger.Debug("backing-file-found")
 		return m.storeDriver.MountFilesystem(logger, m.getBackingStoreFilePath(), m.storePath)
 	}
 	return nil
