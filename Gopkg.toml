@@ -26,6 +26,9 @@
 
 ignored = ["code.cloudfoundry.org/garden-shed*"]
 
+# we should be able to get rid of this line when https://github.com/golang/dep/issues/1799 gets fixed
+required = ["gopkg.in/fsnotify.v1"]
+
 [[constraint]]
   revision = "e135af3d5a2a2c5a80d3c9b366669ac8ed18953b"
   name = "code.cloudfoundry.org/archiver"
@@ -116,7 +119,7 @@ ignored = ["code.cloudfoundry.org/garden-shed*"]
 
 [[constraint]]
   name = "github.com/onsi/ginkgo"
-  revision = "v1.5.0"
+  revision = "v1.6.0"
 
 [[constraint]]
   name = "github.com/onsi/gomega"
@@ -177,6 +180,11 @@ ignored = ["code.cloudfoundry.org/garden-shed*"]
 [[constraint]]
   name = "gopkg.in/yaml.v2"
   version = "2.2.1"
+
+# we should be able to get rid of this line when https://github.com/golang/dep/issues/1799 gets fixed
+[[constraint]]
+  name = "gopkg.in/fsnotify.v1"
+  source = "https://github.com/fsnotify/fsnotify.git"
 
 [prune]
   go-tests = true

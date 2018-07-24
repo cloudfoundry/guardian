@@ -335,6 +335,18 @@
   revision = "b7773ae218740a7be65057fc60b366a49b538a44"
 
 [[projects]]
+  name = "github.com/hpcloud/tail"
+  packages = [
+    ".",
+    "ratelimiter",
+    "util",
+    "watch",
+    "winfile"
+  ]
+  revision = "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/jessevdk/go-flags"
   packages = ["."]
   revision = "c6ca198ec95c841fdb89fc0de7496fed11ab854e"
@@ -400,7 +412,7 @@
     "reporters/stenographer/support/go-isatty",
     "types"
   ]
-  revision = "v1.5.0"
+  revision = "v1.6.0"
 
 [[projects]]
   name = "github.com/onsi/gomega"
@@ -648,6 +660,19 @@
   version = "v1.12.0"
 
 [[projects]]
+  name = "gopkg.in/fsnotify.v1"
+  packages = ["."]
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  source = "https://github.com/fsnotify/fsnotify.git"
+  version = "v1.4.7"
+
+[[projects]]
+  branch = "v1"
+  name = "gopkg.in/tomb.v1"
+  packages = ["."]
+  revision = "dd632973f1e7218eb1089048e0798ec9ae7dceb8"
+
+[[projects]]
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
@@ -656,6 +681,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c09838b9bd2db3a1aa7ce24547dadd16b72cd9caf684aa35ba4f6380a16bec83"
+  inputs-digest = "f6674be36a49ec1ffbb89e4b917c2da00a1b12bcdfa182b89672980e1f8b05fc"
   solver-name = "gps-cdcl"
   solver-version = 1
