@@ -420,7 +420,7 @@
     "matchers/support/goraph/util",
     "types"
   ]
-  revision = "v1.4.0"
+  revision = "v1.4.1"
 
 [[projects]]
   name = "github.com/opencontainers/go-digest"
@@ -656,6 +656,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e5c55fab2de8d17e9d11391e96bed90c8b8f9d833d59f269752ae47eaf29f48c"
+  inputs-digest = "c09838b9bd2db3a1aa7ce24547dadd16b72cd9caf684aa35ba4f6380a16bec83"
   solver-name = "gps-cdcl"
   solver-version = 1

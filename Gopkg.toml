@@ -120,7 +120,7 @@ ignored = ["code.cloudfoundry.org/garden-shed*"]
 
 [[constraint]]
   name = "github.com/onsi/gomega"
-  revision = "v1.4.0"
+  revision = "v1.4.1"
 
 [[constraint]]
   name = "github.com/opencontainers/go-digest"
