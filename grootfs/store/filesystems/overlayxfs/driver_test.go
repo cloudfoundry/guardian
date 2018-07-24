@@ -739,6 +739,14 @@ var _ = Describe("Driver", func() {
 				Expect(err).To(HaveOccurred())
 			})
 		})
+
+		Context("when there is a very long file path in the rootfs", func() {
+			It("successfully removes the rootfs", func() {
+				Expect(createVeryLongFilePath(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir))).To(Succeed())
+				Expect(driver.DestroyImage(logger, spec.ImagePath)).To(Succeed())
+				Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).NotTo(BeADirectory())
+			})
+		})
 	})
 
 	Describe("FetchStats", func() {
@@ -1266,4 +1274,30 @@ func createFileEvenRootCantRemove(pathname string) {
 func removeFileEvenRootCantRemove(pathname string) {
 	Expect(syscall.Unmount(pathname, 0)).To(Succeed())
 	Expect(os.Remove(pathname)).To(Succeed())
+}
+
+func createVeryLongFilePath(startPath string) error {
+	currentPath := startPath
+	for i := 0; i < 40; i++ {
+		name := ""
+		for j := 0; j < 100; j++ {
+			name = name + "a"
+		}
+		if err := mkdirAt(currentPath, name); err != nil {
+			return err
+		}
+		currentPath = filepath.Join(currentPath, name)
+	}
+
+	return nil
+}
+
+func mkdirAt(atPath, path string) error {
+	fd, err := syscall.Open(atPath, syscall.O_RDONLY, 0)
+	if err != nil {
+		return err
+	}
+	defer syscall.Close(fd)
+
+	return syscall.Mkdirat(fd, path, 755)
 }

@@ -683,7 +683,9 @@ func ensureImageDestroyed(logger lager.Logger, imagePath string) error {
 	if err := syscall.Unmount(filepath.Join(imagePath, RootfsDir), 0); err != nil {
 		logger.Info("unmount image path failed", lager.Data{"path": imagePath, "error": err})
 	}
-	return os.RemoveAll(imagePath)
+
+	// os.RemoveAll fails with long path names
+	return rmRf(imagePath)
 }
 
 func getDeviceForFile(path string) (uint64, error) {
@@ -711,4 +713,13 @@ func isMountpoint(path string) (bool, error) {
 	}
 
 	return dev != parentDev, nil
+}
+
+func rmRf(path string) error {
+	output, err := exec.Command("rm", "-Rf", path).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("rm -rf %s failed: %s; original error: %s", path, output, err.Error())
+	}
+
+	return nil
 }
