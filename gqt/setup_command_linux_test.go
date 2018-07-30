@@ -50,10 +50,12 @@ var _ = Describe("gdn setup", func() {
 	})
 
 	AfterEach(func() {
-		cleanCgroups := func() error {
-			return cgrouper.CleanGardenCgroups(cgroupsRoot, tag)
+		for {
+			err := cgrouper.CleanGardenCgroups(cgroupsRoot, tag)
+			if err == nil {
+				break
+			}
 		}
-		Eventually(cleanCgroups, 3*time.Second).Should(Succeed())
 	})
 
 	Describe("cgroups", func() {
