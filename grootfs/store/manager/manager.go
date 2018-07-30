@@ -155,6 +155,11 @@ func (m *Manager) configureStore(logger lager.Logger, ownerUID, ownerGID int) er
 		return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", ownerUID, ownerGID, m.storePath)
 	}
 
+	if err := os.Chmod(m.storePath, 0700); err != nil {
+		logger.Error("store-permission-change-failed", err)
+		return errorspkg.Wrapf(err, "changing store permissions %s", m.storePath)
+	}
+
 	for _, folderName := range store.StoreFolders {
 		if err := m.createInternalDirectory(logger, folderName, ownerUID, ownerGID); err != nil {
 			return err
@@ -217,7 +222,7 @@ func (m *Manager) DeleteStore(logger lager.Logger) error {
 }
 
 func (m *Manager) createAndMountFilesystem(logger lager.Logger, storeSizeBytes int64) error {
-	if err := os.MkdirAll(m.storePath, 0700); err != nil {
+	if err := os.MkdirAll(m.storePath, 0755); err != nil {
 		logger.Error("init-store-failed", err)
 		return errorspkg.Wrap(err, "initializing store")
 	}
