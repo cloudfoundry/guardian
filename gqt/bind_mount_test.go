@@ -1,3 +1,5 @@
+// +build !windows
+
 package gqt_test
 
 import (
@@ -15,6 +17,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"golang.org/x/sys/unix"
 )
 
 var _ = Describe("Bind mount", func() {
@@ -345,12 +348,7 @@ func createRWMountPointUnder(srcPath string) string {
 }
 
 func unmount(mountpoint string) {
-	cmd := exec.Command("umount", "-f", mountpoint)
-	output, err := cmd.CombinedOutput()
-	if len(output) > 0 {
-		fmt.Printf("Command: umount -f [%s]\n%v", mountpoint, string(output))
-	}
-	Expect(err).NotTo(HaveOccurred())
+	Expect(unix.Unmount(mountpoint, 0)).To(Succeed())
 }
 
 func userReadFile(container garden.Container, dstPath, fileName, user string) garden.Process {
