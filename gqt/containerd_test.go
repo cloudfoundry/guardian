@@ -315,7 +315,7 @@ func runCtr(ctr, socket string, args []string) string {
 
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
-	Eventually(session).Should(gexec.Exit(0))
+	Eventually(session).Should(gexec.Exit(0), string(session.Err.Contents()))
 
 	return string(session.Out.Contents())
 }
