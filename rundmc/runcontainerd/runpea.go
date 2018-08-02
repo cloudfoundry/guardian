@@ -18,11 +18,11 @@ type RunContainerPea struct {
 }
 
 func (r *RunContainerPea) Run(
-	log lager.Logger, processID, processPath, sandboxHandle, sandboxBundlePath string,
+	log lager.Logger, processID, processBundlePath, sandboxHandle, sandboxBundlePath string,
 	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 ) (garden.Process, error) {
 
-	if err := r.PeaManager.Create(log, processPath, processID, garden.ProcessIO{}); err != nil {
+	if err := r.PeaManager.Create(log, processBundlePath, processID, pio); err != nil {
 		return &Process{}, err
 	}
 
