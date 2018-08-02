@@ -103,6 +103,25 @@ func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs
 	return process.CloseIO(n.context, containerd.WithStdinCloser)
 }
 
+func (n *Nerd) DeleteProcess(log lager.Logger, containerID, processID string) error {
+	_, task, err := n.loadContainerAndTask(log, containerID)
+	if err != nil {
+		return err
+	}
+
+	process, err := task.LoadProcess(n.context, processID, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = process.Delete(n.context)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func withProcessIO(processIO func() (io.Reader, io.Writer, io.Writer)) cio.Opt {
 	return func(opt *cio.Streams) {
 		stdIn, stdOut, stdErr := processIO()
@@ -172,11 +191,6 @@ func (n *Nerd) Wait(log lager.Logger, containerID, processID string) (int, error
 	exitStatus := <-exitCh
 	if exitStatus.Error() != nil {
 		return 0, exitStatus.Error()
-	}
-
-	_, err = process.Delete(n.context)
-	if err != nil {
-		return 0, err
 	}
 
 	return int(exitStatus.ExitCode()), nil

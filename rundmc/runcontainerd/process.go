@@ -21,7 +21,12 @@ func NewProcess(log lager.Logger, containerID, processID string, processManager 
 }
 
 func (p *Process) Wait() (int, error) {
-	return p.processManager.Wait(p.log, p.containerID, p.processID)
+	exitCode, err := p.processManager.Wait(p.log, p.containerID, p.processID)
+	if err != nil {
+		return -1, err
+	}
+
+	return exitCode, p.processManager.DeleteProcess(p.log, p.containerID, p.processID)
 }
 
 func (p *Process) Signal(gardenSignal garden.Signal) error {

@@ -182,11 +182,6 @@ var _ = Describe("Nerd", func() {
 		It("returns the exit code", func() {
 			Expect(exitCode).To(Equal(17))
 		})
-
-		It("removes process metadata after finishing", func() {
-			_, retryWaitErr := cnerd.Wait(testLogger, containerID, processID)
-			Expect(retryWaitErr).To(MatchError(ContainSubstring("no running process found")))
-		})
 	})
 
 	Describe("Signal", func() {
@@ -283,6 +278,45 @@ var _ = Describe("Nerd", func() {
 			containerPid, err := cnerd.GetContainerPID(testLogger, containerID)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(procls).To(ContainSubstring(strconv.Itoa(int(containerPid))))
+		})
+	})
+
+	Describe("DeleteProcess", func() {
+		BeforeEach(func() {
+			spec := generateSpec(containerdContext, containerdClient, containerID)
+			Expect(cnerd.Create(testLogger, containerID, spec)).To(Succeed())
+
+			processSpec := &specs.Process{
+				Args: []string{"/bin/sh", "-c", "exit 17"},
+				Cwd:  "/",
+			}
+
+			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+			Expect(err).NotTo(HaveOccurred())
+
+			exitCode, err := cnerd.Wait(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCode).To(Equal(17))
+		})
+
+		AfterEach(func() {
+			cnerd.Delete(testLogger, containerID)
+		})
+
+		It("removes process metadata", func() {
+			err := cnerd.DeleteProcess(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = cnerd.DeleteProcess(testLogger, containerID, processID)
+			Expect(err).To(MatchError(ContainSubstring("not found")))
+		})
+
+		Context("when the container does not exist", func() {
+			It("fails", func() {
+				err := cnerd.DeleteProcess(testLogger, "foo", processID)
+
+				Expect(err).To(HaveOccurred())
+			})
 		})
 	})
 })
