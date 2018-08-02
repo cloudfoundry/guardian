@@ -7,13 +7,13 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-//go:generate counterfeiter . Creator
-type Creator interface {
+//go:generate counterfeiter . PeaManager
+type PeaManager interface {
 	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
 }
 
 type RunContainerPea struct {
-	Creator        Creator
+	PeaManager     PeaManager
 	ProcessManager ProcessManager
 }
 
@@ -22,7 +22,7 @@ func (r *RunContainerPea) Run(
 	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 ) (garden.Process, error) {
 
-	if err := r.Creator.Create(log, processPath, processID, garden.ProcessIO{}); err != nil {
+	if err := r.PeaManager.Create(log, processPath, processID, garden.ProcessIO{}); err != nil {
 		return &Process{}, err
 	}
 

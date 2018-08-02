@@ -9,7 +9,7 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type FakeCreator struct {
+type FakePeaManager struct {
 	CreateStub        func(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
@@ -28,7 +28,7 @@ type FakeCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCreator) Create(log lager.Logger, bundlePath string, id string, io garden.ProcessIO) error {
+func (fake *FakePeaManager) Create(log lager.Logger, bundlePath string, id string, io garden.ProcessIO) error {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
@@ -48,26 +48,26 @@ func (fake *FakeCreator) Create(log lager.Logger, bundlePath string, id string, 
 	return fake.createReturns.result1
 }
 
-func (fake *FakeCreator) CreateCallCount() int {
+func (fake *FakePeaManager) CreateCallCount() int {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeCreator) CreateArgsForCall(i int) (lager.Logger, string, string, garden.ProcessIO) {
+func (fake *FakePeaManager) CreateArgsForCall(i int) (lager.Logger, string, string, garden.ProcessIO) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].bundlePath, fake.createArgsForCall[i].id, fake.createArgsForCall[i].io
 }
 
-func (fake *FakeCreator) CreateReturns(result1 error) {
+func (fake *FakePeaManager) CreateReturns(result1 error) {
 	fake.CreateStub = nil
 	fake.createReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeCreator) CreateReturnsOnCall(i int, result1 error) {
+func (fake *FakePeaManager) CreateReturnsOnCall(i int, result1 error) {
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {
@@ -79,7 +79,7 @@ func (fake *FakeCreator) CreateReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeCreator) Invocations() map[string][][]interface{} {
+func (fake *FakePeaManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.createMutex.RLock()
@@ -91,7 +91,7 @@ func (fake *FakeCreator) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *FakeCreator) recordInvocation(key string, args []interface{}) {
+func (fake *FakePeaManager) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -103,4 +103,4 @@ func (fake *FakeCreator) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ runcontainerd.Creator = new(FakeCreator)
+var _ runcontainerd.PeaManager = new(FakePeaManager)

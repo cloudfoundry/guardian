@@ -15,18 +15,18 @@ import (
 var _ = Describe("RunContainerPea", func() {
 
 	var (
-		fakeCreator        *runcontainerdfakes.FakeCreator
+		fakePeaManager     *runcontainerdfakes.FakePeaManager
 		fakeProcessManager *runcontainerdfakes.FakeProcessManager
 
 		runContainerPea *runcontainerd.RunContainerPea
 	)
 
 	BeforeEach(func() {
-		fakeCreator = new(runcontainerdfakes.FakeCreator)
+		fakePeaManager = new(runcontainerdfakes.FakePeaManager)
 		fakeProcessManager = new(runcontainerdfakes.FakeProcessManager)
 
 		runContainerPea = &runcontainerd.RunContainerPea{
-			Creator:        fakeCreator,
+			PeaManager:     fakePeaManager,
 			ProcessManager: fakeProcessManager,
 		}
 	})
@@ -35,15 +35,15 @@ var _ = Describe("RunContainerPea", func() {
 		It("creates a container using process args", func() {
 			runContainerPea.Run(lagertest.NewTestLogger("test-logger"), "test-process-id", "/process/path", "", "", garden.ProcessIO{}, false, strings.NewReader(""), nil)
 
-			Expect(fakeCreator.CreateCallCount()).To(Equal(1))
-			_, actualProcessPath, actualProcessID, _ := fakeCreator.CreateArgsForCall(0)
+			Expect(fakePeaManager.CreateCallCount()).To(Equal(1))
+			_, actualProcessPath, actualProcessID, _ := fakePeaManager.CreateArgsForCall(0)
 			Expect(actualProcessPath).To(Equal("/process/path"))
 			Expect(actualProcessID).To(Equal("test-process-id"))
 		})
 
 		When("the creator returns an error", func() {
 			BeforeEach(func() {
-				fakeCreator.CreateReturns(errors.New("error-creating"))
+				fakePeaManager.CreateReturns(errors.New("error-creating"))
 			})
 
 			It("returns the error", func() {

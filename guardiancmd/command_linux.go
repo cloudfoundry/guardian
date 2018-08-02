@@ -238,7 +238,7 @@ func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *
 	containerdManager := runcontainerd.New(nerd, nerd, bndlLoader, processBuilder, userLookupper, wireExecer(pidGetter), statser, useContainerdForProcesses)
 
 	peaRunner := &runcontainerd.RunContainerPea{
-		Creator:        containerdManager,
+		PeaManager:     containerdManager,
 		ProcessManager: nerd,
 	}
 
