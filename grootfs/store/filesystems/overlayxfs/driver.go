@@ -29,16 +29,15 @@ import (
 )
 
 const (
-	UpperDir          = "diff"
-	IDDir             = "projectids"
-	WorkDir           = "workdir"
-	RootfsDir         = "rootfs"
-	imageInfoName     = "image_info"
-	imageQuotaName    = "image_quota"
-	WhiteoutDevice    = "whiteout_dev"
-	LinksDirName      = "l"
-	maxDestroyRetries = 5
-	MinQuota          = 1024 * 256
+	UpperDir       = "diff"
+	IDDir          = "projectids"
+	WorkDir        = "workdir"
+	RootfsDir      = "rootfs"
+	imageInfoName  = "image_info"
+	imageQuotaName = "image_quota"
+	WhiteoutDevice = "whiteout_dev"
+	LinksDirName   = "l"
+	MinQuota       = 1024 * 256
 )
 
 func NewDriver(storePath, tardisBinPath string) *Driver {

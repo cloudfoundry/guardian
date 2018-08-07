@@ -9,8 +9,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/metrics"
 )
 
-const errorSource = "grootfs-error.%s"
-
 type Emitter struct{}
 
 func NewEmitter(logger lager.Logger, metronEndpoint string) *Emitter {

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -408,21 +407,6 @@ func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarR
 	}
 
 	return fileSize, nil
-}
-
-func cleanWhiteoutDir(path string) error {
-	contents, err := ioutil.ReadDir(path)
-	if err != nil {
-		return errors.Wrap(err, "reading whiteout directory")
-	}
-
-	for _, content := range contents {
-		if err := os.RemoveAll(filepath.Join(path, content.Name())); err != nil {
-			return errors.Wrap(err, "cleaning up whiteout directory")
-		}
-	}
-
-	return nil
 }
 
 func (u *TarUnpacker) translateID(id int, mappings []groot.IDMappingSpec) int {
