@@ -49,7 +49,6 @@ type PeaCreator struct {
 	BindMountSourceCreator depot.BindMountSourceCreator
 	BundleGenerator        depot.BundleGenerator
 	BundleSaver            depot.BundleSaver
-	BundleLoader           depot.BundleLoader
 	ProcessBuilder         runrunc.ProcessBuilder
 	ExecRunner             runrunc.ExecRunner
 	RuncDeleter            RuncDeleter
@@ -113,26 +112,13 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		NetworkSharedContainerName: sandboxHandle,
 	}
 
-	cgroupPath := filepath.Join(sandboxHandle, processID)
+	cgroupPath := sandboxHandle
 	limits := garden.Limits{}
 	if processSpec.OverrideContainerLimits != nil {
 		cgroupPath = processID
 		limits = garden.Limits{
 			CPU:    processSpec.OverrideContainerLimits.CPU,
 			Memory: processSpec.OverrideContainerLimits.Memory,
-		}
-	} else {
-		sandboxBundle, err := p.BundleLoader.Load(sandboxBundlePath)
-		if err != nil {
-			return nil, err
-		}
-		limits = garden.Limits{
-			Memory: garden.MemoryLimits{
-				LimitInBytes: uint64(*sandboxBundle.Spec.Linux.Resources.Memory.Limit),
-			},
-			Pid: garden.PidLimits{
-				Max: uint64(sandboxBundle.Spec.Linux.Resources.Pids.Limit),
-			},
 		}
 	}
 

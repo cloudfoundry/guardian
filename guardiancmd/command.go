@@ -913,7 +913,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		PrivilegedGetter:       privilegeChecker,
 		BindMountSourceCreator: bindMountSourceCreator,
 		BundleGenerator:        template,
-		BundleLoader:           bndlLoader,
 		ProcessBuilder:         processBuilder,
 		BundleSaver:            bundleSaver,
 		ExecRunner:             execRunner,

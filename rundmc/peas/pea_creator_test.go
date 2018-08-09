@@ -31,7 +31,6 @@ var _ = Describe("PeaCreator", func() {
 		bindMountSourceCreator *depotfakes.FakeBindMountSourceCreator
 		bundleGenerator        *depotfakes.FakeBundleGenerator
 		bundleSaver            *depotfakes.FakeBundleSaver
-		bundleLoader           *depotfakes.FakeBundleLoader
 		processBuilder         *runruncfakes.FakeProcessBuilder
 		execRunner             *runruncfakes.FakeExecRunner
 		privilegedGetter       *peasfakes.FakePrivilegedGetter
@@ -71,22 +70,6 @@ var _ = Describe("PeaCreator", func() {
 		bundleGenerator = new(depotfakes.FakeBundleGenerator)
 		bundleGenerator.GenerateReturns(generatedBundle, nil)
 		bundleSaver = new(depotfakes.FakeBundleSaver)
-		bundleLoader = new(depotfakes.FakeBundleLoader)
-		memoryLimit := int64(123)
-		bundleLoader.LoadReturns(goci.Bndl{
-			Spec: specs.Spec{
-				Linux: &specs.Linux{
-					Resources: &specs.LinuxResources{
-						Memory: &specs.LinuxMemory{
-							Limit: &memoryLimit,
-						},
-						Pids: &specs.LinuxPids{
-							Limit: 765,
-						},
-					},
-				},
-			},
-		}, nil)
 
 		processBuilder = new(runruncfakes.FakeProcessBuilder)
 		builtProcess = &specs.Process{Cwd: "some-cwd"}
@@ -103,7 +86,6 @@ var _ = Describe("PeaCreator", func() {
 			BindMountSourceCreator: bindMountSourceCreator,
 			BundleGenerator:        bundleGenerator,
 			BundleSaver:            bundleSaver,
-			BundleLoader:           bundleLoader,
 			ProcessBuilder:         processBuilder,
 			ExecRunner:             execRunner,
 			PrivilegedGetter:       privilegedGetter,
@@ -171,11 +153,6 @@ var _ = Describe("PeaCreator", func() {
 			Expect(actualChown).To(BeTrue())
 		})
 
-		It("loads the bundle of the sandbox container to get memory and pid limits", func() {
-			Expect(bundleLoader.LoadCallCount()).To(Equal(1))
-			Expect(bundleLoader.LoadArgsForCall(0)).To(Equal(ctrBundleDir))
-		})
-
 		It("passes bind mounts to bundle generator", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
 			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
@@ -201,17 +178,10 @@ var _ = Describe("PeaCreator", func() {
 			}))
 		})
 
-		It("passes <container-handle>/<process-id> as cgroup path to the bundle generator", func() {
+		It("passes the container handle as cgroup path to the bundle generator", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
 			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
-			Expect(actualCtrSpec.CgroupPath).To(Equal(filepath.Join(ctrHandle, processSpec.ID)))
-		})
-
-		It("passes the sandbox memory and pid limits to the bundle generator", func() {
-			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
-			Expect(actualCtrSpec.Limits.Memory.LimitInBytes).To(Equal(uint64(123)))
-			Expect(actualCtrSpec.Limits.Pid.Max).To(Equal(uint64(765)))
+			Expect(actualCtrSpec.CgroupPath).To(Equal(ctrHandle))
 		})
 
 		It("passes sandbox handle to bundle generator", func() {
@@ -405,16 +375,6 @@ var _ = Describe("PeaCreator", func() {
 
 			It("returns a wrapped error", func() {
 				Expect(createErr).To(MatchError(ContainSubstring("pickle")))
-			})
-		})
-
-		Context("when the bundle loader returns an error", func() {
-			BeforeEach(func() {
-				bundleLoader.LoadReturns(goci.Bndl{}, errors.New("potato"))
-			})
-
-			It("propagates the error", func() {
-				Expect(createErr).To(MatchError("potato"))
 			})
 		})
 
