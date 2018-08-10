@@ -356,7 +356,7 @@ func (cmd *ServerCommand) Execute([]string) error {
 }
 
 func newInitStoreCommand(pluginPath string, pluginGlobalArgs []string) *exec.Cmd {
-	return exec.Command(pluginPath, append(pluginGlobalArgs, "init-store", "--store-size-bytes", strconv.Itoa(10*1024*1024*1024))...)
+	return exec.Command(pluginPath, append(pluginGlobalArgs, "init-store", "--store-size-bytes", strconv.FormatInt(10*1024*1024*1024, 10))...)
 }
 
 func runCommand(cmd *exec.Cmd) {
