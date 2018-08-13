@@ -24,6 +24,19 @@ type FakePeaManager struct {
 	createReturnsOnCall map[int]struct {
 		result1 error
 	}
+	DeleteStub        func(log lager.Logger, force bool, containerID string) error
+	deleteMutex       sync.RWMutex
+	deleteArgsForCall []struct {
+		log         lager.Logger
+		force       bool
+		containerID string
+	}
+	deleteReturns struct {
+		result1 error
+	}
+	deleteReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -79,11 +92,63 @@ func (fake *FakePeaManager) CreateReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakePeaManager) Delete(log lager.Logger, force bool, containerID string) error {
+	fake.deleteMutex.Lock()
+	ret, specificReturn := fake.deleteReturnsOnCall[len(fake.deleteArgsForCall)]
+	fake.deleteArgsForCall = append(fake.deleteArgsForCall, struct {
+		log         lager.Logger
+		force       bool
+		containerID string
+	}{log, force, containerID})
+	fake.recordInvocation("Delete", []interface{}{log, force, containerID})
+	fake.deleteMutex.Unlock()
+	if fake.DeleteStub != nil {
+		return fake.DeleteStub(log, force, containerID)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.deleteReturns.result1
+}
+
+func (fake *FakePeaManager) DeleteCallCount() int {
+	fake.deleteMutex.RLock()
+	defer fake.deleteMutex.RUnlock()
+	return len(fake.deleteArgsForCall)
+}
+
+func (fake *FakePeaManager) DeleteArgsForCall(i int) (lager.Logger, bool, string) {
+	fake.deleteMutex.RLock()
+	defer fake.deleteMutex.RUnlock()
+	return fake.deleteArgsForCall[i].log, fake.deleteArgsForCall[i].force, fake.deleteArgsForCall[i].containerID
+}
+
+func (fake *FakePeaManager) DeleteReturns(result1 error) {
+	fake.DeleteStub = nil
+	fake.deleteReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakePeaManager) DeleteReturnsOnCall(i int, result1 error) {
+	fake.DeleteStub = nil
+	if fake.deleteReturnsOnCall == nil {
+		fake.deleteReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.deleteReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakePeaManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
+	fake.deleteMutex.RLock()
+	defer fake.deleteMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

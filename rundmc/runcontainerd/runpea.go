@@ -10,6 +10,7 @@ import (
 //go:generate counterfeiter . PeaManager
 type PeaManager interface {
 	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
+	Delete(log lager.Logger, force bool, containerID string) error
 }
 
 type RunContainerPea struct {
@@ -26,13 +27,14 @@ func (r *RunContainerPea) Run(
 		return &Process{}, err
 	}
 
-	// TODO: Add tests when we come to do Wait for peas
-	// This only exists to satisfy integration test (garden server calls wait on a process)
-	return &Process{
-		log:            log,
-		containerID:    sandboxHandle,
-		processID:      processID,
-		processManager: r.ProcessManager,
+	return &PeaProcess{
+		Process: Process{
+			log:            log,
+			containerID:    processID,
+			processID:      processID,
+			processManager: r.ProcessManager,
+		},
+		peaManager: r.PeaManager,
 	}, nil
 }
 

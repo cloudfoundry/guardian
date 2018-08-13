@@ -16,6 +16,11 @@ type Process struct {
 	processManager ProcessManager
 }
 
+type PeaProcess struct {
+	Process
+	peaManager PeaManager
+}
+
 func NewProcess(log lager.Logger, containerID, processID string, processManager ProcessManager) *Process {
 	return &Process{log: log, containerID: containerID, processID: processID, processManager: processManager}
 }
@@ -27,6 +32,20 @@ func (p *Process) Wait() (int, error) {
 	}
 
 	return exitCode, p.processManager.DeleteProcess(p.log, p.containerID, p.processID)
+}
+
+func (p *PeaProcess) Wait() (int, error) {
+	exitCode, err := p.processManager.Wait(p.log, p.containerID, p.processID)
+	if err != nil {
+		return 0, err
+	}
+
+	err = p.peaManager.Delete(p.log, false, p.containerID)
+	if err != nil {
+		return 0, err
+	}
+
+	return exitCode, nil
 }
 
 func (p *Process) Signal(gardenSignal garden.Signal) error {
