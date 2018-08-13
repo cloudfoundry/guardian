@@ -93,6 +93,7 @@ var _ = Describe("Dadoo", func() {
 		var (
 			processDir                                  string
 			runcLogFile                                 *os.File
+			runcLogFilePath                             string
 			stdinPipe, stdoutPipe, stderrPipe, exitPipe string
 		)
 
@@ -114,13 +115,13 @@ var _ = Describe("Dadoo", func() {
 				specs.Process{
 					Args:        []string{"/bin/sh", "-c", "sleep 9999"},
 					Cwd:         "/",
-					ConsoleSize: &specs.Box{},
+					ConsoleSize: new(specs.Box),
 				},
 			)
 			processDir = bundlePath
 			Expect(os.MkdirAll(processDir, 0777)).To(Succeed())
 
-			runcLogFilePath := filepath.Join(processDir, "exec.log")
+			runcLogFilePath = filepath.Join(processDir, "exec.log")
 			runcLogFile, err = os.Create(runcLogFilePath)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -138,10 +139,10 @@ var _ = Describe("Dadoo", func() {
 		})
 
 		AfterEach(func() {
-			runcLogFileContents, err := ioutil.ReadAll(runcLogFile)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(runcLogFile.Close()).To(Succeed())
-			fmt.Print(string(runcLogFileContents))
+			content, err := ioutil.ReadFile(runcLogFilePath)
+			Expect(err).NotTo(HaveOccurred())
+			fmt.Print(string(content))
 		})
 
 		runDadoo := func(processSpec specs.Process) *gexec.Session {
@@ -811,7 +812,7 @@ var _ = Describe("Dadoo", func() {
 					bundle = bundle.WithProcess(specs.Process{
 						Args:        []string{"/bin/sh", "-c", "echo hello-world; exit 24"},
 						Cwd:         "/",
-						ConsoleSize: &specs.Box{},
+						ConsoleSize: new(specs.Box),
 					})
 					Expect(bundleSaver.Save(bundle, bundlePath)).To(Succeed())
 
