@@ -63,9 +63,10 @@ type RunContainerd struct {
 	statser                   Statser
 	useContainerdForProcesses bool
 	userLookupper             users.UserLookupper
+	cgroupManager             CgroupManager
 }
 
-func New(containerManager ContainerManager, processManager ProcessManager, bundleLoader BundleLoader, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool) *RunContainerd {
+func New(containerManager ContainerManager, processManager ProcessManager, bundleLoader BundleLoader, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager) *RunContainerd {
 	return &RunContainerd{
 		containerManager:          containerManager,
 		processManager:            processManager,
@@ -75,6 +76,7 @@ func New(containerManager ContainerManager, processManager ProcessManager, bundl
 		statser:                   statser,
 		useContainerdForProcesses: useContainerdForProcesses,
 		userLookupper:             userLookupper,
+		cgroupManager:             cgroupManager,
 	}
 }
 
@@ -84,7 +86,15 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 		return err
 	}
 
-	return r.containerManager.Create(log, id, &bundle.Spec)
+	err = r.containerManager.Create(log, id, &bundle.Spec)
+	if err != nil {
+		return err
+	}
+
+	if r.useContainerdForProcesses {
+		return r.cgroupManager.SetUseMemoryHierarchy(id)
+	}
+	return nil
 }
 
 func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, gardenProcessSpec garden.ProcessSpec, gardenIO garden.ProcessIO) (garden.Process, error) {

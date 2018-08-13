@@ -878,6 +878,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 
 	statser := runrunc.NewStatser(runcLogRunner, runcBinary)
 
+	var useNestedCgroups bool
 	var execRunner runrunc.ExecRunner = factory.WireExecRunner("run", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)))
 	if cmd.useContainerd() {
 		var err error
@@ -890,6 +891,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		if cmd.Containerd.UseContainerdForProcesses {
 			peaPidGetter = pidGetter
 			execRunner = peaRunner
+			useNestedCgroups = true
 		}
 	} else {
 		pidGetter = &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}
@@ -918,6 +920,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		ExecRunner:             execRunner,
 		RuncDeleter:            runcDeleter,
 		PeaCleaner:             peaCleaner,
+		NestedCgroups:          useNestedCgroups,
 	}
 
 	peaUsernameResolver := &peas.PeaUsernameResolver{

@@ -235,7 +235,9 @@ func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *
 	nerd := nerd.New(containerdClient, ctx)
 	pidGetter := &runcontainerd.PidGetter{Nerd: nerd}
 
-	containerdManager := runcontainerd.New(nerd, nerd, bndlLoader, processBuilder, userLookupper, wireExecer(pidGetter), statser, useContainerdForProcesses)
+	cgroupManager := runcontainerd.NewCgroupManager(containerdRuncRoot(), containerdNamespace)
+
+	containerdManager := runcontainerd.New(nerd, nerd, bndlLoader, processBuilder, userLookupper, wireExecer(pidGetter), statser, useContainerdForProcesses, cgroupManager)
 
 	peaRunner := &runcontainerd.RunContainerPea{
 		PeaManager:     containerdManager,

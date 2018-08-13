@@ -32,6 +32,7 @@ var _ = Describe("Runcontainerd", func() {
 		statser          *runcontainerdfakes.FakeStatser
 		processBuilder   *runcontainerdfakes.FakeProcessBuilder
 		userLookupper    *usersfakes.FakeUserLookupper
+		cgroupManager    *runcontainerdfakes.FakeCgroupManager
 	)
 
 	BeforeEach(func() {
@@ -43,8 +44,9 @@ var _ = Describe("Runcontainerd", func() {
 		statser = new(runcontainerdfakes.FakeStatser)
 		processBuilder = new(runcontainerdfakes.FakeProcessBuilder)
 		userLookupper = new(usersfakes.FakeUserLookupper)
+		cgroupManager = new(runcontainerdfakes.FakeCgroupManager)
 
-		runContainerd = runcontainerd.New(containerManager, processManager, bundleLoader, processBuilder, userLookupper, execer, statser, false)
+		runContainerd = runcontainerd.New(containerManager, processManager, bundleLoader, processBuilder, userLookupper, execer, statser, false, cgroupManager)
 	})
 
 	Describe("Create", func() {
@@ -105,6 +107,28 @@ var _ = Describe("Runcontainerd", func() {
 
 			It("bubbles up that", func() {
 				Expect(createErr).To(MatchError("EXPLODE"))
+			})
+		})
+
+		Context("when using containerd for processes", func() {
+			BeforeEach(func() {
+				runContainerd = runcontainerd.New(containerManager, processManager, bundleLoader, processBuilder, userLookupper, execer, statser, true, cgroupManager)
+			})
+
+			It("sets the container to use the memory hierarchy", func() {
+				Expect(cgroupManager.SetUseMemoryHierarchyCallCount()).To(Equal(1))
+				actualID := cgroupManager.SetUseMemoryHierarchyArgsForCall(0)
+				Expect(actualID).To(Equal(id))
+			})
+
+			Context("when setting the container to use the memory hierarchy fails", func() {
+				BeforeEach(func() {
+					cgroupManager.SetUseMemoryHierarchyReturns(errors.New("NOPE"))
+				})
+
+				It("returns the error", func() {
+					Expect(createErr).To(MatchError("NOPE"))
+				})
 			})
 		})
 	})
@@ -243,7 +267,7 @@ var _ = Describe("Runcontainerd", func() {
 
 				containerManager.GetContainerPIDReturns(1234, nil)
 				containerManager.ExecReturns(nil)
-				runContainerd = runcontainerd.New(containerManager, processManager, bundleLoader, processBuilder, userLookupper, execer, statser, true)
+				runContainerd = runcontainerd.New(containerManager, processManager, bundleLoader, processBuilder, userLookupper, execer, statser, true, cgroupManager)
 			})
 
 			It("passes the logger through", func() {

@@ -196,6 +196,19 @@ var _ = Describe("PeaCreator", func() {
 			Expect(actualCtrSpec.Privileged).To(Equal(false))
 		})
 
+		Context("When NestedCgroups=true", func() {
+			BeforeEach(func() {
+				peaCreator.NestedCgroups = true
+			})
+
+			It("passes <container-handle>/<process-id> as cgroup path to the bundle generator", func() {
+				Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
+				actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+				expected := filepath.Join(ctrHandle, processSpec.ID)
+				Expect(actualCtrSpec.CgroupPath).To(Equal(expected))
+			})
+		})
+
 		Describe("sharing namespaces", func() {
 			It("shares all namespaces apart from mnt with the container", func() {
 				Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
