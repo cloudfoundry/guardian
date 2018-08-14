@@ -44,7 +44,7 @@ func ContainerdConfig(containerdDataDir string) Config {
 		},
 		Debug: DebugConfig{
 			Address: filepath.Join(containerdDataDir, "debug.sock"),
-			Level:   "info",
+			Level:   "debug",
 		},
 		DisabledPlugins: []string{
 			"aufs",
