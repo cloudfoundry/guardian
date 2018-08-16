@@ -99,6 +99,10 @@ var _ = Describe("garden server Logging", func() {
 	})
 
 	Context("when log-level is not passed", func() {
+		BeforeEach(func() {
+			config.LogLevel = ""
+		})
+
 		AfterEach(func() {
 			Expect(client.Stop()).To(Succeed())
 		})
