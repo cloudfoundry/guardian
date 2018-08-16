@@ -240,6 +240,7 @@ func DefaultGdnRunnerConfig(binaries Binaries) GdnRunnerConfig {
 
 	config.ImagePluginExtraArgs = []string{`"--store"`, config.StorePath, `"--tardis-bin"`, binaries.Tardis, `"--log-level"`, "debug"}
 	config.PrivilegedImagePluginExtraArgs = []string{`"--store"`, config.PrivilegedStorePath, `"--tardis-bin"`, binaries.Tardis, `"--log-level"`, "debug"}
+	config.LogLevel = "debug"
 
 	return config
 }
