@@ -135,7 +135,7 @@ required = ["gopkg.in/fsnotify.v1"]
 
 [[constraint]]
   name = "github.com/opencontainers/runc"
-  revision = "ec9bf5058614525576e60e210a4e645bbd4d8335"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/opencontainers/runtime-spec"
