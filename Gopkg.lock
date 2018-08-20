@@ -40,7 +40,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:429904e27947b03709f98df2774c0056536e09d54b72e2971603f66ccd9eb4ff"
+  digest = "1:01807402a7915ab5800c8d8fc0ea8428cc3cbbe60fda5ef8c5e8758760c40f51"
   name = "code.cloudfoundry.org/garden"
   packages = [
     ".",
@@ -55,7 +55,7 @@
     "transport",
   ]
   pruneopts = "UT"
-  revision = "c2a1d4f1b94c61559a4c7aee5488319d0e4a6f76"
+  revision = "7999b305fe991191b38f0da55a95d6d5c5ed970b"
 
 [[projects]]
   branch = "master"
