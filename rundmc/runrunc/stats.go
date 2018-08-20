@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"time"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -35,6 +36,10 @@ type runcStats struct {
 	}
 }
 
+type runcState struct {
+	Created time.Time `json:"created"`
+}
+
 type Statser struct {
 	runner RuncCmdRunner
 	runc   RuncBinary
@@ -47,6 +52,36 @@ func NewStatser(runner RuncCmdRunner, runc RuncBinary) *Statser {
 }
 
 func (r *Statser) Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error) {
+	containerStats, err := r.getStats(log, id)
+	if err != nil {
+		return gardener.ActualContainerMetrics{}, err
+	}
+
+	containerState, err := r.getState(log, id)
+	if err != nil {
+		return gardener.ActualContainerMetrics{}, err
+	}
+
+	stats := gardener.ActualContainerMetrics{
+		Memory: containerStats.Data.MemoryStats.Stats,
+		CPU: garden.ContainerCPUStat{
+			Usage:  containerStats.Data.CPUStats.CPUUsage.Usage,
+			System: containerStats.Data.CPUStats.CPUUsage.System,
+			User:   containerStats.Data.CPUStats.CPUUsage.User,
+		},
+		Pid: garden.ContainerPidStat{
+			Current: containerStats.Data.PidStats.Current,
+			Max:     containerStats.Data.PidStats.Max,
+		},
+		Age: time.Since(containerState.Created),
+	}
+
+	stats.Memory.TotalUsageTowardLimit = stats.Memory.TotalRss + (stats.Memory.TotalCache - stats.Memory.TotalInactiveFile)
+
+	return stats, nil
+}
+
+func (r *Statser) getStats(log lager.Logger, id string) (runcStats, error) {
 	buf := new(bytes.Buffer)
 
 	if err := r.runner.RunAndLog(log, func(logFile string) *exec.Cmd {
@@ -54,28 +89,30 @@ func (r *Statser) Stats(log lager.Logger, id string) (gardener.ActualContainerMe
 		cmd.Stdout = buf
 		return cmd
 	}); err != nil {
-		return gardener.ActualContainerMetrics{}, fmt.Errorf("runC stats: %s", err)
+		return runcStats{}, fmt.Errorf("runC stats: %s", err)
 	}
 
 	var data runcStats
 	if err := json.NewDecoder(buf).Decode(&data); err != nil {
-		return gardener.ActualContainerMetrics{}, fmt.Errorf("decode stats: %s", err)
+		return runcStats{}, fmt.Errorf("decode stats: %s", err)
 	}
 
-	stats := gardener.ActualContainerMetrics{
-		Memory: data.Data.MemoryStats.Stats,
-		CPU: garden.ContainerCPUStat{
-			Usage:  data.Data.CPUStats.CPUUsage.Usage,
-			System: data.Data.CPUStats.CPUUsage.System,
-			User:   data.Data.CPUStats.CPUUsage.User,
-		},
-		Pid: garden.ContainerPidStat{
-			Current: data.Data.PidStats.Current,
-			Max:     data.Data.PidStats.Max,
-		},
+	return data, nil
+}
+
+func (r *Statser) getState(log lager.Logger, id string) (runcState, error) {
+	stateBuf := new(bytes.Buffer)
+	if err := r.runner.RunAndLog(log, func(logFile string) *exec.Cmd {
+		cmd := r.runc.StateCommand(id, logFile)
+		cmd.Stdout = stateBuf
+		return cmd
+	}); err != nil {
+		return runcState{}, fmt.Errorf("runC state: %s", err)
+	}
+	var stateData runcState
+	if err := json.NewDecoder(stateBuf).Decode(&stateData); err != nil {
+		return runcState{}, fmt.Errorf("decode state: %s", err)
 	}
 
-	stats.Memory.TotalUsageTowardLimit = stats.Memory.TotalRss + (stats.Memory.TotalCache - stats.Memory.TotalInactiveFile)
-
-	return stats, nil
+	return stateData, nil
 }

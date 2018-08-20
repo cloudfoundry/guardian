@@ -117,6 +117,7 @@ type ActualContainerMetrics struct {
 	CPU    garden.ContainerCPUStat
 	Memory garden.ContainerMemoryStat
 	Pid    garden.ContainerPidStat
+	Age    time.Duration
 }
 
 // Gardener orchestrates other components to implement the Garden API

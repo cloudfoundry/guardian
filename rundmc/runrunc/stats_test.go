@@ -3,6 +3,7 @@ package runrunc_test
 import (
 	"errors"
 	"os/exec"
+	"time"
 
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -37,6 +38,11 @@ var _ = Describe("Stats", func() {
 		runcBinary.StatsCommandStub = func(id string, logFile string) *exec.Cmd {
 			return exec.Command("funC-stats", "--log", logFile, id)
 		}
+
+		runcBinary.StateCommandStub = func(id string, logFile string) *exec.Cmd {
+			return exec.Command("funC-state", "--log", logFile, id)
+		}
+
 		runner.RunAndLogStub = func(_ lager.Logger, fn runrunc.LoggingCmd) error {
 			return commandRunner.Run(fn("potato.log"))
 		}
@@ -99,7 +105,15 @@ var _ = Describe("Stats", func() {
             }
 					}
 				}`))
+				return nil
+			})
 
+			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+				Path: "funC-state",
+			}, func(cmd *exec.Cmd) error {
+				cmd.Stdout.Write([]byte(`{
+					"created": "2018-08-17T11:05:57.464894007Z"
+				}`))
 				return nil
 			})
 		})
@@ -113,6 +127,18 @@ var _ = Describe("Stats", func() {
 				System: 2,
 				User:   3,
 			}))
+		})
+
+		It("shows container's age", func() {
+			initialStats, err := statser.Stats(logger, "some-handle")
+			Expect(err).NotTo(HaveOccurred())
+
+			time.Sleep(5 * time.Millisecond)
+
+			subsequentStats, err := statser.Stats(logger, "some-handle")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(subsequentStats.Age).To(BeNumerically(">", initialStats.Age))
 		})
 
 		It("parses the memory stats", func() {
@@ -166,15 +192,20 @@ var _ = Describe("Stats", func() {
 			_, err := statser.Stats(logger, "some-container")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-				Path: "funC-stats",
-				Args: []string{"--log", "potato.log", "some-container"},
-			}))
+			Expect(commandRunner).To(HaveExecutedSerially(
+				fake_command_runner.CommandSpec{
+					Path: "funC-stats",
+					Args: []string{"--log", "potato.log", "some-container"},
+				},
+				fake_command_runner.CommandSpec{
+					Path: "funC-state",
+					Args: []string{"--log", "potato.log", "some-container"},
+				},
+			))
 		})
-
 	})
 
-	Context("when runC reports invalid JSON", func() {
+	Context("when runC stats reports invalid JSON", func() {
 		BeforeEach(func() {
 			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 				Path: "funC-stats",
@@ -191,7 +222,30 @@ var _ = Describe("Stats", func() {
 		})
 	})
 
-	Context("when runC fails", func() {
+	Context("when runC state reports invalid JSON", func() {
+		BeforeEach(func() {
+			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+				Path: "funC-stats",
+			}, func(cmd *exec.Cmd) error {
+				cmd.Stdout.Write([]byte(`{}`))
+				return nil
+			})
+			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+				Path: "funC-state",
+			}, func(cmd *exec.Cmd) error {
+				cmd.Stdout.Write([]byte(`{ banana potato banana potato }`))
+
+				return nil
+			})
+		})
+
+		It("should return an error", func() {
+			_, err := statser.Stats(logger, "some-container")
+			Expect(err).To(MatchError(ContainSubstring("decode state")))
+		})
+	})
+
+	Context("when runC stats fails", func() {
 		BeforeEach(func() {
 			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 				Path: "funC-stats",
@@ -203,6 +257,27 @@ var _ = Describe("Stats", func() {
 		It("returns an error", func() {
 			_, err := statser.Stats(logger, "some-container")
 			Expect(err).To(MatchError(ContainSubstring("runC stats: banana")))
+		})
+	})
+
+	Context("when runC state fails", func() {
+		BeforeEach(func() {
+			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+				Path: "funC-stats",
+			}, func(cmd *exec.Cmd) error {
+				cmd.Stdout.Write([]byte(`{}`))
+				return nil
+			})
+			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+				Path: "funC-state",
+			}, func(cmd *exec.Cmd) error {
+				return errors.New("banana")
+			})
+		})
+
+		It("returns an error", func() {
+			_, err := statser.Stats(logger, "some-container")
+			Expect(err).To(MatchError(ContainSubstring("runC state: banana")))
 		})
 	})
 })
