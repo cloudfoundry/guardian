@@ -194,8 +194,8 @@
     "rootfs",
     "snapshots"
   ]
-  revision = "209a7fc3e4a32ef71a8c7b50c68fc8398415badf"
-  version = "v1.1.0"
+  revision = "468a545b9edcd5932818eb9de8e72413e616e86e"
+  version = "v1.1.2"
 
 [[projects]]
   branch = "master"
@@ -682,6 +682,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5286fbd1a16f8c55f2e810bacab90ee9c5ed48d1a519a37197f7f863673d2940"
+  inputs-digest = "a7bf3ffad4ee46d97e8633b9b51860beaa811e7d702bb3638c0139156b182a6a"
   solver-name = "gps-cdcl"
   solver-version = 1
