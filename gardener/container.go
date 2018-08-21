@@ -150,6 +150,7 @@ func (c *container) Metrics() (garden.Metrics, error) {
 		MemoryStat: actualContainerMetrics.Memory,
 		DiskStat:   diskMetrics,
 		PidStat:    actualContainerMetrics.Pid,
+		Age:        actualContainerMetrics.Age,
 	}, nil
 }
 
