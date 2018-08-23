@@ -11,6 +11,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
+	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/linux/runctypes"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -50,6 +51,32 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec) er
 	return task.Start(n.context)
 }
 
+func withProcessKillLogging(log lager.Logger) func(context.Context, containerd.Process) error {
+	return func(ctx context.Context, p containerd.Process) error {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		// ignore errors to wait and kill as we are forcefully killing
+		// the process and don't care about the exit status
+		log.Debug("with-process-kill.wait", lager.Data{"containerdProcess": p})
+		s, err := p.Wait(ctx)
+		if err != nil {
+			return err
+		}
+		log.Debug("with-process-kill.kill", lager.Data{"containerdProcess": p})
+		if err := p.Kill(ctx, syscall.SIGKILL, containerd.WithKillAll); err != nil {
+			if errdefs.IsFailedPrecondition(err) || errdefs.IsNotFound(err) {
+				return nil
+			}
+			return err
+		}
+		log.Debug("with-process-kill.kill-complete", lager.Data{"containerdProcess": p})
+		// wait for the process to fully stop before letting the rest of the deletion complete
+		<-s
+		log.Debug("with-process-kill.wait-complete", lager.Data{"containerdProcess": p})
+		return nil
+	}
+}
+
 func (n *Nerd) Delete(log lager.Logger, containerID string) error {
 	container, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
@@ -57,7 +84,7 @@ func (n *Nerd) Delete(log lager.Logger, containerID string) error {
 	}
 
 	log.Debug("deleting-task", lager.Data{"containerID": containerID})
-	_, err = task.Delete(n.context, containerd.WithProcessKill)
+	_, err = task.Delete(n.context, withProcessKillLogging(log))
 	if err != nil {
 		return err
 	}
