@@ -260,7 +260,7 @@ func (u *TarUnpacker) handleEntry(entryPath string, tarReader *tar.Reader, tarHe
 		return 0, nil
 
 	case tar.TypeLink:
-		if err = u.createLink(entryPath, tarHeader); err != nil {
+		if err = u.createLink(entryPath, tarHeader, spec.BaseDirectory); err != nil {
 			return 0, err
 		}
 
@@ -344,8 +344,8 @@ func (u *TarUnpacker) createSymlink(path string, tarHeader *tar.Header, spec bas
 	return nil
 }
 
-func (u *TarUnpacker) createLink(path string, tarHeader *tar.Header) error {
-	return os.Link(tarHeader.Linkname, path)
+func (u *TarUnpacker) createLink(path string, tarHeader *tar.Header, basedir string) error {
+	return os.Link(filepath.Join(basedir, tarHeader.Linkname), path)
 }
 
 func ensureParentDir(childPath string) error {

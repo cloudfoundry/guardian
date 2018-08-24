@@ -117,6 +117,49 @@ var _ = Describe("Create with OCI images", func() {
 
 				Expect(path.Join(containerSpec.Root.Path, "home", "example")).To(BeARegularFile())
 			})
+
+			Context("and the annotated layer contains a hardlink", func() {
+				BeforeEach(func() {
+					baseImageURL = integration.String2URL(fmt.Sprintf("oci:///%s/assets/oci-test-image/hardlink:latest", workDir))
+				})
+
+				It("succeeds", func() {
+					containerSpec, err := runner.Create(groot.CreateSpec{
+						BaseImageURL: baseImageURL,
+						ID:           randomImageID,
+						Mount:        mountByDefault(),
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					firstLink := filepath.Join(containerSpec.Root.Path, "home", "first/second/file-link")
+					Expect(firstLink).To(BeAnExistingFile())
+
+					hlStat, err := os.Stat(firstLink)
+					Expect(err).NotTo(HaveOccurred())
+
+					firstFile := filepath.Join(containerSpec.Root.Path, "home", "file")
+					Expect(err).NotTo(HaveOccurred())
+
+					origStat, err := os.Stat(firstFile)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(os.SameFile(hlStat, origStat)).To(BeTrue())
+
+					secondLink := filepath.Join(containerSpec.Root.Path, "home", "file-link2")
+					Expect(secondLink).To(BeAnExistingFile())
+
+					hlStat, err = os.Stat(secondLink)
+					Expect(err).NotTo(HaveOccurred())
+
+					secondFile := filepath.Join(containerSpec.Root.Path, "home", "first/second/file2")
+					Expect(err).NotTo(HaveOccurred())
+
+					origStat, err = os.Stat(secondFile)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(os.SameFile(hlStat, origStat)).To(BeTrue())
+				})
+			})
 		})
 	})
 
