@@ -68,7 +68,7 @@ func NewConfigCreator(idGenerator IDGenerator, interfacePrefix, chainPrefix stri
 		operatorNameservers:   operatorNameservers,
 		additionalNameservers: additionalNameservers,
 		additionalHostEntries: additionalHostEntries,
-		mtu: min(mtu, maxAllowedMtuSize),
+		mtu:                   min(mtu, maxAllowedMtuSize),
 	}
 }
 

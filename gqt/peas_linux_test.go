@@ -107,10 +107,10 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		It("should not leak cgroups", func() {
 			stdout := gbytes.NewBuffer()
 			process, err := ctr.Run(garden.ProcessSpec{
-				ID:    "pea-process",
-				Path:  "cat",
-				Args:  []string{"/proc/self/cgroup"},
-				Image: garden.ImageRef{URI: "raw://" + peaRootfs},
+				ID:                      "pea-process",
+				Path:                    "cat",
+				Args:                    []string{"/proc/self/cgroup"},
+				Image:                   garden.ImageRef{URI: "raw://" + peaRootfs},
 				OverrideContainerLimits: &garden.ProcessLimits{},
 			}, garden.ProcessIO{
 				Stdout: stdout,

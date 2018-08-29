@@ -146,9 +146,9 @@ var _ = Describe("Stats", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(stats.Memory).To(Equal(garden.ContainerMemoryStat{
-				ActiveAnon: 1,
-				ActiveFile: 2,
-				Cache:      3,
+				ActiveAnon:              1,
+				ActiveFile:              2,
+				Cache:                   3,
 				HierarchicalMemoryLimit: 4,
 				InactiveAnon:            5,
 				InactiveFile:            6,
@@ -172,9 +172,9 @@ var _ = Describe("Stats", func() {
 				TotalUnevictable:        26,
 				Unevictable:             28,
 				Swap:                    30,
-				HierarchicalMemswLimit: 31,
-				TotalSwap:              32,
-				TotalUsageTowardLimit:  22,
+				HierarchicalMemswLimit:  31,
+				TotalSwap:               32,
+				TotalUsageTowardLimit:   22,
 			}))
 		})
 
