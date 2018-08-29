@@ -1,7 +1,7 @@
 package runcontainerd_test
 
 import (
-	"encoding/json"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -18,53 +18,54 @@ var _ = Describe("CgroupManager", func() {
 	)
 
 	BeforeEach(func() {
-		var err error
-		runcRoot, err = ioutil.TempDir("", "runc-root")
-		Expect(err).NotTo(HaveOccurred())
-
+		runcRoot = tempDir("", "runc-root")
 		cgroupManager = runcontainerd.NewCgroupManager(runcRoot, "garden")
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(runcRoot)).To(Succeed())
 	})
 
 	Describe("SetUseMemoryHierarchy", func() {
 		var (
-			containerHandle           string
-			memoryUseHierarchyFile    string
-			containerStateFile        string
-			containerStateFileContent []byte
-			returnedErr               error
+			containerHandle  string
+			useHierarchyPath string
+			stateFilePath    string
+			stateFileContent []byte
+			setErr           error
+			cgroupDir        string
 		)
 
 		BeforeEach(func() {
 			containerHandle = "potato"
 
-			memoryDir, err := ioutil.TempDir("", "memory-cgroup")
-			Expect(err).NotTo(HaveOccurred())
+			cgroupDir = tempDir("", "memory-cgroup")
 
-			memoryUseHierarchyFile = filepath.Join(memoryDir, "memory.use_hierarchy")
-			Expect(ioutil.WriteFile(memoryUseHierarchyFile, []byte("0"), os.ModePerm)).To(Succeed())
+			useHierarchyPath = filepath.Join(cgroupDir, "memory.use_hierarchy")
+			writeFile(useHierarchyPath, []byte("0"), os.ModePerm)
 
-			containerStateDir := filepath.Join(runcRoot, "garden", containerHandle)
-			Expect(os.MkdirAll(containerStateDir, os.ModePerm)).To(Succeed())
+			stateFilePath = filepath.Join(runcRoot, "garden", containerHandle, "state.json")
+			Expect(os.MkdirAll(filepath.Dir(stateFilePath), os.ModePerm)).To(Succeed())
 
-			containerStateFile = filepath.Join(containerStateDir, "state.json")
-
-			containerStateFileContent, err = json.Marshal(map[string]interface{}{
+			stateFileContent = marshal(map[string]interface{}{
 				"cgroup_paths": map[string]interface{}{
-					"memory": memoryDir,
+					"memory": cgroupDir,
 				},
 			})
-			Expect(err).NotTo(HaveOccurred())
 		})
 
 		JustBeforeEach(func() {
-			Expect(ioutil.WriteFile(containerStateFile, []byte(containerStateFileContent), os.ModePerm)).To(Succeed())
+			writeFile(stateFilePath, stateFileContent, os.ModePerm)
+			setErr = cgroupManager.SetUseMemoryHierarchy(containerHandle)
+		})
 
-			returnedErr = cgroupManager.SetUseMemoryHierarchy(containerHandle)
+		AfterEach(func() {
+			Expect(os.RemoveAll(cgroupDir)).To(Succeed())
 		})
 
 		It("sets memory.use_hierarchy to 1 for the specified container", func() {
-			Expect(returnedErr).NotTo(HaveOccurred())
-			Expect(ioutil.ReadFile(memoryUseHierarchyFile)).To(Equal([]byte("1")))
+			Expect(setErr).NotTo(HaveOccurred())
+			Expect(ioutil.ReadFile(useHierarchyPath)).To(Equal([]byte("1")))
 		})
 
 		Context("when the state dir for the container doesn't exist", func() {
@@ -73,17 +74,17 @@ var _ = Describe("CgroupManager", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(returnedErr).To(HaveOccurred())
+				Expect(setErr).To(HaveOccurred())
 			})
 		})
 
 		Context("when the container state file is malformed", func() {
 			BeforeEach(func() {
-				containerStateFileContent = []byte{}
+				stateFileContent = nil
 			})
 
 			It("returns an error", func() {
-				Expect(returnedErr).To(MatchError(ContainSubstring("EOF")))
+				Expect(setErr).To(Equal(io.EOF))
 			})
 		})
 	})
