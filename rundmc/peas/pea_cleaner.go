@@ -52,7 +52,7 @@ func (p *PeaCleaner) CleanAll(log lager.Logger) error {
 	log.Info("start")
 	defer log.Info("end")
 
-	peas, err := p.getPeas()
+	peas, err := p.getPeas(log)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (p *PeaCleaner) CleanAll(log lager.Logger) error {
 	return nil
 }
 
-func (p *PeaCleaner) getPeas() ([]Pea, error) {
+func (p *PeaCleaner) getPeas(log lager.Logger) ([]Pea, error) {
 	peas := []Pea{}
 
 	processDirs, err := getProcessDirs(p.DepotDirectory)
@@ -83,7 +83,7 @@ func (p *PeaCleaner) getPeas() ([]Pea, error) {
 		return nil, err
 	}
 
-	peaDirs, err := filterStringSlice(processDirs, isBundle)
+	peaDirs, err := filterStringSlice(processDirs, isPeaDir(log))
 	if err != nil {
 		return nil, err
 	}
@@ -103,8 +103,18 @@ type Pea struct {
 	Pid    int
 }
 
-func isBundle(path string) (bool, error) {
-	return fileExists(filepath.Join(path, "config.json"))
+func isPeaDir(log lager.Logger) func(string) (bool, error) {
+	return func(path string) (bool, error) {
+		if configJSONExists, err := fileExists(filepath.Join(path, "config.json")); !configJSONExists {
+			return false, err
+		}
+
+		if pidfileExists, err := fileExists(filepath.Join(path, "pidfile")); !pidfileExists {
+			log.Error("error-pea-pidfile-does-not-exist", err, lager.Data{"path": path})
+			return false, err
+		}
+		return true, nil
+	}
 }
 
 func getProcessDirs(depotDirectory string) ([]string, error) {

@@ -202,6 +202,18 @@ var _ = Describe("Surviving Restarts", func() {
 					Expect(client.Ping()).To(Succeed())
 				})
 			})
+
+			Context("when there is a pea directory without a pid file", func() {
+				BeforeEach(func() {
+					processDir := filepath.Join(config.DepotDir, "container-handle", "processes", "1234")
+					Expect(os.MkdirAll(processDir, os.ModePerm)).To(Succeed())
+					Expect(ioutil.WriteFile(filepath.Join(processDir, "config.json"), []byte{}, os.ModePerm)).To(Succeed())
+				})
+
+				It("starts up successfully", func() {
+					Expect(client.Ping()).To(Succeed())
+				})
+			})
 		})
 
 		Context("when the destroy-containers-on-startup flag is not passed", func() {

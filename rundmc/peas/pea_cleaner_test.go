@@ -151,8 +151,8 @@ var _ = Describe("PeaCleaner", func() {
 					Expect(os.RemoveAll(pidFilePath)).To(Succeed())
 				})
 
-				It("returns an error", func() {
-					Expect(os.IsNotExist(cleanErr)).To(BeTrue())
+				It("does not return an error", func() {
+					Expect(cleanErr).NotTo(HaveOccurred())
 				})
 			})
 
