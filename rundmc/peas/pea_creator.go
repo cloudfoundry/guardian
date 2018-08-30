@@ -144,7 +144,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 
 	peaBundlePath := filepath.Join(sandboxBundlePath, "processes", processID)
 	if mkdirErr := os.MkdirAll(peaBundlePath, 0700); mkdirErr != nil {
-		return nil, err
+		return nil, mkdirErr
 	}
 	defer func() {
 		if theErr == nil {
