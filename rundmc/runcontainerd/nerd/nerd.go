@@ -11,7 +11,8 @@ import (
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
-	"github.com/containerd/containerd/linux/runctypes"
+	"github.com/containerd/containerd/oci"
+	"github.com/containerd/containerd/runtime/linux/runctypes"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -35,7 +36,7 @@ func WithNoNewKeyring(ctx context.Context, c *containerd.Client, ti *containerd.
 
 func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec) error {
 	log.Debug("creating-container", lager.Data{"containerID": containerID})
-	container, err := n.client.NewContainer(n.context, containerID, containerd.WithSpec(spec))
+	container, err := n.client.NewContainer(n.context, containerID, containerd.WithSpec(spec, oci.WithRootless()))
 	if err != nil {
 		return err
 	}

@@ -1,3 +1,5 @@
+// +build !linux
+
 /*
    Copyright The containerd Authors.
 
@@ -20,24 +22,13 @@ import (
 	"context"
 
 	"github.com/containerd/containerd/containers"
-	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/containerd/containerd/errdefs"
 )
 
-// Spec is a type alias to the OCI runtime spec to allow third part SpecOpts
-// to be created without the "issues" with go vendoring and package imports
-type Spec = specs.Spec
-
-// GenerateSpec will generate a default spec from the provided image
-// for use as a containerd container
-func GenerateSpec(ctx context.Context, client Client, c *containers.Container, opts ...SpecOpts) (*Spec, error) {
-	s, err := createDefaultSpec(ctx, c.ID)
-	if err != nil {
-		return nil, err
+// WithRootless is unsupported on non-Linux but defined so as to
+// keep `ctr` compilable on Darwin.
+func WithRootless() SpecOpts {
+	return func(_ context.Context, _ Client, _ *containers.Container, s *Spec) error {
+		return errdefs.ErrNotImplemented
 	}
-	for _, o := range opts {
-		if err := o(ctx, client, c, s); err != nil {
-			return nil, err
-		}
-	}
-	return s, nil
 }

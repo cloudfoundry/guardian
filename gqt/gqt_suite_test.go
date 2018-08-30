@@ -34,6 +34,8 @@ var (
 	containerdSession *gexec.Session
 	containerdRunDir  string
 
+	rootlessTmpDir string
+
 	config            runner.GdnRunnerConfig
 	binaries          runner.Binaries
 	defaultTestRootFS string
@@ -89,11 +91,13 @@ var _ = BeforeEach(func() {
 	}
 
 	config = defaultConfig()
+	var err error
+	rootlessTmpDir, err = ioutil.TempDir(config.TmpDir, "rootlessTemp")
+	Expect(err).NotTo(HaveOccurred())
+	Expect(exec.Command("chown", "-R", fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedGID), rootlessTmpDir).Run()).To(Succeed())
+
 	if isContainerd() {
-		var err error
-		containerdRunDir, err = ioutil.TempDir("", "")
-		Expect(err).NotTo(HaveOccurred())
-		containerdSession = startContainerd(containerdRunDir)
+		containerdSession = startContainerd(rootlessTmpDir)
 	}
 
 })

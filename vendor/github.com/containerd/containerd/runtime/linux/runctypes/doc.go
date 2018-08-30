@@ -14,30 +14,4 @@
    limitations under the License.
 */
 
-package oci
-
-import (
-	"context"
-
-	specs "github.com/opencontainers/runtime-spec/specs-go"
-)
-
-func createDefaultSpec(ctx context.Context, id string) (*Spec, error) {
-	return &Spec{
-		Version: specs.Version,
-		Root:    &specs.Root{},
-		Process: &specs.Process{
-			Cwd: `C:\`,
-			ConsoleSize: &specs.Box{
-				Width:  80,
-				Height: 20,
-			},
-		},
-		Windows: &specs.Windows{
-			IgnoreFlushesDuringBoot: true,
-			Network: &specs.WindowsNetwork{
-				AllowUnqualifiedDNSQuery: true,
-			},
-		},
-	}, nil
-}
+package runctypes

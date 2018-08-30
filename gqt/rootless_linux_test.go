@@ -23,15 +23,13 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("rootless containers", func() {
+var _ = FDescribe("rootless containers", func() {
 	var (
 		client    *runner.RunningGarden
 		imagePath string
 	)
 
 	BeforeEach(func() {
-		skipIfContainerd()
-
 		setupArgs := []string{"setup",
 			"--tag", config.Tag,
 			"--rootless-uid", idToStr(unprivilegedUID),
@@ -53,9 +51,6 @@ var _ = Describe("rootless containers", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess).Should(gexec.Exit(0))
 
-		runcRootDir, err := ioutil.TempDir(config.TmpDir, "runcRootDir")
-		Expect(err).NotTo(HaveOccurred())
-
 		tempDir, err := ioutil.TempDir(config.TmpDir, "rootlessImagePath")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -68,7 +63,6 @@ var _ = Describe("rootless containers", func() {
 		unprivilegedUser := &syscall.Credential{Uid: unprivilegedUID, Gid: unprivilegedGID}
 
 		runCommand(exec.Command("tar", "xf", defaultTestRootFS, "-C", imagePath))
-		Expect(exec.Command("chown", "-R", fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedGID), runcRootDir).Run()).To(Succeed())
 		Expect(exec.Command("chown", "-R", fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedGID), tempDir).Run()).To(Succeed())
 		// The 'alice' user in the GARDEN_TEST_ROOTFS has a UID of 1000
 		// The tests below use a uid range of 100000 -> 165536
@@ -85,7 +79,7 @@ var _ = Describe("rootless containers", func() {
 		config.UIDMapLength = uint32ptr(65536)
 		config.GIDMapStart = uint32ptr(100000)
 		config.GIDMapLength = uint32ptr(65536)
-		config.RuncRoot = runcRootDir
+		config.RuncRoot = filepath.Join(rootlessTmpDir, "runtime_root", "garden")
 
 		config.BindSocket = ""
 		config.Socket2meSocketPath = filepath.Join(config.TmpDir, "socket.sock")
@@ -280,7 +274,9 @@ var _ = Describe("rootless containers", func() {
 			ctr, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
-			pidBytes, err := ioutil.ReadFile(filepath.Join(client.DepotDir, ctr.Handle(), "pidfile"))
+			// containerd tracks its own pids, so we need to look at that pidfile when doing containerd
+			// pidBytes, err := ioutil.ReadFile(filepath.Join(client.DepotDir, ctr.Handle(), "pidfile"))
+			pidBytes, err := ioutil.ReadFile(filepath.Join(rootlessTmpDir, "state", "io.containerd.runtime.v1.linux", "garden", ctr.Handle(), "init.pid"))
 			Expect(err).NotTo(HaveOccurred())
 			pidStr := strings.TrimSpace(string(pidBytes))
 

@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 
 	"github.com/burntsushi/toml"
 	. "github.com/onsi/ginkgo"
@@ -13,24 +14,33 @@ import (
 )
 
 type Config struct {
-	Root            string      `toml:"root"`
-	State           string      `toml:"state"`
-	Subreaper       bool        `toml:"subreaper"`
-	OomScore        int         `toml:"oom_score"`
-	GRPC            GRPCConfig  `toml:"grpc"`
-	Debug           DebugConfig `toml:"debug"`
-	DisabledPlugins []string    `toml:"disabled_plugins"`
+	Root            string                 `toml:"root"`
+	State           string                 `toml:"state"`
+	Subreaper       bool                   `toml:"subreaper"`
+	OomScore        int                    `toml:"oom_score"`
+	GRPC            GRPCConfig             `toml:"grpc"`
+	Debug           DebugConfig            `toml:"debug"`
+	DisabledPlugins []string               `toml:"disabled_plugins"`
+	Plugins         map[string]interface{} `toml:"plugins"`
 
 	RunDir string
 }
 
 type GRPCConfig struct {
 	Address string `toml:"address"`
+	UID     int    `toml:"uid"`
+	GID     int    `toml:"gid"`
 }
 
 type DebugConfig struct {
 	Address string `toml:"address"`
 	Level   string `toml:"level"`
+	UID     int    `toml:"uid"`
+	GID     int    `toml:"gid"`
+}
+
+type LinuxPlugin struct {
+	RuntimeRoot string `toml:"runtime_root"`
 }
 
 func ContainerdConfig(containerdDataDir string) Config {
@@ -41,10 +51,19 @@ func ContainerdConfig(containerdDataDir string) Config {
 		OomScore:  -999,
 		GRPC: GRPCConfig{
 			Address: filepath.Join(containerdDataDir, "containerd.sock"),
+			UID:     5000,
+			GID:     5000,
 		},
 		Debug: DebugConfig{
 			Address: filepath.Join(containerdDataDir, "debug.sock"),
 			Level:   "debug",
+			UID:     5000,
+			GID:     5000,
+		},
+		Plugins: map[string]interface{}{
+			"linux": LinuxPlugin{
+				RuntimeRoot: filepath.Join(containerdDataDir, "runtime_root"),
+			},
 		},
 		DisabledPlugins: []string{
 			"aufs",
@@ -76,7 +95,11 @@ func NewSession(runDir string, config Config) *gexec.Session {
 	Expect(toml.NewEncoder(configFile).Encode(&config)).To(Succeed())
 	Expect(configFile.Close()).To(Succeed())
 
+	Expect(os.Chown(configFile.Name(), 5000, 5000)).To(Succeed())
+
 	cmd := exec.Command("containerd", "--config", configFile.Name())
+	unprivilegedUser := &syscall.Credential{Uid: uint32(5000), Gid: uint32(5000)}
+	cmd.SysProcAttr = &syscall.SysProcAttr{Credential: unprivilegedUser}
 	cmd.Env = append(os.Environ(), fmt.Sprintf("PATH=%s", fmt.Sprintf("%s:%s", os.Getenv("PATH"), "/usr/local/bin")))
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())

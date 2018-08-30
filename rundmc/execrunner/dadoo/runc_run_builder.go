@@ -9,6 +9,7 @@ import (
 
 func BuildRuncCommand(runtimePath, runMode, runcRoot, processPath, containerHandle, ttyConsoleSocket, logfilePath string) *exec.Cmd {
 	runtimeArgs := []string{}
+
 	if runcRoot != "" {
 		runtimeArgs = append(runtimeArgs, "--root", runcRoot)
 	}

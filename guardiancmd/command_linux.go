@@ -28,8 +28,8 @@ import (
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/linux/proc"
 	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/runtime/linux/proc"
 	"github.com/docker/docker/pkg/mount"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
@@ -248,17 +248,13 @@ func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *
 }
 
 func containerdRuncRoot() string {
-	return proc.RuncRoot
+	return proc.RuncRoot()
 }
 
 func (cmd *ServerCommand) computeRuncRoot() string {
-	if cmd.useContainerd() {
-		return filepath.Join(containerdRuncRoot(), containerdNamespace)
-	}
-
 	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
 	if os.Geteuid() != 0 && runtimeDir != "" {
-		return filepath.Join(runtimeDir, "runc")
+		return runtimeDir
 	}
 
 	return filepath.Join("/", "run", "runc")
