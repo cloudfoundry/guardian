@@ -131,7 +131,7 @@ func getGardenBinaries() runner.Binaries {
 		runCommandInDir(cmd, "../rundmc/nstar")
 		gardenBinaries.NSTar = "../rundmc/nstar/nstar"
 
-		cmd = exec.Command("gcc", "-static", "-o", "init", "init.c")
+		cmd = exec.Command("gcc", "-static", "-o", "init", "init.c", "ignore_sigchild.c")
 		runCommandInDir(cmd, "../cmd/init")
 		gardenBinaries.Init = "../cmd/init/init"
 
