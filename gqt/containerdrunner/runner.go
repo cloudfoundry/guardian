@@ -20,6 +20,7 @@ type Config struct {
 	GRPC            GRPCConfig  `toml:"grpc"`
 	Debug           DebugConfig `toml:"debug"`
 	DisabledPlugins []string    `toml:"disabled_plugins"`
+	Plugins         Plugins     `toml:"plugins"`
 
 	RunDir string
 }
@@ -31,6 +32,14 @@ type GRPCConfig struct {
 type DebugConfig struct {
 	Address string `toml:"address"`
 	Level   string `toml:"level"`
+}
+
+type Plugins struct {
+	Linux Linux `toml:"linux"`
+}
+
+type Linux struct {
+	ShimDebug bool `toml:"shim_debug"`
 }
 
 func ContainerdConfig(containerdDataDir string) Config {
@@ -66,6 +75,11 @@ func ContainerdConfig(containerdDataDir string) Config {
 			"snapshots",
 			"version",
 			"cri",
+		},
+		Plugins: Plugins{
+			Linux: Linux{
+				ShimDebug: true,
+			},
 		},
 	}
 }
