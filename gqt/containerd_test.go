@@ -41,6 +41,10 @@ var _ = Describe("Containerd", func() {
 
 			containers := listContainers("ctr", config.ContainerdSocket)
 			Expect(containers).To(ContainSubstring(container.Handle()))
+
+			tasks := listTasks("ctr", config.ContainerdSocket)
+			Expect(tasks).To(ContainSubstring(container.Handle()))
+			Expect(tasks).To(MatchRegexp(fmt.Sprintf(`%s\s+\d+\s+RUNNING`, container.Handle())))
 		})
 	})
 
