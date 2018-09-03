@@ -18,10 +18,12 @@
 package specconv
 
 import (
+	"errors"
 	"os"
 	"sort"
 	"strings"
 
+	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -31,9 +33,9 @@ import (
 // * Fix up mount flags (same as above)
 // * Replace /sys with bind-mount (FIXME: we don't need to do this if netns is unshared)
 func ToRootless(spec *specs.Spec) error {
-	// if !system.RunningInUserNS() {
-	// 	return errors.New("needs to be in user namespace")
-	// }
+	if !system.RunningInUserNS() {
+		return errors.New("needs to be in user namespace")
+	}
 	uidMap, err := user.CurrentProcessUIDMap()
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -47,16 +49,16 @@ func ToRootless(spec *specs.Spec) error {
 
 // toRootless was forked from github.com/opencontainers/runc/libcontainer/specconv
 func toRootless(spec *specs.Spec, uidMap, gidMap []user.IDMap) error {
-	// if err := configureUserNS(spec, uidMap, gidMap); err != nil {
-	// 	return err
-	// }
-	// if err := configureMounts(spec); err != nil {
-	// 	return err
-	// }
-	//
-	// // Remove cgroup settings.
-	// spec.Linux.Resources = nil
-	// spec.Linux.CgroupsPath = ""
+	if err := configureUserNS(spec, uidMap, gidMap); err != nil {
+		return err
+	}
+	if err := configureMounts(spec); err != nil {
+		return err
+	}
+
+	// Remove cgroup settings.
+	spec.Linux.Resources = nil
+	spec.Linux.CgroupsPath = ""
 	return nil
 }
 
