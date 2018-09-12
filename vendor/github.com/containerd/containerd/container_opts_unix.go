@@ -31,14 +31,14 @@ import (
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
-	"github.com/containerd/containerd/linux/runctypes"
 	"github.com/containerd/containerd/mount"
 	"github.com/containerd/containerd/platforms"
+	"github.com/containerd/containerd/runtime/linux/runctypes"
 	"github.com/gogo/protobuf/proto"
 	protobuf "github.com/gogo/protobuf/types"
-	digest "github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/identity"
 	"github.com/opencontainers/image-spec/specs-go/v1"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
 
@@ -50,10 +50,9 @@ func WithCheckpoint(im Image, snapshotKey string) NewContainerOpts {
 	return func(ctx context.Context, client *Client, c *containers.Container) error {
 		var (
 			desc  = im.Target()
-			id    = desc.Digest
 			store = client.ContentStore()
 		)
-		index, err := decodeIndex(ctx, store, id)
+		index, err := decodeIndex(ctx, store, desc)
 		if err != nil {
 			return err
 		}
@@ -80,7 +79,7 @@ func WithCheckpoint(im Image, snapshotKey string) NewContainerOpts {
 				}
 				c.Image = index.Annotations["image.name"]
 			case images.MediaTypeContainerd1CheckpointConfig:
-				data, err := content.ReadBlob(ctx, store, m.Digest)
+				data, err := content.ReadBlob(ctx, store, m)
 				if err != nil {
 					return errors.Wrap(err, "unable to read checkpoint config")
 				}
@@ -113,7 +112,7 @@ func WithTaskCheckpoint(im Image) NewTaskOpts {
 	return func(ctx context.Context, c *Client, info *TaskInfo) error {
 		desc := im.Target()
 		id := desc.Digest
-		index, err := decodeIndex(ctx, c.ContentStore(), id)
+		index, err := decodeIndex(ctx, c.ContentStore(), desc)
 		if err != nil {
 			return err
 		}
@@ -131,9 +130,9 @@ func WithTaskCheckpoint(im Image) NewTaskOpts {
 	}
 }
 
-func decodeIndex(ctx context.Context, store content.Provider, id digest.Digest) (*v1.Index, error) {
+func decodeIndex(ctx context.Context, store content.Provider, desc ocispec.Descriptor) (*v1.Index, error) {
 	var index v1.Index
-	p, err := content.ReadBlob(ctx, store, id)
+	p, err := content.ReadBlob(ctx, store, desc)
 	if err != nil {
 		return nil, err
 	}
@@ -225,16 +224,8 @@ func incrementFS(root string, uidInc, gidInc uint32) filepath.WalkFunc {
 
 // WithNoPivotRoot instructs the runtime not to you pivot_root
 func WithNoPivotRoot(_ context.Context, _ *Client, info *TaskInfo) error {
-	if info.Options == nil {
-		info.Options = &runctypes.CreateOptions{
-			NoPivotRoot: true,
-		}
+	return updateTaskInfoCreateOptions(info, func(opts *runctypes.CreateOptions) error {
+		opts.NoPivotRoot = true
 		return nil
-	}
-	copts, ok := info.Options.(*runctypes.CreateOptions)
-	if !ok {
-		return errors.New("invalid options type, expected runctypes.CreateOptions")
-	}
-	copts.NoPivotRoot = true
-	return nil
+	})
 }

@@ -144,12 +144,7 @@
   revision = "b33733203bb48d7c56de7cb639d77f78b0449d19"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/containerd/console"
-  packages = ["."]
-  revision = "cb7008ab3d8359b78c5f464cb7cf160107ad5925"
-
-[[projects]]
+  branch = "spike-rootless-no-ns"
   name = "github.com/containerd/containerd"
   packages = [
     ".",
@@ -169,8 +164,8 @@
     "cio",
     "containers",
     "content",
+    "content/proxy",
     "defaults",
-    "dialer",
     "diff",
     "errdefs",
     "events",
@@ -179,12 +174,11 @@
     "identifiers",
     "images",
     "leases",
-    "linux/proc",
-    "linux/runctypes",
     "log",
     "mount",
     "namespaces",
     "oci",
+    "pkg/dialer",
     "platforms",
     "plugin",
     "reference",
@@ -192,10 +186,13 @@
     "remotes/docker",
     "remotes/docker/schema1",
     "rootfs",
-    "snapshots"
+    "rootless/specconv",
+    "runtime/linux/runctypes",
+    "snapshots",
+    "snapshots/proxy"
   ]
-  revision = "209a7fc3e4a32ef71a8c7b50c68fc8398415badf"
-  version = "v1.1.0"
+  revision = "242e830f2b96f06d0b77f6baee195a74bd242d4d"
+  source = "github.com/masters-of-cats/containerd"
 
 [[projects]]
   branch = "master"
@@ -214,12 +211,6 @@
   name = "github.com/containerd/fifo"
   packages = ["."]
   revision = "3d5202aec260678c48179c56f40e6f38a095738c"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/containerd/go-runc"
-  packages = ["."]
-  revision = "301f7c1fbbc328a0b5b08c4e9942de2f0a147f96"
 
 [[projects]]
   branch = "master"
@@ -682,6 +673,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5286fbd1a16f8c55f2e810bacab90ee9c5ed48d1a519a37197f7f863673d2940"
+  inputs-digest = "eb33fc7f13f02723c9df2c04f3d254a8a8f00015234bf61ca7aa84041d6f976e"
   solver-name = "gps-cdcl"
   solver-version = 1

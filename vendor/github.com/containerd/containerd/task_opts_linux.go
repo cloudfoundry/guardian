@@ -18,7 +18,10 @@ package containerd
 
 import (
 	"context"
+	"errors"
+	"syscall"
 
+	"github.com/containerd/containerd/runtime/linux/runctypes"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -28,4 +31,36 @@ func WithResources(resources *specs.LinuxResources) UpdateTaskOpts {
 		r.Resources = resources
 		return nil
 	}
+}
+
+// WithNoNewKeyring causes tasks not to be created with a new keyring for secret storage.
+// There is an upper limit on the number of keyrings in a linux system
+func WithNoNewKeyring(ctx context.Context, c *Client, ti *TaskInfo) error {
+	return updateTaskInfoCreateOptions(ti, func(opts *runctypes.CreateOptions) error {
+		opts.NoNewKeyring = true
+		return nil
+	})
+}
+
+// WithCurrentUIDAndGID sets IoUid and IoGid to the calling user
+// Note: This ensures that when fifo fds are created, they are chowned to the correct user
+// This is important for when executing as a non-root user
+func WithCurrentUIDAndGID(ctx context.Context, c *Client, ti *TaskInfo) error {
+	return updateTaskInfoCreateOptions(ti, func(opts *runctypes.CreateOptions) error {
+		opts.IoUid = uint32(syscall.Geteuid())
+		opts.IoGid = uint32(syscall.Getegid())
+		return nil
+	})
+}
+
+func updateTaskInfoCreateOptions(taskInfo *TaskInfo, updateCreateOptions func(createOptions *runctypes.CreateOptions) error) error {
+	if taskInfo.Options == nil {
+		taskInfo.Options = &runctypes.CreateOptions{}
+	}
+	opts, ok := taskInfo.Options.(*runctypes.CreateOptions)
+	if !ok {
+		return errors.New("could not cast TaskInfo Options to CreateOptions")
+	}
+
+	return updateCreateOptions(opts)
 }

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/containerd/containerd/defaults"
@@ -120,6 +121,9 @@ func WithStreams(stdin io.Reader, stdout, stderr io.Writer) Opt {
 
 // WithFIFODir sets the fifo directory.
 // e.g. "/run/containerd/fifo", "/run/users/1001/containerd/fifo"
+//
+// For rootless execution, specifying WithFIFODir is required in most setup.
+// If WithFIFODir is not specified, NewCreator sets the directory to defaults.DefaultFIFODir.
 func WithFIFODir(dir string) Opt {
 	return func(opt *Streams) {
 		opt.FIFODir = dir
@@ -132,8 +136,9 @@ func NewCreator(opts ...Opt) Creator {
 	for _, opt := range opts {
 		opt(streams)
 	}
+	// Note: Ensure this dir created somewhere user has perms
 	if streams.FIFODir == "" {
-		streams.FIFODir = defaults.DefaultFIFODir
+		streams.FIFODir = defaults.UserFIFODir
 	}
 	return func(id string) (IO, error) {
 		fifos, err := NewFIFOSetInDir(streams.FIFODir, id, streams.Terminal)
@@ -213,3 +218,55 @@ type DirectIO struct {
 }
 
 var _ IO = &DirectIO{}
+
+// LogFile creates a file on disk that logs the task's STDOUT,STDERR.
+// If the log file already exists, the logs will be appended to the file.
+func LogFile(path string) Creator {
+	return func(_ string) (IO, error) {
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			return nil, err
+		}
+		f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, err
+		}
+		f.Close()
+		return &logIO{
+			config: Config{
+				Stdout: path,
+				Stderr: path,
+			},
+		}, nil
+	}
+}
+
+type logIO struct {
+	config Config
+}
+
+func (l *logIO) Config() Config {
+	return l.config
+}
+
+func (l *logIO) Cancel() {
+
+}
+
+func (l *logIO) Wait() {
+
+}
+
+func (l *logIO) Close() error {
+	return nil
+}
+
+// Load the io for a container but do not attach
+//
+// Allows io to be loaded on the task for deletion without
+// starting copy routines
+func Load(set *FIFOSet) (IO, error) {
+	return &cio{
+		config:  set.Config,
+		closers: []io.Closer{set},
+	}, nil
+}

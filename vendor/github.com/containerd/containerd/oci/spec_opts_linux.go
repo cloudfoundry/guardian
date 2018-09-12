@@ -20,24 +20,15 @@ import (
 	"context"
 
 	"github.com/containerd/containerd/containers"
-	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/containerd/containerd/rootless/specconv"
 )
 
-// Spec is a type alias to the OCI runtime spec to allow third part SpecOpts
-// to be created without the "issues" with go vendoring and package imports
-type Spec = specs.Spec
+// WithRootless applies github.com/containerd/containerd/rootless/specconv.ToRootless().
+// WithRootless needs to be called in the daemon's user namespace.
 
-// GenerateSpec will generate a default spec from the provided image
-// for use as a containerd container
-func GenerateSpec(ctx context.Context, client Client, c *containers.Container, opts ...SpecOpts) (*Spec, error) {
-	s, err := createDefaultSpec(ctx, c.ID)
-	if err != nil {
-		return nil, err
+// Note: Garden does not need to use this in our client as we are not running with user ns
+func WithRootless() SpecOpts {
+	return func(_ context.Context, _ Client, _ *containers.Container, s *Spec) error {
+		return specconv.ToRootless(s)
 	}
-	for _, o := range opts {
-		if err := o(ctx, client, c, s); err != nil {
-			return nil, err
-		}
-	}
-	return s, nil
 }
