@@ -8,7 +8,7 @@ int main(void) {
     sleep(1);
   } else {
     while(1) {
-      sleep(10);
+      pause();
     }
   }
 }

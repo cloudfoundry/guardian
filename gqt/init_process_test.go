@@ -1,11 +1,12 @@
 package gqt_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
-	"time"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -34,10 +35,20 @@ var _ = Describe("Init process", func() {
 		parentCommand = exec.Command("cmd/test_init")
 		parentCommand.Start()
 
-		time.Sleep(1)
-
 		Eventually(countPsOccurances).Should(Equal(1))
-		Expect(string(runPs())).NotTo(ContainSubstring("defunct"))
+
+		psOut := string(runPs())
+		fmt.Println(psOut)
+		matchingPsLines := []string{}
+		psLines := strings.Split(psOut, "\n")
+		for _, psLine := range psLines {
+			if !strings.Contains(psLine, "test_init") {
+				continue
+			}
+			matchingPsLines = append(matchingPsLines, psLine)
+		}
+
+		Expect(strings.Join(matchingPsLines, "\n")).NotTo(ContainSubstring("defunct"))
 	})
 })
 
@@ -52,13 +63,9 @@ func countPsOccurances() int {
 }
 
 func runPs() []byte {
-
 	cmd := exec.Command("ps", "auxf")
-	cmd.Wait()
-
 	psout, err := cmd.Output()
 	Expect(err).NotTo(HaveOccurred())
 
 	return psout
-
 }
