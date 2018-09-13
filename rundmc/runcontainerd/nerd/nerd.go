@@ -3,10 +3,12 @@ package nerd
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"strconv"
 	"syscall"
+	"time"
 
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
@@ -71,7 +73,13 @@ func withProcessKillLogging(log lager.Logger) func(context.Context, containerd.P
 		}
 		log.Debug("with-process-kill.kill-complete", lager.Data{"containerdProcess": p})
 		// wait for the process to fully stop before letting the rest of the deletion complete
-		<-s
+		select {
+		case <-s:
+			break
+		case <-time.After(time.Minute * 2):
+			return fmt.Errorf("timed out waiting for container kill: %#v", p)
+		}
+
 		log.Debug("with-process-kill.wait-complete", lager.Data{"containerdProcess": p})
 		return nil
 	}
