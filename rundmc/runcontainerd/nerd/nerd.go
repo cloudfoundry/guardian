@@ -59,28 +59,28 @@ func withProcessKillLogging(log lager.Logger) func(context.Context, containerd.P
 		defer cancel()
 		// ignore errors to wait and kill as we are forcefully killing
 		// the process and don't care about the exit status
-		log.Debug("with-process-kill.wait", lager.Data{"containerdProcess": p})
+		log.Debug("with-process-kill.wait", lager.Data{"containerdProcess": p.ID(), "processID": p.Pid()})
 		s, err := p.Wait(ctx)
 		if err != nil {
 			return err
 		}
-		log.Debug("with-process-kill.kill", lager.Data{"containerdProcess": p})
+		log.Debug("with-process-kill.kill", lager.Data{"containerdProcess": p.ID(), "processID": p.Pid()})
 		if err := p.Kill(ctx, syscall.SIGKILL, containerd.WithKillAll); err != nil {
 			if errdefs.IsFailedPrecondition(err) || errdefs.IsNotFound(err) {
 				return nil
 			}
 			return err
 		}
-		log.Debug("with-process-kill.kill-complete", lager.Data{"containerdProcess": p})
+		log.Debug("with-process-kill.kill-complete", lager.Data{"containerdProcess": p.ID(), "processID": p.Pid()})
 		// wait for the process to fully stop before letting the rest of the deletion complete
 		select {
 		case <-s:
 			break
 		case <-time.After(time.Minute * 2):
-			return fmt.Errorf("timed out waiting for container kill: %#v", p)
+			return fmt.Errorf("timed out waiting for container kill: containerdProcess=%s, processID=%d", p.ID(), p.Pid())
 		}
 
-		log.Debug("with-process-kill.wait-complete", lager.Data{"containerdProcess": p})
+		log.Debug("with-process-kill.wait-complete", lager.Data{"containerdProcess": p.ID(), "processID": p.Pid()})
 		return nil
 	}
 }
