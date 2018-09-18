@@ -311,7 +311,7 @@ func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header, spec b
 	}
 
 	if err := changeModTime(path, tarHeader.ModTime); err != nil {
-		return errors.Wrapf(err, "setting the modtime for directory `%s`: %s", path)
+		return errors.Wrapf(err, "setting the modtime for directory %s", path)
 	}
 
 	return nil
