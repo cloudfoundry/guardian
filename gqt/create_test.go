@@ -556,7 +556,7 @@ var _ = Describe("Creating a Container", func() {
 				var err error
 				lookupContainer, err = client.Lookup(handle)
 				return err
-			}, time.Second*10, time.Millisecond*100).ShouldNot(HaveOccurred())
+			}, time.Second*20, time.Millisecond*200).ShouldNot(HaveOccurred())
 
 			// Properties used to be set after containers were available from lookup
 			Expect(lookupContainer.Properties()).To(HaveKeyWithValue("somename", "somevalue"))
