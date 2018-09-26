@@ -336,8 +336,6 @@ func (cmd *ServerCommand) Execute([]string) error {
 			"--log-level", cmd.Logger.LogLevel,
 		}
 
-		cmd.Network.AllowHostAccess = true
-
 		maxId := mustGetMaxValidUID()
 
 		initStoreCmd := newInitStoreCommand(cmd.Image.Plugin.Path(), cmd.Image.PluginExtraArgs)
