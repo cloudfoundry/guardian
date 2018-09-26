@@ -498,12 +498,15 @@ var _ = Describe("Runcontainerd", func() {
 
 	Describe("Stats", func() {
 		var (
-			metrics    gardener.ActualContainerMetrics
+			metrics    gardener.StatsContainerMetrics
 			metricsErr error
 		)
 
 		BeforeEach(func() {
-			statser.StatsReturns(gardener.ActualContainerMetrics{CPU: garden.ContainerCPUStat{Usage: 123}}, nil)
+			statser.StatsReturns(gardener.StatsContainerMetrics{
+				CPU: garden.ContainerCPUStat{
+					Usage: 123,
+				}}, nil)
 		})
 
 		JustBeforeEach(func() {
@@ -527,7 +530,7 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("statser fails", func() {
 			BeforeEach(func() {
-				statser.StatsReturns(gardener.ActualContainerMetrics{}, errors.New("statser-failure"))
+				statser.StatsReturns(gardener.StatsContainerMetrics{}, errors.New("statser-failure"))
 			})
 
 			It("returns the statser error", func() {

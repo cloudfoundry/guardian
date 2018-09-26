@@ -51,7 +51,7 @@ type Execer interface {
 
 //go:generate counterfeiter . Statser
 type Statser interface {
-	Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error)
+	Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)
 }
 
 type RunContainerd struct {
@@ -163,7 +163,7 @@ func (r *RunContainerd) State(log lager.Logger, id string) (runrunc.State, error
 	return runrunc.State{Pid: pid, Status: runrunc.Status(status)}, nil
 }
 
-func (r *RunContainerd) Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error) {
+func (r *RunContainerd) Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error) {
 	return r.statser.Stats(log, id)
 }
 

@@ -99,18 +99,18 @@ type FakeOCIRuntime struct {
 		result1 runrunc.State
 		result2 error
 	}
-	StatsStub        func(log lager.Logger, id string) (gardener.ActualContainerMetrics, error)
+	StatsStub        func(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)
 	statsMutex       sync.RWMutex
 	statsArgsForCall []struct {
 		log lager.Logger
 		id  string
 	}
 	statsReturns struct {
-		result1 gardener.ActualContainerMetrics
+		result1 gardener.StatsContainerMetrics
 		result2 error
 	}
 	statsReturnsOnCall map[int]struct {
-		result1 gardener.ActualContainerMetrics
+		result1 gardener.StatsContainerMetrics
 		result2 error
 	}
 	WatchEventsStub        func(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error
@@ -442,7 +442,7 @@ func (fake *FakeOCIRuntime) StateReturnsOnCall(i int, result1 runrunc.State, res
 	}{result1, result2}
 }
 
-func (fake *FakeOCIRuntime) Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error) {
+func (fake *FakeOCIRuntime) Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error) {
 	fake.statsMutex.Lock()
 	ret, specificReturn := fake.statsReturnsOnCall[len(fake.statsArgsForCall)]
 	fake.statsArgsForCall = append(fake.statsArgsForCall, struct {
@@ -472,24 +472,24 @@ func (fake *FakeOCIRuntime) StatsArgsForCall(i int) (lager.Logger, string) {
 	return fake.statsArgsForCall[i].log, fake.statsArgsForCall[i].id
 }
 
-func (fake *FakeOCIRuntime) StatsReturns(result1 gardener.ActualContainerMetrics, result2 error) {
+func (fake *FakeOCIRuntime) StatsReturns(result1 gardener.StatsContainerMetrics, result2 error) {
 	fake.StatsStub = nil
 	fake.statsReturns = struct {
-		result1 gardener.ActualContainerMetrics
+		result1 gardener.StatsContainerMetrics
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeOCIRuntime) StatsReturnsOnCall(i int, result1 gardener.ActualContainerMetrics, result2 error) {
+func (fake *FakeOCIRuntime) StatsReturnsOnCall(i int, result1 gardener.StatsContainerMetrics, result2 error) {
 	fake.StatsStub = nil
 	if fake.statsReturnsOnCall == nil {
 		fake.statsReturnsOnCall = make(map[int]struct {
-			result1 gardener.ActualContainerMetrics
+			result1 gardener.StatsContainerMetrics
 			result2 error
 		})
 	}
 	fake.statsReturnsOnCall[i] = struct {
-		result1 gardener.ActualContainerMetrics
+		result1 gardener.StatsContainerMetrics
 		result2 error
 	}{result1, result2}
 }

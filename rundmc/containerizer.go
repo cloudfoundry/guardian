@@ -46,7 +46,7 @@ type OCIRuntime interface {
 	Kill(log lager.Logger, bundlePath string) error
 	Delete(log lager.Logger, force bool, id string) error
 	State(log lager.Logger, id string) (runrunc.State, error)
-	Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error)
+	Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)
 	WatchEvents(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error
 }
 
@@ -356,10 +356,27 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (spec.ActualContai
 }
 
 func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.ActualContainerMetrics, error) {
-	return c.runtime.Stats(log, handle)
+	containerMetrics, err := c.runtime.Stats(log, handle)
+	if err != nil {
+		return gardener.ActualContainerMetrics{}, err
+	}
+
+	return gardener.ActualContainerMetrics{
+		StatsContainerMetrics: containerMetrics,
+		CPUEntitlement: calculateEntitlement(containerMetrics.Memory.HierarchicalMemoryLimit,
+			containerMetrics.Age),
+	}, nil
 }
 
 // Handles returns a list of all container handles
 func (c *Containerizer) Handles() ([]string, error) {
 	return c.depot.Handles()
+}
+
+func calculateEntitlement(memoryLimitInBytes uint64, containerAge time.Duration) uint64 {
+	return uint64(gigabytes(memoryLimitInBytes) * float64(containerAge.Nanoseconds()))
+}
+
+func gigabytes(bytes uint64) float64 {
+	return float64(bytes) / (1024 * 1024 * 1024)
 }

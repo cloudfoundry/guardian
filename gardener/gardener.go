@@ -113,11 +113,16 @@ func (fn UidGeneratorFunc) Generate() string {
 	return fn()
 }
 
-type ActualContainerMetrics struct {
+type StatsContainerMetrics struct {
 	CPU    garden.ContainerCPUStat
 	Memory garden.ContainerMemoryStat
 	Pid    garden.ContainerPidStat
 	Age    time.Duration
+}
+
+type ActualContainerMetrics struct {
+	StatsContainerMetrics
+	CPUEntitlement uint64
 }
 
 // Gardener orchestrates other components to implement the Garden API

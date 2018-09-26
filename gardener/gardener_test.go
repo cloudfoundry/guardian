@@ -1262,8 +1262,12 @@ var _ = Describe("Gardener", func() {
 			}
 
 			containerizer.MetricsReturns(gardener.ActualContainerMetrics{
-				CPU:    cpuStat,
-				Memory: memoryStat,
+				StatsContainerMetrics: gardener.StatsContainerMetrics{
+					CPU:    cpuStat,
+					Memory: memoryStat,
+					Age:    time.Minute,
+				},
+				CPUEntitlement: 12345,
 			}, nil)
 
 			volumizer.MetricsReturns(diskStat, nil)
@@ -1291,6 +1295,20 @@ var _ = Describe("Gardener", func() {
 			Expect(volumizer.MetricsCallCount()).To(Equal(1))
 			_, _, namespaced := volumizer.MetricsArgsForCall(0)
 			Expect(namespaced).To(BeTrue())
+		})
+
+		It("should return the container age", func() {
+			metrics, err := container.Metrics()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(metrics.Age).To(Equal(time.Minute))
+		})
+
+		It("should return the container CPU entitlement", func() {
+			metrics, err := container.Metrics()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(metrics.CPUEntitlement).To(Equal(uint64(12345)))
 		})
 
 		Context("when the container is privileged", func() {
@@ -1343,8 +1361,10 @@ var _ = Describe("Gardener", func() {
 				}
 
 				return gardener.ActualContainerMetrics{
-					CPU:    cpuStat,
-					Memory: memoryStat,
+					StatsContainerMetrics: gardener.StatsContainerMetrics{
+						CPU:    cpuStat,
+						Memory: memoryStat,
+					},
 				}, nil
 			}
 

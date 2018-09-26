@@ -51,18 +51,18 @@ func NewStatser(runner RuncCmdRunner, runc RuncBinary) *Statser {
 	}
 }
 
-func (r *Statser) Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error) {
+func (r *Statser) Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error) {
 	containerStats, err := r.getStats(log, id)
 	if err != nil {
-		return gardener.ActualContainerMetrics{}, err
+		return gardener.StatsContainerMetrics{}, err
 	}
 
 	containerState, err := r.getState(log, id)
 	if err != nil {
-		return gardener.ActualContainerMetrics{}, err
+		return gardener.StatsContainerMetrics{}, err
 	}
 
-	stats := gardener.ActualContainerMetrics{
+	stats := gardener.StatsContainerMetrics{
 		Memory: containerStats.Data.MemoryStats.Stats,
 		CPU: garden.ContainerCPUStat{
 			Usage:  containerStats.Data.CPUStats.CPUUsage.Usage,

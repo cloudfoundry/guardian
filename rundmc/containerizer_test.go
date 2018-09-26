@@ -686,22 +686,51 @@ var _ = Describe("Rundmc", func() {
 	})
 
 	Describe("Metrics", func() {
+		JustBeforeEach(func() {
+			memoryLimit := int64(100)
+			fakeBundleLoader.LoadStub = func(bundlePath string) (goci.Bndl, error) {
+				return goci.Bndl{
+					Spec: specs.Spec{
+						Root: &specs.Root{},
+						Linux: &specs.Linux{
+							Resources: &specs.LinuxResources{
+								Memory: &specs.LinuxMemory{
+									Limit: &memoryLimit,
+								}}}},
+				}, nil
+			}
+		})
+
 		It("returns the CPU metrics", func() {
-			metrics := gardener.ActualContainerMetrics{
+			containerStats := gardener.StatsContainerMetrics{
 				CPU: garden.ContainerCPUStat{
 					Usage:  1,
 					User:   2,
 					System: 3,
 				},
 			}
-
-			fakeOCIRuntime.StatsReturns(metrics, nil)
+			metrics := gardener.ActualContainerMetrics{
+				StatsContainerMetrics: containerStats,
+			}
+			fakeOCIRuntime.StatsReturns(containerStats, nil)
 			Expect(containerizer.Metrics(logger, "foo")).To(Equal(metrics))
+		})
+
+		It("return the CPU entitlement", func() {
+			fakeOCIRuntime.StatsReturns(gardener.StatsContainerMetrics{
+				Memory: garden.ContainerMemoryStat{
+					HierarchicalMemoryLimit: 100,
+				},
+				Age: time.Second,
+			}, nil)
+			actualMetrics, err := containerizer.Metrics(logger, "foo")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualMetrics.CPUEntitlement).To(Equal((uint64(time.Second.Nanoseconds()*100) / (1024 * 1024 * 1024))))
 		})
 
 		Context("when container fails to provide stats", func() {
 			BeforeEach(func() {
-				fakeOCIRuntime.StatsReturns(gardener.ActualContainerMetrics{}, errors.New("banana"))
+				fakeOCIRuntime.StatsReturns(gardener.StatsContainerMetrics{}, errors.New("banana"))
 			})
 
 			It("should return the error", func() {
