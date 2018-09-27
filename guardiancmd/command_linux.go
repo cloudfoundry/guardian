@@ -30,7 +30,6 @@ import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/linux/proc"
 	"github.com/containerd/containerd/namespaces"
-	"github.com/docker/docker/pkg/mount"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
@@ -219,10 +218,7 @@ func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
 
 func wireMounts() bundlerules.Mounts {
 	return bundlerules.Mounts{
-		MountOptionsGetter: rundmc.GetMountOptions,
-		MountInfosProvider: func() ([]*mount.Info, error) {
-			return mount.GetMounts()
-		},
+		MountOptionsGetter: bundlerules.UnprivilegedMountFlagsGetter,
 	}
 }
 

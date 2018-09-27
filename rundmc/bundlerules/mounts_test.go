@@ -3,7 +3,6 @@ package bundlerules_test
 import (
 	"errors"
 
-	"github.com/docker/docker/pkg/mount"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -24,7 +23,6 @@ var _ = Describe("MountsRule", func() {
 
 		bindMounts             []garden.BindMount
 		desiredImageSpecMounts []specs.Mount
-		mountInfosProvider     func() ([]*mount.Info, error)
 	)
 
 	BeforeEach(func() {
@@ -59,16 +57,11 @@ var _ = Describe("MountsRule", func() {
 		}
 
 		originalBndl = goci.Bundle().WithMounts(preConfiguredMounts...)
-
-		mountInfosProvider = func() ([]*mount.Info, error) {
-			return []*mount.Info{&mount.Info{ID: 1234}}, nil
-		}
 	})
 
 	JustBeforeEach(func() {
 		rule := bundlerules.Mounts{
 			MountOptionsGetter: mountOptionsGetter.Spy,
-			MountInfosProvider: mountInfosProvider,
 		}
 		bndl, bundleApplyErr = rule.Apply(
 			originalBndl,
@@ -85,13 +78,11 @@ var _ = Describe("MountsRule", func() {
 
 		It("checks mount options for the source path", func() {
 			Expect(mountOptionsGetter.CallCount()).To(Equal(2))
-			actualPath, mountInfos := mountOptionsGetter.ArgsForCall(0)
+			actualPath := mountOptionsGetter.ArgsForCall(0)
 			Expect(actualPath).To(Equal("/path/to/ro/src"))
-			Expect(mountInfos[0].ID).To(Equal(1234))
 
-			actualPath, mountInfos = mountOptionsGetter.ArgsForCall(1)
+			actualPath = mountOptionsGetter.ArgsForCall(1)
 			Expect(actualPath).To(Equal("/path/to/rw/src"))
-			Expect(mountInfos[0].ID).To(Equal(1234))
 		})
 
 		Context("when checking mount options for the source path fails", func() {
@@ -114,18 +105,6 @@ var _ = Describe("MountsRule", func() {
 					Type:        "bind",
 				},
 			))
-		})
-	})
-
-	Context("when getting mountpoints information fails", func() {
-		BeforeEach(func() {
-			mountInfosProvider = func() ([]*mount.Info, error) {
-				return nil, errors.New("minfo")
-			}
-		})
-
-		It("returns an error", func() {
-			Expect(bundleApplyErr).To(MatchError("minfo"))
 		})
 	})
 

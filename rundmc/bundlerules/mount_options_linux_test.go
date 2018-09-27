@@ -1,4 +1,4 @@
-package rundmc_test
+package bundlerules_test
 
 import (
 	"io/ioutil"
@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"code.cloudfoundry.org/guardian/rundmc"
-	"github.com/docker/docker/pkg/mount"
+	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -16,25 +16,18 @@ var _ = Describe("Mount options", func() {
 	var (
 		mountPoint         string
 		mountOptions       []string
-		toBeMounted        string
 		getMountOptionsErr error
 		tmpDir             string
 	)
 
 	JustBeforeEach(func() {
-		mountInfos, err := mount.GetMounts()
-		Expect(err).NotTo(HaveOccurred())
-		mountOptions, getMountOptionsErr = rundmc.GetMountOptions(mountPoint, mountInfos)
+		mountOptions, getMountOptionsErr = bundlerules.UnprivilegedMountFlagsGetter(mountPoint)
 	})
 
 	BeforeEach(func() {
 		var err error
 		tmpDir, err = ioutil.TempDir("", "mountpoint-options")
 		Expect(err).NotTo(HaveOccurred())
-
-		toBeMounted = filepath.Join(tmpDir, "to-be-mounted")
-		Expect(os.Mkdir(toBeMounted, os.ModeDir)).To(Succeed())
-
 		mountPoint = filepath.Join(tmpDir, "mount-point")
 		Expect(os.Mkdir(mountPoint, os.ModeDir)).To(Succeed())
 	})
@@ -73,6 +66,9 @@ var _ = Describe("Mount options", func() {
 
 	Context("when the path is a mount point", func() {
 		BeforeEach(func() {
+			toBeMounted := filepath.Join(tmpDir, "to-be-mounted")
+			Expect(os.Mkdir(toBeMounted, os.ModeDir)).To(Succeed())
+
 			cmd := exec.Command("mount", "-t", "tmpfs", "-o", "ro,noexec", toBeMounted, mountPoint)
 			Expect(cmd.Run()).To(Succeed())
 		})
