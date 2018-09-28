@@ -233,6 +233,8 @@ type ServerCommand struct {
 	} `group:"Image Graph"`
 
 	Image struct {
+		NoPlugin bool `long:"no-image-plugin" description:"Do not use the embedded 'grootfs' image plugin."`
+
 		Plugin          FileFlag `long:"image-plugin"           description:"Path to image plugin binary."`
 		PluginExtraArgs []string `long:"image-plugin-extra-arg" description:"Extra argument to pass to the image plugin to create unprivileged images. Can be specified multiple times."`
 
@@ -323,33 +325,39 @@ func (cmd *ServerCommand) Execute([]string) error {
 		cmd.Bin.Tar = FileFlag(filepath.Join(restoredAssetsDir, "bin", "tar"))
 		cmd.Bin.IPTables = FileFlag(filepath.Join(restoredAssetsDir, "sbin", "iptables"))
 		cmd.Bin.IPTablesRestore = FileFlag(filepath.Join(restoredAssetsDir, "sbin", "iptables-restore"))
-		cmd.Image.Plugin = FileFlag(filepath.Join(restoredAssetsDir, "bin", "grootfs"))
-		cmd.Image.PluginExtraArgs = []string{
-			"--store", "/var/lib/grootfs/store",
-			"--tardis-bin", FileFlag(filepath.Join(restoredAssetsDir, "bin", "tardis")).Path(),
-			"--log-level", cmd.Logger.LogLevel,
-		}
-		cmd.Image.PrivilegedPlugin = FileFlag(filepath.Join(restoredAssetsDir, "bin", "grootfs"))
-		cmd.Image.PrivilegedPluginExtraArgs = []string{
-			"--store", "/var/lib/grootfs/store-privileged",
-			"--tardis-bin", FileFlag(filepath.Join(restoredAssetsDir, "bin", "tardis")).Path(),
-			"--log-level", cmd.Logger.LogLevel,
-		}
 
 		cmd.Network.AllowHostAccess = true
 
-		maxId := mustGetMaxValidUID()
+		if cmd.Image.Plugin == "" {
+			cmd.Image.Plugin = FileFlag(filepath.Join(restoredAssetsDir, "bin", "grootfs"))
+			cmd.Image.PluginExtraArgs = append([]string{
+				"--tardis-bin", FileFlag(filepath.Join(restoredAssetsDir, "bin", "tardis")).Path(),
+				"--log-level", cmd.Logger.LogLevel,
+			}, cmd.Image.PluginExtraArgs...)
+		}
 
-		initStoreCmd := newInitStoreCommand(cmd.Image.Plugin.Path(), cmd.Image.PluginExtraArgs)
-		initStoreCmd.Args = append(initStoreCmd.Args,
-			"--uid-mapping", fmt.Sprintf("0:%d:1", maxId),
-			"--uid-mapping", fmt.Sprintf("1:1:%d", maxId-1),
-			"--gid-mapping", fmt.Sprintf("0:%d:1", maxId),
-			"--gid-mapping", fmt.Sprintf("1:1:%d", maxId-1))
-		runCommand(initStoreCmd)
+		if cmd.Image.PrivilegedPlugin == "" {
+			cmd.Image.PrivilegedPlugin = FileFlag(filepath.Join(restoredAssetsDir, "bin", "grootfs"))
+			cmd.Image.PrivilegedPluginExtraArgs = append([]string{
+				"--tardis-bin", FileFlag(filepath.Join(restoredAssetsDir, "bin", "tardis")).Path(),
+				"--log-level", cmd.Logger.LogLevel,
+			}, cmd.Image.PrivilegedPluginExtraArgs...)
+		}
 
-		privInitStoreCmd := newInitStoreCommand(cmd.Image.PrivilegedPlugin.Path(), cmd.Image.PrivilegedPluginExtraArgs)
-		runCommand(privInitStoreCmd)
+		if !cmd.Image.NoPlugin {
+			maxId := mustGetMaxValidUID()
+
+			initStoreCmd := newInitStoreCommand(cmd.Image.Plugin.Path(), cmd.Image.PluginExtraArgs)
+			initStoreCmd.Args = append(initStoreCmd.Args,
+				"--uid-mapping", fmt.Sprintf("0:%d:1", maxId),
+				"--uid-mapping", fmt.Sprintf("1:1:%d", maxId-1),
+				"--gid-mapping", fmt.Sprintf("0:%d:1", maxId),
+				"--gid-mapping", fmt.Sprintf("1:1:%d", maxId-1))
+			runCommand(initStoreCmd)
+
+			privInitStoreCmd := newInitStoreCommand(cmd.Image.PrivilegedPlugin.Path(), cmd.Image.PrivilegedPluginExtraArgs)
+			runCommand(privInitStoreCmd)
+		}
 	}
 
 	return <-ifrit.Invoke(sigmon.New(cmd)).Wait()
