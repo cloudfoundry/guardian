@@ -328,23 +328,25 @@ func (cmd *ServerCommand) Execute([]string) error {
 
 		cmd.Network.AllowHostAccess = true
 
-		if cmd.Image.Plugin == "" {
-			cmd.Image.Plugin = FileFlag(filepath.Join(restoredAssetsDir, "bin", "grootfs"))
-			cmd.Image.PluginExtraArgs = append([]string{
-				"--tardis-bin", FileFlag(filepath.Join(restoredAssetsDir, "bin", "tardis")).Path(),
-				"--log-level", cmd.Logger.LogLevel,
-			}, cmd.Image.PluginExtraArgs...)
-		}
-
-		if cmd.Image.PrivilegedPlugin == "" {
-			cmd.Image.PrivilegedPlugin = FileFlag(filepath.Join(restoredAssetsDir, "bin", "grootfs"))
-			cmd.Image.PrivilegedPluginExtraArgs = append([]string{
-				"--tardis-bin", FileFlag(filepath.Join(restoredAssetsDir, "bin", "tardis")).Path(),
-				"--log-level", cmd.Logger.LogLevel,
-			}, cmd.Image.PrivilegedPluginExtraArgs...)
-		}
-
 		if !cmd.Image.NoPlugin {
+			if cmd.Image.Plugin == "" {
+				cmd.Image.Plugin = FileFlag(filepath.Join(restoredAssetsDir, "bin", "grootfs"))
+				cmd.Image.PluginExtraArgs = append([]string{
+					"--store", "/var/lib/grootfs/store",
+					"--tardis-bin", FileFlag(filepath.Join(restoredAssetsDir, "bin", "tardis")).Path(),
+					"--log-level", cmd.Logger.LogLevel,
+				}, cmd.Image.PluginExtraArgs...)
+			}
+
+			if cmd.Image.PrivilegedPlugin == "" {
+				cmd.Image.PrivilegedPlugin = FileFlag(filepath.Join(restoredAssetsDir, "bin", "grootfs"))
+				cmd.Image.PrivilegedPluginExtraArgs = append([]string{
+					"--store", "/var/lib/grootfs/store-privileged",
+					"--tardis-bin", FileFlag(filepath.Join(restoredAssetsDir, "bin", "tardis")).Path(),
+					"--log-level", cmd.Logger.LogLevel,
+				}, cmd.Image.PrivilegedPluginExtraArgs...)
+			}
+
 			maxId := mustGetMaxValidUID()
 
 			initStoreCmd := newInitStoreCommand(cmd.Image.Plugin.Path(), cmd.Image.PluginExtraArgs)
