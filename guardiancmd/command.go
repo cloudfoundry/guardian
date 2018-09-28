@@ -326,8 +326,6 @@ func (cmd *ServerCommand) Execute([]string) error {
 		cmd.Bin.IPTables = FileFlag(filepath.Join(restoredAssetsDir, "sbin", "iptables"))
 		cmd.Bin.IPTablesRestore = FileFlag(filepath.Join(restoredAssetsDir, "sbin", "iptables-restore"))
 
-		cmd.Network.AllowHostAccess = true
-
 		if !cmd.Image.NoPlugin {
 			if cmd.Image.Plugin == "" {
 				cmd.Image.Plugin = FileFlag(filepath.Join(restoredAssetsDir, "bin", "grootfs"))
