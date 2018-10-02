@@ -10,7 +10,7 @@ import (
 //go:generate counterfeiter . PeaManager
 type PeaManager interface {
 	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
-	Delete(log lager.Logger, force bool, containerID string) error
+	Delete(log lager.Logger, containerID string) error
 }
 
 type RunContainerPea struct {

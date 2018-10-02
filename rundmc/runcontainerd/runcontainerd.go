@@ -150,7 +150,7 @@ func (r *RunContainerd) Kill(log lager.Logger, bundlePath string) error {
 	return fmt.Errorf("Kill is not implemented yet")
 }
 
-func (r *RunContainerd) Delete(log lager.Logger, force bool, id string) error {
+func (r *RunContainerd) Delete(log lager.Logger, id string) error {
 	return r.containerManager.Delete(log, id)
 }
 

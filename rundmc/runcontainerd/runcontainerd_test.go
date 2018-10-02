@@ -137,7 +137,7 @@ var _ = Describe("Runcontainerd", func() {
 		var deleteErr error
 
 		JustBeforeEach(func() {
-			deleteErr = runContainerd.Delete(nil, false, "container-id")
+			deleteErr = runContainerd.Delete(nil, "container-id")
 		})
 
 		It("deletes the containerd container with the passed id", func() {

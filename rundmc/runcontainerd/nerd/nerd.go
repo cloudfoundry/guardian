@@ -88,6 +88,13 @@ func withProcessKillLogging(log lager.Logger) func(context.Context, containerd.P
 func (n *Nerd) Delete(log lager.Logger, containerID string) error {
 	container, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
+		switch err.(type) {
+		case *ContainerNotFoundError:
+			return nil
+		case *TaskNotFoundError:
+			log.Debug("deleting-container", lager.Data{"containerID": containerID})
+			return container.Delete(n.context)
+		}
 		return err
 	}
 
@@ -190,19 +197,23 @@ func (n *Nerd) GetContainerPID(log lager.Logger, containerID string) (uint32, er
 }
 
 func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (containerd.Container, containerd.Task, error) {
+	var err error
+
 	log.Debug("loading-container", lager.Data{"containerID": containerID})
 	container, err := n.client.LoadContainer(n.context, containerID)
-	if err != nil {
-		return nil, nil, err
+	if errdefs.IsNotFound(err) {
+		log.Debug("container-not-found", lager.Data{"containerID": containerID})
+		return nil, nil, &ContainerNotFoundError{Handle: containerID}
 	}
 
 	log.Debug("loading-task", lager.Data{"containerID": containerID})
 	task, err := container.Task(n.context, nil)
-	if err != nil {
-		return nil, nil, err
+	if errdefs.IsNotFound(err) {
+		log.Debug("task-not-found", lager.Data{"containerID": containerID})
+		return container, nil, &TaskNotFoundError{Handle: containerID}
 	}
 
-	return container, task, nil
+	return container, task, err
 }
 
 func (n *Nerd) Wait(log lager.Logger, containerID, processID string) (int, error) {

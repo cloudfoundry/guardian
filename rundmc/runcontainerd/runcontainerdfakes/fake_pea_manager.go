@@ -24,11 +24,10 @@ type FakePeaManager struct {
 	createReturnsOnCall map[int]struct {
 		result1 error
 	}
-	DeleteStub        func(log lager.Logger, force bool, containerID string) error
+	DeleteStub        func(log lager.Logger, containerID string) error
 	deleteMutex       sync.RWMutex
 	deleteArgsForCall []struct {
 		log         lager.Logger
-		force       bool
 		containerID string
 	}
 	deleteReturns struct {
@@ -92,18 +91,17 @@ func (fake *FakePeaManager) CreateReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakePeaManager) Delete(log lager.Logger, force bool, containerID string) error {
+func (fake *FakePeaManager) Delete(log lager.Logger, containerID string) error {
 	fake.deleteMutex.Lock()
 	ret, specificReturn := fake.deleteReturnsOnCall[len(fake.deleteArgsForCall)]
 	fake.deleteArgsForCall = append(fake.deleteArgsForCall, struct {
 		log         lager.Logger
-		force       bool
 		containerID string
-	}{log, force, containerID})
-	fake.recordInvocation("Delete", []interface{}{log, force, containerID})
+	}{log, containerID})
+	fake.recordInvocation("Delete", []interface{}{log, containerID})
 	fake.deleteMutex.Unlock()
 	if fake.DeleteStub != nil {
-		return fake.DeleteStub(log, force, containerID)
+		return fake.DeleteStub(log, containerID)
 	}
 	if specificReturn {
 		return ret.result1
@@ -117,10 +115,10 @@ func (fake *FakePeaManager) DeleteCallCount() int {
 	return len(fake.deleteArgsForCall)
 }
 
-func (fake *FakePeaManager) DeleteArgsForCall(i int) (lager.Logger, bool, string) {
+func (fake *FakePeaManager) DeleteArgsForCall(i int) (lager.Logger, string) {
 	fake.deleteMutex.RLock()
 	defer fake.deleteMutex.RUnlock()
-	return fake.deleteArgsForCall[i].log, fake.deleteArgsForCall[i].force, fake.deleteArgsForCall[i].containerID
+	return fake.deleteArgsForCall[i].log, fake.deleteArgsForCall[i].containerID
 }
 
 func (fake *FakePeaManager) DeleteReturns(result1 error) {

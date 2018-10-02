@@ -9,11 +9,10 @@ import (
 )
 
 type FakeRuncDeleter struct {
-	DeleteStub        func(log lager.Logger, force bool, handle string) error
+	DeleteStub        func(log lager.Logger, handle string) error
 	deleteMutex       sync.RWMutex
 	deleteArgsForCall []struct {
 		log    lager.Logger
-		force  bool
 		handle string
 	}
 	deleteReturns struct {
@@ -26,18 +25,17 @@ type FakeRuncDeleter struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRuncDeleter) Delete(log lager.Logger, force bool, handle string) error {
+func (fake *FakeRuncDeleter) Delete(log lager.Logger, handle string) error {
 	fake.deleteMutex.Lock()
 	ret, specificReturn := fake.deleteReturnsOnCall[len(fake.deleteArgsForCall)]
 	fake.deleteArgsForCall = append(fake.deleteArgsForCall, struct {
 		log    lager.Logger
-		force  bool
 		handle string
-	}{log, force, handle})
-	fake.recordInvocation("Delete", []interface{}{log, force, handle})
+	}{log, handle})
+	fake.recordInvocation("Delete", []interface{}{log, handle})
 	fake.deleteMutex.Unlock()
 	if fake.DeleteStub != nil {
-		return fake.DeleteStub(log, force, handle)
+		return fake.DeleteStub(log, handle)
 	}
 	if specificReturn {
 		return ret.result1
@@ -51,10 +49,10 @@ func (fake *FakeRuncDeleter) DeleteCallCount() int {
 	return len(fake.deleteArgsForCall)
 }
 
-func (fake *FakeRuncDeleter) DeleteArgsForCall(i int) (lager.Logger, bool, string) {
+func (fake *FakeRuncDeleter) DeleteArgsForCall(i int) (lager.Logger, string) {
 	fake.deleteMutex.RLock()
 	defer fake.deleteMutex.RUnlock()
-	return fake.deleteArgsForCall[i].log, fake.deleteArgsForCall[i].force, fake.deleteArgsForCall[i].handle
+	return fake.deleteArgsForCall[i].log, fake.deleteArgsForCall[i].handle
 }
 
 func (fake *FakeRuncDeleter) DeleteReturns(result1 error) {

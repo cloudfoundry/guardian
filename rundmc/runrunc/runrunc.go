@@ -31,13 +31,15 @@ func New(
 	runner commandrunner.CommandRunner, runcCmdRunner RuncCmdRunner,
 	runc RuncBinary, runcPath string, runcExtraArgs []string, execer *Execer, statser *Statser,
 ) *RunRunc {
+	stater := NewStater(runcCmdRunner, runc)
+
 	return &RunRunc{
 		Creator:    NewCreator(runcPath, runcExtraArgs, runner),
 		Execer:     execer,
 		OomWatcher: NewOomWatcher(runner, runc),
 		Statser:    statser,
-		Stater:     NewStater(runcCmdRunner, runc),
+		Stater:     stater,
 		Killer:     NewKiller(runcCmdRunner, runc),
-		Deleter:    NewDeleter(runcCmdRunner, runc),
+		Deleter:    NewDeleter(runcCmdRunner, runc, stater),
 	}
 }

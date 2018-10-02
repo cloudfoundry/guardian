@@ -43,8 +43,7 @@ var _ = Describe("PeaCleaner", func() {
 
 		It("deletes the container", func() {
 			Expect(fakeRuncDeleter.DeleteCallCount()).To(Equal(1))
-			_, force, id := fakeRuncDeleter.DeleteArgsForCall(0)
-			Expect(force).To(BeTrue())
+			_, id := fakeRuncDeleter.DeleteArgsForCall(0)
 			Expect(id).To(Equal(processID))
 		})
 

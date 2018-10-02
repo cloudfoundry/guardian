@@ -40,7 +40,7 @@ func (p *PeaProcess) Wait() (int, error) {
 		return 0, err
 	}
 
-	err = p.peaManager.Delete(p.log, false, p.containerID)
+	err = p.peaManager.Delete(p.log, p.containerID)
 	if err != nil {
 		return 0, err
 	}

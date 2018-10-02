@@ -445,79 +445,18 @@ var _ = Describe("Rundmc", func() {
 	})
 
 	Describe("Destroy", func() {
-		Context("when getting state fails", func() {
-			BeforeEach(func() {
-				fakeOCIRuntime.StateReturns(runrunc.State{}, errors.New("pid not found"))
-			})
-
-			It("should NOT run delete", func() {
-				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-				Expect(fakeOCIRuntime.DeleteCallCount()).To(Equal(0))
-			})
+		It("delegates to the OCI runtime", func() {
+			Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
+			Expect(fakeOCIRuntime.DeleteCallCount()).To(Equal(1))
 		})
 
-		Context("when in a state that should result in a delete", func() {
-			var status runrunc.Status
-
-			stateThatShouldResultInADelete := func(force bool) {
-				It("should run delete", func() {
-					Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-					Expect(fakeOCIRuntime.DeleteCallCount()).To(Equal(1))
-					_, passedForce, passedHandle := fakeOCIRuntime.DeleteArgsForCall(0)
-					Expect(passedForce).To(Equal(force))
-					Expect(passedHandle).To(Equal("some-handle"))
-				})
-
-				Context("when delete fails", func() {
-					It("does not destroy the depot directory", func() {
-						fakeOCIRuntime.DeleteReturns(errors.New("delete failed"))
-						containerizer.Destroy(logger, "some-handle")
-						Expect(fakeDepot.DestroyCallCount()).To(Equal(0))
-					})
-				})
-			}
-
-			JustBeforeEach(func() {
-				fakeOCIRuntime.StateReturns(runrunc.State{
-					Status: status,
-				}, nil)
-			})
-
-			Context("when in the 'created' state", func() {
-				BeforeEach(func() {
-					status = "created"
-				})
-
-				stateThatShouldResultInADelete(false)
-			})
-
-			Context("when in the 'stopped' state", func() {
-				BeforeEach(func() {
-					status = "stopped"
-				})
-
-				stateThatShouldResultInADelete(false)
-			})
-
-			Context("when in the 'running' state", func() {
-				BeforeEach(func() {
-					status = "running"
-				})
-
-				stateThatShouldResultInADelete(true)
-			})
-		})
-
-		Context("when state that should not result in a delete", func() {
+		Context("when the runtime fails to destroy", func() {
 			BeforeEach(func() {
-				fakeOCIRuntime.StateReturns(runrunc.State{
-					Status: "potato",
-				}, nil)
+				fakeOCIRuntime.DeleteReturns(errors.New("pid not found"))
 			})
 
-			It("should not run delete", func() {
-				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-				Expect(fakeOCIRuntime.DeleteCallCount()).To(Equal(0))
+			It("propagates the error back", func() {
+				Expect(containerizer.Destroy(logger, "some-handle")).To(MatchError("pid not found"))
 			})
 		})
 	})

@@ -35,7 +35,7 @@ func (p *PeaCleaner) Clean(log lager.Logger, handle string) error {
 	defer log.Info("end")
 
 	var result *multierror.Error
-	err := p.RuncDeleter.Delete(log, true, handle)
+	err := p.RuncDeleter.Delete(log, handle)
 	if err != nil {
 		result = multierror.Append(result, err)
 	}

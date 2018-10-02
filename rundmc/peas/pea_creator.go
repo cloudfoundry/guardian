@@ -39,7 +39,7 @@ type PrivilegedGetter interface {
 
 //go:generate counterfeiter . RuncDeleter
 type RuncDeleter interface {
-	Delete(log lager.Logger, force bool, handle string) error
+	Delete(log lager.Logger, handle string) error
 }
 
 type PeaCreator struct {

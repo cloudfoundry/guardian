@@ -572,7 +572,8 @@ func (cmd *ServerCommand) wirePeaCleaner(factory GardenFactory, volumizer garden
 	runcLogRunner := runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile)
 	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin, Root: cmd.computeRuncRoot()}
 
-	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary)
+	runcStater := runrunc.NewStater(runcLogRunner, runcBinary)
+	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary, runcStater)
 	return peas.NewPeaCleaner(runcDeleter, volumizer, cmd.Containers.Dir)
 }
 
@@ -870,7 +871,8 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 
 	pidFileReader := wirePidfileReader()
 	privilegeChecker := &privchecker.PrivilegeChecker{BundleLoader: bndlLoader}
-	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary)
+	runcStater := runrunc.NewStater(runcLogRunner, runcBinary)
+	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary, runcStater)
 
 	var runner rundmc.OCIRuntime
 	var pidGetter peas.ProcessPidGetter
