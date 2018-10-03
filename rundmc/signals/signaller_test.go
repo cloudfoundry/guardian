@@ -54,7 +54,7 @@ done
 
 	It("forwards SIGTERM", func() {
 		Expect(signaller.Signal(garden.SignalTerminate)).To(Succeed())
-		Eventually(proc, time.Second*3).Should(gexec.Exit(42))
+		Expect(proc.Wait()).To(gexec.Exit(42))
 		Expect(string(proc.Buffer().Contents())).To(ContainSubstring("terminated"))
 	})
 
@@ -76,7 +76,8 @@ done
 
 	Context("when no process with specified pid is running", func() {
 		BeforeEach(func() {
-			Eventually(proc.Kill()).Should(gexec.Exit(137))
+			proc = proc.Kill()
+			Expect(proc.Wait()).To(gexec.Exit(137))
 		})
 
 		It("returns an error", func() {
