@@ -50,11 +50,13 @@ func getMountMode(m garden.BindMount) string {
 }
 
 func filterModeOption(mountOptions []string) []string {
-	for i, o := range mountOptions {
+	filteredOptions := []string{}
+	for _, o := range mountOptions {
 		if o == "rw" || o == "ro" || o == "bind" {
-			mountOptions = append(mountOptions[0:i], mountOptions[i+1:]...)
+			continue
 		}
+		filteredOptions = append(filteredOptions, o)
 	}
 
-	return mountOptions
+	return filteredOptions
 }

@@ -106,6 +106,23 @@ var _ = Describe("MountsRule", func() {
 				},
 			))
 		})
+
+		Context("when multiple mount options are to be filtered out", func() {
+			BeforeEach(func() {
+				mountOptionsGetter.Returns([]string{"rw", "rw", "noexec", "rw"}, nil)
+			})
+
+			It("filters them all", func() {
+				Expect(bndl.Mounts()[2]).To(Equal(
+					specs.Mount{
+						Source:      "/path/to/ro/src",
+						Destination: "/path/to/ro/dest",
+						Options:     []string{"bind", "ro", "noexec"},
+						Type:        "bind",
+					},
+				))
+			})
+		})
 	})
 
 	It("succeeds", func() {
