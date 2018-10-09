@@ -151,12 +151,10 @@ func CompileGdn(additionalCompileArgs ...string) string {
 }
 
 func runCommandInDir(cmd *exec.Cmd, workingDir string) string {
-	var stdout bytes.Buffer
 	cmd.Dir = workingDir
-	cmd.Stdout = io.MultiWriter(&stdout, GinkgoWriter)
-	cmd.Stderr = GinkgoWriter
-	Expect(cmd.Run()).To(Succeed())
-	return stdout.String()
+	cmdOutput, err := cmd.CombinedOutput()
+	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Running command %#v failed: %v: %s", cmd, err, string(cmdOutput)))
+	return string(cmdOutput)
 }
 
 func runCommand(cmd *exec.Cmd) string {
