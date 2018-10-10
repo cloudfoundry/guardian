@@ -112,7 +112,7 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 		return "", 0, err
 	}
 
-	blobTempFile, err := ioutil.TempFile("", fmt.Sprintf("blob-%s", layerInfo.BlobID))
+	blobTempFile, err := ioutil.TempFile("", fmt.Sprintf("blob-%s", strings.Replace(layerInfo.BlobID, ":", "-", -1)))
 	if err != nil {
 		return "", 0, err
 	}
