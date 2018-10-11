@@ -37,7 +37,7 @@ func NewFakeRegistry(actualRegistryURL *url.URL) *FakeRegistry {
 		blobHandlers:        make(map[string]blobHandler),
 		blobRequestsCounter: make(map[string]int),
 		mutex:               &sync.RWMutex{},
-		stopped:             make(chan struct{}),
+		stopped:             make(chan struct{}, 1),
 	}
 }
 
@@ -64,12 +64,6 @@ func (r *FakeRegistry) Start() {
 
 	ourRegexp = regexp.MustCompile(`.*`)
 	r.server.RouteToHandler("GET", ourRegexp, r.serveHTTP)
-
-	go func() {
-		<-r.stopped
-		r.server.Close()
-		close(r.stopped)
-	}()
 }
 
 func (r *FakeRegistry) FailNextRequests(n int) {
@@ -155,6 +149,7 @@ func (r *FakeRegistry) serveBlob(rw http.ResponseWriter, req *http.Request) {
 
 func (r *FakeRegistry) Stop() {
 	r.stopped <- struct{}{}
+	r.server.Close()
 }
 
 func (r *FakeRegistry) Addr() string {
