@@ -2,12 +2,16 @@ package integration_test
 
 import (
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"sync"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/integration/runner"
+	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
@@ -94,5 +98,64 @@ var _ = Describe("Concurrent creations", func() {
 		}()
 
 		wg.Wait()
+	})
+
+	Context("when a creation is slow", func() {
+		var (
+			fastRegistry *testhelpers.FakeRegistry
+			slowRegistry *testhelpers.FakeRegistry
+		)
+
+		createWithRegistry := func(registryAddr, imageId, imagePath string) error {
+			runner := Runner.WithLogLevel(lager.ERROR).WithInsecureRegistry(registryAddr)
+			_, err := runner.Create(groot.CreateSpec{
+				ID:           fmt.Sprintf("test-%d-%s", GinkgoParallelNode(), imageId),
+				BaseImageURL: integration.String2URL(fmt.Sprintf("docker://%s/%s", registryAddr, imagePath)),
+			})
+			return err
+		}
+
+		BeforeEach(func() {
+			dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
+			Expect(err).NotTo(HaveOccurred())
+			fastRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+			fastRegistry.Start()
+			slowRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+			slowRegistry.Start()
+
+			slowRegistry.WhenGettingBlob(testhelpers.EmptyBaseImageV011.Layers[0].BlobID, 0, func(rw http.ResponseWriter, req *http.Request) {
+				err := slowRegistry.Delay(30 * time.Second)
+				if err == nil {
+					slowRegistry.DelegateToActualRegistry(rw, req)
+				}
+			})
+		})
+
+		AfterEach(func() {
+			fastRegistry.Stop()
+			slowRegistry.Stop()
+		})
+
+		It("doesn't prevent other creations from running", func() {
+			slowCreateDone := make(chan struct{})
+			defer close(slowCreateDone)
+
+			go func() {
+				defer GinkgoRecover()
+				defer func() {
+					slowCreateDone <- struct{}{}
+				}()
+				Expect(createWithRegistry(slowRegistry.Addr(), "long-running", "cfgarden/empty:v0.1.1")).To(Succeed())
+			}()
+
+			time.Sleep(time.Second)
+			Expect(createWithRegistry(fastRegistry.Addr(), "fast-running", "cfgarden/empty:schemaV1")).To(Succeed())
+
+			select {
+			case <-slowCreateDone:
+				Fail("Slow create completed before the fast one!")
+			default:
+			}
+		})
 	})
 })
