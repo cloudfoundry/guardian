@@ -138,14 +138,14 @@ var _ = Describe("Concurrent creations", func() {
 
 		It("doesn't prevent other creations from running", func() {
 			slowCreateDone := make(chan struct{})
-			defer close(slowCreateDone)
 
 			go func() {
 				defer GinkgoRecover()
 				defer func() {
 					slowCreateDone <- struct{}{}
+					close(slowCreateDone)
 				}()
-				Expect(createWithRegistry(slowRegistry.Addr(), "long-running", "cfgarden/empty:v0.1.1")).To(Succeed())
+				createWithRegistry(slowRegistry.Addr(), "long-running", "cfgarden/empty:v0.1.1")
 			}()
 
 			time.Sleep(time.Second)
