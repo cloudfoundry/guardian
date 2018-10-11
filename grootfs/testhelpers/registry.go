@@ -1,11 +1,13 @@
 package testhelpers
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"regexp"
 	"sync"
+	"time"
 
 	"github.com/onsi/gomega/ghttp"
 )
@@ -26,6 +28,7 @@ type FakeRegistry struct {
 	revProxy            *httputil.ReverseProxy
 	server              *ghttp.Server
 	mutex               *sync.RWMutex
+	stopped             chan struct{}
 }
 
 func NewFakeRegistry(actualRegistryURL *url.URL) *FakeRegistry {
@@ -34,6 +37,7 @@ func NewFakeRegistry(actualRegistryURL *url.URL) *FakeRegistry {
 		blobHandlers:        make(map[string]blobHandler),
 		blobRequestsCounter: make(map[string]int),
 		mutex:               &sync.RWMutex{},
+		stopped:             make(chan struct{}),
 	}
 }
 
@@ -60,6 +64,12 @@ func (r *FakeRegistry) Start() {
 
 	ourRegexp = regexp.MustCompile(`.*`)
 	r.server.RouteToHandler("GET", ourRegexp, r.serveHTTP)
+
+	go func() {
+		<-r.stopped
+		r.server.Close()
+		close(r.stopped)
+	}()
 }
 
 func (r *FakeRegistry) FailNextRequests(n int) {
@@ -144,7 +154,7 @@ func (r *FakeRegistry) serveBlob(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (r *FakeRegistry) Stop() {
-	r.server.Close()
+	r.stopped <- struct{}{}
 }
 
 func (r *FakeRegistry) Addr() string {
@@ -170,4 +180,18 @@ func (r *FakeRegistry) RequestedBlobs() []string {
 	}
 
 	return blobDigests
+}
+
+func (r *FakeRegistry) DelegateToActualRegistry(rw http.ResponseWriter, req *http.Request) {
+	r.revProxy.ServeHTTP(rw, req)
+}
+
+func (r *FakeRegistry) Delay(timeout time.Duration) error {
+	timer := time.NewTimer(timeout)
+	select {
+	case <-timer.C:
+		return nil
+	case <-r.stopped:
+		return errors.New("Server has been stopped while delaying")
+	}
 }
