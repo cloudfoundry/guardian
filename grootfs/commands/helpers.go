@@ -12,11 +12,9 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
-	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 	"github.com/opencontainers/runc/libcontainer/user"
-	errorspkg "github.com/pkg/errors"
 )
 
 type fileSystemDriver interface {
@@ -39,20 +37,7 @@ type fileSystemDriver interface {
 	Marshal(logger lager.Logger) ([]byte, error)
 }
 
-func createFileSystemDriver(cfg config.Config) (fileSystemDriver, error) {
-	switch cfg.FSDriver {
-	case "overlay-xfs":
-		return overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin), nil
-	default:
-		return nil, errorspkg.Errorf("filesystem driver not supported: %s", cfg.FSDriver)
-	}
-}
-
 func createImageDriver(cfg config.Config, fsDriver fileSystemDriver) (image_cloner.ImageDriver, error) {
-	if !nsImageDriverRequired(cfg) {
-		return fsDriver, nil
-	}
-
 	storeNamespacer := groot.NewStoreNamespacer(cfg.StorePath)
 	idMappings, err := storeNamespacer.Read()
 	if err != nil {
@@ -62,10 +47,6 @@ func createImageDriver(cfg config.Config, fsDriver fileSystemDriver) (image_clon
 	runner := linux_command_runner.New()
 	idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
 	return namespaced.New(fsDriver, idMappings, idMapper, runner), nil
-}
-
-func nsImageDriverRequired(cfg config.Config) bool {
-	return cfg.FSDriver == "overlay-xfs"
 }
 
 func parseIDMappings(args []string) ([]groot.IDMappingSpec, error) {

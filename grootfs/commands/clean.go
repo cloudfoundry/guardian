@@ -15,6 +15,7 @@ import (
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
@@ -57,11 +58,7 @@ var CleanCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 0)
 		}
 
-		fsDriver, err := createFileSystemDriver(cfg)
-		if err != nil {
-			logger.Error("failed-to-initialise-filesystem-driver", err)
-			return cli.NewExitError(err.Error(), 1)
-		}
+		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin)
 
 		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
 		metricsEmitter := metrics.NewEmitter(logger, cfg.MetronEndpoint)

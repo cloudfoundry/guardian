@@ -40,7 +40,6 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 
 		fakeIDMapper = new(unpackerfakes.FakeIDMapper)
 		fakeCommandRunner = fake_command_runner.New()
-		unpackStrategy.Name = "defaultfs"
 		unpacker = unpackerpkg.NewNSIdMapperUnpacker(fakeCommandRunner, fakeIDMapper, unpackStrategy)
 		reexecOutput = ""
 

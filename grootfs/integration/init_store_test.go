@@ -253,7 +253,7 @@ var _ = Describe("Init Store", func() {
 		})
 	})
 
-	Context("when the given driver does not match the mounted path", func() {
+	Context("when given a non XFS store path", func() {
 		BeforeEach(func() {
 			runner = Runner.WithStore("/mnt/ext4/grootfs")
 		})
@@ -261,7 +261,7 @@ var _ = Describe("Init Store", func() {
 		It("returns an error", func() {
 			err := runner.InitStore(spec)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("Store path filesystem (/mnt/ext4) is incompatible with requested driver"))
+			Expect(err).To(MatchError("Store path filesystem (/mnt/ext4) is incompatible with native driver (must be XFS mountpoint)"))
 			Expect(runner.StorePath).ToNot(BeADirectory())
 		})
 	})

@@ -31,7 +31,7 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 
 	BeforeEach(func() {
 		var err error
-		tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "defaultfs"})
+		tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{})
 		Expect(err).NotTo(HaveOccurred())
 
 		targetPath, err = ioutil.TempDir("", "target-")

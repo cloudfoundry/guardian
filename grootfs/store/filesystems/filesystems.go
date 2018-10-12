@@ -27,7 +27,7 @@ func CheckFSPath(path string, filesystem string, mountOptions ...string) error {
 	}
 
 	if statfs.Type != fsType {
-		return errorspkg.Errorf("Store path filesystem (%s) is incompatible with requested driver", path)
+		return errorspkg.Errorf("Store path filesystem (%s) is incompatible with native driver (must be XFS mountpoint)", path)
 	}
 
 	return checkMountOptions(path, filesystem, mountOptions...)

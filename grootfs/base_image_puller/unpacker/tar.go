@@ -73,7 +73,6 @@ func init() {
 }
 
 type UnpackStrategy struct {
-	Name               string
 	WhiteoutDevicePath string
 }
 
@@ -85,20 +84,15 @@ type TarUnpacker struct {
 func NewTarUnpacker(unpackStrategy UnpackStrategy) (*TarUnpacker, error) {
 	var woHandler whiteoutHandler
 
-	switch unpackStrategy.Name {
-	case "overlay-xfs":
-		parentDirectory := filepath.Dir(unpackStrategy.WhiteoutDevicePath)
-		whiteoutDevDir, err := os.Open(parentDirectory)
-		if err != nil {
-			return nil, err
-		}
+	parentDirectory := filepath.Dir(unpackStrategy.WhiteoutDevicePath)
+	whiteoutDevDir, err := os.Open(parentDirectory)
+	if err != nil {
+		return nil, err
+	}
 
-		woHandler = &overlayWhiteoutHandler{
-			whiteoutDevName: filepath.Base(unpackStrategy.WhiteoutDevicePath),
-			whiteoutDevDir:  whiteoutDevDir,
-		}
-	default:
-		woHandler = &defaultWhiteoutHandler{}
+	woHandler = &overlayWhiteoutHandler{
+		whiteoutDevName: filepath.Base(unpackStrategy.WhiteoutDevicePath),
+		whiteoutDevDir:  whiteoutDevDir,
 	}
 
 	return &TarUnpacker{

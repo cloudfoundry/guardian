@@ -53,14 +53,13 @@ grootfs version 0.25.0
 GrootFS makes use of various Linux filesystem features in order to efficiently store
 container root filesystems on the host machine.
 
-Currently we support:
-* Overlay on XFS (`--driver overlay-xfs`)
+Currently we natively support Overlay on XFS.
 
-GrootFS's 'store' directory must be stored on one of these filesystems. Our setup
+GrootFS's 'store' directory must be formatted as XFS. Our setup
 script will try to set up both of these filesystems for you so you can experiment
 with GrootFS, or you can provision your own and configure GrootFS to point to the
-mounted filesystem you create, using the `--store` and `--driver` command-line flags.
-These are documented in the instructions below.
+mounted filesystem you create, using the `--store` command-line flag.
+This is documented in the instructions below.
 
 
 ### Instructions
@@ -99,7 +98,6 @@ Following is an example configuration file with all options provided:
 
 ```yaml
 store: /var/lib/data/grootfs/store
-driver: overlay-xfs
 newuidmap_bin: /var/lib/packages/idmapper/bin/newuidmap
 newgidmap_bin: /var/lib/packages/idmapper/bin/newgidmap
 log_level: debug
@@ -118,7 +116,6 @@ create:
 | Key | Description  |
 |---|---|
 | store  | Path to the store directory |
-| driver | Storage driver to use, currently only overlay-xfs is supported |
 | newuidmap_bin | Path to newuidmap bin. (If not provided will use $PATH) |
 | newgidmap_bin | Path to newgidmap bin. (If not provided will use $PATH) |
 | log_level | Set logging level \<debug \| info \| error \| fatal\> |
@@ -137,11 +134,10 @@ If you have an existing XFS filesystem mounted, you can use this to hold GrootFS
 To create a store directory within your existing mountpath:
 
 ```
-grootfs --store /mnt/xfs/my-store-dir --driver overlay-xfs init-store <--uid-mapping 1000:0:1> <--gid-mapping 1000:0:1> <--uid-mapping/gid-mapping ...>
+grootfs --store /mnt/xfs/my-store-dir init-store <--uid-mapping 1000:0:1> <--gid-mapping 1000:0:1> <--uid-mapping/gid-mapping ...>
 ```
 
 N.B.
-- The `driver` you pass to init-store must be compatible with the mounted path.
 - The command can currently only be run as root, with the mounted store owned by root.
 - It can take a number of uid/gid mappings to initialize the store with.
 - If no mappings are provided, the store will be owned by host root user.
@@ -178,7 +174,7 @@ You can delete a store by running the following:
 While this command will delete all contents of the store path, it will leave
 the backing filesystem intact.
 ```
-grootfs --store /mnt/xfs/my-store-dir --driver overlay-xfs delete-store
+grootfs --store /mnt/xfs/my-store-dir delete-store
 ```
 
 ### Creating an image

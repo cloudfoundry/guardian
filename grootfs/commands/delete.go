@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
@@ -48,11 +49,7 @@ var DeleteCommand = cli.Command{
 			return nil
 		}
 
-		fsDriver, err := createFileSystemDriver(cfg)
-		if err != nil {
-			logger.Error("failed-to-initialise-filesystem-driver", err)
-			return cli.NewExitError(err.Error(), 1)
-		}
+		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin)
 
 		imageDriver, err := createImageDriver(cfg, fsDriver)
 		if err != nil {

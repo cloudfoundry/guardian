@@ -407,9 +407,9 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			Context("when the image is not accounted for in the quota", func() {
 				It("succeeds", func() {
 					containerSpec, err := runner.Create(groot.CreateSpec{
-						BaseImageURL: baseImageURL,
-						ID:           randomImageID,
-						Mount:        mountByDefault(),
+						BaseImageURL:              baseImageURL,
+						ID:                        randomImageID,
+						Mount:                     mountByDefault(),
 						ExcludeBaseImageFromQuota: true,
 						DiskLimit:                 10,
 					})
@@ -451,9 +451,9 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			Context("when the image is not accounted for in the quota", func() {
 				It("succeeds", func() {
 					containerSpec, err := runner.Create(groot.CreateSpec{
-						BaseImageURL: baseImageURL,
-						ID:           randomImageID,
-						Mount:        mountByDefault(),
+						BaseImageURL:              baseImageURL,
+						ID:                        randomImageID,
+						Mount:                     mountByDefault(),
 						ExcludeBaseImageFromQuota: true,
 						DiskLimit:                 diskLimit,
 					})

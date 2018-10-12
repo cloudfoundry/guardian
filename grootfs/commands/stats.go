@@ -8,6 +8,7 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/commands/idfinder"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
@@ -44,10 +45,7 @@ var StatsCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		fsDriver, err := createFileSystemDriver(cfg)
-		if err != nil {
-			return cli.NewExitError(err.Error(), 1)
-		}
+		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin)
 		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
 
 		statser := groot.IamStatser(imageCloner)

@@ -2,6 +2,7 @@ package commands // import "code.cloudfoundry.org/grootfs/commands"
 
 import (
 	"code.cloudfoundry.org/grootfs/commands/config"
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
 	"github.com/urfave/cli"
@@ -24,11 +25,7 @@ var DeleteStoreCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		fsDriver, err := createFileSystemDriver(cfg)
-		if err != nil {
-			logger.Error("failed-to-initialise-filesystem-driver", err)
-			return cli.NewExitError(err.Error(), 1)
-		}
+		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin)
 
 		storePath := cfg.StorePath
 		manager := manager.New(storePath, nil, fsDriver, fsDriver, fsDriver, nil)

@@ -17,10 +17,9 @@ import (
 )
 
 const (
-	defaultFilesystemDriver = "overlay-xfs"
-	defaultTardisBin        = "tardis"
-	defaultNewuidmapBin     = "newuidmap"
-	defaultNewgidmapBin     = "newgidmap"
+	defaultTardisBin    = "tardis"
+	defaultNewuidmapBin = "newuidmap"
+	defaultNewgidmapBin = "newgidmap"
 )
 
 func init() {
@@ -45,11 +44,6 @@ func main() {
 			Name:  "store",
 			Usage: "Path to the store directory",
 			Value: store.DefaultStorePath,
-		},
-		cli.StringFlag{
-			Name:  "driver",
-			Usage: "Storage driver to use, currently only overlay-xfs is supported",
-			Value: defaultFilesystemDriver,
 		},
 		cli.StringFlag{
 			Name:  "log-level",
@@ -101,7 +95,6 @@ func main() {
 		ctx.App.Metadata["configBuilder"] = cfgBuilder
 
 		cfg, err := cfgBuilder.WithStorePath(ctx.GlobalString("store"), ctx.IsSet("store")).
-			WithFSDriver(ctx.GlobalString("driver"), ctx.IsSet("driver")).
 			WithTardisBin(ctx.GlobalString("tardis-bin"), ctx.IsSet("tardis-bin")).
 			WithMetronEndpoint(ctx.GlobalString("metron-endpoint")).
 			WithLogLevel(ctx.GlobalString("log-level"), ctx.IsSet("log-level")).

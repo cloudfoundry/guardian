@@ -8,6 +8,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
@@ -71,11 +72,7 @@ var InitStoreCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		fsDriver, err := createFileSystemDriver(cfg)
-		if err != nil {
-			logger.Error("failed-to-initialise-filesystem-driver", err)
-			return cli.NewExitError(err.Error(), 1)
-		}
+		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin)
 
 		uidMappings, err := parseIDMappings(ctx.StringSlice("uid-mapping"))
 		if err != nil {

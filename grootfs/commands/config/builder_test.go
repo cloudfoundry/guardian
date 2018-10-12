@@ -40,7 +40,6 @@ var _ = Describe("Builder", func() {
 			Create:         createCfg,
 			Clean:          cleanCfg,
 			StorePath:      "/hello",
-			FSDriver:       "kitten-fs",
 			TardisBin:      "/config/tardis",
 			NewuidmapBin:   "/config/newuidmap",
 			NewgidmapBin:   "/config/newgidmap",
@@ -165,37 +164,6 @@ var _ = Describe("Builder", func() {
 					config, err := builder.Build()
 					Expect(err).NotTo(HaveOccurred())
 					Expect(config.StorePath).To(Equal("/mnt/grootfs/data"))
-				})
-			})
-		})
-	})
-
-	Describe("WithFSDriver", func() {
-		It("overrides the config's filesystem driver entry when command line flag is set", func() {
-			builder = builder.WithFSDriver("dinosaur-fs", true)
-			config, err := builder.Build()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(config.FSDriver).To(Equal("dinosaur-fs"))
-		})
-
-		Context("when filesystem driver is not provided via command line", func() {
-			It("uses the config's filesystem driver", func() {
-				builder = builder.WithFSDriver("dinosaur-fs", false)
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(config.FSDriver).To(Equal("kitten-fs"))
-			})
-
-			Context("and filesystem driver is not set in the config", func() {
-				BeforeEach(func() {
-					cfg.FSDriver = ""
-				})
-
-				It("uses the provided filesystem driver", func() {
-					builder = builder.WithFSDriver("dinosaur-fs", false)
-					config, err := builder.Build()
-					Expect(err).NotTo(HaveOccurred())
-					Expect(config.FSDriver).To(Equal("dinosaur-fs"))
 				})
 			})
 		})

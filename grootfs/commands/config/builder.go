@@ -10,7 +10,6 @@ import (
 
 type Config struct {
 	StorePath      string `yaml:"store"`
-	FSDriver       string `yaml:"driver"`
 	TardisBin      string `yaml:"tardis_bin"`
 	NewuidmapBin   string `yaml:"newuidmap_bin"`
 	NewgidmapBin   string `yaml:"newgidmap_bin"`
@@ -88,14 +87,6 @@ func (b *Builder) WithInsecureRegistries(insecureRegistries []string) *Builder {
 func (b *Builder) WithStorePath(storePath string, isSet bool) *Builder {
 	if isSet || b.config.StorePath == "" {
 		b.config.StorePath = storePath
-	}
-
-	return b
-}
-
-func (b *Builder) WithFSDriver(driver string, isSet bool) *Builder {
-	if isSet || b.config.FSDriver == "" {
-		b.config.FSDriver = driver
 	}
 
 	return b

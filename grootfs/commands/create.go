@@ -129,11 +129,7 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		fsDriver, err := createFileSystemDriver(cfg)
-		if err != nil {
-			return cli.NewExitError(err.Error(), 1)
-		}
-
+		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin)
 		metricsEmitter := metrics.NewEmitter(logger, cfg.MetronEndpoint)
 
 		initLocksDir := filepath.Join("/", "var", "run")
@@ -160,7 +156,6 @@ var CreateCommand = cli.Command{
 		runner := linux_command_runner.New()
 		var unpacker base_image_puller.Unpacker
 		unpackerStrategy := unpackerpkg.UnpackStrategy{
-			Name:               cfg.FSDriver,
 			WhiteoutDevicePath: filepath.Join(storePath, overlayxfs.WhiteoutDevice),
 		}
 

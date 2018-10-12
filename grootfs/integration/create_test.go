@@ -459,18 +459,7 @@ var _ = Describe("Create", func() {
 		})
 	})
 
-	Context("when the requested filesystem driver is not supported", func() {
-		It("fails with a useful error message", func() {
-			_, err := Runner.WithDriver("dinosaurfs").Create(groot.CreateSpec{
-				BaseImageURL: integration.String2URL(baseImagePath),
-				ID:           "some-id",
-				Mount:        true,
-			})
-			Expect(err).To(MatchError(ContainSubstring("filesystem driver not supported: dinosaurfs")))
-		})
-	})
-
-	Context("when StorePath doesn't match the given driver", func() {
+	Context("when StorePath is not formatted as XFS", func() {
 		var (
 			storePath string
 			runner    runner.Runner
@@ -489,7 +478,7 @@ var _ = Describe("Create", func() {
 				BaseImageURL: integration.String2URL(baseImagePath),
 				ID:           randomImageID,
 			})
-			errMessage := fmt.Sprintf("Store path filesystem (%s) is incompatible with requested driver", storePath)
+			errMessage := fmt.Sprintf("Store path filesystem (%s) is incompatible with native driver (must be XFS mountpoint)", storePath)
 			Expect(err).To(MatchError(ContainSubstring(errMessage)))
 		})
 	})
@@ -529,18 +518,6 @@ var _ = Describe("Create", func() {
 				containerSpec, err := runner.Create(spec)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(filepath.Dir(containerSpec.Root.Path)).To(Equal(filepath.Join(cfg.StorePath, "images", randomImageID)))
-			})
-		})
-
-		Describe("filesystem driver", func() {
-			BeforeEach(func() {
-				cfg.FSDriver = "this-should-fail"
-			})
-
-			It("uses the filesystem driver from the config file", func() {
-				_, err := Runner.WithoutDriver().Create(spec)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("filesystem driver not supported: this-should-fail"))
 			})
 		})
 

@@ -7,6 +7,7 @@ import (
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/store/filesystems"
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/lager"
 
 	errorspkg "github.com/pkg/errors"
@@ -32,10 +33,7 @@ var GenerateVolumeSizeMetadata = cli.Command{
 			return err
 		}
 
-		driver, err := createFileSystemDriver(cfg)
-		if err != nil {
-			return err
-		}
+		driver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin)
 
 		volumes, err := driver.Volumes(logger)
 		if err != nil {

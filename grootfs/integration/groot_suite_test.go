@@ -108,7 +108,6 @@ func TestGroot(t *testing.T) {
 			GrootFSBin: GrootFSBin,
 			StorePath:  StorePath,
 			TardisBin:  TardisBin,
-			Driver:     "overlay-xfs",
 		}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).RunningAsUser(GrootfsTestUid, GrootfsTestGid)
 	})
 
