@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -175,7 +176,11 @@ var _ = Describe("Destroying a Container", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		var itCleansUpPerContainerNetworkingResources = func() {
+		Context("when destroy is called", func() {
+			JustBeforeEach(func() {
+				Expect(client.Destroy(container.Handle())).To(Succeed())
+			})
+
 			It("should remove iptable entries", func() {
 				out, err := runIPTables("-S", "-t", "filter")
 				Expect(err).NotTo(HaveOccurred())
@@ -191,28 +196,10 @@ var _ = Describe("Destroying a Container", func() {
 				}
 				Eventually(ifconfigExits).ShouldNot(Equal(0))
 			})
-		}
 
-		var itRemovesTheNetworkBridge = func() {
 			It("should remove the network bridge", func() {
-				session, err := gexec.Start(
-					exec.Command("ip", "link", "show", networkBridgeName),
-					GinkgoWriter, GinkgoWriter,
-				)
-				Expect(err).NotTo(HaveOccurred())
-
-				session.Wait()
-				Expect(session.ExitCode()).NotTo(Equal(0))
+				Expect(checkBridgePresence(networkBridgeName)).To(BeFalse())
 			})
-		}
-
-		Context("when destroy is called", func() {
-			JustBeforeEach(func() {
-				Expect(client.Destroy(container.Handle())).To(Succeed())
-			})
-
-			itCleansUpPerContainerNetworkingResources()
-			itRemovesTheNetworkBridge()
 
 			Context("and there was more than one containers in the same subnet", func() {
 				var otherContainer garden.Container
@@ -230,7 +217,9 @@ var _ = Describe("Destroying a Container", func() {
 					Expect(client.Destroy(otherContainer.Handle())).To(Succeed())
 				})
 
-				itRemovesTheNetworkBridge()
+				It("should remove the network bridge", func() {
+					Expect(checkBridgePresence(networkBridgeName)).To(BeFalse())
+				})
 			})
 		})
 	})
@@ -255,4 +244,11 @@ func ethInterfaceName(container garden.Container) string {
 	contIfaceName := string(buffer.Contents()) // g3-abc-1
 
 	return contIfaceName[:len(contIfaceName)-2] + "0" // g3-abc-0
+}
+
+func checkBridgePresence(networkBridgeName string) bool {
+	cmd := exec.Command("ip", "link", "show", networkBridgeName)
+	output, err := cmd.CombinedOutput()
+	Expect(err).To(HaveOccurred())
+	return !strings.Contains(string(output), "does not exist")
 }
