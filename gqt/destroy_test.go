@@ -37,13 +37,7 @@ var _ = Describe("Destroying a Container", func() {
 	})
 
 	It("should not leak goroutines", func() {
-		var numGoRoutines = func() int {
-			numGoroutines, err := client.NumGoroutines()
-			Expect(err).NotTo(HaveOccurred())
-			return numGoroutines
-		}
-
-		numGoroutinesBefore := numGoRoutines()
+		numGoroutinesBefore := numGoRoutines(client)
 
 		handle := fmt.Sprintf("goroutine-leak-test-%d", GinkgoParallelNode())
 		_, err := client.Create(garden.ContainerSpec{
@@ -52,7 +46,7 @@ var _ = Describe("Destroying a Container", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(client.Destroy(handle)).To(Succeed())
 
-		Eventually(numGoRoutines).Should(BeNumerically("<=", numGoroutinesBefore))
+		Eventually(pollNumGoRoutines(client)).Should(BeNumerically("<=", numGoroutinesBefore))
 	})
 
 	It("should destroy the container's rootfs", func() {

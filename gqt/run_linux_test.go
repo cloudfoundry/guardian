@@ -506,16 +506,24 @@ var _ = Describe("Run", func() {
 	Describe("Errors", func() {
 		Context("when trying to run an executable which does not exist", func() {
 			var (
-				runErr     error
-				binaryPath string
+				runErr              error
+				binaryPath          string
+				numGoRoutinesBefore int
 			)
 
+			BeforeEach(func() {
+				binaryPath = "/i/do/not/exist"
+			})
+
 			JustBeforeEach(func() {
+				config.DebugIP = "0.0.0.0"
+				config.DebugPort = intptr(8080 + GinkgoParallelNode())
 				client = runner.Start(config)
 
 				container, err := client.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
+				numGoRoutinesBefore = numGoRoutines(client)
 				_, runErr = container.Run(garden.ProcessSpec{
 					Path: binaryPath,
 				}, garden.ProcessIO{})
@@ -539,6 +547,10 @@ var _ = Describe("Run", func() {
 				It("returns a useful error type", func() {
 					Expect(runErr).To(BeAssignableToTypeOf(garden.ExecutableNotFoundError{}))
 				})
+			})
+
+			It("should not leak go routines", func() {
+				Eventually(pollNumGoRoutines(client), "10s").Should(Equal(numGoRoutinesBefore))
 			})
 		})
 	})
