@@ -515,6 +515,12 @@ var _ = Describe("Run", func() {
 				binaryPath = "/i/do/not/exist"
 			})
 
+			AfterEach(func() {
+				if CurrentGinkgoTestDescription().Failed {
+					client.Runner.Command.Process.Signal(unix.SIGABRT)
+				}
+			})
+
 			JustBeforeEach(func() {
 				config.DebugIP = "0.0.0.0"
 				config.DebugPort = intptr(8080 + GinkgoParallelNode())
