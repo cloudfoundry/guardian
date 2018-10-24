@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -562,7 +563,7 @@ var _ = Describe("Run", func() {
 					return s
 				}
 
-				Eventually(pollNumGoRoutines(client), "10s").Should(
+				Eventually(pollNumGoRoutines(client), time.Second*30).Should(
 					Equal(numGoRoutinesBefore),
 					fmt.Sprintf("possible go routine leak\n\n--- stack dump before ---\n%s\n\n--- stack dump after ---\n%s\n", stackBefore, getStackDump()),
 				)
