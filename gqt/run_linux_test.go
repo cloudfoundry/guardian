@@ -509,6 +509,7 @@ var _ = Describe("Run", func() {
 				runErr              error
 				binaryPath          string
 				numGoRoutinesBefore int
+				stackBefore         string
 			)
 
 			BeforeEach(func() {
@@ -523,7 +524,10 @@ var _ = Describe("Run", func() {
 				container, err := client.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
+				stackBefore, err = client.StackDump()
+				Expect(err).NotTo(HaveOccurred())
 				numGoRoutinesBefore = numGoRoutines(client)
+
 				_, runErr = container.Run(garden.ProcessSpec{
 					Path: binaryPath,
 				}, garden.ProcessIO{})
@@ -550,7 +554,18 @@ var _ = Describe("Run", func() {
 			})
 
 			It("should not leak go routines", func() {
-				Eventually(pollNumGoRoutines(client), "10s").Should(Equal(numGoRoutinesBefore))
+				getStackDump := func() string {
+					s, e := client.StackDump()
+					if e != nil {
+						return fmt.Sprintf("<Failed to get stack dump: %v>", e)
+					}
+					return s
+				}
+
+				Eventually(pollNumGoRoutines(client), "10s").Should(
+					Equal(numGoRoutinesBefore),
+					fmt.Sprintf("possible go routine leak\n\n--- stack dump before ---\n%s\n\n--- stack dump after ---\n%s\n", stackBefore, getStackDump()),
+				)
 			})
 		})
 	})

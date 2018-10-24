@@ -436,6 +436,22 @@ func (r *RunningGarden) NumGoroutines() (int, error) {
 	return debugVarsData.NumGoRoutines, nil
 }
 
+func (r *RunningGarden) StackDump() (string, error) {
+	debugURL := fmt.Sprintf("http://%s:%d/debug/pprof/goroutine?debug=2", r.DebugIP, *r.DebugPort)
+	res, err := http.Get(debugURL)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	stack, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(stack), nil
+}
+
 func intptr(i int) *int {
 	return &i
 }
