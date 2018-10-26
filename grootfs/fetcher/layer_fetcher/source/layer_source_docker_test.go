@@ -32,6 +32,7 @@ var _ = Describe("Layer source: Docker", func() {
 		baseImageURL *url.URL
 
 		configBlob    string
+		blobPath      string
 		layerInfos    []groot.LayerInfo
 		systemContext types.SystemContext
 
@@ -41,6 +42,7 @@ var _ = Describe("Layer source: Docker", func() {
 	)
 
 	BeforeEach(func() {
+		blobPath = ""
 		systemContext = types.SystemContext{
 			DockerAuthConfig: &types.DockerAuthConfig{
 				Username: RegistryUsername,
@@ -76,6 +78,12 @@ var _ = Describe("Layer source: Docker", func() {
 
 	JustBeforeEach(func() {
 		layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, skipImageQuotaValidation, imageQuota, baseImageURL)
+	})
+
+	AfterEach(func() {
+		if _, err := os.Stat(blobPath); err == nil {
+			Expect(os.Remove(blobPath)).To(Succeed())
+		}
 	})
 
 	Describe("Manifest", func() {
@@ -311,7 +319,8 @@ var _ = Describe("Layer source: Docker", func() {
 		It("retries fetching a blob twice", func() {
 			fakeRegistry.FailNextRequests(2)
 
-			_, _, err := layerSource.Blob(logger, layerInfos[0])
+			var err error
+			blobPath, _, err = layerSource.Blob(logger, layerInfos[0])
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(logger.TestSink.LogMessages()).To(
@@ -387,7 +396,12 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("downloads and uncompresses the blob", func() {
-				blobPath, size, err := layerSource.Blob(logger, layerInfos[0])
+				var (
+					size int64
+					err  error
+				)
+
+				blobPath, size, err = layerSource.Blob(logger, layerInfos[0])
 				Expect(err).NotTo(HaveOccurred())
 
 				blobReader, err := os.Open(blobPath)
@@ -441,7 +455,12 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("downloads and uncompresses the blob", func() {
-				blobPath, size, err := layerSource.Blob(logger, layerInfos[0])
+				var (
+					size int64
+					err  error
+				)
+
+				blobPath, size, err = layerSource.Blob(logger, layerInfos[0])
 				Expect(err).NotTo(HaveOccurred())
 
 				blobReader, err := os.Open(blobPath)
@@ -461,9 +480,22 @@ var _ = Describe("Layer source: Docker", func() {
 	})
 
 	Describe("Blob", func() {
+		var (
+			blobSize  int64
+			blobErr   error
+			layerInfo groot.LayerInfo
+		)
+
+		BeforeEach(func() {
+			layerInfo = layerInfos[0]
+		})
+
+		JustBeforeEach(func() {
+			blobPath, blobSize, blobErr = layerSource.Blob(logger, layerInfo)
+		})
+
 		It("downloads and uncompresses the blob", func() {
-			blobPath, size, err := layerSource.Blob(logger, layerInfos[0])
-			Expect(err).NotTo(HaveOccurred())
+			Expect(blobErr).NotTo(HaveOccurred())
 
 			blobReader, err := os.Open(blobPath)
 			Expect(err).NotTo(HaveOccurred())
@@ -473,7 +505,7 @@ var _ = Describe("Layer source: Docker", func() {
 			cmd.Stdin = blobReader
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(size).To(Equal(int64(90)))
+			Expect(blobSize).To(Equal(int64(90)))
 
 			Eventually(sess.Out).Should(gbytes.Say("hello"))
 			Eventually(sess).Should(gexec.Exit(0))
@@ -497,6 +529,8 @@ var _ = Describe("Layer source: Docker", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				systemContext.DockerInsecureSkipTLSVerify = true
+
+				layerInfo.MediaType = "gzip"
 			})
 
 			AfterEach(func() {
@@ -504,9 +538,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("returns an error", func() {
-				layerInfos[0].MediaType = "gzip"
-				_, _, err := layerSource.Blob(logger, layerInfos[0])
-				Expect(err).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
+				Expect(blobErr).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
 			})
 		})
 
@@ -516,20 +548,17 @@ var _ = Describe("Layer source: Docker", func() {
 				baseImageURL, err = url.Parse("docker:///cfgarden/private")
 				Expect(err).NotTo(HaveOccurred())
 
-				layerInfos = []groot.LayerInfo{
-					{
-						BlobID:    "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4",
-						DiffID:    "780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296",
-						MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
-						Size:      90,
-					},
+				layerInfo = groot.LayerInfo{
+					BlobID:    "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4",
+					DiffID:    "780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296",
+					MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
+					Size:      90,
 				}
 			})
 
 			Context("when the correct credentials are provided", func() {
 				It("fetches the config", func() {
-					blobPath, size, err := layerSource.Blob(logger, layerInfos[0])
-					Expect(err).NotTo(HaveOccurred())
+					Expect(blobErr).NotTo(HaveOccurred())
 
 					blobReader, err := os.Open(blobPath)
 					Expect(err).NotTo(HaveOccurred())
@@ -539,7 +568,7 @@ var _ = Describe("Layer source: Docker", func() {
 					cmd.Stdin = blobReader
 					sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(size).To(Equal(int64(90)))
+					Expect(blobSize).To(Equal(int64(90)))
 
 					Eventually(buffer, 5*time.Second).Should(gbytes.Say("hello"))
 					Eventually(sess).Should(gexec.Exit(0))
@@ -566,8 +595,7 @@ var _ = Describe("Layer source: Docker", func() {
 				})
 
 				It("retuns an error", func() {
-					_, _, err := layerSource.Blob(logger, layerInfos[0])
-					Expect(err).To(MatchError(ContainSubstring("unable to retrieve auth token")))
+					Expect(blobErr).To(MatchError(ContainSubstring("unable to retrieve auth token")))
 				})
 			})
 		})
@@ -580,15 +608,17 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, layerInfos[0])
-				Expect(err).To(MatchError(ContainSubstring("parsing url failed")))
+				Expect(blobErr).To(MatchError(ContainSubstring("parsing url failed")))
 			})
 		})
 
 		Context("when the blob does not exist", func() {
+			BeforeEach(func() {
+				layerInfo = groot.LayerInfo{BlobID: "sha256:steamed-blob"}
+			})
+
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, groot.LayerInfo{BlobID: "sha256:steamed-blob"})
-				Expect(err).To(MatchError(ContainSubstring("fetching blob 400")))
+				Expect(blobErr).To(MatchError(ContainSubstring("fetching blob 400")))
 			})
 		})
 
@@ -596,10 +626,11 @@ var _ = Describe("Layer source: Docker", func() {
 			var fakeRegistry *testhelpers.FakeRegistry
 
 			BeforeEach(func() {
+				layerInfo = layerInfos[1]
 				dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
 				Expect(err).NotTo(HaveOccurred())
 				fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
-				fakeRegistry.WhenGettingBlob(layerInfos[1].BlobID, 1, func(rw http.ResponseWriter, req *http.Request) {
+				fakeRegistry.WhenGettingBlob(layerInfo.BlobID, 1, func(rw http.ResponseWriter, req *http.Request) {
 					gzipWriter := gzip.NewWriter(rw)
 					io.WriteString(gzipWriter, "bad-blob")
 					gzipWriter.Close()
@@ -617,8 +648,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, layerInfos[1])
-				Expect(err).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
+				Expect(blobErr).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
 			})
 
 			Context("when a devious hacker tries to set skipOCILayerValidation to true", func() {
@@ -627,20 +657,21 @@ var _ = Describe("Layer source: Docker", func() {
 				})
 
 				It("returns an error", func() {
-					_, _, err := layerSource.Blob(logger, layerInfos[1])
-					Expect(err).To(MatchError(ContainSubstring("layerID digest mismatch")))
+					Expect(blobErr).To(MatchError(ContainSubstring("layerID digest mismatch")))
 				})
 			})
 		})
 
 		Context("when the blob doesn't match the diffID", func() {
 			BeforeEach(func() {
-				layerInfos[1].DiffID = "0000000000000000000000000000000000000000000000000000000000000000"
+				layerInfo = layerInfos[1]
+			})
+			BeforeEach(func() {
+				layerInfo.DiffID = "0000000000000000000000000000000000000000000000000000000000000000"
 			})
 
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, layerInfos[1])
-				Expect(err).To(MatchError(ContainSubstring("diffID digest mismatch")))
+				Expect(blobErr).To(MatchError(ContainSubstring("diffID digest mismatch")))
 			})
 		})
 
@@ -655,8 +686,7 @@ var _ = Describe("Layer source: Docker", func() {
 				})
 
 				It("returns quota exceeded error", func() {
-					_, _, err := layerSource.Blob(logger, layerInfos[0])
-					Expect(err).To(MatchError(ContainSubstring("uncompressed layer size exceeds quota")))
+					Expect(blobErr).To(MatchError(ContainSubstring("uncompressed layer size exceeds quota")))
 				})
 			})
 		})

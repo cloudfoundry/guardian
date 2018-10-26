@@ -142,10 +142,30 @@ var _ = Describe("Layer source: OCI", func() {
 	})
 
 	Describe("Blob", func() {
+		var (
+			blobPath  string
+			blobSize  int64
+			blobErr   error
+			layerInfo groot.LayerInfo
+		)
+
+		BeforeEach(func() {
+			layerInfo = layerInfos[0]
+		})
+
+		JustBeforeEach(func() {
+			blobPath, blobSize, blobErr = layerSource.Blob(logger, layerInfo)
+		})
+
+		AfterEach(func() {
+			if _, err := os.Stat(blobPath); err == nil {
+				Expect(os.Remove(blobPath)).To(Succeed())
+			}
+		})
+
 		It("downloads a blob", func() {
-			blobPath, size, err := layerSource.Blob(logger, layerInfos[0])
-			Expect(err).NotTo(HaveOccurred())
-			Expect(size).To(Equal(int64(668151)))
+			Expect(blobErr).NotTo(HaveOccurred())
+			Expect(blobSize).To(Equal(int64(668151)))
 
 			blobReader, err := os.Open(blobPath)
 			Expect(err).NotTo(HaveOccurred())
@@ -161,9 +181,12 @@ var _ = Describe("Layer source: OCI", func() {
 		})
 
 		Context("when the blob has an invalid checksum", func() {
+			BeforeEach(func() {
+				layerInfo = groot.LayerInfo{BlobID: "sha256:steamed-blob"}
+			})
+
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, groot.LayerInfo{BlobID: "sha256:steamed-blob"})
-				Expect(err).To(MatchError(ContainSubstring("invalid checksum digest format")))
+				Expect(blobErr).To(MatchError(ContainSubstring("invalid checksum digest format")))
 			})
 		})
 
@@ -172,12 +195,11 @@ var _ = Describe("Layer source: OCI", func() {
 				var err error
 				baseImageURL, err = url.Parse(fmt.Sprintf("oci:///%s/../../../integration/assets/oci-test-image/corrupted:latest", workDir))
 				Expect(err).NotTo(HaveOccurred())
-				layerInfos[0].Size = 668551
+				layerInfo.Size = 668551
 			})
 
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, layerInfos[0])
-				Expect(err).To(MatchError(ContainSubstring("layerID digest mismatch")))
+				Expect(blobErr).To(MatchError(ContainSubstring("layerID digest mismatch")))
 			})
 		})
 
@@ -186,23 +208,21 @@ var _ = Describe("Layer source: OCI", func() {
 				var err error
 				baseImageURL, err = url.Parse(fmt.Sprintf("oci:///%s/../../../integration/assets/oci-test-image/corrupted:latest", workDir))
 				Expect(err).NotTo(HaveOccurred())
-				layerInfos[0].Size = 668551
+				layerInfo.Size = 668551
 				skipOCILayerValidation = true
 			})
 
 			It("does not validate against checksums and does not return an error", func() {
-				_, _, err := layerSource.Blob(logger, layerInfos[0])
-				Expect(err).NotTo(HaveOccurred())
+				Expect(blobErr).NotTo(HaveOccurred())
 			})
 
 			Context("when the actual blob size is different than the layersize in the manifest", func() {
 				BeforeEach(func() {
-					layerInfos[0].Size = 100
+					layerInfo.Size = 100
 				})
 
 				It("does not validate layer size", func() {
-					_, _, err := layerSource.Blob(logger, layerInfos[0])
-					Expect(err).NotTo(HaveOccurred())
+					Expect(blobErr).NotTo(HaveOccurred())
 				})
 			})
 
@@ -210,34 +230,31 @@ var _ = Describe("Layer source: OCI", func() {
 
 		Context("when the blob doesn't match the diffID", func() {
 			BeforeEach(func() {
-				layerInfos[0].DiffID = "0000000000000000000000000000000000000000000000000000000000000000"
+				layerInfo.DiffID = "0000000000000000000000000000000000000000000000000000000000000000"
 			})
 
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, layerInfos[0])
-				Expect(err).To(MatchError(ContainSubstring("diffID digest mismatch")))
+				Expect(blobErr).To(MatchError(ContainSubstring("diffID digest mismatch")))
 			})
 		})
 
 		Context("when the actual blob size is greater than the layersize in the manifest", func() {
 			BeforeEach(func() {
-				layerInfos[0].Size = 100
+				layerInfo.Size = 100
 			})
 
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, layerInfos[0])
-				Expect(err).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
+				Expect(blobErr).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
 			})
 		})
 
 		Context("when the actual blob size is less than the layersize in the manifest", func() {
 			BeforeEach(func() {
-				layerInfos[0].Size = 10000000000000
+				layerInfo.Size = 10000000000000
 			})
 
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, layerInfos[0])
-				Expect(err).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
+				Expect(blobErr).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
 			})
 		})
 
@@ -252,22 +269,19 @@ var _ = Describe("Layer source: OCI", func() {
 				})
 
 				It("returns quota exceeded error", func() {
-					_, _, err := layerSource.Blob(logger, layerInfos[0])
-					Expect(err).To(MatchError(ContainSubstring("uncompressed layer size exceeds quota")))
+					Expect(blobErr).To(MatchError(ContainSubstring("uncompressed layer size exceeds quota")))
 				})
 			})
 
 			Context("when the first layer exhausts the quota", func() {
 				BeforeEach(func() {
-					uncompressedLayerSize := int64(1293824)
-					imageQuota = uncompressedLayerSize
+					imageQuota = int64(1293824)
 				})
 
 				It("fails when downloading subsequent layers", func() {
-					_, _, err := layerSource.Blob(logger, layerInfos[0])
-					Expect(err).NotTo(HaveOccurred())
+					Expect(blobErr).NotTo(HaveOccurred())
 
-					_, _, err = layerSource.Blob(logger, layerInfos[1])
+					_, _, err := layerSource.Blob(logger, layerInfos[1])
 					Expect(err).To(MatchError(ContainSubstring("uncompressed layer size exceeds quota")))
 				})
 			})

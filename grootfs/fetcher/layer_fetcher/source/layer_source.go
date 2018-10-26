@@ -106,6 +106,7 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 	if err != nil {
 		return "", 0, err
 	}
+	defer blob.Close()
 	logger.Debug("got-blob-stream", lager.Data{"digest": layerInfo.BlobID, "size": size, "mediaType": layerInfo.MediaType})
 
 	if err = s.validateLayerSize(layerInfo, size); err != nil {
@@ -116,6 +117,14 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 	if err != nil {
 		return "", 0, err
 	}
+
+	defer func() {
+		blobTempFile.Close()
+
+		if err != nil {
+			os.Remove(blobTempFile.Name())
+		}
+	}()
 
 	blobIDHash := sha256.New()
 	digestReader := ioutil.NopCloser(io.TeeReader(blob, blobIDHash))
@@ -133,15 +142,6 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 	if s.shouldEnforceImageQuotaValidation() {
 		digestReader = layer_fetcher.NewQuotaedReader(digestReader, s.imageQuota, "uncompressed layer size exceeds quota")
 	}
-
-	defer func() {
-		blob.Close()
-		blobTempFile.Close()
-
-		if err != nil {
-			os.Remove(blobTempFile.Name())
-		}
-	}()
 
 	diffIDHash := sha256.New()
 	digestReader = ioutil.NopCloser(io.TeeReader(digestReader, diffIDHash))
