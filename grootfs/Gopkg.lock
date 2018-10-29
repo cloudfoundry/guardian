@@ -106,9 +106,10 @@
   revision = "4b6d9cf918c1e79a605265568c93cb35185ad25d"
 
 [[projects]]
+  branch = "master"
   name = "github.com/containers/storage"
   packages = ["pkg/reexec"]
-  revision = "f8cff0727cf0802f0752ca58d2c05ec5270a47d5"
+  revision = "09abf3a26b8a3aa69e29fd7faeb260b98d675759"
 
 [[projects]]
   name = "github.com/docker/distribution"
@@ -432,6 +433,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d0d6c6344ac017ffb831aeb144337c52b60e35a6d69c77bfd72a023ac852234b"
+  inputs-digest = "a8895fc9ddba51d5f59793577dd652647a43431df7878640914c3e725b09c265"
   solver-name = "gps-cdcl"
   solver-version = 1

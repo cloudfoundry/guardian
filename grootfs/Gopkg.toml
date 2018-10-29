@@ -53,7 +53,7 @@
   name = "github.com/containers/image"
 
 [[constraint]]
-  revision = "f8cff0727cf0802f0752ca58d2c05ec5270a47d5"
+  branch = "master"
   name = "github.com/containers/storage"
 
 # TODO: We are using the revision below because moby's latest tag is form last year
