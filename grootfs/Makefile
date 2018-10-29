@@ -15,7 +15,6 @@ cf: all
 
 help:
 	@echo '    all ................................. builds the grootfs cli'
-	@echo '    deps ................................ installs dependencies'
 	@echo '    update-deps ......................... updates dependencies'
 	@echo '    unit ................................ run unit tests'
 	@echo '    integration ......................... run integration tests'
@@ -28,9 +27,6 @@ help:
 	@echo '    push-image .......................... pushes image to docker-hub'
 
 ###### Dependencies ###########################################################
-
-deps:
-	git submodule update --init --recursive
 
 ###### Testing ################################################################
 
