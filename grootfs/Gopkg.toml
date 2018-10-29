@@ -49,7 +49,7 @@
   name = "github.com/cloudfoundry/sonde-go"
 
 [[constraint]]
-  revision = "490d44adfcfb69a96f146af41ec9c631cdfd346b"
+  branch = "master"
   name = "github.com/containers/image"
 
 [[constraint]]

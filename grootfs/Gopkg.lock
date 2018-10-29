@@ -86,6 +86,7 @@
   revision = "d3c23511c1bf5851696cba83143d9cbcd666869b"
 
 [[projects]]
+  branch = "master"
   name = "github.com/containers/image"
   packages = [
     "directory/explicitfilepath",
@@ -102,7 +103,7 @@
     "transports",
     "types"
   ]
-  revision = "490d44adfcfb69a96f146af41ec9c631cdfd346b"
+  revision = "4b6d9cf918c1e79a605265568c93cb35185ad25d"
 
 [[projects]]
   name = "github.com/containers/storage"
@@ -431,6 +432,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9fa9f3db3b0abea27f36f2687b2c8bbd5336713e03f841d561f7855a7b81212c"
+  inputs-digest = "d0d6c6344ac017ffb831aeb144337c52b60e35a6d69c77bfd72a023ac852234b"
   solver-name = "gps-cdcl"
   solver-version = 1
