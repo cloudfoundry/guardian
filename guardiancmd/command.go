@@ -46,8 +46,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/dropsonde"
-	_ "github.com/docker/docker/daemon/graphdriver/aufs" // aufs needed for garden-shed
-	_ "github.com/docker/docker/pkg/chrootarchive"       // allow reexec of docker-applyLayer
+	_ "github.com/docker/docker/pkg/chrootarchive" // allow reexec of docker-applyLayer
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/eapache/go-resiliency/retrier"
 	uuid "github.com/nu7hatch/gouuid"
@@ -225,12 +224,6 @@ type ServerCommand struct {
 		Plugin          string   `long:"runtime-plugin"       default:"runc" description:"Path to the runtime plugin binary."`
 		PluginExtraArgs []string `long:"runtime-plugin-extra-arg" description:"Extra argument to pass to the runtime plugin. Can be specified multiple times."`
 	} `group:"Runtime"`
-
-	Graph struct {
-		Dir                         string   `long:"graph"                                default:"/var/gdn/graph" description:"Directory on which to store imported rootfs graph data."`
-		CleanupThresholdInMegabytes int      `long:"graph-cleanup-threshold-in-megabytes" default:"-1" description:"Disk usage of the graph dir at which cleanup should trigger, or -1 to disable graph cleanup."`
-		PersistentImages            []string `long:"persistent-image" description:"Image that should never be garbage collected. Can be specified multiple times."`
-	} `group:"Image Graph"`
 
 	Image struct {
 		NoPlugin bool `long:"no-image-plugin" description:"Do not use the embedded 'grootfs' image plugin."`
@@ -521,11 +514,6 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 
 	periodicMetronMetrics := map[string]func() int{
 		"DepotDirs": metricsProvider.DepotDirs,
-	}
-
-	if cmd.Image.Plugin == "" && cmd.Image.PrivilegedPlugin == "" {
-		periodicMetronMetrics["LoopDevices"] = metricsProvider.LoopDevices
-		periodicMetronMetrics["BackingStores"] = metricsProvider.BackingStores
 	}
 
 	metronNotifier := cmd.wireMetronNotifier(logger, periodicMetronMetrics)
@@ -958,12 +946,7 @@ func wirePidfileReader() *pid.FileReader {
 }
 
 func (cmd *ServerCommand) wireMetricsProvider(log lager.Logger) *metrics.MetricsProvider {
-	var backingStoresPath string
-	if cmd.Graph.Dir != "" {
-		backingStoresPath = filepath.Join(cmd.Graph.Dir, "backing_stores")
-	}
-
-	return metrics.NewMetricsProvider(log, backingStoresPath, cmd.Containers.Dir)
+	return metrics.NewMetricsProvider(log, cmd.Containers.Dir)
 }
 
 func (cmd *ServerCommand) wireMetronNotifier(log lager.Logger, metricsProvider metrics.Metrics) *metrics.PeriodicMetronNotifier {

@@ -15,24 +15,14 @@ import (
 
 var _ = Describe("MetricsProvider", func() {
 	var (
-		logger           *lagertest.TestLogger
-		backingStorePath string
-		depotPath        string
+		logger    *lagertest.TestLogger
+		depotPath string
 
 		m *metrics.MetricsProvider
 	)
 
 	BeforeEach(func() {
 		var err error
-
-		backingStorePath, err = ioutil.TempDir("", "backing_stores")
-		Expect(err).NotTo(HaveOccurred())
-		Expect(ioutil.WriteFile(
-			filepath.Join(backingStorePath, "bs-1"), []byte("test"), 0660,
-		)).To(Succeed())
-		Expect(ioutil.WriteFile(
-			filepath.Join(backingStorePath, "bs-2"), []byte("test"), 0660,
-		)).To(Succeed())
 
 		depotPath, err = ioutil.TempDir("", "depotDirs")
 		Expect(err).NotTo(HaveOccurred())
@@ -42,28 +32,18 @@ var _ = Describe("MetricsProvider", func() {
 
 		Expect(err).ToNot(HaveOccurred())
 		logger = lagertest.NewTestLogger("test")
-		m = metrics.NewMetricsProvider(logger, backingStorePath, depotPath)
+		m = metrics.NewMetricsProvider(logger, depotPath)
 	})
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(depotPath)).To(Succeed())
-		Expect(os.RemoveAll(backingStorePath)).To(Succeed())
 	})
 
 	It("should report the number of loop devices, backing store files and depotDirs", func() {
 		Expect(m.NumCPU()).To(Equal(runtime.NumCPU()))
 		Expect(m.NumGoroutine()).To(BeNumerically("~", runtime.NumGoroutine(), 2))
-		Expect(m.LoopDevices()).NotTo(BeNil())
-		Expect(m.BackingStores()).To(Equal(2))
+		Expect(m.LoopDevices()).To(Equal(0))
+		Expect(m.BackingStores()).To(Equal(0))
 		Expect(m.DepotDirs()).To(Equal(3))
-	})
-
-	Context("when the backing store path is empty", func() {
-		It("reports BackingStores as -1 without doing any funny business", func() {
-			m := metrics.NewMetricsProvider(logger, "", depotPath)
-			Expect(m.BackingStores()).To(Equal(-1))
-
-			Expect(logger.LogMessages()).To(BeEmpty())
-		})
 	})
 })

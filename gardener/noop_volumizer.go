@@ -11,7 +11,7 @@ import (
 
 type NoopVolumizer struct{}
 
-var ErrGraphDisabled = errors.New("volume graph is disabled")
+var ErrGraphDisabled = errors.New("no image plugin configured")
 
 func (NoopVolumizer) Create(lager.Logger, string, RootfsSpec) (specs.Spec, error) {
 	return specs.Spec{}, ErrGraphDisabled

@@ -8,11 +8,9 @@ import (
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
-	"code.cloudfoundry.org/garden-shed/rootfs_provider"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/kawasaki/dns"
-	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
@@ -62,25 +60,8 @@ func (f *LinuxFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 		return f.config.wireImagePlugin(f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
 	}
 
-	if f.config.Graph.Dir == "" {
-		noop := gardener.NoopVolumizer{}
-		return gardener.NewVolumeProvider(noop, noop, gardener.CommandFactory(preparerootfs.Command), f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
-	}
-
-	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger}
-	shed := rootfs_provider.Wire(
-		logger,
-		runner,
-		f.config.Graph.Dir,
-		f.config.Containers.DefaultRootFS,
-		f.config.Docker.Registry,
-		f.config.Docker.InsecureRegistries,
-		f.config.Graph.PersistentImages,
-		f.config.Graph.CleanupThresholdInMegabytes,
-		f.uidMappings,
-		f.gidMappings,
-	)
-	return gardener.NewVolumeProvider(shed, shed, gardener.CommandFactory(preparerootfs.Command), f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
+	noop := gardener.NoopVolumizer{}
+	return gardener.NewVolumeProvider(noop, noop, gardener.CommandFactory(preparerootfs.Command), f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
 }
 
 func wireEnvFunc() processes.EnvFunc {

@@ -41,11 +41,10 @@ var _ = Describe("Rootfs container create parameter", func() {
 		Expect(os.RemoveAll(grootfsConfPath)).To(Succeed())
 	})
 
-	Context("without an image plugin or shed", func() {
+	Context("without an image plugin", func() {
 		var rootfsPath string
 		BeforeEach(func() {
 			config = resetImagePluginConfig()
-			config.GraphDir = stringptr("")
 			rootfsPath = createRootfs(func(string) {}, 0755)
 		})
 

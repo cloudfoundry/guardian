@@ -24,8 +24,6 @@
 #   go-tests = true
 #   unused-packages = true
 
-ignored = ["code.cloudfoundry.org/garden-shed*"]
-
 # we should be able to get rid of this line when https://github.com/golang/dep/issues/1799 gets fixed
 required = ["gopkg.in/fsnotify.v1"]
 

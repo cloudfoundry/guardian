@@ -4,16 +4,11 @@ package runner
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
-	"path"
 	"syscall"
-	"time"
 
-	"github.com/eapache/go-resiliency/retrier"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"golang.org/x/sys/unix"
 )
 
 type UserCredential *syscall.Credential
@@ -46,9 +41,6 @@ func socket2meCommand(config GdnRunnerConfig) *exec.Cmd {
 }
 
 func (r *GardenRunner) setupDirsForUser() {
-	// TODO: Remove this when we get rid of shed
-	MustMountTmpfs(*r.GraphDir)
-
 	if r.User != nil {
 		uidGid := fmt.Sprintf("%d:%d", r.User.Uid, r.User.Gid)
 
@@ -78,31 +70,6 @@ func (r *RunningGarden) Cleanup() error {
 		return err
 	}
 
-	// AUFS CLEANUP
-	// TODO: Remove this when we get rid of shed
-	aufsCleanup := func() error {
-		if err := os.RemoveAll(path.Join(*r.GraphDir, "aufs")); err == nil {
-			return nil // if we can remove it, it's already unmounted
-		}
-
-		if err := unix.Unmount(path.Join(*r.GraphDir, "aufs"), unix.MNT_DETACH); err != nil {
-			r.logger.Error("failed-unmount-attempt", err)
-			return err
-		}
-
-		return nil
-	}
-	retry := retrier.New(retrier.ConstantBackoff(200, 500*time.Millisecond), nil)
-	if err := retry.Run(aufsCleanup); err != nil {
-		return err
-	}
-
-	MustUnmountTmpfs(*r.GraphDir)
-
-	if err := os.RemoveAll(*r.GraphDir); err != nil {
-		r.logger.Error("remove-graph", err)
-		return err
-	}
 	return nil
 }
 

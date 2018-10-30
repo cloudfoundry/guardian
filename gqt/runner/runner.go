@@ -49,7 +49,6 @@ type GdnRunnerConfig struct {
 
 	DefaultRootFS                  string   `flag:"default-rootfs"`
 	DepotDir                       string   `flag:"depot"`
-	GraphDir                       *string  `flag:"graph"`
 	ConsoleSocketsPath             string   `flag:"console-sockets-path"`
 	BindIP                         string   `flag:"bind-ip"`
 	BindPort                       *int     `flag:"bind-port"`
@@ -64,8 +63,6 @@ type GdnRunnerConfig struct {
 	DebugIP                        string   `flag:"debug-bind-ip"`
 	DebugPort                      *int     `flag:"debug-bind-port"`
 	PropertiesPath                 string   `flag:"properties-path"`
-	PersistentImages               []string `flag:"persistent-image"`
-	GraphCleanupThresholdMB        *int     `flag:"graph-cleanup-threshold-in-megabytes"`
 	LogLevel                       string   `flag:"log-level"`
 	TCPMemoryLimit                 *uint64  `flag:"tcp-memory-limit"`
 	CPUQuotaPerShare               *uint64  `flag:"cpu-quota-per-share"`
@@ -192,16 +189,7 @@ type RunningGarden struct {
 	logger  lager.Logger
 }
 
-var graphDirBase string
-
 func init() {
-	graphDirBase = os.Getenv("GARDEN_TEST_GRAPHPATH")
-	if graphDirBase == "" {
-		// This must be set outside of the Ginkgo node directory (tmpDir) because
-		// otherwise the Concourse worker may run into one of the AUFS kernel
-		// module bugs that cause the VM to become unresponsive.
-		graphDirBase = filepath.Join("/tmp", "aufs_mount")
-	}
 }
 
 func DefaultGdnRunnerConfig(binaries Binaries) GdnRunnerConfig {
@@ -213,10 +201,7 @@ func DefaultGdnRunnerConfig(binaries Binaries) GdnRunnerConfig {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(os.Chmod(config.TmpDir, 0777)).To(Succeed())
 
-	graphDir := filepath.Join(graphDirBase, filepath.Base(config.TmpDir))
-	config.GraphDir = &graphDir
 	config.ConsoleSocketsPath = filepath.Join(config.TmpDir, "console-sockets")
-
 	config.DepotDir = filepath.Join(config.TmpDir, "containers")
 	Expect(os.MkdirAll(config.DepotDir, 0755)).To(Succeed())
 
