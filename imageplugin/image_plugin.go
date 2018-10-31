@@ -15,7 +15,6 @@ import (
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	errorwrapper "github.com/pkg/errors"
-	"github.com/tscolari/lagregator"
 )
 
 const PreloadedPlusLayerScheme = "preloaded+layer"
@@ -83,7 +82,7 @@ func (p *ImagePlugin) Create(log lager.Logger, handle string, spec gardener.Root
 
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	createCmd.Stdout = stdoutBuffer
-	createCmd.Stderr = lagregator.NewRelogger(log)
+	createCmd.Stderr = NewRelogger(log)
 
 	if err := p.CommandRunner.Run(createCmd); err != nil {
 		logData := lager.Data{"action": "create", "stdout": stdoutBuffer.String()}
@@ -126,7 +125,7 @@ func (p *ImagePlugin) Destroy(log lager.Logger, handle string) error {
 		}
 		stdoutBuffer := bytes.NewBuffer([]byte{})
 		destroyCmd.Stdout = stdoutBuffer
-		destroyCmd.Stderr = lagregator.NewRelogger(log)
+		destroyCmd.Stderr = NewRelogger(log)
 
 		if err := p.CommandRunner.Run(destroyCmd); err != nil {
 			logData := lager.Data{"action": "destroy", "stdout": stdoutBuffer.String()}
@@ -156,7 +155,7 @@ func (p *ImagePlugin) Metrics(log lager.Logger, handle string, namespaced bool) 
 
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	metricsCmd.Stdout = stdoutBuffer
-	metricsCmd.Stderr = lagregator.NewRelogger(log)
+	metricsCmd.Stderr = NewRelogger(log)
 
 	if err := p.CommandRunner.Run(metricsCmd); err != nil {
 		logData := lager.Data{"action": "metrics", "stdout": stdoutBuffer.String()}
