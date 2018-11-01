@@ -9,9 +9,6 @@ GRR_ROOT=$HOME/workspace/garden-runc-release
 DIRS=$(for d in $ARGS; do [ -d "$d" ] && echo "$d"; done)
 
 TASK="$GRR_ROOT"/ci/unit-tests/guardian.yml
-if [ "$TAG" == "xenial" ]; then
-  TASK="$GRR_ROOT"/ci/unit-tests/guardian-xenial.yml
-fi
 if [ "$GOOS" == "windows" ]; then
   TASK="$GRR_ROOT"/ci/unit-tests/guardian-windows.yml
 fi
