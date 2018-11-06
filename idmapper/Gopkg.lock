@@ -2,6 +2,7 @@
 
 
 [[projects]]
+  digest = "1:dba1351ee3e5b2c89d2252d4cc91918399b34b42a07f9d96e6e919387dc33dad"
   name = "github.com/onsi/ginkgo"
   packages = [
     ".",
@@ -21,12 +22,14 @@
     "reporters/stenographer",
     "reporters/stenographer/support/go-colorable",
     "reporters/stenographer/support/go-isatty",
-    "types"
+    "types",
   ]
+  pruneopts = "UT"
   revision = "77a8c1e5c40d6bb6c5eb4dd4bdce9763564f6298"
   version = "v1.3.1"
 
 [[projects]]
+  digest = "1:843aac8325c3be216084cdbcd447e6af21f62d4528ce67c8b43d17e1c8c2412b"
   name = "github.com/onsi/gomega"
   packages = [
     ".",
@@ -42,30 +45,44 @@
     "matchers/support/goraph/edge",
     "matchers/support/goraph/node",
     "matchers/support/goraph/util",
-    "types"
+    "types",
   ]
+  pruneopts = "UT"
   revision = "334b8f472b3af5d541c5642701c1e29e2126f486"
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:7ac8d1611821c05e78c2692d0facb1b74c89884df26f32fb478c5697af2a9c1f"
   name = "github.com/opencontainers/runtime-spec"
   packages = ["specs-go"]
+  pruneopts = "UT"
   revision = "035da1dca3dfbb00d752eb58b0b158d6129f3776"
   version = "v1.0.0-rc5"
 
 [[projects]]
+  digest = "1:62d32e3ab9655bb0124b5d7a87eed55c6606a5488290111bd2a06a5f01baba1d"
   name = "golang.org/x/sys"
   packages = ["unix"]
+  pruneopts = "UT"
   revision = "8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9"
 
 [[projects]]
+  digest = "1:342378ac4dcb378a5448dd723f0784ae519383532f5e70ade24132c4c8693202"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "bef53efd0c76e49e6de55ead051f886bea7e9420"
+  pruneopts = "UT"
+  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
+  version = "v2.2.1"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "14f939606d99767ea4b7b01677ee7218f304ff4447be641d2c6fad766635d3f8"
+  input-imports = [
+    "github.com/onsi/ginkgo",
+    "github.com/onsi/gomega",
+    "github.com/onsi/gomega/gbytes",
+    "github.com/onsi/gomega/gexec",
+    "github.com/opencontainers/runtime-spec/specs-go",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
