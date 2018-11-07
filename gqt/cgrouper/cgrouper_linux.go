@@ -11,7 +11,10 @@ import (
 
 func CleanGardenCgroups(cgroupsRootPath, tag string) error {
 	subsystems, err := ioutil.ReadDir(cgroupsRootPath)
-	if err != nil {
+	if os.IsNotExist(err) || err == unix.EINVAL {
+		return nil
+	}
+	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("read cgroup root dir %s: %v", cgroupsRootPath, err)
 	}
 

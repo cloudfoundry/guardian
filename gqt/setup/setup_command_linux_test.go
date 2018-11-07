@@ -1,4 +1,4 @@
-package gqt_test
+package setup_gqt_test
 
 import (
 	"io/ioutil"
@@ -69,6 +69,7 @@ var _ = Describe("gdn setup", func() {
 		It("allows both OCI default and garden specific devices", func() {
 			cgroupPath, err := cgrouper.GetCGroupPath(cgroupsRoot, "devices", tag, false)
 			Expect(err).NotTo(HaveOccurred())
+			time.Sleep(time.Second * 20)
 
 			content := readFile(filepath.Join(cgroupPath, "devices.list"))
 			expectedAllowedDevices := []string{
