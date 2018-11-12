@@ -55,7 +55,7 @@ type runnerBinaries struct {
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
 	SetDefaultEventuallyTimeout(5 * time.Second)
-	RunSpecs(t, "GQT Suite")
+	RunSpecs(t, "GQT Setup Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {

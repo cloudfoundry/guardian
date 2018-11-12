@@ -5,10 +5,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
-	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
@@ -111,50 +109,6 @@ var _ = Describe("gdn setup", func() {
 					Expect(stat.Uid).To(Equal(unprivilegedUID), "subsystem: "+subsystem.Name())
 					Expect(stat.Gid).To(Equal(unprivilegedGID))
 				}
-			})
-		})
-	})
-
-	Context("when we start the server", func() {
-		var (
-			server *runner.RunningGarden
-		)
-
-		BeforeEach(func() {
-			config.SkipSetup = boolptr(true)
-			config.Tag = tag
-		})
-
-		AfterEach(func() {
-			Expect(server.DestroyAndStop()).To(Succeed())
-
-			// Allow a sec for server to "fully" stop and cleanup cgroups.
-			// Without this, the cgrouper.CleanGardenCgroups() call in the AfterEach
-			// can sometimes flake with "device or resource busy" ...
-			time.Sleep(time.Second)
-		})
-
-		Context("when the server is running as root", func() {
-			JustBeforeEach(func() {
-				config.User = &syscall.Credential{Uid: 0, Gid: 0}
-				server = runner.Start(config)
-				Expect(server).NotTo(BeNil())
-			})
-
-			It("should be able to create a container", func() {
-				_, err := server.Create(garden.ContainerSpec{})
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			Context("when a dummy network plugin is suppplied", func() {
-				BeforeEach(func() {
-					config.NetworkPluginBin = "/bin/true"
-				})
-
-				It("should be able to create a container", func() {
-					_, err := server.Create(garden.ContainerSpec{})
-					Expect(err).NotTo(HaveOccurred())
-				})
 			})
 		})
 	})
