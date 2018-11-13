@@ -79,7 +79,7 @@ var _ = Describe("ImagePlugin", func() {
 	})
 
 	Context("when the entry is not a lager log entry", func() {
-		It("ignores it", func() {
+		It("wraps it with a lager error log entry", func() {
 			_, err := relogger.Write([]byte(`some random log line`))
 			Expect(err).NotTo(HaveOccurred())
 
