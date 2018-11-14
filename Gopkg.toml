@@ -77,7 +77,7 @@ required = ["gopkg.in/fsnotify.v1"]
 
 [[constraint]]
   name = "github.com/containerd/containerd"
-  version = "1.1.2"
+  version = "1.2.0"
 
 # TODO: We are using the revision below because moby's latest tag is form last year
 # for some reason. The revision references the project state before they bumped to
@@ -133,11 +133,11 @@ required = ["gopkg.in/fsnotify.v1"]
 
 [[constraint]]
   name = "github.com/opencontainers/runc"
-  branch = "master"
+  revision = "58592df56734acf62e574865fe40b9e53e967910"
 
 [[constraint]]
   name = "github.com/opencontainers/runtime-spec"
-  version = "1.0.1"
+  revision = "eba862dc2470385a233c7507392675cbeadf7353"
 
 [[constraint]]
   name = "github.com/pkg/errors"
@@ -154,10 +154,6 @@ required = ["gopkg.in/fsnotify.v1"]
 [[constraint]]
   revision = "e89a512c3162f0e5762a0948ace8509995e9820d"
   name = "github.com/tedsuo/ifrit"
-
-[[constraint]]
-  revision = "b0fb43b018612a8bd982718843b52dac263a21a8"
-  name = "github.com/tscolari/lagregator"
 
 [[constraint]]
   name = "github.com/urfave/cli"

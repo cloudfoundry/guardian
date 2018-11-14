@@ -14,7 +14,6 @@ import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/errdefs"
-	"github.com/containerd/containerd/linux/runctypes"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -30,12 +29,6 @@ func New(client *containerd.Client, context context.Context) *Nerd {
 	}
 }
 
-// TODO: didn't we PR this?
-func WithNoNewKeyring(ctx context.Context, c *containerd.Client, ti *containerd.TaskInfo) error {
-	ti.Options = &runctypes.CreateOptions{NoNewKeyring: true}
-	return nil
-}
-
 func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec) error {
 	log.Debug("creating-container", lager.Data{"containerID": containerID})
 	container, err := n.client.NewContainer(n.context, containerID, containerd.WithSpec(spec))
@@ -44,7 +37,7 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec) er
 	}
 
 	log.Debug("creating-task", lager.Data{"containerID": containerID})
-	task, err := container.NewTask(n.context, cio.NullIO, WithNoNewKeyring)
+	task, err := container.NewTask(n.context, cio.NullIO, containerd.WithNoNewKeyring)
 	if err != nil {
 		return err
 	}

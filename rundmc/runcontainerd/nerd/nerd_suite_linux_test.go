@@ -18,6 +18,7 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/burntsushi/toml"
 	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/leases"
 	"github.com/containerd/containerd/namespaces"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -67,6 +68,7 @@ var _ = BeforeEach(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	containerdContext = namespaces.WithNamespace(context.Background(), fmt.Sprintf("nerdspace%d", GinkgoParallelNode()))
+	containerdContext = leases.WithLease(containerdContext, "lease-is-off-for-testing")
 
 	testConfig = &TestConfig{
 		RunDir: runDir,

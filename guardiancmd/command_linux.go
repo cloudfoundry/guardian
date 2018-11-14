@@ -26,8 +26,9 @@ import (
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/linux/proc"
+	"github.com/containerd/containerd/leases"
 	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/runtime/v1/linux/proc"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
@@ -209,6 +210,7 @@ func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *
 		return nil, nil, nil, err
 	}
 	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
+	ctx = leases.WithLease(ctx, "lease-is-off")
 	nerd := nerd.New(containerdClient, ctx)
 	pidGetter := &runcontainerd.PidGetter{Nerd: nerd}
 

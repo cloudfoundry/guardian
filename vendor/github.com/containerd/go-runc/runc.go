@@ -66,6 +66,7 @@ type Runc struct {
 	Setpgid       bool
 	Criu          string
 	SystemdCgroup bool
+	Rootless      *bool // nil stands for "auto"
 }
 
 // List returns all containers created inside the provided runc root directory
@@ -411,7 +412,7 @@ func (r *Runc) Top(context context.Context, id string, psOptions string) (*TopRe
 		return nil, fmt.Errorf("%s: %s", err, data)
 	}
 
-	topResults, err := parsePSOutput(data)
+	topResults, err := ParsePSOutput(data)
 	if err != nil {
 		return nil, fmt.Errorf("%s: ", err)
 	}
@@ -607,9 +608,8 @@ func parseVersion(data []byte) (Version, error) {
 	var v Version
 	parts := strings.Split(strings.TrimSpace(string(data)), "\n")
 	if len(parts) != 3 {
-		return v, ErrParseRuncVersion
+		return v, nil
 	}
-
 	for i, p := range []struct {
 		dest  *string
 		split string
@@ -654,6 +654,10 @@ func (r *Runc) args() (out []string) {
 	}
 	if r.SystemdCgroup {
 		out = append(out, "--systemd-cgroup")
+	}
+	if r.Rootless != nil {
+		// nil stands for "auto" (differs from explicit "false")
+		out = append(out, "--rootless="+strconv.FormatBool(*r.Rootless))
 	}
 	return out
 }

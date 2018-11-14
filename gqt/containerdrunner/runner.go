@@ -75,6 +75,9 @@ func ContainerdConfig(containerdDataDir string) Config {
 			"snapshots",
 			"version",
 			"cri",
+			"leases",
+			"leases-service",
+			"restart",
 		},
 		Plugins: Plugins{
 			Linux: Linux{
