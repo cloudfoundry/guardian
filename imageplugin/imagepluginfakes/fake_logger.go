@@ -4,36 +4,11 @@ package imagepluginfakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/guardian/imageplugin"
 	"code.cloudfoundry.org/lager"
 )
 
 type FakeLogger struct {
-	RegisterSinkStub        func(lager.Sink)
-	registerSinkMutex       sync.RWMutex
-	registerSinkArgsForCall []struct {
-		arg1 lager.Sink
-	}
-	SessionStub        func(task string, data ...lager.Data) lager.Logger
-	sessionMutex       sync.RWMutex
-	sessionArgsForCall []struct {
-		task string
-		data []lager.Data
-	}
-	sessionReturns struct {
-		result1 lager.Logger
-	}
-	sessionReturnsOnCall map[int]struct {
-		result1 lager.Logger
-	}
-	SessionNameStub        func() string
-	sessionNameMutex       sync.RWMutex
-	sessionNameArgsForCall []struct{}
-	sessionNameReturns     struct {
-		result1 string
-	}
-	sessionNameReturnsOnCall map[int]struct {
-		result1 string
-	}
 	DebugStub        func(action string, data ...lager.Data)
 	debugMutex       sync.RWMutex
 	debugArgsForCall []struct {
@@ -53,139 +28,8 @@ type FakeLogger struct {
 		err    error
 		data   []lager.Data
 	}
-	FatalStub        func(action string, err error, data ...lager.Data)
-	fatalMutex       sync.RWMutex
-	fatalArgsForCall []struct {
-		action string
-		err    error
-		data   []lager.Data
-	}
-	WithDataStub        func(lager.Data) lager.Logger
-	withDataMutex       sync.RWMutex
-	withDataArgsForCall []struct {
-		arg1 lager.Data
-	}
-	withDataReturns struct {
-		result1 lager.Logger
-	}
-	withDataReturnsOnCall map[int]struct {
-		result1 lager.Logger
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *FakeLogger) RegisterSink(arg1 lager.Sink) {
-	fake.registerSinkMutex.Lock()
-	fake.registerSinkArgsForCall = append(fake.registerSinkArgsForCall, struct {
-		arg1 lager.Sink
-	}{arg1})
-	fake.recordInvocation("RegisterSink", []interface{}{arg1})
-	fake.registerSinkMutex.Unlock()
-	if fake.RegisterSinkStub != nil {
-		fake.RegisterSinkStub(arg1)
-	}
-}
-
-func (fake *FakeLogger) RegisterSinkCallCount() int {
-	fake.registerSinkMutex.RLock()
-	defer fake.registerSinkMutex.RUnlock()
-	return len(fake.registerSinkArgsForCall)
-}
-
-func (fake *FakeLogger) RegisterSinkArgsForCall(i int) lager.Sink {
-	fake.registerSinkMutex.RLock()
-	defer fake.registerSinkMutex.RUnlock()
-	return fake.registerSinkArgsForCall[i].arg1
-}
-
-func (fake *FakeLogger) Session(task string, data ...lager.Data) lager.Logger {
-	fake.sessionMutex.Lock()
-	ret, specificReturn := fake.sessionReturnsOnCall[len(fake.sessionArgsForCall)]
-	fake.sessionArgsForCall = append(fake.sessionArgsForCall, struct {
-		task string
-		data []lager.Data
-	}{task, data})
-	fake.recordInvocation("Session", []interface{}{task, data})
-	fake.sessionMutex.Unlock()
-	if fake.SessionStub != nil {
-		return fake.SessionStub(task, data...)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.sessionReturns.result1
-}
-
-func (fake *FakeLogger) SessionCallCount() int {
-	fake.sessionMutex.RLock()
-	defer fake.sessionMutex.RUnlock()
-	return len(fake.sessionArgsForCall)
-}
-
-func (fake *FakeLogger) SessionArgsForCall(i int) (string, []lager.Data) {
-	fake.sessionMutex.RLock()
-	defer fake.sessionMutex.RUnlock()
-	return fake.sessionArgsForCall[i].task, fake.sessionArgsForCall[i].data
-}
-
-func (fake *FakeLogger) SessionReturns(result1 lager.Logger) {
-	fake.SessionStub = nil
-	fake.sessionReturns = struct {
-		result1 lager.Logger
-	}{result1}
-}
-
-func (fake *FakeLogger) SessionReturnsOnCall(i int, result1 lager.Logger) {
-	fake.SessionStub = nil
-	if fake.sessionReturnsOnCall == nil {
-		fake.sessionReturnsOnCall = make(map[int]struct {
-			result1 lager.Logger
-		})
-	}
-	fake.sessionReturnsOnCall[i] = struct {
-		result1 lager.Logger
-	}{result1}
-}
-
-func (fake *FakeLogger) SessionName() string {
-	fake.sessionNameMutex.Lock()
-	ret, specificReturn := fake.sessionNameReturnsOnCall[len(fake.sessionNameArgsForCall)]
-	fake.sessionNameArgsForCall = append(fake.sessionNameArgsForCall, struct{}{})
-	fake.recordInvocation("SessionName", []interface{}{})
-	fake.sessionNameMutex.Unlock()
-	if fake.SessionNameStub != nil {
-		return fake.SessionNameStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.sessionNameReturns.result1
-}
-
-func (fake *FakeLogger) SessionNameCallCount() int {
-	fake.sessionNameMutex.RLock()
-	defer fake.sessionNameMutex.RUnlock()
-	return len(fake.sessionNameArgsForCall)
-}
-
-func (fake *FakeLogger) SessionNameReturns(result1 string) {
-	fake.SessionNameStub = nil
-	fake.sessionNameReturns = struct {
-		result1 string
-	}{result1}
-}
-
-func (fake *FakeLogger) SessionNameReturnsOnCall(i int, result1 string) {
-	fake.SessionNameStub = nil
-	if fake.sessionNameReturnsOnCall == nil {
-		fake.sessionNameReturnsOnCall = make(map[int]struct {
-			result1 string
-		})
-	}
-	fake.sessionNameReturnsOnCall[i] = struct {
-		result1 string
-	}{result1}
 }
 
 func (fake *FakeLogger) Debug(action string, data ...lager.Data) {
@@ -264,99 +108,15 @@ func (fake *FakeLogger) ErrorArgsForCall(i int) (string, error, []lager.Data) {
 	return fake.errorArgsForCall[i].action, fake.errorArgsForCall[i].err, fake.errorArgsForCall[i].data
 }
 
-func (fake *FakeLogger) Fatal(action string, err error, data ...lager.Data) {
-	fake.fatalMutex.Lock()
-	fake.fatalArgsForCall = append(fake.fatalArgsForCall, struct {
-		action string
-		err    error
-		data   []lager.Data
-	}{action, err, data})
-	fake.recordInvocation("Fatal", []interface{}{action, err, data})
-	fake.fatalMutex.Unlock()
-	if fake.FatalStub != nil {
-		fake.FatalStub(action, err, data...)
-	}
-}
-
-func (fake *FakeLogger) FatalCallCount() int {
-	fake.fatalMutex.RLock()
-	defer fake.fatalMutex.RUnlock()
-	return len(fake.fatalArgsForCall)
-}
-
-func (fake *FakeLogger) FatalArgsForCall(i int) (string, error, []lager.Data) {
-	fake.fatalMutex.RLock()
-	defer fake.fatalMutex.RUnlock()
-	return fake.fatalArgsForCall[i].action, fake.fatalArgsForCall[i].err, fake.fatalArgsForCall[i].data
-}
-
-func (fake *FakeLogger) WithData(arg1 lager.Data) lager.Logger {
-	fake.withDataMutex.Lock()
-	ret, specificReturn := fake.withDataReturnsOnCall[len(fake.withDataArgsForCall)]
-	fake.withDataArgsForCall = append(fake.withDataArgsForCall, struct {
-		arg1 lager.Data
-	}{arg1})
-	fake.recordInvocation("WithData", []interface{}{arg1})
-	fake.withDataMutex.Unlock()
-	if fake.WithDataStub != nil {
-		return fake.WithDataStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.withDataReturns.result1
-}
-
-func (fake *FakeLogger) WithDataCallCount() int {
-	fake.withDataMutex.RLock()
-	defer fake.withDataMutex.RUnlock()
-	return len(fake.withDataArgsForCall)
-}
-
-func (fake *FakeLogger) WithDataArgsForCall(i int) lager.Data {
-	fake.withDataMutex.RLock()
-	defer fake.withDataMutex.RUnlock()
-	return fake.withDataArgsForCall[i].arg1
-}
-
-func (fake *FakeLogger) WithDataReturns(result1 lager.Logger) {
-	fake.WithDataStub = nil
-	fake.withDataReturns = struct {
-		result1 lager.Logger
-	}{result1}
-}
-
-func (fake *FakeLogger) WithDataReturnsOnCall(i int, result1 lager.Logger) {
-	fake.WithDataStub = nil
-	if fake.withDataReturnsOnCall == nil {
-		fake.withDataReturnsOnCall = make(map[int]struct {
-			result1 lager.Logger
-		})
-	}
-	fake.withDataReturnsOnCall[i] = struct {
-		result1 lager.Logger
-	}{result1}
-}
-
 func (fake *FakeLogger) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.registerSinkMutex.RLock()
-	defer fake.registerSinkMutex.RUnlock()
-	fake.sessionMutex.RLock()
-	defer fake.sessionMutex.RUnlock()
-	fake.sessionNameMutex.RLock()
-	defer fake.sessionNameMutex.RUnlock()
 	fake.debugMutex.RLock()
 	defer fake.debugMutex.RUnlock()
 	fake.infoMutex.RLock()
 	defer fake.infoMutex.RUnlock()
 	fake.errorMutex.RLock()
 	defer fake.errorMutex.RUnlock()
-	fake.fatalMutex.RLock()
-	defer fake.fatalMutex.RUnlock()
-	fake.withDataMutex.RLock()
-	defer fake.withDataMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
@@ -376,4 +136,4 @@ func (fake *FakeLogger) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ lager.Logger = new(FakeLogger)
+var _ imageplugin.Logger = new(FakeLogger)

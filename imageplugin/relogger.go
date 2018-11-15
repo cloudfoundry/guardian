@@ -7,13 +7,18 @@ import (
 	"code.cloudfoundry.org/lager/chug"
 )
 
-//go:generate counterfeiter -o imagepluginfakes/fake_logger.go ../vendor/code.cloudfoundry.org/lager Logger
-
-type Relogger struct {
-	destination lager.Logger
+//go:generate counterfeiter -o imagepluginfakes/fake_logger.go . Logger
+type Logger interface {
+	Debug(action string, data ...lager.Data)
+	Info(action string, data ...lager.Data)
+	Error(action string, err error, data ...lager.Data)
 }
 
-func NewRelogger(destination lager.Logger) Relogger {
+type Relogger struct {
+	destination Logger
+}
+
+func NewRelogger(destination Logger) Relogger {
 	return Relogger{
 		destination: destination,
 	}
