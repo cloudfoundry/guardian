@@ -17,7 +17,7 @@ import (
 
 //go:generate counterfeiter . ContainerManager
 type ContainerManager interface {
-	Create(log lager.Logger, containerID string, spec *specs.Spec) error
+	Create(log lager.Logger, containerID string, spec *specs.Spec, processIO func() (io.Reader, io.Writer, io.Writer)) error
 	Delete(log lager.Logger, containerID string) error
 
 	Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer)) error
@@ -80,13 +80,13 @@ func New(containerManager ContainerManager, processManager ProcessManager, bundl
 	}
 }
 
-func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error {
+func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, pio garden.ProcessIO) error {
 	bundle, err := r.bundleLoader.Load(bundlePath)
 	if err != nil {
 		return err
 	}
 
-	err = r.containerManager.Create(log, id, &bundle.Spec)
+	err = r.containerManager.Create(log, id, &bundle.Spec, func() (io.Reader, io.Writer, io.Writer) { return pio.Stdin, pio.Stdout, pio.Stderr })
 	if err != nil {
 		return err
 	}
@@ -94,6 +94,7 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 	if r.useContainerdForProcesses {
 		return r.cgroupManager.SetUseMemoryHierarchy(id)
 	}
+
 	return nil
 }
 

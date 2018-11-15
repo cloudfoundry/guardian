@@ -305,6 +305,53 @@ var _ = Describe("Containerd", func() {
 					containers := listContainers("ctr", config.ContainerdSocket)
 					Expect(containers).NotTo(ContainSubstring("ctrd-pea-id-2"))
 				})
+
+				Describe("Stdio", func() {
+					It("connects stdin", func() {
+						stdout := gbytes.NewBuffer()
+						stdin := bytes.NewBufferString("hello from stdin")
+						process, err := container.Run(garden.ProcessSpec{
+							Path:  "cat",
+							Image: garden.ImageRef{URI: createPeaRootfsTar()},
+						}, garden.ProcessIO{
+							Stdin:  stdin,
+							Stdout: io.MultiWriter(GinkgoWriter, stdout),
+						})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(process.Wait()).To(Equal(0))
+						Eventually(stdout).Should(gbytes.Say("hello from stdin"))
+					})
+
+					It("connects stdout", func() {
+						stdout := new(bytes.Buffer)
+						process, err := container.Run(garden.ProcessSpec{
+							Path:  "/bin/echo",
+							Args:  []string{"-n", "hello world"},
+							Image: garden.ImageRef{URI: createPeaRootfsTar()},
+						}, garden.ProcessIO{
+							Stdout: io.MultiWriter(GinkgoWriter, stdout),
+						})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(process.Wait()).To(Equal(0))
+
+						Expect(stdout.String()).To(Equal("hello world"))
+					})
+
+					It("connects stderr", func() {
+						stderr := new(bytes.Buffer)
+						process, err := container.Run(garden.ProcessSpec{
+							Path:  "/bin/sh",
+							Args:  []string{"-c", "/bin/echo -n hello error 1>&2"},
+							Image: garden.ImageRef{URI: createPeaRootfsTar()},
+						}, garden.ProcessIO{
+							Stderr: io.MultiWriter(GinkgoWriter, stderr),
+						})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(process.Wait()).To(Equal(0))
+
+						Expect(stderr.String()).To(Equal("hello error"))
+					})
+				})
 			})
 		})
 	})

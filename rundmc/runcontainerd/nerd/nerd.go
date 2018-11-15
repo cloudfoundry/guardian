@@ -29,7 +29,7 @@ func New(client *containerd.Client, context context.Context) *Nerd {
 	}
 }
 
-func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec) error {
+func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, pio func() (io.Reader, io.Writer, io.Writer)) error {
 	log.Debug("creating-container", lager.Data{"containerID": containerID})
 	container, err := n.client.NewContainer(n.context, containerID, containerd.WithSpec(spec))
 	if err != nil {
@@ -37,13 +37,18 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec) er
 	}
 
 	log.Debug("creating-task", lager.Data{"containerID": containerID})
-	task, err := container.NewTask(n.context, cio.NullIO, containerd.WithNoNewKeyring)
+	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(pio)), containerd.WithNoNewKeyring)
 	if err != nil {
 		return err
 	}
 
 	log.Debug("starting-task", lager.Data{"containerID": containerID})
-	return task.Start(n.context)
+	err = task.Start(n.context)
+	if err != nil {
+		return err
+	}
+
+	return task.CloseIO(n.context, containerd.WithStdinCloser)
 }
 
 func withProcessKillLogging(log lager.Logger) func(context.Context, containerd.Process) error {

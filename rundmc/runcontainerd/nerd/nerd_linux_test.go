@@ -1,6 +1,7 @@
 package nerd_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -34,14 +35,19 @@ var _ = Describe("Nerd", func() {
 		containerID string
 		processID   string
 		processIO   func() (io.Reader, io.Writer, io.Writer)
+		stdin       io.Reader
+		stdout      io.Writer
+		stderr      io.Writer
 	)
 
 	BeforeEach(func() {
 		rand.Seed(time.Now().UnixNano())
 		containerID = fmt.Sprintf("test-container-%s", randomString(10))
 		processID = fmt.Sprintf("test-process-%s", randomString(10))
+		stdout = gbytes.NewBuffer()
+		stderr = gbytes.NewBuffer()
 		processIO = func() (io.Reader, io.Writer, io.Writer) {
-			return nil, nil, nil
+			return stdin, stdout, stderr
 		}
 
 		testLogger = lagertest.NewTestLogger("nerd-test")
@@ -55,7 +61,7 @@ var _ = Describe("Nerd", func() {
 
 		It("creates the containerd container by id", func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
-			Expect(cnerd.Create(testLogger, containerID, spec)).To(Succeed())
+			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 
 			containers := listContainers(testConfig.CtrBin, testConfig.Socket)
 			Expect(containers).To(ContainSubstring(containerID))
@@ -63,17 +69,39 @@ var _ = Describe("Nerd", func() {
 
 		It("starts an init process in the container", func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
-			Expect(cnerd.Create(testLogger, containerID, spec)).To(Succeed())
+			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 
 			containers := listProcesses(testConfig.CtrBin, testConfig.Socket, containerID)
 			Expect(containers).To(ContainSubstring(containerID))
+		})
+
+		It("writes stdout", func() {
+			spec := generateSpec(containerdContext, containerdClient, containerID)
+			spec.Process.Args = []string{"/bin/sh", "-c", "echo hi && sleep 60"}
+			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
+			Eventually(stdout, "30s").Should(gbytes.Say("hi"))
+		})
+
+		It("writes stderr", func() {
+			spec := generateSpec(containerdContext, containerdClient, containerID)
+			spec.Process.Args = []string{"/bin/sh", "-c", "echo hi 1>&2 && sleep 60"}
+			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
+			Eventually(stderr, "30s").Should(gbytes.Say("hi"))
+		})
+
+		It("reads from stdin", func() {
+			stdin = bytes.NewBufferString("hi")
+			spec := generateSpec(containerdContext, containerdClient, containerID)
+			spec.Process.Args = []string{"/bin/sh", "-c", "cat && sleep 60"}
+			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
+			Eventually(stdout, "30s").Should(gbytes.Say("hi"))
 		})
 	})
 
 	Describe("Exec", func() {
 		BeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
-			Expect(cnerd.Create(testLogger, containerID, spec)).To(Succeed())
+			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -158,7 +186,7 @@ var _ = Describe("Nerd", func() {
 
 		BeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
-			Expect(cnerd.Create(testLogger, containerID, spec)).To(Succeed())
+			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 
 			processSpec := &specs.Process{
 				Args: []string{"/bin/sh", "-c", "exit 17"},
@@ -187,7 +215,7 @@ var _ = Describe("Nerd", func() {
 	Describe("Signal", func() {
 		BeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
-			Expect(cnerd.Create(testLogger, containerID, spec)).To(Succeed())
+			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 			stdoutBuffer := gbytes.NewBuffer()
 			processIO = func() (io.Reader, io.Writer, io.Writer) {
 				return nil, stdoutBuffer, nil
@@ -233,7 +261,7 @@ var _ = Describe("Nerd", func() {
 	Describe("Delete", func() {
 		BeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
-			Expect(cnerd.Create(testLogger, containerID, spec)).To(Succeed())
+			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 		})
 
 		It("deletes the containerd container by id", func() {
@@ -247,7 +275,7 @@ var _ = Describe("Nerd", func() {
 	Describe("State", func() {
 		BeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
-			Expect(cnerd.Create(testLogger, containerID, spec)).To(Succeed())
+			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -266,7 +294,7 @@ var _ = Describe("Nerd", func() {
 	Describe("GetContainerPID", func() {
 		BeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
-			Expect(cnerd.Create(testLogger, containerID, spec)).To(Succeed())
+			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -284,7 +312,7 @@ var _ = Describe("Nerd", func() {
 	Describe("DeleteProcess", func() {
 		BeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
-			Expect(cnerd.Create(testLogger, containerID, spec)).To(Succeed())
+			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 
 			processSpec := &specs.Process{
 				Args: []string{"/bin/sh", "-c", "exit 17"},

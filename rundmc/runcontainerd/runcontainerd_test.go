@@ -1,7 +1,9 @@
 package runcontainerd_test
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"syscall"
 
 	"code.cloudfoundry.org/garden"
@@ -55,6 +57,10 @@ var _ = Describe("Runcontainerd", func() {
 			bundlePath string
 			bundle     goci.Bndl
 
+			stdin  io.Reader
+			stdout io.Writer
+			stderr io.Writer
+
 			createErr error
 		)
 
@@ -72,22 +78,36 @@ var _ = Describe("Runcontainerd", func() {
 				}
 				return goci.Bndl{}, nil
 			}
+
+			stdin = new(bytes.Buffer)
+			stdout = new(bytes.Buffer)
+			stderr = new(bytes.Buffer)
 		})
 
 		JustBeforeEach(func() {
-			createErr = runContainerd.Create(nil, bundlePath, id, garden.ProcessIO{})
+			createErr = runContainerd.Create(nil, bundlePath, id, garden.ProcessIO{Stdin: stdin, Stdout: stdout, Stderr: stderr})
 		})
 
 		It("creates the container with the passed containerID", func() {
 			Expect(containerManager.CreateCallCount()).To(Equal(1))
-			_, actualID, _ := containerManager.CreateArgsForCall(0)
+			_, actualID, _, _ := containerManager.CreateArgsForCall(0)
 			Expect(actualID).To(Equal(id))
 		})
 
 		It("creates the container using the spec from the loaded bundle", func() {
 			Expect(containerManager.CreateCallCount()).To(Equal(1))
-			_, _, actualSpec := containerManager.CreateArgsForCall(0)
+			_, _, actualSpec, _ := containerManager.CreateArgsForCall(0)
 			Expect(actualSpec).To(Equal(&bundle.Spec))
+		})
+
+		It("creates the container and attaches IO", func() {
+			Expect(containerManager.CreateCallCount()).To(Equal(1))
+			_, _, _, processIO := containerManager.CreateArgsForCall(0)
+
+			actualStdin, actualStdout, actualStderr := processIO()
+			Expect(actualStdin).To(BeIdenticalTo(stdin))
+			Expect(actualStdout).To(BeIdenticalTo(stdout))
+			Expect(actualStderr).To(BeIdenticalTo(stderr))
 		})
 
 		Context("when loading the bundle returns an error", func() {

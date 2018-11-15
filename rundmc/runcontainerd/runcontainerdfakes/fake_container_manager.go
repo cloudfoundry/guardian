@@ -11,12 +11,13 @@ import (
 )
 
 type FakeContainerManager struct {
-	CreateStub        func(log lager.Logger, containerID string, spec *specs.Spec) error
+	CreateStub        func(log lager.Logger, containerID string, spec *specs.Spec, processIO func() (io.Reader, io.Writer, io.Writer)) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		log         lager.Logger
 		containerID string
 		spec        *specs.Spec
+		processIO   func() (io.Reader, io.Writer, io.Writer)
 	}
 	createReturns struct {
 		result1 error
@@ -85,18 +86,19 @@ type FakeContainerManager struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeContainerManager) Create(log lager.Logger, containerID string, spec *specs.Spec) error {
+func (fake *FakeContainerManager) Create(log lager.Logger, containerID string, spec *specs.Spec, processIO func() (io.Reader, io.Writer, io.Writer)) error {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		log         lager.Logger
 		containerID string
 		spec        *specs.Spec
-	}{log, containerID, spec})
-	fake.recordInvocation("Create", []interface{}{log, containerID, spec})
+		processIO   func() (io.Reader, io.Writer, io.Writer)
+	}{log, containerID, spec, processIO})
+	fake.recordInvocation("Create", []interface{}{log, containerID, spec, processIO})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(log, containerID, spec)
+		return fake.CreateStub(log, containerID, spec, processIO)
 	}
 	if specificReturn {
 		return ret.result1
@@ -110,10 +112,10 @@ func (fake *FakeContainerManager) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeContainerManager) CreateArgsForCall(i int) (lager.Logger, string, *specs.Spec) {
+func (fake *FakeContainerManager) CreateArgsForCall(i int) (lager.Logger, string, *specs.Spec, func() (io.Reader, io.Writer, io.Writer)) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].containerID, fake.createArgsForCall[i].spec
+	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].containerID, fake.createArgsForCall[i].spec, fake.createArgsForCall[i].processIO
 }
 
 func (fake *FakeContainerManager) CreateReturns(result1 error) {
