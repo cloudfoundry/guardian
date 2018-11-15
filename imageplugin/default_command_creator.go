@@ -16,7 +16,9 @@ type DefaultCommandCreator struct {
 }
 
 func (cc *DefaultCommandCreator) CreateCommand(log lager.Logger, handle string, spec gardener.RootfsSpec) (*exec.Cmd, error) {
-	args := append(cc.ExtraArgs, "create")
+	extraArgs := make([]string, len(cc.ExtraArgs))
+	copy(extraArgs, cc.ExtraArgs)
+	args := append(extraArgs, "create")
 
 	if spec.QuotaSize > 0 {
 		args = append(args, "--disk-limit-size-bytes", strconv.FormatInt(spec.QuotaSize, 10))
