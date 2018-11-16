@@ -21,6 +21,7 @@ var _ = Describe("Networking Uniqueness", func() {
 	)
 
 	BeforeEach(func() {
+		config.LogLevel = "error"
 		client = runner.Start(config)
 	})
 
