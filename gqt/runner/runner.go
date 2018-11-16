@@ -236,7 +236,7 @@ func NewGardenRunner(config GdnRunnerConfig) *GardenRunner {
 		Runner: ginkgomon.New(ginkgomon.Config{
 			Name:              "guardian",
 			AnsiColorCode:     "31m",
-			StartCheck:        "guardian.started",
+			StartCheck:        "",
 			StartCheckTimeout: 30 * time.Second,
 		}),
 	}
