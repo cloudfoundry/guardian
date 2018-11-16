@@ -306,6 +306,19 @@ var _ = Describe("Containerd", func() {
 					Expect(containers).NotTo(ContainSubstring("ctrd-pea-id-2"))
 				})
 
+				It("returns the process exit code", func() {
+					process, err := container.Run(garden.ProcessSpec{
+						Image: garden.ImageRef{URI: createPeaRootfsTar()},
+						Path:  "/bin/sh",
+						Args:  []string{"-c", "exit 12"},
+					}, garden.ProcessIO{})
+					Expect(err).NotTo(HaveOccurred())
+
+					code, err := process.Wait()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(code).To(Equal(12))
+				})
+
 				Describe("Stdio", func() {
 					It("connects stdin", func() {
 						stdout := gbytes.NewBuffer()
