@@ -2,7 +2,6 @@ package gqt_test
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os/exec"
@@ -18,9 +17,7 @@ import (
 )
 
 var _ = Describe("Containerd", func() {
-	var (
-		client *runner.RunningGarden
-	)
+	var client *runner.RunningGarden
 
 	BeforeEach(func() {
 		skipIfNotContainerd()
@@ -44,14 +41,12 @@ var _ = Describe("Containerd", func() {
 
 			tasks := listTasks("ctr", config.ContainerdSocket)
 			Expect(tasks).To(ContainSubstring(container.Handle()))
-			Expect(tasks).To(MatchRegexp(fmt.Sprintf(`%s\s+\d+\s+RUNNING`, container.Handle())))
+			Expect(tasks).To(MatchRegexp(container.Handle() + `\s+\d+\s+RUNNING`))
 		})
 	})
 
 	Describe("destroying a container", func() {
-		var (
-			container garden.Container
-		)
+		var container garden.Container
 
 		JustBeforeEach(func() {
 			var err error
@@ -305,7 +300,7 @@ var _ = Describe("Containerd", func() {
 
 					tasks := listTasks("ctr", config.ContainerdSocket)
 					Expect(tasks).NotTo(ContainSubstring("ctrd-pea-id-2"))
-					Expect(tasks).To(MatchRegexp(fmt.Sprintf(`%s\s+\d+\s+RUNNING`, container.Handle())))
+					Expect(tasks).To(MatchRegexp(container.Handle() + `\s+\d+\s+RUNNING`))
 
 					containers := listContainers("ctr", config.ContainerdSocket)
 					Expect(containers).NotTo(ContainSubstring("ctrd-pea-id-2"))
