@@ -47,9 +47,8 @@ var _ = Describe("Network plugin", func() {
 
 		pluginReturn = `{"properties":{"garden.network.container-ip":"10.255.10.10"}}`
 
-		out, err := ioutil.ReadFile("/etc/resolv.conf")
-		Expect(err).NotTo(HaveOccurred())
-		hostNameservers = parseEntries(string(out), "nameserver")
+		out := readFileString("/etc/resolv.conf")
+		hostNameservers = parseEntries(out, "nameserver")
 	})
 
 	JustBeforeEach(func() {
@@ -184,9 +183,8 @@ var _ = Describe("Network plugin", func() {
 
 	It("adds the host's search domains to the container's /etc/resolv.conf", func() {
 		containerSearchDomains := getSearchDomains(container)
-		resolvConf, err := ioutil.ReadFile("/etc/resolv.conf")
-		Expect(err).NotTo(HaveOccurred())
-		hostSearchDomains := parseEntries(string(resolvConf), "search")
+		resolvConf := readFileString("/etc/resolv.conf")
+		hostSearchDomains := parseEntries(resolvConf, "search")
 
 		Expect(containerSearchDomains).To(ConsistOf(hostSearchDomains))
 	})

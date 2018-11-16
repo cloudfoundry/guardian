@@ -705,9 +705,8 @@ var _ = Describe("Networking", func() {
 			)
 
 			BeforeEach(func() {
-				out, err := ioutil.ReadFile("/etc/resolv.conf")
-				Expect(err).NotTo(HaveOccurred())
-				hostNameservers = parseEntries(string(out), "nameserver")
+				out := readFileString("/etc/resolv.conf")
+				hostNameservers = parseEntries(out, "nameserver")
 
 				pluginReturn := `{
 					"properties":{
@@ -896,9 +895,8 @@ var _ = Describe("Networking", func() {
 		)
 
 		BeforeEach(func() {
-			out, err := ioutil.ReadFile("/etc/resolv.conf")
-			Expect(err).NotTo(HaveOccurred())
-			hostNameservers = parseEntries(string(out), "nameserver")
+			out := readFileString("/etc/resolv.conf")
+			hostNameservers = parseEntries(out, "nameserver")
 		})
 
 		Context("when not provided with any DNS servers", func() {
@@ -1147,9 +1145,7 @@ func sendRequest(ip string, port uint32) *gexec.Session {
 
 func getContent(filename string) func() []byte {
 	return func() []byte {
-		bytes, err := ioutil.ReadFile(filename)
-		Expect(err).NotTo(HaveOccurred())
-		return bytes
+		return readFile(filename)
 	}
 }
 

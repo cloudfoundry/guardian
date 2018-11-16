@@ -235,10 +235,14 @@ func idToStr(id uint32) string {
 	return strconv.FormatUint(uint64(id), 10)
 }
 
-func readFile(path string) string {
+func readFile(path string) []byte {
 	content, err := ioutil.ReadFile(path)
 	Expect(err).NotTo(HaveOccurred())
-	return string(content)
+	return content
+}
+
+func readFileString(path string) string {
+	return string(readFile(path))
 }
 
 func copyFile(srcPath, dstPath string) error {

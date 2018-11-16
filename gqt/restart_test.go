@@ -306,7 +306,7 @@ var _ = Describe("Surviving Restarts", func() {
 					cgroupPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), "devices", config.Tag, containerSpec.Privileged)
 					Expect(err).NotTo(HaveOccurred())
 
-					content := readFile(filepath.Join(cgroupPath, "devices.list"))
+					content := readFileString(filepath.Join(cgroupPath, "devices.list"))
 					expectedAllowedDevices := []string{
 						"c 1:3 rwm",
 						"c 5:0 rwm",

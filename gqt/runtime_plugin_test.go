@@ -376,9 +376,7 @@ var _ = Describe("Runtime Plugin", func() {
 
 func readPluginArgs(argsFilepath string) []string {
 	Eventually(argsFilepath).Should(BeAnExistingFile())
-	pluginArgsBytes, err := ioutil.ReadFile(argsFilepath)
-	Expect(err).ToNot(HaveOccurred())
-	return strings.Split(string(pluginArgsBytes), " ")
+	return strings.Split(readFileString(argsFilepath), " ")
 }
 
 func onlyOnLinux() {

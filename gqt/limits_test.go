@@ -59,7 +59,7 @@ var _ = Describe("Limits", func() {
 		})
 
 		JustBeforeEach(func() {
-			memLimitBytes := readFile(filepath.Join(cgroupPath, "memory.kmem.tcp.limit_in_bytes"))
+			memLimitBytes := readFileString(filepath.Join(cgroupPath, "memory.kmem.tcp.limit_in_bytes"))
 			tcpMemLimit = strings.TrimSpace(memLimitBytes)
 		})
 
@@ -101,12 +101,12 @@ var _ = Describe("Limits", func() {
 				})
 
 				It("sets cpu.cfs_period_us to 100000 (100ms)", func() {
-					period := readFile(filepath.Join(cgroupPath, "cpu.cfs_period_us"))
+					period := readFileString(filepath.Join(cgroupPath, "cpu.cfs_period_us"))
 					Expect(strings.TrimSpace(period)).To(Equal("100000"))
 				})
 
 				It("configures cpu.cfs_quota_us as shares * cpu-quota-per-share", func() {
-					period := readFile(filepath.Join(cgroupPath, "cpu.cfs_quota_us"))
+					period := readFileString(filepath.Join(cgroupPath, "cpu.cfs_quota_us"))
 					Expect(strings.TrimSpace(period)).To(Equal("1280"))
 				})
 			})
@@ -123,7 +123,7 @@ var _ = Describe("Limits", func() {
 				})
 
 				It("configures cpu.cfs_quota_us as shares * cpu-quota-per-share", func() {
-					period := readFile(filepath.Join(cgroupPath, "cpu.cfs_quota_us"))
+					period := readFileString(filepath.Join(cgroupPath, "cpu.cfs_quota_us"))
 					Expect(strings.TrimSpace(period)).To(Equal("-1"))
 				})
 			})
@@ -137,7 +137,7 @@ var _ = Describe("Limits", func() {
 
 		itAllowsOnlyCertainDevices := func() {
 			It("only allows certain devices", func() {
-				content := readFile(filepath.Join(cgroupPath, "devices.list"))
+				content := readFileString(filepath.Join(cgroupPath, "devices.list"))
 				expectedAllowedDevices := []string{
 					"c 1:3 rwm",
 					"c 5:0 rwm",

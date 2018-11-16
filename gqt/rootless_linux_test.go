@@ -171,7 +171,7 @@ var _ = Describe("rootless containers", func() {
 			Expect(err).NotTo(HaveOccurred())
 			cgroupPath := filepath.Join(parentPath, container.Handle())
 
-			content := readFile(filepath.Join(cgroupPath, "devices.list"))
+			content := readFileString(filepath.Join(cgroupPath, "devices.list"))
 			expectedAllowedDevices := []string{
 				"c 1:3 rwm",
 				"c 5:0 rwm",
@@ -254,9 +254,7 @@ var _ = Describe("rootless containers", func() {
 
 				It("creates container with the specified pid limit", func() {
 					Expect(cgroupPath).To(BeADirectory())
-					pidsMaxInBytes, err := ioutil.ReadFile(filepath.Join(cgroupPath, "pids.max"))
-					Expect(err).NotTo(HaveOccurred())
-					pidsMax := strings.TrimSpace(string(pidsMaxInBytes))
+					pidsMax := strings.TrimSpace(readFileString(filepath.Join(cgroupPath, "pids.max")))
 					Expect(pidsMax).To(Equal("100"))
 				})
 			})
@@ -268,9 +266,7 @@ var _ = Describe("rootless containers", func() {
 
 				It("creates container with the specified cpu limits", func() {
 					Expect(cgroupPath).To(BeADirectory())
-					sharesBytes, err := ioutil.ReadFile(filepath.Join(cgroupPath, "cpu.shares"))
-					Expect(err).NotTo(HaveOccurred())
-					shares := strings.TrimSpace(string(sharesBytes))
+					shares := strings.TrimSpace(readFileString(filepath.Join(cgroupPath, "cpu.shares")))
 					Expect(shares).To(Equal("512"))
 				})
 			})
@@ -280,11 +276,10 @@ var _ = Describe("rootless containers", func() {
 			ctr, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
-			pidBytes, err := ioutil.ReadFile(filepath.Join(client.DepotDir, ctr.Handle(), "pidfile"))
-			Expect(err).NotTo(HaveOccurred())
-			pidStr := strings.TrimSpace(string(pidBytes))
+			path := filepath.Join(client.DepotDir, ctr.Handle(), "pidfile")
+			pid := strings.TrimSpace(readFileString(path))
 
-			fdDir := filepath.Join("/proc", pidStr, "fd")
+			fdDir := filepath.Join("/proc", pid, "fd")
 			ctrInitFDs, err := ioutil.ReadDir(fdDir)
 			Expect(err).NotTo(HaveOccurred())
 			for _, ctrInitFD := range ctrInitFDs {

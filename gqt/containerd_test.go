@@ -3,7 +3,6 @@ package gqt_test
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -275,9 +274,8 @@ var _ = Describe("Containerd", func() {
 					Expect(processes).To(ContainSubstring("ctrd-pea-id"))
 
 					peaProcessPid := pidFromProcessesOutput(processes, "ctrd-pea-id")
-					cmdline, err := ioutil.ReadFile(filepath.Join("/", "proc", peaProcessPid, "cmdline"))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(string(cmdline)).To(ContainSubstring("/bin/sleep"))
+					cmdline := readFileString(filepath.Join("/", "proc", peaProcessPid, "cmdline"))
+					Expect(cmdline).To(ContainSubstring("/bin/sleep"))
 
 					code, err := process.Wait()
 					Expect(err).NotTo(HaveOccurred())

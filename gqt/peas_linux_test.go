@@ -175,12 +175,12 @@ var _ = Describe("Partially shared containers (peas)", func() {
 				})
 
 				It("sets cpu.cfs_period_us to 100000 (100ms)", func() {
-					period := readFile(filepath.Join(cgroupPath, "cpu.cfs_period_us"))
+					period := readFileString(filepath.Join(cgroupPath, "cpu.cfs_period_us"))
 					Expect(strings.TrimSpace(period)).To(Equal("100000"))
 				})
 
 				It("configures cpu.cfs_quota_us as shares * cpu-quota-per-share", func() {
-					period := readFile(filepath.Join(cgroupPath, "cpu.cfs_quota_us"))
+					period := readFileString(filepath.Join(cgroupPath, "cpu.cfs_quota_us"))
 					Expect(strings.TrimSpace(period)).To(Equal("1280"))
 				})
 			})
@@ -195,7 +195,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 				})
 
 				It("configures cpu.cfs_quota_us as shares * cpu-quota-per-share", func() {
-					period := readFile(filepath.Join(cgroupPath, "cpu.cfs_quota_us"))
+					period := readFileString(filepath.Join(cgroupPath, "cpu.cfs_quota_us"))
 					Expect(strings.TrimSpace(period)).To(Equal("-1"))
 				})
 			})
@@ -318,9 +318,7 @@ func collectPeaPids(handle string) []string {
 			return nil
 		}
 		if info.Name() == "pidfile" {
-			pid, err := ioutil.ReadFile(path)
-			Expect(err).NotTo(HaveOccurred())
-			peaPids = append(peaPids, string(pid))
+			peaPids = append(peaPids, string(readFile(path)))
 		}
 		return nil
 	})

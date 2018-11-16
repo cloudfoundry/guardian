@@ -54,7 +54,7 @@ var _ = Describe("Creating a Container", func() {
 		Expect(err).NotTo(HaveOccurred())
 		cgroupPath := filepath.Join(parentPath, container.Handle())
 
-		content := readFile(filepath.Join(cgroupPath, "devices.list"))
+		content := readFileString(filepath.Join(cgroupPath, "devices.list"))
 		expectedAllowedDevices := []string{
 			"c 1:3 rwm",
 			"c 5:0 rwm",
@@ -391,13 +391,13 @@ var _ = Describe("Creating a Container", func() {
 		}
 
 		checkCPUSharesInContainer := func(container garden.Container, clientPid int, expected int) {
-			cpuset := readFileContent(fmt.Sprintf("/proc/%d/cpuset", clientPid))
+			cpuset := strings.TrimSpace(readFileString(fmt.Sprintf("/proc/%d/cpuset", clientPid)))
 			cpuset = strings.TrimLeft(cpuset, "/")
 
 			cpuSharesPath := fmt.Sprintf("%s/cpu/%s/garden-%s/%s/cpu.shares",
 				client.CgroupsRootPath(), cpuset, config.Tag, container.Handle())
 
-			cpuShares := readFileContent(cpuSharesPath)
+			cpuShares := strings.TrimSpace(readFileString(cpuSharesPath))
 			Expect(cpuShares).To(Equal(strconv.Itoa(expected)))
 		}
 
@@ -448,8 +448,8 @@ var _ = Describe("Creating a Container", func() {
 			blkIOWeightPath := fmt.Sprintf("%s/blkio/%s/garden-%s/%s/blkio.weight",
 				client.CgroupsRootPath(), parentCgroupPath, config.Tag, container.Handle())
 
-			blkIOWeight := readFileContent(blkIOWeightPath)
-			Expect(string(blkIOWeight)).To(Equal(expected))
+			blkIOWeight := strings.TrimSpace(readFileString(blkIOWeightPath))
+			Expect(blkIOWeight).To(Equal(expected))
 		}
 
 		It("uses the specified block IO weight", func() {
@@ -672,11 +672,4 @@ func numOpenSockets(pid int) (num int) {
 func numPipes(pid int) (num int) {
 	stdout := runCommand(exec.Command("sh", "-c", fmt.Sprintf("lsof -p %d | grep pipe", pid)))
 	return strings.Count(stdout, "\n")
-}
-
-func readFileContent(path string) string {
-	content, err := ioutil.ReadFile(path)
-	Expect(err).NotTo(HaveOccurred())
-
-	return strings.TrimSpace(string(content))
 }

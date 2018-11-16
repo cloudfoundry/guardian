@@ -643,12 +643,11 @@ var _ = Describe("Attach", func() {
 			hostPidFilePath := filepath.Join(hostProcessDir, "pidfile")
 
 			// Finds the pid on the host.
-			pidBytes, err := ioutil.ReadFile(hostPidFilePath)
-			Expect(err).NotTo(HaveOccurred())
+			pidFileContent := readFileString(hostPidFilePath)
 
 			Expect(client.Stop()).To(Succeed())
 
-			pid, err := strconv.Atoi(string(pidBytes))
+			pid, err := strconv.Atoi(pidFileContent)
 			Expect(err).NotTo(HaveOccurred())
 
 			hostProcess, err := os.FindProcess(pid)

@@ -105,10 +105,8 @@ var _ = Describe("Image Plugin", func() {
 			})
 
 			It("executes the plugin, passing the correct args", func() {
-				pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-				Expect(err).ToNot(HaveOccurred())
+				pluginArgs := strings.Split(readFileString(filepath.Join(tmpDir, "args")), " ")
 
-				pluginArgs := strings.Split(string(pluginArgsBytes), " ")
 				Expect(pluginArgs).To(Equal([]string{
 					binaries.ImagePlugin,
 					"--rootfs-path", tmpDir,
@@ -121,10 +119,8 @@ var _ = Describe("Image Plugin", func() {
 			})
 
 			It("executes the plugin as root", func() {
-				whoamiBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "create-whoami"))
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(string(whoamiBytes)).To(ContainSubstring("0 - 0"))
+				whoami := readFileString(filepath.Join(tmpDir, "create-whoami"))
+				Expect(whoami).To(ContainSubstring("0 - 0"))
 			})
 
 			Context("when there are env vars", func() {
@@ -216,8 +212,7 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("ensures that the mounts from the image plugin response are first in config.json", func() {
-					config, err := ioutil.ReadFile(filepath.Join(client.DepotDir, container.Handle(), "config.json"))
-					Expect(err).NotTo(HaveOccurred())
+					config := readFile(filepath.Join(client.DepotDir, container.Handle(), "config.json"))
 
 					var spec specs.Spec
 					Expect(json.Unmarshal(config, &spec)).To(Succeed())
@@ -238,10 +233,8 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("uses the default rootfs", func() {
-					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-					Expect(err).ToNot(HaveOccurred())
-
-					Expect(string(pluginArgsBytes)).To(ContainSubstring(defaultTestRootFS))
+					pluginArgs := readFileString(filepath.Join(tmpDir, "args"))
+					Expect(pluginArgs).To(ContainSubstring(defaultTestRootFS))
 				})
 			})
 
@@ -251,10 +244,8 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("replaces the # with :", func() {
-					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-					Expect(err).ToNot(HaveOccurred())
-
-					Expect(string(pluginArgsBytes)).To(ContainSubstring("docker:///busybox:1.26.1"))
+					pluginArgs := readFileString(filepath.Join(tmpDir, "args"))
+					Expect(pluginArgs).To(ContainSubstring("docker:///busybox:1.26.1"))
 				})
 			})
 
@@ -264,10 +255,8 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("executes the plugin, passing the Image URI", func() {
-					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-					Expect(err).ToNot(HaveOccurred())
-
-					Expect(string(pluginArgsBytes)).To(ContainSubstring("/some/fake/rootfs"))
+					pluginArgs := readFileString(filepath.Join(tmpDir, "args"))
+					Expect(pluginArgs).To(ContainSubstring("/some/fake/rootfs"))
 				})
 			})
 
@@ -288,12 +277,11 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				JustBeforeEach(func() {
-					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-					Expect(err).ToNot(HaveOccurred())
+					pluginArgs := readFileString(filepath.Join(tmpDir, "args"))
 
 					ociImagePath = filepath.Join(client.DepotDir, container.Handle(), "image")
 					ociImageURI := fmt.Sprintf("oci://%s", ociImagePath)
-					Expect(string(pluginArgsBytes)).To(ContainSubstring(ociImageURI))
+					Expect(pluginArgs).To(ContainSubstring(ociImageURI))
 				})
 
 				It("executes the plugin, creating the expected OCI image", func() {
@@ -354,10 +342,8 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("calls the image plugin setting the quota", func() {
-					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-					Expect(err).ToNot(HaveOccurred())
-
-					Expect(string(pluginArgsBytes)).To(ContainSubstring("--disk-limit-size-bytes 100000"))
+					pluginArgs := readFileString(filepath.Join(tmpDir, "args"))
+					Expect(pluginArgs).To(ContainSubstring("--disk-limit-size-bytes 100000"))
 				})
 
 				Context("when the quota is total", func() {
@@ -366,10 +352,8 @@ var _ = Describe("Image Plugin", func() {
 					})
 
 					It("calls the image plugin without the exclusive flag", func() {
-						pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-						Expect(err).ToNot(HaveOccurred())
-
-						Expect(string(pluginArgsBytes)).NotTo(ContainSubstring("--exclude-image-from-quota"))
+						pluginArgs := readFileString(filepath.Join(tmpDir, "args"))
+						Expect(pluginArgs).NotTo(ContainSubstring("--exclude-image-from-quota"))
 					})
 				})
 
@@ -379,10 +363,8 @@ var _ = Describe("Image Plugin", func() {
 					})
 
 					It("calls the image plugin setting the exclusive flag", func() {
-						pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-						Expect(err).ToNot(HaveOccurred())
-
-						Expect(string(pluginArgsBytes)).To(ContainSubstring("--exclude-image-from-quota"))
+						pluginArgs := readFileString(filepath.Join(tmpDir, "args"))
+						Expect(pluginArgs).To(ContainSubstring("--exclude-image-from-quota"))
 					})
 				})
 
@@ -406,8 +388,9 @@ var _ = Describe("Image Plugin", func() {
 
 				BeforeEach(func() {
 					rootfs := createRootfs(func(string) {}, 0755)
-					Expect(copyFile(filepath.Join(rootfs, "bin", "env"),
-						filepath.Join(tmpDir, "env"))).To(Succeed())
+					source := filepath.Join(rootfs, "bin", "env")
+					destination := filepath.Join(tmpDir, "env")
+					Expect(copyFile(source, destination)).To(Succeed())
 				})
 
 				JustBeforeEach(func() {
@@ -425,10 +408,7 @@ var _ = Describe("Image Plugin", func() {
 					Expect(exitCode).To(BeZero())
 					Expect(err).NotTo(HaveOccurred())
 
-					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-					Expect(err).ToNot(HaveOccurred())
-
-					pluginArgs := strings.Split(string(pluginArgsBytes), " ")
+					pluginArgs := strings.Split(readFileString(filepath.Join(tmpDir, "args")), " ")
 					Expect(pluginArgs).To(Equal([]string{
 						binaries.ImagePlugin,
 						"--rootfs-path", tmpDir,
@@ -460,10 +440,7 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("executes the plugin, passing the correct args", func() {
-					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-					Expect(err).ToNot(HaveOccurred())
-
-					pluginArgs := strings.Split(string(pluginArgsBytes), " ")
+					pluginArgs := strings.Split(readFileString(filepath.Join(tmpDir, "args")), " ")
 					Expect(pluginArgs).To(Equal([]string{
 						binaries.ImagePlugin,
 						"--rootfs-path", tmpDir,
@@ -482,10 +459,8 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("executes the plugin as root", func() {
-					whoamiBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "metrics-whoami"))
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(string(whoamiBytes)).To(ContainSubstring("0 - 0"))
+					whoami := readFileString(filepath.Join(tmpDir, "metrics-whoami"))
+					Expect(whoami).To(ContainSubstring("0 - 0"))
 				})
 
 				It("returns the plugin stdout as disk stats", func() {
@@ -552,10 +527,7 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("executes the plugin, passing the correct args", func() {
-					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-					Expect(err).ToNot(HaveOccurred())
-
-					pluginArgs := strings.Split(string(pluginArgsBytes), " ")
+					pluginArgs := strings.Split(readFileString(filepath.Join(tmpDir, "args")), " ")
 					Expect(pluginArgs).To(Equal([]string{
 						binaries.ImagePlugin,
 						"--rootfs-path", tmpDir,
@@ -568,10 +540,8 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("executes the plugin as root", func() {
-					whoamiBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "destroy-whoami"))
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(string(whoamiBytes)).To(ContainSubstring("0 - 0"))
+					whoami := readFileString(filepath.Join(tmpDir, "destroy-whoami"))
+					Expect(whoami).To(ContainSubstring("0 - 0"))
 				})
 
 				Context("when the plugin logs to stderr", func() {
@@ -673,10 +643,7 @@ var _ = Describe("Image Plugin", func() {
 			})
 
 			It("executes the plugin, passing the correct args", func() {
-				pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-				Expect(err).ToNot(HaveOccurred())
-
-				pluginArgs := strings.Split(string(pluginArgsBytes), " ")
+				pluginArgs := strings.Split(readFileString(filepath.Join(tmpDir, "args")), " ")
 				Expect(pluginArgs).To(Equal([]string{
 					binaries.ImagePlugin,
 					"--rootfs-path", tmpDir,
@@ -689,10 +656,8 @@ var _ = Describe("Image Plugin", func() {
 			})
 
 			It("executes the plugin as root", func() {
-				whoamiBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "create-whoami"))
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(string(whoamiBytes)).To(ContainSubstring("0 - 0"))
+				whoami := readFileString(filepath.Join(tmpDir, "create-whoami"))
+				Expect(whoami).To(ContainSubstring("0 - 0"))
 			})
 
 			Context("when there are env vars", func() {
@@ -736,10 +701,8 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("uses the default rootfs", func() {
-					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-					Expect(err).ToNot(HaveOccurred())
-
-					Expect(string(pluginArgsBytes)).To(ContainSubstring(defaultTestRootFS))
+					pluginArgs := readFileString(filepath.Join(tmpDir, "args"))
+					Expect(pluginArgs).To(ContainSubstring(defaultTestRootFS))
 				})
 			})
 
@@ -749,10 +712,8 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("replaces the # with :", func() {
-					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-					Expect(err).ToNot(HaveOccurred())
-
-					Expect(string(pluginArgsBytes)).To(ContainSubstring("docker:///busybox:1.26.1"))
+					pluginArgs := readFileString(filepath.Join(tmpDir, "args"))
+					Expect(pluginArgs).To(ContainSubstring("docker:///busybox:1.26.1"))
 				})
 			})
 
@@ -762,10 +723,8 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("executes the plugin, passing the Image URI", func() {
-					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-					Expect(err).ToNot(HaveOccurred())
-
-					Expect(string(pluginArgsBytes)).To(ContainSubstring("/some/fake/rootfs"))
+					pluginArgs := readFileString(filepath.Join(tmpDir, "args"))
+					Expect(pluginArgs).To(ContainSubstring("/some/fake/rootfs"))
 				})
 			})
 
@@ -775,10 +734,8 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("calls the image plugin setting the quota", func() {
-					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-					Expect(err).ToNot(HaveOccurred())
-
-					Expect(string(pluginArgsBytes)).To(ContainSubstring("--disk-limit-size-bytes 100000"))
+					pluginArgs := readFileString(filepath.Join(tmpDir, "args"))
+					Expect(pluginArgs).To(ContainSubstring("--disk-limit-size-bytes 100000"))
 				})
 
 				Context("when the quota is total", func() {
@@ -787,10 +744,8 @@ var _ = Describe("Image Plugin", func() {
 					})
 
 					It("calls the image plugin without the exclusive flag", func() {
-						pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-						Expect(err).ToNot(HaveOccurred())
-
-						Expect(string(pluginArgsBytes)).NotTo(ContainSubstring("--exclude-image-from-quota"))
+						pluginArgs := readFileString(filepath.Join(tmpDir, "args"))
+						Expect(pluginArgs).NotTo(ContainSubstring("--exclude-image-from-quota"))
 					})
 				})
 
@@ -800,10 +755,8 @@ var _ = Describe("Image Plugin", func() {
 					})
 
 					It("calls the image plugin setting the exclusive flag", func() {
-						pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-						Expect(err).ToNot(HaveOccurred())
-
-						Expect(string(pluginArgsBytes)).To(ContainSubstring("--exclude-image-from-quota"))
+						pluginArgs := readFileString(filepath.Join(tmpDir, "args"))
+						Expect(pluginArgs).To(ContainSubstring("--exclude-image-from-quota"))
 					})
 				})
 			})
@@ -825,10 +778,7 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("executes the plugin, passing the correct args", func() {
-					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-					Expect(err).ToNot(HaveOccurred())
-
-					pluginArgs := strings.Split(string(pluginArgsBytes), " ")
+					pluginArgs := strings.Split(readFileString(filepath.Join(tmpDir, "args")), " ")
 					Expect(pluginArgs).To(Equal([]string{
 						binaries.ImagePlugin,
 						"--rootfs-path", tmpDir,
@@ -847,10 +797,8 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("executes the plugin as root", func() {
-					whoamiBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "metrics-whoami"))
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(string(whoamiBytes)).To(ContainSubstring("0 - 0"))
+					whoami := readFileString(filepath.Join(tmpDir, "metrics-whoami"))
+					Expect(whoami).To(ContainSubstring("0 - 0"))
 				})
 
 				Context("when the plugin logs to stderr", func() {
@@ -897,10 +845,7 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("executes the plugin, passing the correct args", func() {
-					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-					Expect(err).ToNot(HaveOccurred())
-
-					pluginArgs := strings.Split(string(pluginArgsBytes), " ")
+					pluginArgs := strings.Split(readFileString(filepath.Join(tmpDir, "args")), " ")
 					Expect(pluginArgs).To(Equal([]string{
 						binaries.ImagePlugin,
 						"--rootfs-path", tmpDir,
@@ -913,10 +858,8 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("executes the plugin as root", func() {
-					whoamiBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "destroy-whoami"))
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(string(whoamiBytes)).To(ContainSubstring("0 - 0"))
+					whoami := readFileString(filepath.Join(tmpDir, "destroy-whoami"))
+					Expect(whoami).To(ContainSubstring("0 - 0"))
 				})
 
 				Context("when the plugin logs to stderr", func() {
@@ -1012,10 +955,8 @@ var _ = Describe("Image Plugin", func() {
 			})
 
 			It("calls only the unprivileged plugin", func() {
-				pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "create-bin-location"))
-				Expect(err).ToNot(HaveOccurred())
-
-				Expect(string(pluginLocationBytes)).To(Equal(binaries.ImagePlugin))
+				pluginLocation := readFileString(filepath.Join(tmpDir, "create-bin-location"))
+				Expect(pluginLocation).To(Equal(binaries.ImagePlugin))
 			})
 
 			Context("and metrics are collected on that container", func() {
@@ -1025,10 +966,8 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("calls only the unprivileged plugin", func() {
-					pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "metrics-bin-location"))
-					Expect(err).ToNot(HaveOccurred())
-
-					Expect(string(pluginLocationBytes)).To(Equal(binaries.ImagePlugin))
+					pluginLocation := readFileString(filepath.Join(tmpDir, "metrics-bin-location"))
+					Expect(pluginLocation).To(Equal(binaries.ImagePlugin))
 				})
 			})
 
@@ -1038,10 +977,8 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("calls the unprivileged plugin", func() {
-					pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "destroy-bin-location"))
-					Expect(err).ToNot(HaveOccurred())
-
-					Expect(string(pluginLocationBytes)).To(ContainSubstring(binaries.ImagePlugin))
+					pluginLocation := readFileString(filepath.Join(tmpDir, "destroy-bin-location"))
+					Expect(pluginLocation).To(ContainSubstring(binaries.ImagePlugin))
 				})
 			})
 		})
@@ -1064,10 +1001,8 @@ var _ = Describe("Image Plugin", func() {
 			})
 
 			It("calls only the privileged plugin", func() {
-				pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "create-bin-location"))
-				Expect(err).ToNot(HaveOccurred())
-
-				Expect(string(pluginLocationBytes)).To(Equal(binaries.PrivilegedImagePlugin))
+				pluginLocation := readFileString(filepath.Join(tmpDir, "create-bin-location"))
+				Expect(pluginLocation).To(Equal(binaries.PrivilegedImagePlugin))
 			})
 
 			Context("and metrics are collected on that container", func() {
@@ -1077,10 +1012,9 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("tries to call both image plugins", func() {
-					pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "metrics-bin-location"))
-					Expect(err).ToNot(HaveOccurred())
-					Expect(string(pluginLocationBytes)).To(ContainSubstring(binaries.ImagePlugin))
-					Expect(string(pluginLocationBytes)).To(ContainSubstring(binaries.PrivilegedImagePlugin))
+					pluginLocation := readFileString(filepath.Join(tmpDir, "metrics-bin-location"))
+					Expect(pluginLocation).To(ContainSubstring(binaries.ImagePlugin))
+					Expect(pluginLocation).To(ContainSubstring(binaries.PrivilegedImagePlugin))
 				})
 			})
 
@@ -1090,10 +1024,8 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("calls the privileged plugin", func() {
-					pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "destroy-bin-location"))
-					Expect(err).ToNot(HaveOccurred())
-
-					Expect(string(pluginLocationBytes)).To(ContainSubstring(binaries.PrivilegedImagePlugin))
+					pluginLocation := readFileString(filepath.Join(tmpDir, "destroy-bin-location"))
+					Expect(pluginLocation).To(ContainSubstring(binaries.PrivilegedImagePlugin))
 				})
 			})
 		})
@@ -1126,10 +1058,9 @@ var _ = Describe("Image Plugin", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			args, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(args)).To(ContainSubstring("imagepluginuser"))
-			Expect(string(args)).To(ContainSubstring("secretpassword"))
+			args := readFileString(filepath.Join(tmpDir, "args"))
+			Expect(args).To(ContainSubstring("imagepluginuser"))
+			Expect(args).To(ContainSubstring("secretpassword"))
 		})
 
 		It("does not log username and password", func() {
@@ -1157,9 +1088,7 @@ func lastModifiedTime(pathname string) int64 {
 }
 
 func unmarshalJSONFromFile(pathname string, into interface{}) {
-	contents, err := ioutil.ReadFile(pathname)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(json.Unmarshal(contents, into)).To(Succeed())
+	Expect(json.Unmarshal(readFile(pathname), into)).To(Succeed())
 }
 
 func readlink(name string) string {
