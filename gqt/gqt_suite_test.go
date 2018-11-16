@@ -356,6 +356,12 @@ func skipIfNotContainerd() {
 	}
 }
 
+func skipIfDev() {
+	if os.Getenv("LOCAL_DEV_RUN") == "true" {
+		Skip("skipping when running locally")
+	}
+}
+
 func getRuncRoot() string {
 	if config.ContainerdSocket != "" {
 		return "/run/containerd/runc/garden"
