@@ -1,11 +1,13 @@
 package gqt_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -30,30 +32,67 @@ var _ = Describe("Networking Uniqueness", func() {
 	})
 
 	It("should not allocate duplicate subnets", func() {
-		for i := 0; i < 4; i++ {
+		skipIfDev()
+		routines := 25
+		containersPerRoutine := 10
+		allContainerInfos := []garden.ContainerInfo{}
+		var mutex = &sync.Mutex{}
+
+		wg := &sync.WaitGroup{}
+		wg.Add(routines)
+		for i := 0; i < routines; i++ {
 			go func() {
 				defer GinkgoRecover()
+				defer wg.Done()
 
-				create(client, 5)
+				containerInfos := create(client, containersPerRoutine)
+
+				mutex.Lock()
+				defer mutex.Unlock()
+				allContainerInfos = append(allContainerInfos, containerInfos...)
 			}()
 		}
 
-		Eventually(numContainers(client), "120s").Should(Equal(20))
-		Expect(numBridges()).To(Equal(20), runCommand(exec.Command("ifconfig")))
+		wg.Wait()
+		Expect(numContainers(client)).To(Equal(routines * containersPerRoutine))
+		Expect(numBridges()).To(Equal(routines*containersPerRoutine), diagnose(allContainerInfos))
 	})
 })
 
-func create(client *runner.RunningGarden, n int) {
+func diagnose(containerInfos []garden.ContainerInfo) string {
+	ifconfigBytes, err := exec.Command("ifconfig").CombinedOutput()
+	interfaceInfo := string(ifconfigBytes)
+	if err != nil {
+		interfaceInfo += fmt.Sprintf("\nifconfig error: %v\n", err)
+	}
+
+	var allContainersInfo string
+	bytes, err := json.Marshal(containerInfos)
+	if err != nil {
+		allContainersInfo = fmt.Sprintf("Could not marshal containers due to %v; raw containers data:\n %#v", err, containerInfos)
+	} else {
+		allContainersInfo = string(bytes)
+	}
+
+	return fmt.Sprintf("%s\n%s\n", interfaceInfo, allContainersInfo)
+}
+
+func create(client *runner.RunningGarden, n int) []garden.ContainerInfo {
+	containerInfos := []garden.ContainerInfo{}
 	for i := 0; i < n; i++ {
 		time.Sleep(randomSleepDuration())
 
 		id, err := uuid.NewV4()
 		Expect(err).NotTo(HaveOccurred())
 		randomID := "net-uniq-" + id.String()
-		_, err = client.Create(garden.ContainerSpec{Handle: randomID})
+		container, err := client.Create(garden.ContainerSpec{Handle: randomID})
 		Expect(err).NotTo(HaveOccurred())
+		containerInfo, err := container.Info()
+		Expect(err).NotTo(HaveOccurred())
+		containerInfos = append(containerInfos, containerInfo)
 
 	}
+	return containerInfos
 }
 
 func randomSleepDuration() time.Duration {
@@ -62,12 +101,10 @@ func randomSleepDuration() time.Duration {
 	return duration
 }
 
-func numContainers(client *runner.RunningGarden) func() int {
-	return func() int {
-		containers, err := client.Containers(nil)
-		Expect(err).NotTo(HaveOccurred())
-		return len(containers)
-	}
+func numContainers(client *runner.RunningGarden) int {
+	containers, err := client.Containers(nil)
+	Expect(err).NotTo(HaveOccurred())
+	return len(containers)
 }
 
 func numBridges() int {
