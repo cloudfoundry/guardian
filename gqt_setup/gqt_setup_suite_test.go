@@ -1,4 +1,4 @@
-package setup_gqt_test
+package gqt_setup_test
 
 import (
 	"bytes"
