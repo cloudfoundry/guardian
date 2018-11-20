@@ -114,7 +114,7 @@ func numBridges() int {
 	bridgeCount := 0
 
 	for _, intf := range intfs {
-		if strings.Contains(intf.Name, fmt.Sprintf("w%dbrdg", GinkgoParallelNode())) {
+		if strings.Contains(intf.Name, fmt.Sprintf("w%dbrdg-0afe", GinkgoParallelNode())) {
 			bridgeCount++
 		}
 	}
