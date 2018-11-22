@@ -33,7 +33,7 @@
   name = "code.cloudfoundry.org/idmapper"
 
 [[constraint]]
-  revision = "b60e04e119450552243196105bae0d42179ee0ca"
+  revision = "baf208c4c56b0a06ddec4a03c0348d072261d43a"
   name = "code.cloudfoundry.org/lager"
 
 [[constraint]]
