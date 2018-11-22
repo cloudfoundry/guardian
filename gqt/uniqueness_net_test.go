@@ -1,10 +1,10 @@
 package gqt_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"net"
 	"os/exec"
 	"strings"
 	"sync"
@@ -33,11 +33,39 @@ var _ = Describe("Networking Uniqueness", func() {
 
 	It("should not allocate duplicate subnets", func() {
 		skipIfDev()
+
+		ctrl := make(chan struct{})
+
+		go func() {
+			defer GinkgoRecover()
+
+			for {
+				out, err := exec.Command("/bin/sh", "-c", "iptables-save | grep DNAT").Output()
+				if err != nil {
+					continue
+				}
+
+				ipInfos := parseIPTablesOutput(out)
+				if len(ipInfos) == 0 {
+					continue
+				}
+
+				ipSet := map[string]struct{}{}
+
+				for _, info := range ipInfos {
+					ipSet[info.Ip] = struct{}{}
+				}
+
+				Expect(ipSet).To(HaveLen(len(ipInfos)), diagnose(ipInfos, out))
+
+				if haveToBail(ctrl) {
+					break
+				}
+			}
+		}()
+
 		routines := 25
 		containersPerRoutine := 10
-		allContainerInfos := []garden.ContainerInfo{}
-		var mutex = &sync.Mutex{}
-
 		wg := &sync.WaitGroup{}
 		wg.Add(routines)
 		for i := 0; i < routines; i++ {
@@ -45,54 +73,72 @@ var _ = Describe("Networking Uniqueness", func() {
 				defer GinkgoRecover()
 				defer wg.Done()
 
-				containerInfos := create(client, containersPerRoutine)
+				createAndDestroy(client, containersPerRoutine)
 
-				mutex.Lock()
-				defer mutex.Unlock()
-				allContainerInfos = append(allContainerInfos, containerInfos...)
+				if haveToBail(ctrl) {
+					return
+				}
 			}()
 		}
 
 		wg.Wait()
-		Expect(numContainers(client)).To(Equal(routines * containersPerRoutine))
-		Expect(numBridges()).To(Equal(routines*containersPerRoutine), diagnose(allContainerInfos))
+		close(ctrl)
 	})
 })
 
-func diagnose(containerInfos []garden.ContainerInfo) string {
-	ifconfigBytes, err := exec.Command("ifconfig").CombinedOutput()
-	interfaceInfo := string(ifconfigBytes)
-	if err != nil {
-		interfaceInfo += fmt.Sprintf("\nifconfig error: %v\n", err)
-	}
-
-	var allContainersInfo string
-	bytes, err := json.Marshal(containerInfos)
-	if err != nil {
-		allContainersInfo = fmt.Sprintf("Could not marshal containers due to %v; raw containers data:\n %#v", err, containerInfos)
-	} else {
-		allContainersInfo = string(bytes)
-	}
-
-	return fmt.Sprintf("%s\n%s\n", interfaceInfo, allContainersInfo)
-}
-
-func create(client *runner.RunningGarden, n int) []garden.ContainerInfo {
-	containerInfos := []garden.ContainerInfo{}
+func createAndDestroy(client *runner.RunningGarden, n int) {
 	for i := 0; i < n; i++ {
 		time.Sleep(randomSleepDuration())
 
 		id, err := uuid.NewV4()
 		Expect(err).NotTo(HaveOccurred())
 		randomID := "net-uniq-" + id.String()
-		container, err := client.Create(garden.ContainerSpec{Handle: randomID})
+		container, err := client.Create(garden.ContainerSpec{
+			Handle: randomID,
+			NetIn:  []garden.NetIn{garden.NetIn{HostPort: 8080}},
+		})
 		Expect(err).NotTo(HaveOccurred())
-		containerInfo, err := container.Info()
-		Expect(err).NotTo(HaveOccurred())
-		containerInfos = append(containerInfos, containerInfo)
 
+		time.Sleep(randomSleepDuration())
+
+		err = client.Destroy(container.Handle())
+		Expect(err).NotTo(HaveOccurred())
 	}
-	return containerInfos
+}
+
+func haveToBail(ctrl chan struct{}) bool {
+	select {
+	case <-ctrl:
+		return true
+	case <-time.After(100 * time.Millisecond):
+		return false
+	}
+}
+
+func parseIPTablesOutput(output []byte) []containerIPInfo {
+	ips := []containerIPInfo{}
+
+	outString := string(bytes.TrimSuffix(output, []byte{'\n'}))
+
+	portMappings := strings.Split(outString, "\n")
+
+	for _, portMapping := range portMappings {
+		fields := strings.Split(portMapping, " ")
+		ip := strings.Split(fields[17], ":")[0]
+		handle := fields[13]
+		ips = append(ips, containerIPInfo{handle, ip})
+	}
+
+	return ips
+}
+
+func diagnose(infos []containerIPInfo, iptablesOut []byte) string {
+	containerInfo := fmt.Sprintf("%#v", infos)
+	infoJson, err := json.Marshal(infos)
+	if err == nil {
+		containerInfo = string(infoJson)
+	}
+	return fmt.Sprintf("IpTables Port Mapping Ruels:\n%s\nContainers Info:\n%s\n", iptablesOut, containerInfo)
 }
 
 func randomSleepDuration() time.Duration {
@@ -101,23 +147,7 @@ func randomSleepDuration() time.Duration {
 	return duration
 }
 
-func numContainers(client *runner.RunningGarden) int {
-	containers, err := client.Containers(nil)
-	Expect(err).NotTo(HaveOccurred())
-	return len(containers)
-}
-
-func numBridges() int {
-	intfs, err := net.Interfaces()
-	Expect(err).NotTo(HaveOccurred())
-
-	bridgeCount := 0
-
-	for _, intf := range intfs {
-		if strings.Contains(intf.Name, fmt.Sprintf("w%dbrdg-0afe", GinkgoParallelNode())) {
-			bridgeCount++
-		}
-	}
-
-	return bridgeCount
+type containerIPInfo struct {
+	Handle string
+	Ip     string
 }
