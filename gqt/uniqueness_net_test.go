@@ -17,6 +17,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const handlePrefix = "net-uniq-"
+
 var _ = Describe("Networking Uniqueness", func() {
 	var (
 		client *runner.RunningGarden
@@ -39,8 +41,8 @@ var _ = Describe("Networking Uniqueness", func() {
 		go func() {
 			defer GinkgoRecover()
 
-			for {
-				out, err := exec.Command("/bin/sh", "-c", "iptables-save | grep DNAT").Output()
+			for keepGoing(ctrl) {
+				out, err := exec.Command("/bin/sh", "-c", "iptables-save | grep DNAT | grep "+handlePrefix).Output()
 				if err != nil {
 					continue
 				}
@@ -57,10 +59,6 @@ var _ = Describe("Networking Uniqueness", func() {
 				}
 
 				Expect(ipSet).To(HaveLen(len(ipInfos)), diagnose(ipInfos, out))
-
-				if haveToBail(ctrl) {
-					break
-				}
 			}
 		}()
 
@@ -74,10 +72,6 @@ var _ = Describe("Networking Uniqueness", func() {
 				defer wg.Done()
 
 				createAndDestroy(client, containersPerRoutine)
-
-				if haveToBail(ctrl) {
-					return
-				}
 			}()
 		}
 
@@ -92,7 +86,7 @@ func createAndDestroy(client *runner.RunningGarden, n int) {
 
 		id, err := uuid.NewV4()
 		Expect(err).NotTo(HaveOccurred())
-		randomID := "net-uniq-" + id.String()
+		randomID := handlePrefix + id.String()
 		container, err := client.Create(garden.ContainerSpec{
 			Handle: randomID,
 			NetIn:  []garden.NetIn{garden.NetIn{HostPort: 8080}},
@@ -106,12 +100,12 @@ func createAndDestroy(client *runner.RunningGarden, n int) {
 	}
 }
 
-func haveToBail(ctrl chan struct{}) bool {
+func keepGoing(ctrl chan struct{}) bool {
 	select {
 	case <-ctrl:
-		return true
-	case <-time.After(100 * time.Millisecond):
 		return false
+	case <-time.After(100 * time.Millisecond):
+		return true
 	}
 }
 
