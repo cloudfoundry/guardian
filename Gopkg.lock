@@ -74,16 +74,17 @@
   revision = "bd44efed54946fc3dfd1592a7da8beb86ce4d92f"
 
 [[projects]]
-  digest = "1:724382da192abc2724bcecc65bce734db9fd05a43a3b6d9445ee7e956412a80e"
+  digest = "1:da9500888a9baa4c1b5a211e79a2b7653fe5858724d46557abc649df9779d541"
   name = "code.cloudfoundry.org/lager"
   packages = [
     ".",
     "chug",
+    "internal/truncate",
     "lagerctx",
     "lagertest",
   ]
   pruneopts = "UT"
-  revision = "b60e04e119450552243196105bae0d42179ee0ca"
+  revision = "baf208c4c56b0a06ddec4a03c0348d072261d43a"
 
 [[projects]]
   digest = "1:6fc34ae594075ca1a64205c4f47033ede755e137eed7a6a06aef0ee1ea84ffbe"
@@ -811,6 +812,7 @@
     "github.com/containerd/containerd/cio",
     "github.com/containerd/containerd/containers",
     "github.com/containerd/containerd/errdefs",
+    "github.com/containerd/containerd/leases",
     "github.com/containerd/containerd/namespaces",
     "github.com/containerd/containerd/oci",
     "github.com/containerd/containerd/runtime/v1/linux/proc",
