@@ -12,6 +12,7 @@ import (
 
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/api/types"
 	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/errdefs"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -253,4 +254,14 @@ func (n *Nerd) Signal(log lager.Logger, containerID, processID string, signal sy
 	}
 
 	return process.Kill(n.context, signal)
+}
+
+func (n *Nerd) Metrics(log lager.Logger, containerID string) (*types.Metric, error) {
+	log.Debug("getting-metrics", lager.Data{"containerID": containerID})
+	_, task, err := n.loadContainerAndTask(log, containerID)
+	if err != nil {
+		return nil, err
+	}
+
+	return task.Metrics(n.context)
 }

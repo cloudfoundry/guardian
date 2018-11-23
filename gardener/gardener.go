@@ -54,6 +54,7 @@ type Containerizer interface {
 
 	Info(log lager.Logger, handle string) (spec.ActualContainerSpec, error)
 	Metrics(log lager.Logger, handle string) (ActualContainerMetrics, error)
+	BulkMetrics(log lager.Logger, handles []string) (map[string]ActualContainerMetrics, error)
 }
 
 type Networker interface {

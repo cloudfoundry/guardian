@@ -204,10 +204,10 @@ func wireMounts() bundlerules.Mounts {
 	}
 }
 
-func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, useContainerdForProcesses bool) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, error) {
+func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, useContainerdForProcesses bool) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, rundmc.MetricsCollector, error) {
 	containerdClient, err := containerd.New(socket)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
 	ctx = leases.WithLease(ctx, "lease-is-off")
@@ -223,7 +223,7 @@ func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *
 		ProcessManager: nerd,
 	}
 
-	return containerdManager, peaRunner, pidGetter, nil
+	return containerdManager, peaRunner, pidGetter, runcontainerd.NewContainerdMetricsCollector(nerd), nil
 }
 
 func containerdRuncRoot() string {

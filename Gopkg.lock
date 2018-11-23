@@ -180,6 +180,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:c4066f1e9928cd26f7d54b02799fc0874798e6d45ed2532a40bcd2fa6e4d97d3"
+  name = "github.com/containerd/cgroups"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c0437c3dd5958f74d7f54e9f5def749850b9d6a1"
+
+[[projects]]
+  branch = "master"
   digest = "1:ddbcc8c842f4e5cf1fbf87f197a38ccf90c3930694b1beddb0776a0bc2d58089"
   name = "github.com/containerd/console"
   packages = ["."]
@@ -289,6 +297,14 @@
   revision = "f6943554a7e7e88b3c14aad190bf05932da84788"
 
 [[projects]]
+  digest = "1:6f614c5193761d29b3184a170380672cafd025306261ce7810e2dd99907184c4"
+  name = "github.com/coreos/go-systemd"
+  packages = ["dbus"]
+  pruneopts = "UT"
+  revision = "9002847aa1425fb6ac49077c0a630b3b67e0fbfd"
+  version = "v18"
+
+[[projects]]
   digest = "1:4ddc17aeaa82cb18c5f0a25d7c253a10682f518f4b2558a82869506eec223d76"
   name = "github.com/docker/distribution"
   packages = [
@@ -341,6 +357,14 @@
   pruneopts = "UT"
   revision = "ea41b0fad31007accc7f806884dcdf3da98b79ce"
   version = "v1.1.0"
+
+[[projects]]
+  digest = "1:dae52e85e2f3d0a734799e74ec0711d3ddd673b21a9e83be6c899af64c3a98f6"
+  name = "github.com/godbus/dbus"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "66d97aec3384421e393c2a76b770a1b5c31d07a8"
+  version = "v5.0"
 
 [[projects]]
   digest = "1:e13cb038286ab79c110c415198e69fd8b02c5e7794cda168c04e3149736d8a21"
@@ -808,7 +832,9 @@
     "github.com/cloudfoundry/dropsonde/metric_sender/fake",
     "github.com/cloudfoundry/dropsonde/metrics",
     "github.com/cloudfoundry/gosigar",
+    "github.com/containerd/cgroups",
     "github.com/containerd/containerd",
+    "github.com/containerd/containerd/api/types",
     "github.com/containerd/containerd/cio",
     "github.com/containerd/containerd/containers",
     "github.com/containerd/containerd/errdefs",

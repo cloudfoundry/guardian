@@ -46,7 +46,7 @@ type OCIRuntime interface {
 	Kill(log lager.Logger, bundlePath string) error
 	Delete(log lager.Logger, id string) error
 	State(log lager.Logger, id string) (runrunc.State, error)
-	Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)
+	// Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)
 	WatchEvents(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error
 }
 
@@ -81,6 +81,10 @@ type PeaUsernameResolver interface {
 	ResolveUser(log lager.Logger, bundlePath, handle string, image garden.ImageRef, username string) (int, int, error)
 }
 
+type MetricsCollector interface {
+	Collect(log lager.Logger, handles []string) (map[string]gardener.ActualContainerMetrics, error)
+}
+
 // Containerizer knows how to manage a depot of container bundles
 type Containerizer struct {
 	depot               Depot
@@ -93,9 +97,10 @@ type Containerizer struct {
 	rootfsFileCreator   RootfsFileCreator
 	peaCreator          PeaCreator
 	peaUsernameResolver PeaUsernameResolver
+	metricsCollector    MetricsCollector
 }
 
-func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, events EventStore, states StateStore, rootfsFileCreator RootfsFileCreator, peaCreator PeaCreator, peaUsernameResolver PeaUsernameResolver) *Containerizer {
+func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, events EventStore, states StateStore, rootfsFileCreator RootfsFileCreator, peaCreator PeaCreator, peaUsernameResolver PeaUsernameResolver, metricsCollector MetricsCollector) *Containerizer {
 	return &Containerizer{
 		depot:               depot,
 		runtime:             runtime,
@@ -107,6 +112,7 @@ func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner Nstar
 		rootfsFileCreator:   rootfsFileCreator,
 		peaCreator:          peaCreator,
 		peaUsernameResolver: peaUsernameResolver,
+		metricsCollector:    metricsCollector,
 	}
 }
 
@@ -335,27 +341,22 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (spec.ActualContai
 }
 
 func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.ActualContainerMetrics, error) {
-	containerMetrics, err := c.runtime.Stats(log, handle)
+	metrics, err := c.metricsCollector.Collect(log, []string{handle})
 	if err != nil {
 		return gardener.ActualContainerMetrics{}, err
 	}
+	return metrics[handle], nil
+}
 
-	return gardener.ActualContainerMetrics{
-		StatsContainerMetrics: containerMetrics,
-		CPUEntitlement: calculateEntitlement(containerMetrics.Memory.HierarchicalMemoryLimit,
-			containerMetrics.Age),
-	}, nil
+func (c *Containerizer) BulkMetrics(log lager.Logger, handles []string) (map[string]gardener.ActualContainerMetrics, error) {
+	metrics, err := c.metricsCollector.Collect(log, handles)
+	if err != nil {
+		return nil, err
+	}
+	return metrics, nil
 }
 
 // Handles returns a list of all container handles
 func (c *Containerizer) Handles() ([]string, error) {
 	return c.depot.Handles()
-}
-
-func calculateEntitlement(memoryLimitInBytes uint64, containerAge time.Duration) uint64 {
-	return uint64(gigabytes(memoryLimitInBytes) * float64(containerAge.Nanoseconds()))
-}
-
-func gigabytes(bytes uint64) float64 {
-	return float64(bytes) / (1024 * 1024 * 1024)
 }

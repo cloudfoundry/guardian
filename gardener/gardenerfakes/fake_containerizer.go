@@ -160,6 +160,20 @@ type FakeContainerizer struct {
 		result1 gardener.ActualContainerMetrics
 		result2 error
 	}
+	BulkMetricsStub        func(log lager.Logger, handles []string) (map[string]gardener.ActualContainerMetrics, error)
+	bulkMetricsMutex       sync.RWMutex
+	bulkMetricsArgsForCall []struct {
+		log     lager.Logger
+		handles []string
+	}
+	bulkMetricsReturns struct {
+		result1 map[string]gardener.ActualContainerMetrics
+		result2 error
+	}
+	bulkMetricsReturnsOnCall map[int]struct {
+		result1 map[string]gardener.ActualContainerMetrics
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -719,6 +733,63 @@ func (fake *FakeContainerizer) MetricsReturnsOnCall(i int, result1 gardener.Actu
 	}{result1, result2}
 }
 
+func (fake *FakeContainerizer) BulkMetrics(log lager.Logger, handles []string) (map[string]gardener.ActualContainerMetrics, error) {
+	var handlesCopy []string
+	if handles != nil {
+		handlesCopy = make([]string, len(handles))
+		copy(handlesCopy, handles)
+	}
+	fake.bulkMetricsMutex.Lock()
+	ret, specificReturn := fake.bulkMetricsReturnsOnCall[len(fake.bulkMetricsArgsForCall)]
+	fake.bulkMetricsArgsForCall = append(fake.bulkMetricsArgsForCall, struct {
+		log     lager.Logger
+		handles []string
+	}{log, handlesCopy})
+	fake.recordInvocation("BulkMetrics", []interface{}{log, handlesCopy})
+	fake.bulkMetricsMutex.Unlock()
+	if fake.BulkMetricsStub != nil {
+		return fake.BulkMetricsStub(log, handles)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.bulkMetricsReturns.result1, fake.bulkMetricsReturns.result2
+}
+
+func (fake *FakeContainerizer) BulkMetricsCallCount() int {
+	fake.bulkMetricsMutex.RLock()
+	defer fake.bulkMetricsMutex.RUnlock()
+	return len(fake.bulkMetricsArgsForCall)
+}
+
+func (fake *FakeContainerizer) BulkMetricsArgsForCall(i int) (lager.Logger, []string) {
+	fake.bulkMetricsMutex.RLock()
+	defer fake.bulkMetricsMutex.RUnlock()
+	return fake.bulkMetricsArgsForCall[i].log, fake.bulkMetricsArgsForCall[i].handles
+}
+
+func (fake *FakeContainerizer) BulkMetricsReturns(result1 map[string]gardener.ActualContainerMetrics, result2 error) {
+	fake.BulkMetricsStub = nil
+	fake.bulkMetricsReturns = struct {
+		result1 map[string]gardener.ActualContainerMetrics
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeContainerizer) BulkMetricsReturnsOnCall(i int, result1 map[string]gardener.ActualContainerMetrics, result2 error) {
+	fake.BulkMetricsStub = nil
+	if fake.bulkMetricsReturnsOnCall == nil {
+		fake.bulkMetricsReturnsOnCall = make(map[int]struct {
+			result1 map[string]gardener.ActualContainerMetrics
+			result2 error
+		})
+	}
+	fake.bulkMetricsReturnsOnCall[i] = struct {
+		result1 map[string]gardener.ActualContainerMetrics
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeContainerizer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -744,6 +815,8 @@ func (fake *FakeContainerizer) Invocations() map[string][][]interface{} {
 	defer fake.infoMutex.RUnlock()
 	fake.metricsMutex.RLock()
 	defer fake.metricsMutex.RUnlock()
+	fake.bulkMetricsMutex.RLock()
+	defer fake.bulkMetricsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

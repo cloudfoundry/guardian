@@ -183,3 +183,7 @@ required = ["gopkg.in/fsnotify.v1"]
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/containerd/cgroups"
