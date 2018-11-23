@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -64,10 +63,9 @@ var _ = Describe("Bind mount", func() {
 
 	Describe("when source is a file", func() {
 		BeforeEach(func() {
-			tempFile, err := ioutil.TempFile("/opt", "bindmount-srcpath-file-")
-			Expect(err).NotTo(HaveOccurred())
-			defer tempFile.Close()
-			srcPath = tempFile.Name()
+			tmpFile := tempFile("/opt", "bindmount-srcpath-file-")
+			defer tmpFile.Close()
+			srcPath = tmpFile.Name()
 			Expect(os.Chmod(srcPath, 0777)).To(Succeed())
 			dstPath = "/home/alice/afile"
 			mountMode = garden.BindMountModeRO
@@ -291,9 +289,8 @@ var _ = Describe("Bind mount", func() {
 })
 
 func createTestHostDir() string {
-	tstHostDir, err := ioutil.TempDir("", "bind-mount-test-dir")
-	Expect(err).ToNot(HaveOccurred())
-	err = os.Chown(tstHostDir, 0, 0)
+	tstHostDir := tempDir("", "bind-mount-test-dir")
+	err := os.Chown(tstHostDir, 0, 0)
 	Expect(err).ToNot(HaveOccurred())
 	err = os.Chmod(tstHostDir, 0755)
 	Expect(err).ToNot(HaveOccurred())
@@ -322,8 +319,7 @@ func mountSourceDirToSelf(mountOptions []string, tstHostDir string) {
 func createSymlinkSource() (string, string, string) {
 	tstHostDir := createTestHostDir()
 	tstHostDir, fileName := createTestFile(tstHostDir)
-	tmpfsPath, err := ioutil.TempDir("/opt", "")
-	Expect(err).NotTo(HaveOccurred())
+	tmpfsPath := tempDir("/opt", "")
 
 	Expect(os.MkdirAll(tmpfsPath, os.ModePerm)).To(Succeed())
 	Expect(exec.Command("mount", "-t", "tmpfs", "-o", "size=1m", "tmpfs", tmpfsPath).Run()).To(Succeed())

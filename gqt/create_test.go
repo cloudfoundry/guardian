@@ -485,10 +485,7 @@ var _ = Describe("Creating a Container", func() {
 	Context("when running with an external network plugin", func() {
 		var pluginOutput string
 		BeforeEach(func() {
-			tmpDir, err := ioutil.TempDir("", "netplugtest")
-			Expect(err).NotTo(HaveOccurred())
-
-			tmpFile := path.Join(tmpDir, "iwasrun.log")
+			tmpFile := path.Join(tempDir("", "netplugtest"), "iwasrun.log")
 
 			config.NetworkPluginBin = binaries.NetworkPlugin
 			config.NetworkPluginExtraArgs = []string{tmpFile, "/dev/null"}

@@ -33,9 +33,7 @@ var _ = Describe("Image Plugin", func() {
 	BeforeEach(func() {
 		config = resetImagePluginConfig()
 		containerDestructionShouldSucceed = true
-		var err error
-		tmpDir, err = ioutil.TempDir("", "")
-		Expect(err).NotTo(HaveOccurred())
+		tmpDir = tempDir("", "")
 		Expect(os.Chmod(tmpDir, 0777)).To(Succeed())
 	})
 
@@ -73,9 +71,7 @@ var _ = Describe("Image Plugin", func() {
 			)
 
 			BeforeEach(func() {
-				var err error
-				tmpMountDir, err = ioutil.TempDir("", "")
-				Expect(err).NotTo(HaveOccurred())
+				tmpMountDir = tempDir("", "")
 
 				containerSpec = garden.ContainerSpec{
 					BindMounts: []garden.BindMount{
@@ -165,9 +161,7 @@ var _ = Describe("Image Plugin", func() {
 				fileContent := "mnted-file-content"
 
 				BeforeEach(func() {
-					var err error
-					mountedDir, err = ioutil.TempDir("", "bind-mount")
-					Expect(err).NotTo(HaveOccurred())
+					mountedDir = tempDir("", "bind-mount")
 					Expect(os.Chmod(mountedDir, 0777)).To(Succeed())
 					Expect(ioutil.WriteFile(filepath.Join(mountedDir, fileName), []byte(fileContent), 0644)).To(Succeed())
 

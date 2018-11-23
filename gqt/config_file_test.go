@@ -24,8 +24,7 @@ var _ = Describe("Config File", func() {
 			config.DebugIP = ""
 			config.DebugPort = nil
 
-			configFile, err := ioutil.TempFile("", "gqt-config-file-tests")
-			Expect(err).NotTo(HaveOccurred())
+			configFile := tempFile("", "gqt-config-file-tests")
 			configFilePath = configFile.Name()
 
 			port = 9080 + GinkgoParallelNode()

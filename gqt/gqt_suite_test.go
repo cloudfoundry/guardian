@@ -90,9 +90,7 @@ var _ = BeforeEach(func() {
 
 	config = defaultConfig()
 	if isContainerd() {
-		var err error
-		containerdRunDir, err = ioutil.TempDir("", "")
-		Expect(err).NotTo(HaveOccurred())
+		containerdRunDir = tempDir("", "")
 		containerdSession = startContainerd(containerdRunDir)
 	}
 
@@ -245,6 +243,18 @@ func readFileString(path string) string {
 	return string(readFile(path))
 }
 
+func tempDir(dir, prefix string) string {
+	path, err := ioutil.TempDir(dir, prefix)
+	Expect(err).NotTo(HaveOccurred())
+	return path
+}
+
+func tempFile(dir, prefix string) *os.File {
+	f, err := ioutil.TempFile(dir, prefix)
+	Expect(err).NotTo(HaveOccurred())
+	return f
+}
+
 func copyFile(srcPath, dstPath string) error {
 	dirPath := filepath.Dir(dstPath)
 	if err := os.MkdirAll(dirPath, 0777); err != nil {
@@ -298,9 +308,7 @@ func createRootfsTar(modifyRootfs func(string)) string {
 }
 
 func createRootfs(modifyRootfs func(string), perm os.FileMode) string {
-	var err error
-	tmpDir, err := ioutil.TempDir("", "test-rootfs")
-	Expect(err).NotTo(HaveOccurred())
+	tmpDir := tempDir("", "test-rootfs")
 	unpackedRootfs := filepath.Join(tmpDir, "unpacked")
 	Expect(os.Mkdir(unpackedRootfs, perm)).To(Succeed())
 	runCommand(exec.Command("tar", "xf", defaultTestRootFS, "-C", unpackedRootfs))

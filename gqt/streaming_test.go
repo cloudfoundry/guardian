@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -41,8 +40,7 @@ var _ = Describe("Streaming", func() {
 		var tarStream io.Reader
 
 		BeforeEach(func() {
-			tmpdir, err := ioutil.TempDir("", "some-temp-dir-parent")
-			Expect(err).ToNot(HaveOccurred())
+			tmpdir := tempDir("", "some-temp-dir-parent")
 
 			tgzPath := filepath.Join(tmpdir, "some.tgz")
 

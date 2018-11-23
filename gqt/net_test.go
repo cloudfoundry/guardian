@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -499,8 +498,7 @@ var _ = Describe("Networking", func() {
 		var stdinFile string
 
 		BeforeEach(func() {
-			tmpDir, err := ioutil.TempDir("", "netplugtest")
-			Expect(err).NotTo(HaveOccurred())
+			tmpDir := tempDir("", "netplugtest")
 
 			argsFile = path.Join(tmpDir, "args.log")
 			stdinFile = path.Join(tmpDir, "stdin.log")

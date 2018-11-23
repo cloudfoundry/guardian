@@ -3,7 +3,6 @@ package gqt_test
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -36,8 +35,7 @@ var _ = Describe("Network plugin", func() {
 		containerNetwork = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelNode())
 		containerSpec = garden.ContainerSpec{}
 
-		tmpDir, err := ioutil.TempDir("", "netplugtest")
-		Expect(err).NotTo(HaveOccurred())
+		tmpDir := tempDir("", "netplugtest")
 
 		argsFile = path.Join(tmpDir, "args.log")
 		stdinFile = path.Join(tmpDir, "stdin.log")

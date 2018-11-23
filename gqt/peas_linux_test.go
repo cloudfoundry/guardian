@@ -237,10 +237,8 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		output := gbytes.NewBuffer()
 
 		BeforeEach(func() {
-			var err error
-			testSrcFile, err = ioutil.TempFile("", "host-file")
-			Expect(err).NotTo(HaveOccurred())
-			_, err = testSrcFile.WriteString("test-mount")
+			testSrcFile = tempFile("", "host-file")
+			_, err := testSrcFile.WriteString("test-mount")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exec.Command("chown", "4294967294", testSrcFile.Name()).Run()).To(Succeed())
 		})

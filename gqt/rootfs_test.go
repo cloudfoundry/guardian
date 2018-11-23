@@ -103,13 +103,10 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 	Context("with an empty rootfs", func() {
 		It("creates the container successfully", func() {
-			rootfsDir, err := ioutil.TempDir("", "emptyrootfs")
-			Expect(err).NotTo(HaveOccurred())
-
-			rootfs := filepath.Join(rootfsDir, "empty.tar")
+			rootfs := filepath.Join(tempDir("", "emptyrootfs"), "empty.tar")
 			runCommand(exec.Command("tar", "cvf", rootfs, "-T", "/dev/null"))
 
-			_, err = client.Create(garden.ContainerSpec{RootFSPath: rootfs})
+			_, err := client.Create(garden.ContainerSpec{RootFSPath: rootfs})
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -350,8 +347,7 @@ func writeGrootConfig(insecureRegistry string) string {
 	confYml, err := yaml.Marshal(grootConf)
 	Expect(err).NotTo(HaveOccurred())
 
-	confPath, err := ioutil.TempFile(config.TmpDir, "groot_config")
-	Expect(err).NotTo(HaveOccurred())
+	confPath := tempFile(config.TmpDir, "groot_config")
 	defer confPath.Close()
 
 	Expect(ioutil.WriteFile(confPath.Name(), confYml, 0600)).To(Succeed())

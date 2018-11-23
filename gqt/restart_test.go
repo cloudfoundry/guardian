@@ -40,9 +40,7 @@ var _ = Describe("Surviving Restarts", func() {
 		)
 
 		BeforeEach(func() {
-			var err error
-			propertiesDir, err = ioutil.TempDir("", "props")
-			Expect(err).NotTo(HaveOccurred())
+			propertiesDir = tempDir("", "props")
 			config.PropertiesPath = path.Join(propertiesDir, "props.json")
 			restartConfig = config
 

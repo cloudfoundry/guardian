@@ -2,7 +2,6 @@ package gqt_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -101,8 +100,7 @@ var _ = Describe("Destroying a Container", func() {
 		var originalConfig runner.GdnRunnerConfig
 
 		BeforeEach(func() {
-			tmpDir, err := ioutil.TempDir("", "netplugtest")
-			Expect(err).NotTo(HaveOccurred())
+			tmpDir := tempDir("", "netplugtest")
 
 			argsFile := path.Join(tmpDir, "args.log")
 			stdinFile := path.Join(tmpDir, "stdin.log")

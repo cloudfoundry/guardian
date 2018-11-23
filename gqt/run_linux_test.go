@@ -3,7 +3,6 @@ package gqt_test
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -101,8 +100,7 @@ var _ = Describe("Run", func() {
 
 		Context("when --cleanup-process-dirs-on-wait is not set (default)", func() {
 			It("does not delete the process directory", func() {
-				_, err := os.Stat(processPath)
-				Expect(err).NotTo(HaveOccurred())
+				Expect(processPath).To(BeADirectory())
 			})
 
 			Context("when we reattach", func() {
@@ -123,8 +121,7 @@ var _ = Describe("Run", func() {
 			})
 
 			It("deletes the proccess directory", func() {
-				_, err := os.Stat(processPath)
-				Expect(os.IsNotExist(err)).To(BeTrue())
+				Expect(processPath).NotTo(BeAnExistingFile())
 			})
 		})
 	})
@@ -240,9 +237,7 @@ var _ = Describe("Run", func() {
 			)
 
 			BeforeEach(func() {
-				var err error
-				target, err = ioutil.TempDir("", "symlinkstarget")
-				Expect(err).NotTo(HaveOccurred())
+				target = tempDir("", "symlinkstarget")
 
 				rootfs = createRootfsTar(func(unpackedRootfs string) {
 					Expect(os.Symlink(target, path.Join(unpackedRootfs, "symlink"))).To(Succeed())
@@ -395,13 +390,12 @@ var _ = Describe("Run", func() {
 			)
 
 			BeforeEach(func() {
-				var err error
-				propertiesDir, err = ioutil.TempDir("", "props")
-				Expect(err).NotTo(HaveOccurred())
+				propertiesDir = tempDir("", "props")
 
 				config.PropertiesPath = path.Join(propertiesDir, "props.json")
 				client = runner.Start(config)
 
+				var err error
 				container, err = client.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -582,10 +576,7 @@ var _ = Describe("Attach", func() {
 	BeforeEach(func() {
 		// we need to pass --properties-path to prevent guardian from deleting containers
 		// after restarting the server
-		propertiesDir, err := ioutil.TempDir("", "props")
-		Expect(err).NotTo(HaveOccurred())
-		config.PropertiesPath = path.Join(propertiesDir, "props.json")
-
+		config.PropertiesPath = path.Join(tempDir("", "props"), "props.json")
 		client = runner.Start(config)
 	})
 

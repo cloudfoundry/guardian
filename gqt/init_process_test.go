@@ -2,7 +2,6 @@ package gqt_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
@@ -19,9 +18,7 @@ var _ = Describe("Init process", func() {
 	)
 
 	BeforeEach(func() {
-		var err error
-		tmpDir, err = ioutil.TempDir("", "")
-		Expect(err).NotTo(HaveOccurred())
+		tmpDir = tempDir("", "")
 
 		cmd := exec.Command("gcc", "-static", "-o", "test_init", "test_init.c", "../../cmd/init/ignore_sigchild.c", "-I", "../../cmd/init")
 		runCommandInDir(cmd, "cmd")

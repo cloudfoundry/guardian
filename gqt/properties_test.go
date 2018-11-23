@@ -1,7 +1,6 @@
 package gqt_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -21,15 +20,14 @@ var _ = Describe("Properties", func() {
 	)
 
 	BeforeEach(func() {
-		var err error
-		propertiesDir, err = ioutil.TempDir("", "props")
-		Expect(err).NotTo(HaveOccurred())
+		propertiesDir = tempDir("", "props")
 
 		config.PropertiesPath = path.Join(propertiesDir, "props.json")
 
 		client = runner.Start(config)
 		props = garden.Properties{"somename": "somevalue"}
 
+		var err error
 		container, err = client.Create(garden.ContainerSpec{
 			Properties: props,
 		})

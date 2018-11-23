@@ -1,7 +1,6 @@
 package gqt_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -24,10 +23,8 @@ var _ = Describe("Port Pool", func() {
 		)
 
 		JustBeforeEach(func() {
-			var err error
 			portPoolStart = GinkgoParallelNode() * 7000
-			propsPoolDir, err = ioutil.TempDir("", "portpool")
-			Expect(err).NotTo(HaveOccurred())
+			propsPoolDir = tempDir("", "portpool")
 
 			config.PortPoolSize = &numContainers
 			config.PortPoolPropertiesPath = filepath.Join(propsPoolDir, "props.json")

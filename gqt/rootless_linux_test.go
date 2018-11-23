@@ -53,13 +53,10 @@ var _ = Describe("rootless containers", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess).Should(gexec.Exit(0))
 
-		runcRootDir, err := ioutil.TempDir(config.TmpDir, "runcRootDir")
-		Expect(err).NotTo(HaveOccurred())
+		runcRootDir := tempDir(config.TmpDir, "runcRootDir")
+		tmpDir := tempDir(config.TmpDir, "rootlessImagePath")
 
-		tempDir, err := ioutil.TempDir(config.TmpDir, "rootlessImagePath")
-		Expect(err).NotTo(HaveOccurred())
-
-		imagePath = filepath.Join(tempDir, "rootfs")
+		imagePath = filepath.Join(tmpDir, "rootfs")
 		Expect(os.MkdirAll(imagePath, 0755)).To(Succeed())
 
 		// This is necessary because previous tests may leave a socket owned by root
@@ -69,7 +66,7 @@ var _ = Describe("rootless containers", func() {
 
 		runCommand(exec.Command("tar", "xf", defaultTestRootFS, "-C", imagePath))
 		Expect(exec.Command("chown", "-R", fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedGID), runcRootDir).Run()).To(Succeed())
-		Expect(exec.Command("chown", "-R", fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedGID), tempDir).Run()).To(Succeed())
+		Expect(exec.Command("chown", "-R", fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedGID), tmpDir).Run()).To(Succeed())
 		// The 'alice' user in the GARDEN_TEST_ROOTFS has a UID of 1000
 		// The tests below use a uid range of 100000 -> 165536
 		// 100000 + (1000 - 1) = 100999 (-1 because we map from 0)
