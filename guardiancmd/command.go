@@ -891,6 +891,9 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 			peaPidGetter = pidGetter
 			execRunner = peaRunner
 			useNestedCgroups = true
+		} else {
+			// XXX: When we do not use containerd to run processes/peas/sidecars in containers we should be using the runc metrics collector because containerd is not aware of the processes
+			metricsCollector = runrunc.NewRuncMetricsCollector(statser)
 		}
 	} else {
 		metricsCollector = runrunc.NewRuncMetricsCollector(statser)
