@@ -348,14 +348,6 @@ func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.Actua
 	return metrics[handle], nil
 }
 
-func (c *Containerizer) BulkMetrics(log lager.Logger, handles []string) (map[string]gardener.ActualContainerMetrics, error) {
-	metrics, err := c.metricsCollector.Collect(log, handles)
-	if err != nil {
-		return nil, err
-	}
-	return metrics, nil
-}
-
 // Handles returns a list of all container handles
 func (c *Containerizer) Handles() ([]string, error) {
 	return c.depot.Handles()
