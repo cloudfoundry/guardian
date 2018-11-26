@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
@@ -415,6 +416,7 @@ func (g *Gardener) BulkInfo(handles []string) (map[string]garden.ContainerInfoEn
 }
 
 func (g *Gardener) BulkMetrics(handles []string) (map[string]garden.ContainerMetricsEntry, error) {
+	start := time.Now()
 	result := make(map[string]garden.ContainerMetricsEntry)
 	for _, handle := range handles {
 		var e *garden.Error
@@ -428,8 +430,29 @@ func (g *Gardener) BulkMetrics(handles []string) (map[string]garden.ContainerMet
 			Metrics: m,
 		}
 	}
+	duration := time.Since(start)
+	avg := float64(duration) / float64(len(handles))
+	avg = avg / float64(time.Millisecond.Nanoseconds())
+
+	message := fmt.Sprintf("BulkMetrics for %d containers took: %s, average per container: %fms", len(handles), duration, avg)
+	debug(message)
 
 	return result, nil
+}
+
+func debug(msg string) error {
+	filename := "/tmp/metrics-perf.log"
+	f, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return fmt.Errorf("Failed to open %s: %v", filename, err)
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(msg + "\n")
+	if err != nil {
+		return fmt.Errorf("Failed to write to %s, %v", filename, err)
+	}
+	return nil
 }
 
 func (g *Gardener) checkDuplicateHandle(knownHandles []string, handle string) error {
