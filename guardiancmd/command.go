@@ -882,7 +882,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	if cmd.useContainerd() {
 		var err error
 		var peaRunner *runcontainerd.RunContainerPea
-		runner, peaRunner, pidGetter, metricsCollector, err = wireContainerd(cmd.Containerd.Socket, bndlLoader, processBuilder, userLookupper, wireExecerFunc, statser, cmd.Containerd.UseContainerdForProcesses)
+		runner, peaRunner, pidGetter, metricsCollector, err = wireContainerd(cmd.Containerd.Socket, bndlLoader, processBuilder, userLookupper, wireExecerFunc, statser, cmd.Containerd.UseContainerdForProcesses, runcBinary)
 		if err != nil {
 			return nil, err
 		}

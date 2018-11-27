@@ -1,28 +1,36 @@
 package runcontainerd
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/cgroups"
 	"github.com/containerd/containerd/api/types"
 	"github.com/containerd/typeurl"
 )
 
+type runcState struct {
+	Created time.Time `json:"created"`
+}
 type NerdMetrics interface {
 	Metrics(log lager.Logger, containerHandle string) (*types.Metric, error)
 }
 
 type ContainerdMetricsCollector struct {
-	nerd NerdMetrics
+	nerd       NerdMetrics
+	runcBinary goci.RuncBinary
 }
 
-func NewContainerdMetricsCollector(nerd NerdMetrics) *ContainerdMetricsCollector {
+func NewContainerdMetricsCollector(nerd NerdMetrics, runcBinary goci.RuncBinary) *ContainerdMetricsCollector {
 	return &ContainerdMetricsCollector{
-		nerd: nerd,
+		nerd:       nerd,
+		runcBinary: runcBinary,
 	}
 }
 
@@ -39,10 +47,31 @@ func (c *ContainerdMetricsCollector) Collect(log lager.Logger, handles []string)
 			return nil, err
 		}
 
-		result[h] = toGardenMetrics(cgroupMetrics)
+		createdAt, err := c.getContainerCreationTime(h)
+		if err != nil {
+			return nil, err
+		}
+		containerAge := time.Since(createdAt)
+
+		result[h] = toGardenMetrics(cgroupMetrics, containerAge)
 	}
 
 	return result, nil
+}
+
+func (c *ContainerdMetricsCollector) getContainerCreationTime(id string) (time.Time, error) {
+	buf := new(bytes.Buffer)
+	stateCommand := c.runcBinary.StateCommand(id, "/tmp/runcfoo.log")
+	stateCommand.Stdout = buf
+	if err := stateCommand.Run(); err != nil {
+		return time.Now(), fmt.Errorf("runC state: %s", err)
+	}
+
+	var stateData runcState
+	if err := json.NewDecoder(buf).Decode(&stateData); err != nil {
+		return time.Now(), fmt.Errorf("decode state: %s", err)
+	}
+	return stateData.Created, nil
 }
 
 func toCgroupMetrics(nerdMetrics *types.Metric) (*cgroups.Metrics, error) {
@@ -57,9 +86,9 @@ func toCgroupMetrics(nerdMetrics *types.Metric) (*cgroups.Metrics, error) {
 	return data, nil
 }
 
-func toGardenMetrics(nerdMetrics *cgroups.Metrics) gardener.ActualContainerMetrics {
+func toGardenMetrics(nerdMetrics *cgroups.Metrics, containerAge time.Duration) gardener.ActualContainerMetrics {
 
-	statsContainerMetrics := toStatsContainerMetric(nerdMetrics)
+	statsContainerMetrics := toStatsContainerMetric(nerdMetrics, containerAge)
 	return gardener.ActualContainerMetrics{
 		StatsContainerMetrics: statsContainerMetrics,
 		CPUEntitlement: calculateEntitlement(statsContainerMetrics.Memory.HierarchicalMemoryLimit,
@@ -68,12 +97,12 @@ func toGardenMetrics(nerdMetrics *cgroups.Metrics) gardener.ActualContainerMetri
 
 }
 
-func toStatsContainerMetric(cgroupMetrics *cgroups.Metrics) gardener.StatsContainerMetrics {
+func toStatsContainerMetric(cgroupMetrics *cgroups.Metrics, containerAge time.Duration) gardener.StatsContainerMetrics {
 	return gardener.StatsContainerMetrics{
 		CPU:    toContainerCPUStat(cgroupMetrics),
 		Memory: toContainerMemoryStat(cgroupMetrics),
 		Pid:    toContainerPidStat(cgroupMetrics),
-		Age:    toContainerAge(cgroupMetrics),
+		Age:    containerAge,
 	}
 }
 
@@ -125,11 +154,6 @@ func toContainerPidStat(cgroupMetrics *cgroups.Metrics) garden.ContainerPidStat 
 		Current: cgroupMetrics.Pids.Current,
 		Max:     cgroupMetrics.Pids.Limit,
 	}
-}
-
-func toContainerAge(cgroupMetrics *cgroups.Metrics) time.Duration {
-	// TODO: ContainerD does not support getting the container age, this is a PR opportunity
-	return 1234
 }
 
 func calculateEntitlement(memoryLimitInBytes uint64, containerAge time.Duration) uint64 {

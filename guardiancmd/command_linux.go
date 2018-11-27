@@ -204,7 +204,7 @@ func wireMounts() bundlerules.Mounts {
 	}
 }
 
-func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, useContainerdForProcesses bool) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, rundmc.MetricsCollector, error) {
+func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, useContainerdForProcesses bool, runcBinary goci.RuncBinary) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, rundmc.MetricsCollector, error) {
 	containerdClient, err := containerd.New(socket)
 	if err != nil {
 		return nil, nil, nil, nil, err
@@ -223,7 +223,7 @@ func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *
 		ProcessManager: nerd,
 	}
 
-	return containerdManager, peaRunner, pidGetter, runcontainerd.NewContainerdMetricsCollector(nerd), nil
+	return containerdManager, peaRunner, pidGetter, runcontainerd.NewContainerdMetricsCollector(nerd, runcBinary), nil
 }
 
 func containerdRuncRoot() string {
