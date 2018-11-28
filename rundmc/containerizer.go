@@ -11,6 +11,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
+	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
@@ -83,30 +84,32 @@ type PeaUsernameResolver interface {
 
 // Containerizer knows how to manage a depot of container bundles
 type Containerizer struct {
-	depot               Depot
-	loader              BundleLoader
-	runtime             OCIRuntime
-	stopper             Stopper
-	nstar               NstarRunner
-	events              EventStore
-	states              StateStore
-	rootfsFileCreator   RootfsFileCreator
-	peaCreator          PeaCreator
-	peaUsernameResolver PeaUsernameResolver
+	depot                  Depot
+	loader                 BundleLoader
+	runtime                OCIRuntime
+	stopper                Stopper
+	nstar                  NstarRunner
+	events                 EventStore
+	states                 StateStore
+	rootfsFileCreator      RootfsFileCreator
+	peaCreator             PeaCreator
+	peaUsernameResolver    PeaUsernameResolver
+	cpuEntitlementPerShare float64
 }
 
-func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, events EventStore, states StateStore, rootfsFileCreator RootfsFileCreator, peaCreator PeaCreator, peaUsernameResolver PeaUsernameResolver) *Containerizer {
+func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, events EventStore, states StateStore, rootfsFileCreator RootfsFileCreator, peaCreator PeaCreator, peaUsernameResolver PeaUsernameResolver, cpuEntitlementPerShare float64) *Containerizer {
 	return &Containerizer{
-		depot:               depot,
-		runtime:             runtime,
-		loader:              loader,
-		nstar:               nstarRunner,
-		stopper:             stopper,
-		events:              events,
-		states:              states,
-		rootfsFileCreator:   rootfsFileCreator,
-		peaCreator:          peaCreator,
-		peaUsernameResolver: peaUsernameResolver,
+		depot:                  depot,
+		runtime:                runtime,
+		loader:                 loader,
+		nstar:                  nstarRunner,
+		stopper:                stopper,
+		events:                 events,
+		states:                 states,
+		rootfsFileCreator:      rootfsFileCreator,
+		peaCreator:             peaCreator,
+		peaUsernameResolver:    peaUsernameResolver,
+		cpuEntitlementPerShare: cpuEntitlementPerShare,
 	}
 }
 
@@ -285,12 +288,7 @@ func (c *Containerizer) RemoveBundle(log lager.Logger, handle string) error {
 }
 
 func (c *Containerizer) Info(log lager.Logger, handle string) (spec.ActualContainerSpec, error) {
-	bundlePath, err := c.depot.Lookup(log, handle)
-	if err != nil {
-		return spec.ActualContainerSpec{}, err
-	}
-
-	bundle, err := c.loader.Load(bundlePath)
+	bundlePath, bundle, err := c.loadBundle(log, handle)
 	if err != nil {
 		return spec.ActualContainerSpec{}, err
 	}
@@ -340,11 +338,31 @@ func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.Actua
 		return gardener.ActualContainerMetrics{}, err
 	}
 
-	return gardener.ActualContainerMetrics{
+	actualContainerMetrics := gardener.ActualContainerMetrics{
 		StatsContainerMetrics: containerMetrics,
-		CPUEntitlement: calculateEntitlement(containerMetrics.Memory.HierarchicalMemoryLimit,
-			containerMetrics.Age),
-	}, nil
+	}
+
+	_, bundle, err := c.loadBundle(log, handle)
+	if err != nil && err != depot.ErrDoesNotExist {
+		return gardener.ActualContainerMetrics{}, err
+	}
+
+	if err == nil {
+		actualContainerMetrics.CPUEntitlement = calculateCPUEntitlement(getShares(bundle), c.cpuEntitlementPerShare, containerMetrics.Age)
+	}
+
+	return actualContainerMetrics, nil
+
+}
+
+func (c *Containerizer) loadBundle(log lager.Logger, handle string) (string, goci.Bndl, error) {
+	bundlePath, err := c.depot.Lookup(log, handle)
+	if err != nil {
+		return "", goci.Bndl{}, err
+	}
+
+	bundle, err := c.loader.Load(bundlePath)
+	return bundlePath, bundle, err
 }
 
 // Handles returns a list of all container handles
@@ -352,10 +370,22 @@ func (c *Containerizer) Handles() ([]string, error) {
 	return c.depot.Handles()
 }
 
-func calculateEntitlement(memoryLimitInBytes uint64, containerAge time.Duration) uint64 {
-	return uint64(gigabytes(memoryLimitInBytes) * float64(containerAge.Nanoseconds()))
+func calculateCPUEntitlement(shares uint64, entitlementPerShare float64, containerAge time.Duration) uint64 {
+	return uint64(float64(shares) * (entitlementPerShare / 100) * float64(containerAge.Nanoseconds()))
 }
 
-func gigabytes(bytes uint64) float64 {
-	return float64(bytes) / (1024 * 1024 * 1024)
+func getShares(bundle goci.Bndl) uint64 {
+	resources := bundle.Resources()
+	if resources == nil {
+		return 0
+	}
+	cpu := resources.CPU
+	if cpu == nil {
+		return 0
+	}
+	shares := cpu.Shares
+	if shares == nil {
+		return 0
+	}
+	return *shares
 }

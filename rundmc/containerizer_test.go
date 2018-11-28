@@ -11,6 +11,7 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	specpkg "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc"
+	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	fakes "code.cloudfoundry.org/guardian/rundmc/rundmcfakes"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
@@ -56,7 +57,7 @@ var _ = Describe("Rundmc", func() {
 			return "/path/to/" + handle, nil
 		}
 
-		containerizer = rundmc.New(fakeDepot, fakeOCIRuntime, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeEventStore, fakeStateStore, fakeRootfsFileCreator, fakePeaCreator, fakePeaUsernameResolver)
+		containerizer = rundmc.New(fakeDepot, fakeOCIRuntime, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeEventStore, fakeStateStore, fakeRootfsFileCreator, fakePeaCreator, fakePeaUsernameResolver, 0)
 	})
 
 	Describe("Create", func() {
@@ -655,16 +656,42 @@ var _ = Describe("Rundmc", func() {
 			Expect(containerizer.Metrics(logger, "foo")).To(Equal(metrics))
 		})
 
-		It("return the CPU entitlement", func() {
-			fakeOCIRuntime.StatsReturns(gardener.StatsContainerMetrics{
-				Memory: garden.ContainerMemoryStat{
-					HierarchicalMemoryLimit: 100,
-				},
-				Age: time.Second,
-			}, nil)
-			actualMetrics, err := containerizer.Metrics(logger, "foo")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(actualMetrics.CPUEntitlement).To(Equal((uint64(time.Second.Nanoseconds()*100) / (1024 * 1024 * 1024))))
+		Context("when cpu entitlement per share is defined", func() {
+			var entitlementPerSharePercent float64
+
+			BeforeEach(func() {
+				entitlementPerSharePercent = 0.01
+				containerizer = rundmc.New(fakeDepot, fakeOCIRuntime, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeEventStore, fakeStateStore, fakeRootfsFileCreator, fakePeaCreator, fakePeaUsernameResolver, entitlementPerSharePercent)
+
+			})
+
+			It("return the CPU entitlement", func() {
+				cpuShares := uint64(100)
+				fakeBundleLoader.LoadReturns(goci.Bundle().WithCPUShares(specs.LinuxCPU{Shares: &cpuShares}), nil)
+
+				containerAge := time.Second * 5
+				fakeOCIRuntime.StatsReturns(gardener.StatsContainerMetrics{
+					Age: containerAge,
+				}, nil)
+
+				actualMetrics, err := containerizer.Metrics(logger, "foo")
+				Expect(err).NotTo(HaveOccurred())
+
+				expectedEntitlement := uint64(float64(cpuShares) * (entitlementPerSharePercent / 100) * float64(containerAge))
+				Expect(actualMetrics.CPUEntitlement).To(Equal(expectedEntitlement))
+			})
+
+			Context("when peas metrics are requested", func() {
+				BeforeEach(func() {
+					fakeDepot.LookupReturns("", depot.ErrDoesNotExist)
+				})
+
+				It("does not return CPU entitlement", func() {
+					actualMetrics, err := containerizer.Metrics(logger, "foo")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(actualMetrics.CPUEntitlement).To(Equal(uint64(0)))
+				})
+			})
 		})
 
 		Context("when container fails to provide stats", func() {
