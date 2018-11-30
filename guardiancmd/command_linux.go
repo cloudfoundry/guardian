@@ -237,7 +237,7 @@ func (cmd *ServerCommand) computeRuncRoot() string {
 
 	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
 	if os.Geteuid() != 0 && runtimeDir != "" {
-		return filepath.Join(runtimeDir, "runc")
+		return runtimeDir
 	}
 
 	return filepath.Join("/", "run", "runc")

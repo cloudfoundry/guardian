@@ -30,7 +30,6 @@ var _ = Describe("rootless containers", func() {
 	)
 
 	BeforeEach(func() {
-		skipIfContainerd()
 
 		setupArgs := []string{"setup",
 			"--tag", config.Tag,
@@ -82,7 +81,7 @@ var _ = Describe("rootless containers", func() {
 		config.UIDMapLength = uint32ptr(65536)
 		config.GIDMapStart = uint32ptr(100000)
 		config.GIDMapLength = uint32ptr(65536)
-		config.RuncRoot = runcRootDir
+		config.RuncRoot = filepath.Join(rootlessTmpDir, "runtime_root", "garden")
 
 		config.BindSocket = ""
 		config.Socket2meSocketPath = filepath.Join(config.TmpDir, "socket.sock")
@@ -273,7 +272,7 @@ var _ = Describe("rootless containers", func() {
 			ctr, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
-			path := filepath.Join(client.DepotDir, ctr.Handle(), "pidfile")
+			path := filepath.Join(rootlessTmpDir, "state", "io.containerd.runtime.v1.linux", "garden", ctr.Handle(), "init.pid")
 			pid := strings.TrimSpace(readFileString(path))
 
 			fdDir := filepath.Join("/proc", pid, "fd")
