@@ -3,6 +3,7 @@ package nerd
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,18 +15,24 @@ import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/errdefs"
+	"github.com/containerd/containerd/runtime/linux/runctypes"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type Nerd struct {
 	client  *containerd.Client
 	context context.Context
+	fifoDir string
 }
 
 func New(client *containerd.Client, context context.Context) *Nerd {
+	// We need to override this value. If we don't, containerd will try to mkdir /run/containerd and fail with Persmission denided.
+	fifoDir, _ := ioutil.TempDir("", "")
+
 	return &Nerd{
 		client:  client,
 		context: context,
+		fifoDir: fifoDir,
 	}
 }
 
@@ -37,7 +44,7 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, pi
 	}
 
 	log.Debug("creating-task", lager.Data{"containerID": containerID})
-	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(pio)), containerd.WithNoNewKeyring)
+	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(pio), cio.WithFIFODir(n.fifoDir)), containerd.WithNoNewKeyring, WithCurrentUIDAndGID)
 	if err != nil {
 		return err
 	}
@@ -49,6 +56,22 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, pi
 	}
 
 	return task.CloseIO(n.context, containerd.WithStdinCloser)
+}
+
+func WithCurrentUIDAndGID(ctx context.Context, client *containerd.Client, taskInfo *containerd.TaskInfo) error {
+	if taskInfo.Options == nil {
+		taskInfo.Options = &runctypes.CreateOptions{}
+	}
+
+	opts, ok := taskInfo.Options.(*runctypes.CreateOptions)
+	if !ok {
+		return errors.New("could not cast TaskInfo Options to CreateOptions")
+	}
+
+	opts.IoUid = uint32(syscall.Geteuid())
+	opts.IoGid = uint32(syscall.Getegid())
+
+	return nil
 }
 
 func withProcessKillLogging(log lager.Logger) func(context.Context, containerd.Process) error {
@@ -129,7 +152,7 @@ func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs
 	}
 
 	log.Debug("execing-task", lager.Data{"containerID": containerID, "processID": processID})
-	process, err := task.Exec(n.context, processID, spec, cio.NewCreator(withProcessIO(processIO)))
+	process, err := task.Exec(n.context, processID, spec, cio.NewCreator(withProcessIO(processIO), cio.WithFIFODir(n.fifoDir)))
 	if err != nil {
 		return err
 	}
