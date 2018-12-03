@@ -34,6 +34,14 @@
   revision = "baf208c4c56b0a06ddec4a03c0348d072261d43a"
 
 [[projects]]
+  digest = "1:9f3b30d9f8e0d7040f729b82dcbc8f0dead820a133b3147ce355fc451f32d761"
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005"
+  version = "v0.3.1"
+
+[[projects]]
   digest = "1:bf42be3cb1519bf8018dfd99720b1005ee028d947124cab3ccf965da59381df6"
   name = "github.com/Microsoft/go-winio"
   packages = ["."]
@@ -108,7 +116,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:777db8239fe5fee698852e3df8431d909c6ed0aea5cfd0e754e317baca6f511e"
+  digest = "1:246cacee474bc463cae6b5453746ae38926201178aaa68633094ef158e094bdf"
   name = "github.com/containers/image"
   packages = [
     "directory/explicitfilepath",
@@ -121,12 +129,13 @@
     "oci/layout",
     "pkg/docker/config",
     "pkg/strslice",
+    "pkg/sysregistriesv2",
     "pkg/tlsclientconfig",
     "transports",
     "types",
   ]
   pruneopts = "UT"
-  revision = "4b6d9cf918c1e79a605265568c93cb35185ad25d"
+  revision = "63a1cbdc5e6537056695cf0d627c0a33b334df53"
 
 [[projects]]
   branch = "master"

@@ -292,7 +292,7 @@ func createSystemContext(baseImageURL *url.URL, createConfig config.Create, user
 	switch scheme {
 	case "docker":
 		return types.SystemContext{
-			DockerInsecureSkipTLSVerify: skipTLSValidation(baseImageURL, createConfig.InsecureRegistries),
+			DockerInsecureSkipTLSVerify: types.NewOptionalBool(skipTLSValidation(baseImageURL, createConfig.InsecureRegistries)),
 			DockerAuthConfig: &types.DockerAuthConfig{
 				Username: username,
 				Password: password,

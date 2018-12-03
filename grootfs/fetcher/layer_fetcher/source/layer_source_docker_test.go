@@ -162,7 +162,7 @@ var _ = Describe("Layer source: Docker", func() {
 					fakeRegistry.ForceTokenAuthError()
 					baseImageURL = integration.String2URL(fmt.Sprintf("docker://%s/doesnt-matter-because-fake-registry", fakeRegistry.Addr()))
 
-					systemContext.DockerInsecureSkipTLSVerify = true
+					systemContext.DockerInsecureSkipTLSVerify = types.OptionalBoolTrue
 				})
 
 				AfterEach(func() {
@@ -295,7 +295,7 @@ var _ = Describe("Layer source: Docker", func() {
 			fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
 			fakeRegistry.Start()
 
-			systemContext.DockerInsecureSkipTLSVerify = true
+			systemContext.DockerInsecureSkipTLSVerify = types.OptionalBoolTrue
 			baseImageURL, err = url.Parse(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -369,7 +369,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 		Context("when the private registry is whitelisted", func() {
 			BeforeEach(func() {
-				systemContext.DockerInsecureSkipTLSVerify = true
+				systemContext.DockerInsecureSkipTLSVerify = types.OptionalBoolTrue
 			})
 
 			It("fetches the manifest", func() {
@@ -528,7 +528,7 @@ var _ = Describe("Layer source: Docker", func() {
 				baseImageURL, err = url.Parse(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
 				Expect(err).NotTo(HaveOccurred())
 
-				systemContext.DockerInsecureSkipTLSVerify = true
+				systemContext.DockerInsecureSkipTLSVerify = types.OptionalBoolTrue
 
 				layerInfo.MediaType = "gzip"
 			})
@@ -587,7 +587,7 @@ var _ = Describe("Layer source: Docker", func() {
 					fakeRegistry.ForceTokenAuthError()
 					baseImageURL = integration.String2URL(fmt.Sprintf("docker://%s/doesnt-matter-because-fake-registry", fakeRegistry.Addr()))
 
-					systemContext.DockerInsecureSkipTLSVerify = true
+					systemContext.DockerInsecureSkipTLSVerify = types.OptionalBoolTrue
 				})
 
 				AfterEach(func() {
@@ -640,7 +640,7 @@ var _ = Describe("Layer source: Docker", func() {
 				baseImageURL, err = url.Parse(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
 				Expect(err).NotTo(HaveOccurred())
 
-				systemContext.DockerInsecureSkipTLSVerify = true
+				systemContext.DockerInsecureSkipTLSVerify = types.OptionalBoolTrue
 			})
 
 			AfterEach(func() {
