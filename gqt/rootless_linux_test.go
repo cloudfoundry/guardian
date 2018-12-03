@@ -23,7 +23,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("rootless containers", func() {
+var _ = FDescribe("rootless containers", func() {
 	var (
 		client    *runner.RunningGarden
 		imagePath string
