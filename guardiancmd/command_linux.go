@@ -28,7 +28,6 @@ import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/leases"
 	"github.com/containerd/containerd/namespaces"
-	"github.com/containerd/containerd/runtime/v1/linux/proc"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
@@ -204,7 +203,7 @@ func wireMounts() bundlerules.Mounts {
 	}
 }
 
-func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, useContainerdForProcesses bool) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, error) {
+func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, useContainerdForProcesses bool, containerdRuntimeRoot string) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, error) {
 	containerdClient, err := containerd.New(socket)
 	if err != nil {
 		return nil, nil, nil, err
@@ -214,7 +213,7 @@ func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *
 	nerd := nerd.New(containerdClient, ctx)
 	pidGetter := &runcontainerd.PidGetter{Nerd: nerd}
 
-	cgroupManager := runcontainerd.NewCgroupManager(containerdRuncRoot(), containerdNamespace)
+	cgroupManager := runcontainerd.NewCgroupManager(containerdRuntimeRoot, containerdNamespace)
 
 	containerdManager := runcontainerd.New(nerd, nerd, bndlLoader, processBuilder, userLookupper, wireExecer(pidGetter), statser, useContainerdForProcesses, cgroupManager)
 
@@ -226,13 +225,9 @@ func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *
 	return containerdManager, peaRunner, pidGetter, nil
 }
 
-func containerdRuncRoot() string {
-	return proc.RuncRoot
-}
-
 func (cmd *ServerCommand) computeRuncRoot() string {
 	if cmd.useContainerd() {
-		return filepath.Join(containerdRuncRoot(), containerdNamespace)
+		return filepath.Join(cmd.Containerd.ContainerdRuntimeRoot, containerdNamespace)
 	}
 
 	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")

@@ -281,6 +281,7 @@ type ServerCommand struct {
 	Containerd struct {
 		Socket                    string `long:"containerd-socket" description:"Path to a containerd socket."`
 		UseContainerdForProcesses bool   `long:"use-containerd-for-processes" description:"Use containerd to run processes in containers."`
+		ContainerdRuntimeRoot     string `long:"containerd-runtime-root" description:"Path to the containerd runtime root, must be the same as containerd's runtime_root property"`
 	} `group:"Containerd"`
 }
 
@@ -882,7 +883,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	if cmd.useContainerd() {
 		var err error
 		var peaRunner *runcontainerd.RunContainerPea
-		runner, peaRunner, pidGetter, err = wireContainerd(cmd.Containerd.Socket, bndlLoader, processBuilder, userLookupper, wireExecerFunc, statser, cmd.Containerd.UseContainerdForProcesses)
+		runner, peaRunner, pidGetter, err = wireContainerd(cmd.Containerd.Socket, bndlLoader, processBuilder, userLookupper, wireExecerFunc, statser, cmd.Containerd.UseContainerdForProcesses, cmd.Containerd.ContainerdRuntimeRoot)
 		if err != nil {
 			return nil, err
 		}

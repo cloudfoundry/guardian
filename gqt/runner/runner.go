@@ -91,6 +91,7 @@ type GdnRunnerConfig struct {
 	NetworkPool                    string   `flag:"network-pool"`
 	ContainerdSocket               string   `flag:"containerd-socket"`
 	UseContainerdForProcesses      *bool    `flag:"use-containerd-for-processes"`
+	ContainerdRuntimeRoot          string   `flag:"containerd-runtime-root"`
 
 	StartupExpectedToFail bool
 	StorePath             string
