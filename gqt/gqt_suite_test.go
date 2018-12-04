@@ -392,6 +392,7 @@ func startContainerd(runDir string) *gexec.Session {
 	containerdConfig := containerdrunner.ContainerdConfig(runDir)
 	config.ContainerdSocket = containerdConfig.GRPC.Address
 	config.UseContainerdForProcesses = boolptr(true)
+	config.ContainerdRuntimeRoot = containerdConfig.Plugins.Linux.RuntimeRoot
 	return containerdrunner.NewSession(runDir, containerdConfig)
 }
 
