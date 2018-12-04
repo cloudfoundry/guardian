@@ -35,7 +35,6 @@ var _ = Describe("Init process", func() {
 		Eventually(countPsOccurances).Should(Equal(1))
 
 		psOut := string(runPs())
-		fmt.Println(psOut)
 		matchingPsLines := []string{}
 		psLines := strings.Split(psOut, "\n")
 		for _, psLine := range psLines {
@@ -45,7 +44,7 @@ var _ = Describe("Init process", func() {
 			matchingPsLines = append(matchingPsLines, psLine)
 		}
 
-		Expect(strings.Join(matchingPsLines, "\n")).NotTo(ContainSubstring("defunct"))
+		Expect(strings.Join(matchingPsLines, "\n")).NotTo(ContainSubstring("defunct"), fmt.Sprintf("\n\nps output:\n%s\n\n", psOut))
 	})
 })
 
