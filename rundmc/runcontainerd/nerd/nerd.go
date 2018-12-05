@@ -164,25 +164,23 @@ func (n *Nerd) DeleteProcess(log lager.Logger, containerID, processID string) er
 
 func withProcessIO(processIO func() (io.Reader, io.Writer, io.Writer)) cio.Opt {
 	return func(opt *cio.Streams) {
-		stdIn, stdOut, stdErr := processIO()
-		if stdIn != nil {
-			opt.Stdin = stdIn
-		} else {
-			opt.Stdin = bytes.NewBuffer(nil)
-		}
-
-		if stdOut != nil {
-			opt.Stdout = stdOut
-		} else {
-			opt.Stdout = ioutil.Discard
-		}
-
-		if stdErr != nil {
-			opt.Stderr = stdErr
-		} else {
-			opt.Stderr = ioutil.Discard
-		}
+		stdin, stdout, stderr := processIO()
+		cio.WithStreams(orEmpty(stdin), orDiscard(stdout), orDiscard(stderr))(opt)
 	}
+}
+
+func orEmpty(r io.Reader) io.Reader {
+	if r != nil {
+		return r
+	}
+	return bytes.NewBuffer(nil)
+}
+
+func orDiscard(w io.Writer) io.Writer {
+	if w != nil {
+		return w
+	}
+	return ioutil.Discard
 }
 
 func (n *Nerd) GetContainerPID(log lager.Logger, containerID string) (uint32, error) {
