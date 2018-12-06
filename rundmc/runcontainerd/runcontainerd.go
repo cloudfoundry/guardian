@@ -30,7 +30,6 @@ type ContainerManager interface {
 type ProcessManager interface {
 	Wait(log lager.Logger, containerID, processID string) (int, error)
 	Signal(log lager.Logger, containerID, processID string, signal syscall.Signal) error
-	DeleteProcess(log lager.Logger, containerID, processID string) error
 }
 
 //go:generate counterfeiter . BundleLoader

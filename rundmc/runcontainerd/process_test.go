@@ -59,14 +59,6 @@ var _ = Describe("Containerd Process", func() {
 			Expect(actualProcessID).To(Equal("process-id"))
 		})
 
-		It("deletes the process", func() {
-			Expect(processManager.DeleteProcessCallCount()).To(Equal(1))
-
-			_, actualContainerID, actualProcessID := processManager.DeleteProcessArgsForCall(0)
-			Expect(actualContainerID).To(Equal("container-id"))
-			Expect(actualProcessID).To(Equal("process-id"))
-		})
-
 		Context("when waiting for the proccess fails", func() {
 			BeforeEach(func() {
 				processManager.WaitReturns(-1, errors.New("FAIL"))

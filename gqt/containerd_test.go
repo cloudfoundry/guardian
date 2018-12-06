@@ -2,6 +2,7 @@ package gqt_test
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os/exec"
 	"path/filepath"
@@ -9,10 +10,13 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	"github.com/containerd/containerd/defaults"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+
+	uuid "github.com/nu7hatch/gouuid"
 )
 
 var _ = Describe("Containerd", func() {
@@ -164,17 +168,52 @@ var _ = Describe("Containerd", func() {
 				Eventually(stdout).Should(gbytes.Say("hello alice"))
 			})
 
-			It("can get the exit code of a process", func() {
-				process, err := container.Run(garden.ProcessSpec{
-					Path: "/bin/sh",
-					Args: []string{"-c", "exit 17"},
-				}, garden.ProcessIO{})
-				Expect(err).NotTo(HaveOccurred())
+			Describe("Wait", func() {
+				var (
+					process   garden.Process
+					processID string
+				)
 
-				exitCode, err := process.Wait()
-				Expect(err).NotTo(HaveOccurred())
+				JustBeforeEach(func() {
+					// We can get rid of specifying the ID when https://www.pivotaltracker.com/story/show/162442843 gets fixed
+					randomID, err := uuid.NewV4()
+					Expect(err).NotTo(HaveOccurred())
+					processID = randomID.String()
 
-				Expect(exitCode).To(Equal(17))
+					process, err = container.Run(garden.ProcessSpec{
+						ID:   processID,
+						Path: "/bin/sh",
+						Args: []string{"-c", "exit 17"},
+					}, garden.ProcessIO{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("can get the exit code of a process", func() {
+					Expect(process.Wait()).To(Equal(17))
+				})
+
+				It("can call Wait more than once on the same process", func() {
+					Expect(process.Wait()).To(Equal(17))
+					Expect(process.Wait()).To(Equal(17))
+				})
+
+				Context("when cleanup-process-dirs-on-wait is enabled", func() {
+					BeforeEach(func() {
+						config.CleanupProcessDirsOnWait = boolptr(true)
+					})
+
+					It("deletes all state files for that process", func() {
+						pidFile := filepath.Join(containerdRunDir, "state/io.containerd.runtime.v1.linux", "garden", container.Handle(), processID+".pid")
+						Expect(pidFile).To(BeAnExistingFile())
+
+						Expect(getFifos(processID)).To(HaveLen(3))
+
+						Expect(process.Wait()).To(Equal(17))
+
+						Expect(pidFile).NotTo(BeAnExistingFile())
+						Expect(getFifos(processID)).To(HaveLen(0))
+					})
+				})
 			})
 
 			Describe("Stdio", func() {
@@ -441,4 +480,10 @@ func runCtr(ctr, socket string, args []string) string {
 	Eventually(session).Should(gexec.Exit(0), string(session.Err.Contents()))
 
 	return string(session.Out.Contents())
+}
+
+func getFifos(processID string) []string {
+	fifos, err := filepath.Glob(fmt.Sprintf("%s/*/%s-*", defaults.DefaultFIFODir, processID))
+	Expect(err).NotTo(HaveOccurred())
+	return fifos
 }

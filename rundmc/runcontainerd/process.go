@@ -31,7 +31,7 @@ func (p *Process) Wait() (int, error) {
 		return -1, err
 	}
 
-	return exitCode, p.processManager.DeleteProcess(p.log, p.containerID, p.processID)
+	return exitCode, nil
 }
 
 func (p *PeaProcess) Wait() (int, error) {

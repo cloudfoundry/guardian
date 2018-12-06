@@ -30,14 +30,15 @@ import (
 
 var _ = Describe("Nerd", func() {
 	var (
-		testLogger  lager.Logger
-		cnerd       *nerd.Nerd
-		containerID string
-		processID   string
-		processIO   func() (io.Reader, io.Writer, io.Writer)
-		stdin       io.Reader
-		stdout      io.Writer
-		stderr      io.Writer
+		testLogger               lager.Logger
+		cnerd                    *nerd.Nerd
+		cleanupProcessDirsOnWait bool
+		containerID              string
+		processID                string
+		processIO                func() (io.Reader, io.Writer, io.Writer)
+		stdin                    io.Reader
+		stdout                   io.Writer
+		stderr                   io.Writer
 	)
 
 	BeforeEach(func() {
@@ -49,9 +50,12 @@ var _ = Describe("Nerd", func() {
 		processIO = func() (io.Reader, io.Writer, io.Writer) {
 			return stdin, stdout, stderr
 		}
-
+		cleanupProcessDirsOnWait = false
 		testLogger = lagertest.NewTestLogger("nerd-test")
-		cnerd = nerd.New(containerdClient, containerdContext)
+
+	})
+	JustBeforeEach(func() {
+		cnerd = nerd.New(containerdClient, containerdContext, cleanupProcessDirsOnWait)
 	})
 
 	Describe("Create", func() {
@@ -99,7 +103,7 @@ var _ = Describe("Nerd", func() {
 	})
 
 	Describe("Exec", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
 			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 		})
@@ -179,12 +183,7 @@ var _ = Describe("Nerd", func() {
 	})
 
 	Describe("Wait", func() {
-		var (
-			exitCode int
-			waitErr  error
-		)
-
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
 			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 
@@ -195,8 +194,6 @@ var _ = Describe("Nerd", func() {
 
 			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 			Expect(err).NotTo(HaveOccurred())
-
-			exitCode, waitErr = cnerd.Wait(testLogger, containerID, processID)
 		})
 
 		AfterEach(func() {
@@ -204,16 +201,59 @@ var _ = Describe("Nerd", func() {
 		})
 
 		It("succeeds", func() {
-			Expect(waitErr).NotTo(HaveOccurred())
+			_, err := cnerd.Wait(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns the exit code", func() {
+			exitCode, err := cnerd.Wait(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCode).To(Equal(17))
+		})
+
+		It("allows you to call Wait more than once", func() {
+			_, err := cnerd.Wait(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = cnerd.Wait(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		Context("when CleanupProcessDirsOnWait=true", func() {
+			BeforeEach(func() {
+				cleanupProcessDirsOnWait = true
+			})
+
+			It("removes process metadata", func() {
+				_, err := cnerd.Wait(testLogger, containerID, processID)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = cnerd.Wait(testLogger, containerID, processID)
+				Expect(err).To(MatchError(ContainSubstring("not found")))
+			})
+
+			It("cleans up fifo files", func() {
+				_, err := cnerd.Wait(testLogger, containerID, processID)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(getFifos("hello-potato")).To(HaveLen(0))
+			})
+
+			Context("when the container does not exist", func() {
+				JustBeforeEach(func() {
+					cnerd.Delete(testLogger, containerID)
+				})
+
+				It("fails", func() {
+					_, err := cnerd.Wait(testLogger, "i-should-not-exist", processID)
+					Expect(err).To(MatchError(ContainSubstring("not found")))
+				})
+			})
 		})
 	})
 
 	Describe("Signal", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
 			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 			stdoutBuffer := gbytes.NewBuffer()
@@ -259,7 +299,7 @@ var _ = Describe("Nerd", func() {
 	})
 
 	Describe("Delete", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
 			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 		})
@@ -273,7 +313,7 @@ var _ = Describe("Nerd", func() {
 	})
 
 	Describe("State", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
 			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 		})
@@ -292,7 +332,7 @@ var _ = Describe("Nerd", func() {
 	})
 
 	Describe("GetContainerPID", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
 			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 		})
@@ -306,45 +346,6 @@ var _ = Describe("Nerd", func() {
 			containerPid, err := cnerd.GetContainerPID(testLogger, containerID)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(procls).To(ContainSubstring(strconv.Itoa(int(containerPid))))
-		})
-	})
-
-	Describe("DeleteProcess", func() {
-		BeforeEach(func() {
-			spec := generateSpec(containerdContext, containerdClient, containerID)
-			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
-
-			processSpec := &specs.Process{
-				Args: []string{"/bin/sh", "-c", "exit 17"},
-				Cwd:  "/",
-			}
-
-			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
-			Expect(err).NotTo(HaveOccurred())
-
-			exitCode, err := cnerd.Wait(testLogger, containerID, processID)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(exitCode).To(Equal(17))
-		})
-
-		AfterEach(func() {
-			cnerd.Delete(testLogger, containerID)
-		})
-
-		It("removes process metadata", func() {
-			err := cnerd.DeleteProcess(testLogger, containerID, processID)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = cnerd.DeleteProcess(testLogger, containerID, processID)
-			Expect(err).To(MatchError(ContainSubstring("not found")))
-		})
-
-		Context("when the container does not exist", func() {
-			It("fails", func() {
-				err := cnerd.DeleteProcess(testLogger, "foo", processID)
-
-				Expect(err).To(HaveOccurred())
-			})
 		})
 	})
 })
@@ -401,4 +402,10 @@ func randomString(len int) string {
 		bytes[i] = byte(randomInt(65, 90))
 	}
 	return string(bytes)
+}
+
+func getFifos(processID string) []string {
+	fifos, err := filepath.Glob(fmt.Sprintf("%s/*/%s-*", nerd.FIFODir, processID))
+	Expect(err).NotTo(HaveOccurred())
+	return fifos
 }

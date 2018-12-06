@@ -99,6 +99,10 @@ func (f *WindowsFactory) WireMkdirer() runrunc.Mkdirer {
 	return mkdirer{}
 }
 
+func (f *WindowsFactory) WireContainerd(bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, error) {
+	return nil, nil, nil, errors.New("containerd not impletemented on windows")
+}
+
 func wireEnvFunc() processes.EnvFunc {
 	return processes.WindowsEnvFor
 }
@@ -148,11 +152,6 @@ func mustGetMaxValidUID() int {
 
 func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
 	panic("this should be unreachable: no sockets on Windows")
-}
-
-func wireContainerd(socket string, bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper,
-	wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser *runrunc.Statser, useContainerdForProcesses bool) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, error) {
-	return nil, nil, nil, errors.New("containerd not impletemented on windows")
 }
 
 func containerdRuncRoot() string {

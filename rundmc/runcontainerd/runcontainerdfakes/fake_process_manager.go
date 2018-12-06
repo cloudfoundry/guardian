@@ -39,19 +39,6 @@ type FakeProcessManager struct {
 	signalReturnsOnCall map[int]struct {
 		result1 error
 	}
-	DeleteProcessStub        func(log lager.Logger, containerID, processID string) error
-	deleteProcessMutex       sync.RWMutex
-	deleteProcessArgsForCall []struct {
-		log         lager.Logger
-		containerID string
-		processID   string
-	}
-	deleteProcessReturns struct {
-		result1 error
-	}
-	deleteProcessReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -160,56 +147,6 @@ func (fake *FakeProcessManager) SignalReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeProcessManager) DeleteProcess(log lager.Logger, containerID string, processID string) error {
-	fake.deleteProcessMutex.Lock()
-	ret, specificReturn := fake.deleteProcessReturnsOnCall[len(fake.deleteProcessArgsForCall)]
-	fake.deleteProcessArgsForCall = append(fake.deleteProcessArgsForCall, struct {
-		log         lager.Logger
-		containerID string
-		processID   string
-	}{log, containerID, processID})
-	fake.recordInvocation("DeleteProcess", []interface{}{log, containerID, processID})
-	fake.deleteProcessMutex.Unlock()
-	if fake.DeleteProcessStub != nil {
-		return fake.DeleteProcessStub(log, containerID, processID)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.deleteProcessReturns.result1
-}
-
-func (fake *FakeProcessManager) DeleteProcessCallCount() int {
-	fake.deleteProcessMutex.RLock()
-	defer fake.deleteProcessMutex.RUnlock()
-	return len(fake.deleteProcessArgsForCall)
-}
-
-func (fake *FakeProcessManager) DeleteProcessArgsForCall(i int) (lager.Logger, string, string) {
-	fake.deleteProcessMutex.RLock()
-	defer fake.deleteProcessMutex.RUnlock()
-	return fake.deleteProcessArgsForCall[i].log, fake.deleteProcessArgsForCall[i].containerID, fake.deleteProcessArgsForCall[i].processID
-}
-
-func (fake *FakeProcessManager) DeleteProcessReturns(result1 error) {
-	fake.DeleteProcessStub = nil
-	fake.deleteProcessReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeProcessManager) DeleteProcessReturnsOnCall(i int, result1 error) {
-	fake.DeleteProcessStub = nil
-	if fake.deleteProcessReturnsOnCall == nil {
-		fake.deleteProcessReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.deleteProcessReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *FakeProcessManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -217,8 +154,6 @@ func (fake *FakeProcessManager) Invocations() map[string][][]interface{} {
 	defer fake.waitMutex.RUnlock()
 	fake.signalMutex.RLock()
 	defer fake.signalMutex.RUnlock()
-	fake.deleteProcessMutex.RLock()
-	defer fake.deleteProcessMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
