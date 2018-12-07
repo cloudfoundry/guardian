@@ -212,17 +212,6 @@ func (n *Nerd) Wait(log lager.Logger, containerID, processID string) (int, error
 		return 0, err
 	}
 
-	defer func() {
-		if n.cleanupProcessDirsOnWait {
-			_, err = process.Delete(n.context)
-			if err != nil {
-				log.Error("cleanup-failed-deleting-process", err)
-			}
-
-			removeFifos(log, process.ID())
-		}
-	}()
-
 	exitCh, err := process.Wait(n.context)
 	if err != nil {
 		return 0, err
@@ -232,6 +221,15 @@ func (n *Nerd) Wait(log lager.Logger, containerID, processID string) (int, error
 	exitStatus := <-exitCh
 	if exitStatus.Error() != nil {
 		return 0, exitStatus.Error()
+	}
+
+	if n.cleanupProcessDirsOnWait {
+		_, err = process.Delete(n.context)
+		if err != nil {
+			log.Error("cleanup-failed-deleting-process", err)
+		}
+
+		removeFifos(log, process.ID())
 	}
 
 	return int(exitStatus.ExitCode()), nil
