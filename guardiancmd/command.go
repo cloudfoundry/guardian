@@ -819,7 +819,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		"unprivileged": unprivilegedBundle,
 	})
 
-	cgroupRootPath := "garden"
+	cgroupRootPath := "M5QXEZDFNY------/garden"
 	if cmd.Server.Tag != "" {
 		cgroupRootPath = fmt.Sprintf("%s-%s", cgroupRootPath, cmd.Server.Tag)
 	}
