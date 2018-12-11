@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -232,11 +233,11 @@ var _ = Describe("Nerd", func() {
 				Expect(err).To(MatchError(ContainSubstring("not found")))
 			})
 
-			It("cleans up fifo files", func() {
+			It("removes all process state files", func() {
 				_, err := cnerd.Wait(testLogger, containerID, processID)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(getFifos("hello-potato")).To(HaveLen(0))
+				Expect(findFilesContaining(processID)).To(BeFalse())
 			})
 
 			Context("when the container does not exist", func() {
@@ -404,8 +405,13 @@ func randomString(len int) string {
 	return string(bytes)
 }
 
-func getFifos(processID string) []string {
-	fifos, err := filepath.Glob(fmt.Sprintf("%s/*/%s-*", nerd.FIFODir, processID))
-	Expect(err).NotTo(HaveOccurred())
-	return fifos
+func findFilesContaining(substring string) bool {
+	filenames, _ := exec.Command("/usr/bin/find", "/", "-name", fmt.Sprintf("*%s*", substring)).Output()
+	if strings.Contains(string(filenames), substring) {
+		info := fmt.Sprintf("\nOutput of 'find': \n%s\nLooking for %s\n\n", filenames, substring)
+		GinkgoWriter.Write([]byte(info))
+		return true
+	}
+
+	return false
 }

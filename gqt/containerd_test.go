@@ -10,7 +10,6 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
-	"github.com/containerd/containerd/defaults"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -203,15 +202,9 @@ var _ = Describe("Containerd", func() {
 					})
 
 					It("deletes all state files for that process", func() {
-						pidFile := filepath.Join(containerdRunDir, "state/io.containerd.runtime.v1.linux", "garden", container.Handle(), processID+".pid")
-						Expect(pidFile).To(BeAnExistingFile())
-
-						Expect(getFifos(processID)).To(HaveLen(3))
-
 						Expect(process.Wait()).To(Equal(17))
 
-						Expect(pidFile).NotTo(BeAnExistingFile())
-						Expect(getFifos(processID)).To(HaveLen(0))
+						Expect(findFilesContaining(processID)).To(BeFalse())
 					})
 				})
 			})
@@ -482,8 +475,13 @@ func runCtr(ctr, socket string, args []string) string {
 	return string(session.Out.Contents())
 }
 
-func getFifos(processID string) []string {
-	fifos, err := filepath.Glob(fmt.Sprintf("%s/*/%s-*", defaults.DefaultFIFODir, processID))
-	Expect(err).NotTo(HaveOccurred())
-	return fifos
+func findFilesContaining(substring string) bool {
+	filenames, _ := exec.Command("/usr/bin/find", "/", "-name", fmt.Sprintf("*%s*", substring)).Output()
+	if strings.Contains(string(filenames), substring) {
+		info := fmt.Sprintf("\nOutput of 'find': \n%s\nLooking for %s\n\n", filenames, substring)
+		GinkgoWriter.Write([]byte(info))
+		return true
+	}
+
+	return false
 }

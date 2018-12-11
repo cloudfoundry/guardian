@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
-	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -15,12 +13,9 @@ import (
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
-	"github.com/containerd/containerd/defaults"
 	"github.com/containerd/containerd/errdefs"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
-
-const FIFODir = defaults.DefaultFIFODir
 
 type Nerd struct {
 	client                   *containerd.Client
@@ -44,7 +39,7 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, pi
 	}
 
 	log.Debug("creating-task", lager.Data{"containerID": containerID})
-	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(pio), cio.WithFIFODir(FIFODir)), containerd.WithNoNewKeyring)
+	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(pio)), containerd.WithNoNewKeyring)
 	if err != nil {
 		return err
 	}
@@ -136,7 +131,7 @@ func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs
 	}
 
 	log.Debug("execing-task", lager.Data{"containerID": containerID, "processID": processID})
-	process, err := task.Exec(n.context, processID, spec, cio.NewCreator(withProcessIO(processIO), cio.WithFIFODir(FIFODir)))
+	process, err := task.Exec(n.context, processID, spec, cio.NewCreator(withProcessIO(processIO)))
 	if err != nil {
 		return err
 	}
@@ -191,7 +186,7 @@ func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (conta
 	}
 
 	log.Debug("loading-task", lager.Data{"containerID": containerID})
-	task, err := container.Task(n.context, nil)
+	task, err := container.Task(n.context, cio.Load)
 	if errdefs.IsNotFound(err) {
 		log.Debug("task-not-found", lager.Data{"containerID": containerID})
 		return container, nil, &TaskNotFoundError{Handle: containerID}
@@ -207,7 +202,7 @@ func (n *Nerd) Wait(log lager.Logger, containerID, processID string) (int, error
 		return 0, err
 	}
 
-	process, err := task.LoadProcess(n.context, processID, nil)
+	process, err := task.LoadProcess(n.context, processID, cio.Load)
 	if err != nil {
 		return 0, err
 	}
@@ -228,8 +223,6 @@ func (n *Nerd) Wait(log lager.Logger, containerID, processID string) (int, error
 		if err != nil {
 			log.Error("cleanup-failed-deleting-process", err)
 		}
-
-		removeFifos(log, process.ID())
 	}
 
 	return int(exitStatus.ExitCode()), nil
@@ -242,23 +235,10 @@ func (n *Nerd) Signal(log lager.Logger, containerID, processID string, signal sy
 		return err
 	}
 
-	process, err := task.LoadProcess(n.context, processID, nil)
+	process, err := task.LoadProcess(n.context, processID, cio.Load)
 	if err != nil {
 		return err
 	}
 
 	return process.Kill(n.context, signal)
-}
-
-func removeFifos(log lager.Logger, processID string) {
-	processFifos, err := filepath.Glob(fmt.Sprintf("%s/*/%s-*", FIFODir, processID))
-	if err != nil {
-		log.Error("cleanup-failed-getting-fifos", err)
-	}
-
-	for _, fifo := range processFifos {
-		if err := os.RemoveAll(filepath.Dir(fifo)); err != nil {
-			log.Error("cleanup-failed-removing-fifos", err)
-		}
-	}
 }
