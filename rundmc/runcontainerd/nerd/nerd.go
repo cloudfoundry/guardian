@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"strconv"
 	"syscall"
 	"time"
@@ -31,7 +30,7 @@ func New(client *containerd.Client, context context.Context) *Nerd {
 	return &Nerd{
 		client:  client,
 		context: context,
-		fifoDir: os.TempDir(),
+		fifoDir: "/var/vcap/data/containerd/runc/user/4294967294/fifos",
 	}
 }
 
