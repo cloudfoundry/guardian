@@ -7,10 +7,10 @@ import (
 
 func Load(path string) (*Manager, error) {
 	f, err := os.Open(path)
-	defer f.Close()
 	if err != nil {
 		return NewManager(), nil
 	}
+	defer f.Close()
 
 	var mgr Manager
 	if err := json.NewDecoder(f).Decode(&mgr); err != nil {
@@ -22,10 +22,10 @@ func Load(path string) (*Manager, error) {
 
 func Save(path string, mgr *Manager) error {
 	f, err := os.Create(path)
-	defer f.Close()
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	return json.NewEncoder(f).Encode(mgr)
 }

@@ -1,9 +1,8 @@
 package properties_test
 
 import (
-	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 
 	"code.cloudfoundry.org/guardian/properties"
 
@@ -13,17 +12,17 @@ import (
 
 var _ = Describe("SaveLoad", func() {
 	var (
+		workDir  string
 		propPath string
 	)
 
 	BeforeEach(func() {
-		var err error
-		propPath, err = ioutil.TempDir("", "")
-		Expect(err).NotTo(HaveOccurred())
+		workDir = tempDir("", "")
+		propPath = filepath.Join(workDir, "props.json")
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(propPath)).To(Succeed())
+		Expect(os.RemoveAll(workDir)).To(Succeed())
 	})
 
 	It("returns a new manager when the file is not found", func() {
@@ -36,8 +35,8 @@ var _ = Describe("SaveLoad", func() {
 		mgr := properties.NewManager()
 		mgr.Set("foo", "bar", "baz")
 
-		Expect(properties.Save(path.Join(propPath, "props.json"), mgr)).To(Succeed())
-		newMgr, err := properties.Load(path.Join(propPath, "props.json"))
+		Expect(properties.Save(propPath, mgr)).To(Succeed())
+		newMgr, err := properties.Load(propPath)
 		Expect(err).NotTo(HaveOccurred())
 
 		val, ok := newMgr.Get("foo", "bar")
@@ -46,9 +45,9 @@ var _ = Describe("SaveLoad", func() {
 	})
 
 	It("returns an error when decoding fails", func() {
-		Expect(ioutil.WriteFile(path.Join(propPath, "props.json"), []byte("{teest: banana"), 0655)).To(Succeed())
+		writeFileString(propPath, "{teest: banana", 0655)
 
-		_, err := properties.Load(path.Join(propPath, "props.json"))
+		_, err := properties.Load(propPath)
 		Expect(err).To(HaveOccurred())
 	})
 
