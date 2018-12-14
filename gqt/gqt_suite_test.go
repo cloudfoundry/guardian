@@ -381,11 +381,7 @@ func skipIfDev() {
 }
 
 func getRuncRoot() string {
-	if config.ContainerdSocket != "" {
-		return "/run/containerd/runc/garden"
-	}
-
-	return "/run/runc"
+	return config.ContainerdRuntimeRoot
 }
 
 func startContainerd(runDir string) *gexec.Session {
