@@ -422,6 +422,8 @@ var _ = Describe("Containerd", func() {
 
 						status := make(chan int)
 						go func() {
+							defer GinkgoRecover()
+
 							exit, err := proc.Wait()
 							Expect(err).NotTo(HaveOccurred())
 							status <- exit
