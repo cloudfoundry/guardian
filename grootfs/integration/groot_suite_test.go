@@ -31,7 +31,7 @@ var (
 	NamespacerBin string
 	mountPath     string
 
-	GrootUser        *user.User
+	GrootUsername    string
 	GrootUID         int
 	GrootGID         int
 	RegistryUsername string
@@ -70,18 +70,20 @@ func TestGroot(t *testing.T) {
 		TardisBin = string(binaries[1])
 		tmpNamespacerBin := string(binaries[2])
 
-		GrootUser, err = user.Lookup("groot")
-		Expect(err).NotTo(HaveOccurred())
-
 		rand.Seed(time.Now().UnixNano())
 		NamespacerBin = fmt.Sprintf("/tmp/namespacer-%d", rand.Int())
 		_, _, err = runCommand(exec.Command("cp", tmpNamespacerBin, NamespacerBin))
 		Expect(err).NotTo(HaveOccurred())
 
-		GrootUID, err = strconv.Atoi(GrootUser.Uid)
+		grootUser, err := user.Lookup(os.Getenv("GROOTFS_USER"))
 		Expect(err).NotTo(HaveOccurred())
 
-		GrootGID, err = strconv.Atoi(GrootUser.Gid)
+		GrootUsername = grootUser.Username
+
+		GrootUID, err = strconv.Atoi(grootUser.Uid)
+		Expect(err).NotTo(HaveOccurred())
+
+		GrootGID, err = strconv.Atoi(grootUser.Gid)
 		Expect(err).NotTo(HaveOccurred())
 
 		GrootfsTestUid, _ = strconv.Atoi(os.Getenv("GROOTFS_TEST_UID"))

@@ -156,7 +156,7 @@ var _ = Describe("Init Store", func() {
 
 	Context("when --rootless is provided", func() {
 		BeforeEach(func() {
-			spec.Rootless = "groot:groot"
+			spec.Rootless = fmt.Sprintf("%s:%s", GrootUsername, GrootUsername)
 		})
 
 		It("sets the ownership to the provided user and group", func() {
@@ -232,7 +232,7 @@ var _ = Describe("Init Store", func() {
 
 		Context("when the user does not exist", func() {
 			BeforeEach(func() {
-				spec.Rootless = "someoneelse:groot"
+				spec.Rootless = fmt.Sprintf("someoneelse:%s", GrootUsername)
 			})
 
 			It("returns an error", func() {
@@ -243,7 +243,7 @@ var _ = Describe("Init Store", func() {
 
 		Context("when the group does not exist", func() {
 			BeforeEach(func() {
-				spec.Rootless = "groot:something"
+				spec.Rootless = fmt.Sprintf("%s:something", GrootUsername)
 			})
 
 			It("returns an error", func() {

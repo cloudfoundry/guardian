@@ -1,6 +1,7 @@
 package manager_test
 
 import (
+	"os"
 	"os/user"
 	"strconv"
 
@@ -19,7 +20,7 @@ func TestManager(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	BeforeSuite(func() {
-		GrootUser, err := user.Lookup("groot")
+		GrootUser, err := user.Lookup(os.Getenv("GROOTFS_USER"))
 		Expect(err).NotTo(HaveOccurred())
 
 		grootUID, err := strconv.ParseUint(GrootUser.Uid, 10, 32)

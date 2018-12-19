@@ -14,6 +14,7 @@ inputs:
 params:
   DOCKER_REGISTRY_USERNAME:
   DOCKER_REGISTRY_PASSWORD:
+  GROOTFS_USER: whoever
 
 run:
   path: src/code.cloudfoundry.org/grootfs/ci/scripts/unit-tests.sh

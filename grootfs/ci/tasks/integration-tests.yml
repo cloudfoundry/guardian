@@ -16,6 +16,7 @@ params:
   DOCKER_REGISTRY_PASSWORD:
   GROOTFS_TEST_UID: 0
   GROOTFS_TEST_GID: 0
+  GROOTFS_USER: whoever
 
 run:
   path: src/code.cloudfoundry.org/grootfs/ci/scripts/integration-tests.sh
