@@ -107,8 +107,10 @@ test_path=""
 RECURSIVE=0
 if [ -z "$DOCKER_REGISTRY_PASSWORD" ]
 then
-  export DOCKER_REGISTRY_USERNAME="$(lpass show 'Shared-Garden/cf-garden-docker' --username)"
-  export DOCKER_REGISTRY_PASSWORD="$(lpass show 'Shared-Garden/cf-garden-docker' --password)"
+  export DOCKER_REGISTRY_USERNAME
+  DOCKER_REGISTRY_USERNAME="$(lpass show 'Shared-Garden/cf-garden-docker' --username)"
+  export DOCKER_REGISTRY_PASSWORD
+  DOCKER_REGISTRY_PASSWORD="$(lpass show 'Shared-Garden/cf-garden-docker' --password)"
 fi
 
 while getopts "uia" OPTION
@@ -126,7 +128,7 @@ do
       ;;
     a)
       tmux split-window -p 80 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' ./script/test -u; bash\""
-      tmux split-window -p 80 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=1000 GROOTFS_TEST_GID=1000 ./script/test -i; bash\""
+      tmux split-window -p 80 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=5000 GROOTFS_TEST_GID=5000 ./script/test -i; bash\""
       tmux split-window -p 50 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 ./script/test -i; bash\""
       exit
       ;;
