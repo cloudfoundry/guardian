@@ -2,7 +2,6 @@ package dependency_manager
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -52,6 +51,6 @@ func (d *DependencyManager) Dependencies(id string) ([]string, error) {
 }
 
 func (d *DependencyManager) filePath(id string) string {
-	escapedId := strings.Replace(id, "/", "__", -1)
-	return filepath.Join(d.dependenciesPath, fmt.Sprintf("%s.json", escapedId))
+	escapedID := strings.Replace(id, "/", "__", -1)
+	return filepath.Join(d.dependenciesPath, escapedID+".json")
 }
