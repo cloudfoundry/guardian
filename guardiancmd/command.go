@@ -899,7 +899,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 			cmdRunner,
 			runcLogRunner,
 			runcBinary,
-			cmd.Runtime.Plugin,
 			cmd.Runtime.PluginExtraArgs,
 			wireExecerFunc(pidGetter),
 			statser,

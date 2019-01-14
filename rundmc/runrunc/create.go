@@ -5,7 +5,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"code.cloudfoundry.org/commandrunner"
@@ -15,14 +14,14 @@ import (
 )
 
 type Creator struct {
-	runcPath      string
+	runc          RuncBinary
 	runcExtraArgs []string
 	commandRunner commandrunner.CommandRunner
 }
 
-func NewCreator(runcPath string, runcExtraArgs []string, commandRunner commandrunner.CommandRunner) *Creator {
+func NewCreator(runc RuncBinary, runcExtraArgs []string, commandRunner commandrunner.CommandRunner) *Creator {
 	return &Creator{
-		runcPath,
+		runc,
 		runcExtraArgs,
 		commandRunner,
 	}
@@ -34,7 +33,7 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.Pro
 
 	log = log.Session("create", lager.Data{"bundle": bundlePath})
 	log.Info("creating", lager.Data{
-		"runc":        c.runcPath,
+		"runc":        fmt.Sprintf("%#v", c.runc),
 		"bundlePath":  bundlePath,
 		"id":          id,
 		"logPath":     logFilePath,
@@ -42,22 +41,7 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.Pro
 	})
 	defer log.Info("finished")
 
-	args := []string{
-		"--debug",
-		"--log", logFilePath,
-		"--log-format", "json",
-	}
-	args = append(args, c.runcExtraArgs...)
-	args = append(args, []string{
-		"run",
-		"--detach",
-		"--no-new-keyring",
-		"--bundle", bundlePath,
-		"--pid-file", pidFilePath,
-		id,
-	}...)
-
-	cmd := exec.Command(c.runcPath, args...)
+	cmd := c.runc.RunCommand(bundlePath, pidFilePath, logFilePath, id, c.runcExtraArgs)
 
 	if pio.Stdin != nil {
 		pipeR, pipeW, err := os.Pipe()

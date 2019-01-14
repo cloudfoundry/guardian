@@ -13,6 +13,32 @@ var _ = Describe("Commands", func() {
 		binary = goci.RuncBinary{Path: "funC", Root: "fancy-root"}
 	})
 
+	Describe("RunCommand", func() {
+		It("creates an *exec.Cmd to create a container", func() {
+			cmd := binary.RunCommand(
+				"my-bundle-path",
+				"my-pidfile-path",
+				"my-logfile-path",
+				"my-container",
+				[]string{"foo", "bar"},
+			)
+			Expect(cmd.Args).To(Equal([]string{
+				"funC",
+				"--debug",
+				"--log", "my-logfile-path",
+				"--log-format", "json",
+				"foo",
+				"bar",
+				"run",
+				"--detach",
+				"--no-new-keyring",
+				"--bundle", "my-bundle-path",
+				"--pid-file", "my-pidfile-path",
+				"my-container",
+			}))
+		})
+	})
+
 	Describe("StartCommand", func() {
 		It("creates an *exec.Cmd to start a bundle", func() {
 			cmd := binary.StartCommand("my-bundle-path", "my-bundle-id", false, "mylog.file")

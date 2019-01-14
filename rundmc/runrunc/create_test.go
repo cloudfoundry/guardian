@@ -12,6 +12,7 @@ import (
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -48,7 +49,7 @@ var _ = Describe("Create", func() {
 	})
 
 	JustBeforeEach(func() {
-		runner = runrunc.NewCreator("funC", runcExtraArgs, commandRunner)
+		runner = runrunc.NewCreator(goci.RuncBinary{Path: "funC"}, runcExtraArgs, commandRunner)
 
 		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: "funC",

@@ -9,6 +9,21 @@ import (
 )
 
 type FakeRuncBinary struct {
+	RunCommandStub        func(bundlePath, pidfilePath, logfilePath, id string, extraGlobalArgs []string) *exec.Cmd
+	runCommandMutex       sync.RWMutex
+	runCommandArgsForCall []struct {
+		bundlePath      string
+		pidfilePath     string
+		logfilePath     string
+		id              string
+		extraGlobalArgs []string
+	}
+	runCommandReturns struct {
+		result1 *exec.Cmd
+	}
+	runCommandReturnsOnCall map[int]struct {
+		result1 *exec.Cmd
+	}
 	ExecCommandStub        func(id, processJSONPath, pidFilePath string) *exec.Cmd
 	execCommandMutex       sync.RWMutex
 	execCommandArgsForCall []struct {
@@ -85,6 +100,63 @@ type FakeRuncBinary struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeRuncBinary) RunCommand(bundlePath string, pidfilePath string, logfilePath string, id string, extraGlobalArgs []string) *exec.Cmd {
+	var extraGlobalArgsCopy []string
+	if extraGlobalArgs != nil {
+		extraGlobalArgsCopy = make([]string, len(extraGlobalArgs))
+		copy(extraGlobalArgsCopy, extraGlobalArgs)
+	}
+	fake.runCommandMutex.Lock()
+	ret, specificReturn := fake.runCommandReturnsOnCall[len(fake.runCommandArgsForCall)]
+	fake.runCommandArgsForCall = append(fake.runCommandArgsForCall, struct {
+		bundlePath      string
+		pidfilePath     string
+		logfilePath     string
+		id              string
+		extraGlobalArgs []string
+	}{bundlePath, pidfilePath, logfilePath, id, extraGlobalArgsCopy})
+	fake.recordInvocation("RunCommand", []interface{}{bundlePath, pidfilePath, logfilePath, id, extraGlobalArgsCopy})
+	fake.runCommandMutex.Unlock()
+	if fake.RunCommandStub != nil {
+		return fake.RunCommandStub(bundlePath, pidfilePath, logfilePath, id, extraGlobalArgs)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.runCommandReturns.result1
+}
+
+func (fake *FakeRuncBinary) RunCommandCallCount() int {
+	fake.runCommandMutex.RLock()
+	defer fake.runCommandMutex.RUnlock()
+	return len(fake.runCommandArgsForCall)
+}
+
+func (fake *FakeRuncBinary) RunCommandArgsForCall(i int) (string, string, string, string, []string) {
+	fake.runCommandMutex.RLock()
+	defer fake.runCommandMutex.RUnlock()
+	return fake.runCommandArgsForCall[i].bundlePath, fake.runCommandArgsForCall[i].pidfilePath, fake.runCommandArgsForCall[i].logfilePath, fake.runCommandArgsForCall[i].id, fake.runCommandArgsForCall[i].extraGlobalArgs
+}
+
+func (fake *FakeRuncBinary) RunCommandReturns(result1 *exec.Cmd) {
+	fake.RunCommandStub = nil
+	fake.runCommandReturns = struct {
+		result1 *exec.Cmd
+	}{result1}
+}
+
+func (fake *FakeRuncBinary) RunCommandReturnsOnCall(i int, result1 *exec.Cmd) {
+	fake.RunCommandStub = nil
+	if fake.runCommandReturnsOnCall == nil {
+		fake.runCommandReturnsOnCall = make(map[int]struct {
+			result1 *exec.Cmd
+		})
+	}
+	fake.runCommandReturnsOnCall[i] = struct {
+		result1 *exec.Cmd
+	}{result1}
 }
 
 func (fake *FakeRuncBinary) ExecCommand(id string, processJSONPath string, pidFilePath string) *exec.Cmd {
@@ -386,6 +458,8 @@ func (fake *FakeRuncBinary) DeleteCommandReturnsOnCall(i int, result1 *exec.Cmd)
 func (fake *FakeRuncBinary) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.runCommandMutex.RLock()
+	defer fake.runCommandMutex.RUnlock()
 	fake.execCommandMutex.RLock()
 	defer fake.execCommandMutex.RUnlock()
 	fake.eventsCommandMutex.RLock()
