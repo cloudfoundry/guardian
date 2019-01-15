@@ -27,7 +27,7 @@ func NewCreator(runc RuncBinary, runcExtraArgs []string, commandRunner commandru
 	}
 }
 
-func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.ProcessIO) (theErr error) {
+func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.ProcessIO) error {
 	logFilePath := filepath.Join(bundlePath, "create.log")
 	pidFilePath := filepath.Join(bundlePath, "pidfile")
 
@@ -66,11 +66,7 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.Pro
 	err := c.commandRunner.Run(cmd)
 
 	log.Info("completing")
-	defer func() {
-		theErr = processLogs(log, logFilePath, err)
-	}()
-
-	return
+	return processLogs(log, logFilePath, err)
 }
 
 func processLogs(log lager.Logger, logFilePath string, upstreamErr error) error {
