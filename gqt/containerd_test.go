@@ -108,7 +108,7 @@ var _ = Describe("Containerd", func() {
 			Expect(exitCode).To(Equal(13))
 		})
 
-		Context("when use_containerd_for_processes is enabled", func() {
+		When("use_containerd_for_processes is enabled", func() {
 			BeforeEach(func() {
 				config.UseContainerdForProcesses = boolptr(true)
 			})

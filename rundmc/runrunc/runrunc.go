@@ -33,11 +33,12 @@ func New(
 	runc RuncBinary, runcExtraArgs []string, execer *Execer, statser *Statser,
 ) *RunRunc {
 	stater := NewStater(runcCmdRunner, runc)
+	oomWatcher := NewOomWatcher(runner, runc)
 
 	return &RunRunc{
-		Creator:    NewCreator(runc, runcExtraArgs, runner),
+		Creator:    NewCreator(runc, runcExtraArgs, runner, oomWatcher),
 		Execer:     execer,
-		OomWatcher: NewOomWatcher(runner, runc),
+		OomWatcher: oomWatcher,
 		Statser:    statser,
 		Stater:     stater,
 		Killer:     NewKiller(runcCmdRunner, runc),

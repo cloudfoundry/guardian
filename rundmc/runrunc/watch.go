@@ -6,21 +6,18 @@ import (
 	"io"
 
 	"code.cloudfoundry.org/commandrunner"
+	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/lager"
 )
-
-//go:generate counterfeiter . EventsNotifier
-type EventsNotifier interface {
-	OnEvent(handle string, event string) error
-}
 
 type OomWatcher struct {
 	commandRunner commandrunner.CommandRunner
 	runc          RuncBinary
+	events        chan event.Event
 }
 
 func NewOomWatcher(runner commandrunner.CommandRunner, runc RuncBinary) *OomWatcher {
-	return &OomWatcher{runner, runc}
+	return &OomWatcher{runner, runc, make(chan event.Event)}
 }
 
 type runcEvent struct {
@@ -28,7 +25,11 @@ type runcEvent struct {
 	Data json.RawMessage `json:"data"`
 }
 
-func (r *OomWatcher) WatchEvents(log lager.Logger, handle string, eventsNotifier EventsNotifier) error {
+func (r *OomWatcher) Events(log lager.Logger) (<-chan event.Event, error) {
+	return r.events, nil
+}
+
+func (r *OomWatcher) WatchEvents(log lager.Logger, handle string) error {
 	stdoutR, w := io.Pipe()
 
 	cmd := r.runc.EventsCommand(handle)
@@ -58,8 +59,8 @@ func (r *OomWatcher) WatchEvents(log lager.Logger, handle string, eventsNotifier
 	for {
 		log.Debug("wait-next-event")
 
-		var event runcEvent
-		err := decoder.Decode(&event)
+		var e runcEvent
+		err := decoder.Decode(&e)
 		if err == io.EOF {
 			return nil
 		}
@@ -68,13 +69,10 @@ func (r *OomWatcher) WatchEvents(log lager.Logger, handle string, eventsNotifier
 		}
 
 		log.Debug("got-event", lager.Data{
-			"type": event.Type,
+			"type": e.Type,
 		})
-		if event.Type == "oom" {
-			err := eventsNotifier.OnEvent(handle, "Out of memory")
-			if err != nil {
-				log.Debug("failed-to-notify-oom-event", lager.Data{"event": event.Data})
-			}
+		if e.Type == "oom" {
+			r.events <- event.NewOOMEvent(handle)
 		}
 	}
 }

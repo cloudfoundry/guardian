@@ -13,17 +13,24 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
+//go:generate counterfeiter . EventsWatcher
+type EventsWatcher interface {
+	WatchEvents(log lager.Logger, handle string) error
+}
+
 type Creator struct {
 	runc          RuncBinary
 	runcExtraArgs []string
 	commandRunner commandrunner.CommandRunner
+	eventsWatcher EventsWatcher
 }
 
-func NewCreator(runc RuncBinary, runcExtraArgs []string, commandRunner commandrunner.CommandRunner) *Creator {
+func NewCreator(runc RuncBinary, runcExtraArgs []string, commandRunner commandrunner.CommandRunner, eventsWatcher EventsWatcher) *Creator {
 	return &Creator{
 		runc,
 		runcExtraArgs,
 		commandRunner,
+		eventsWatcher,
 	}
 }
 
@@ -66,7 +73,13 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.Pro
 	err := c.commandRunner.Run(cmd)
 
 	log.Info("completing")
-	return processLogs(log, logFilePath, err)
+	if err := processLogs(log, logFilePath, err); err != nil {
+		return err
+	}
+
+	go c.eventsWatcher.WatchEvents(log, id)
+
+	return nil
 }
 
 func processLogs(log lager.Logger, logFilePath string, upstreamErr error) error {

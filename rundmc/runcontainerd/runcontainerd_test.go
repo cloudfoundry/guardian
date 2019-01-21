@@ -9,6 +9,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden/gardenfakes"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/runcontainerdfakes"
@@ -556,6 +557,19 @@ var _ = Describe("Runcontainerd", func() {
 			It("returns the statser error", func() {
 				Expect(metricsErr).To(MatchError("statser-failure"))
 			})
+		})
+	})
+
+	Describe("Events", func() {
+		var eventsCh <-chan event.Event
+
+		BeforeEach(func() {
+			eventsCh = make(<-chan event.Event)
+			containerManager.EventsReturns(eventsCh)
+		})
+
+		It("returns the event channel", func() {
+			Expect(runContainerd.Events(logger)).To(Equal(eventsCh))
 		})
 	})
 })

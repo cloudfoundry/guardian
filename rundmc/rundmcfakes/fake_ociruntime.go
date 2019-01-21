@@ -7,6 +7,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc"
+	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 )
@@ -112,18 +113,18 @@ type FakeOCIRuntime struct {
 		result1 gardener.StatsContainerMetrics
 		result2 error
 	}
-	WatchEventsStub        func(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error
-	watchEventsMutex       sync.RWMutex
-	watchEventsArgsForCall []struct {
-		log            lager.Logger
-		id             string
-		eventsNotifier runrunc.EventsNotifier
+	EventsStub        func(log lager.Logger) (<-chan event.Event, error)
+	eventsMutex       sync.RWMutex
+	eventsArgsForCall []struct {
+		log lager.Logger
 	}
-	watchEventsReturns struct {
-		result1 error
+	eventsReturns struct {
+		result1 <-chan event.Event
+		result2 error
 	}
-	watchEventsReturnsOnCall map[int]struct {
-		result1 error
+	eventsReturnsOnCall map[int]struct {
+		result1 <-chan event.Event
+		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -492,54 +493,55 @@ func (fake *FakeOCIRuntime) StatsReturnsOnCall(i int, result1 gardener.StatsCont
 	}{result1, result2}
 }
 
-func (fake *FakeOCIRuntime) WatchEvents(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error {
-	fake.watchEventsMutex.Lock()
-	ret, specificReturn := fake.watchEventsReturnsOnCall[len(fake.watchEventsArgsForCall)]
-	fake.watchEventsArgsForCall = append(fake.watchEventsArgsForCall, struct {
-		log            lager.Logger
-		id             string
-		eventsNotifier runrunc.EventsNotifier
-	}{log, id, eventsNotifier})
-	fake.recordInvocation("WatchEvents", []interface{}{log, id, eventsNotifier})
-	fake.watchEventsMutex.Unlock()
-	if fake.WatchEventsStub != nil {
-		return fake.WatchEventsStub(log, id, eventsNotifier)
+func (fake *FakeOCIRuntime) Events(log lager.Logger) (<-chan event.Event, error) {
+	fake.eventsMutex.Lock()
+	ret, specificReturn := fake.eventsReturnsOnCall[len(fake.eventsArgsForCall)]
+	fake.eventsArgsForCall = append(fake.eventsArgsForCall, struct {
+		log lager.Logger
+	}{log})
+	fake.recordInvocation("Events", []interface{}{log})
+	fake.eventsMutex.Unlock()
+	if fake.EventsStub != nil {
+		return fake.EventsStub(log)
 	}
 	if specificReturn {
-		return ret.result1
+		return ret.result1, ret.result2
 	}
-	return fake.watchEventsReturns.result1
+	return fake.eventsReturns.result1, fake.eventsReturns.result2
 }
 
-func (fake *FakeOCIRuntime) WatchEventsCallCount() int {
-	fake.watchEventsMutex.RLock()
-	defer fake.watchEventsMutex.RUnlock()
-	return len(fake.watchEventsArgsForCall)
+func (fake *FakeOCIRuntime) EventsCallCount() int {
+	fake.eventsMutex.RLock()
+	defer fake.eventsMutex.RUnlock()
+	return len(fake.eventsArgsForCall)
 }
 
-func (fake *FakeOCIRuntime) WatchEventsArgsForCall(i int) (lager.Logger, string, runrunc.EventsNotifier) {
-	fake.watchEventsMutex.RLock()
-	defer fake.watchEventsMutex.RUnlock()
-	return fake.watchEventsArgsForCall[i].log, fake.watchEventsArgsForCall[i].id, fake.watchEventsArgsForCall[i].eventsNotifier
+func (fake *FakeOCIRuntime) EventsArgsForCall(i int) lager.Logger {
+	fake.eventsMutex.RLock()
+	defer fake.eventsMutex.RUnlock()
+	return fake.eventsArgsForCall[i].log
 }
 
-func (fake *FakeOCIRuntime) WatchEventsReturns(result1 error) {
-	fake.WatchEventsStub = nil
-	fake.watchEventsReturns = struct {
-		result1 error
-	}{result1}
+func (fake *FakeOCIRuntime) EventsReturns(result1 <-chan event.Event, result2 error) {
+	fake.EventsStub = nil
+	fake.eventsReturns = struct {
+		result1 <-chan event.Event
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeOCIRuntime) WatchEventsReturnsOnCall(i int, result1 error) {
-	fake.WatchEventsStub = nil
-	if fake.watchEventsReturnsOnCall == nil {
-		fake.watchEventsReturnsOnCall = make(map[int]struct {
-			result1 error
+func (fake *FakeOCIRuntime) EventsReturnsOnCall(i int, result1 <-chan event.Event, result2 error) {
+	fake.EventsStub = nil
+	if fake.eventsReturnsOnCall == nil {
+		fake.eventsReturnsOnCall = make(map[int]struct {
+			result1 <-chan event.Event
+			result2 error
 		})
 	}
-	fake.watchEventsReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
+	fake.eventsReturnsOnCall[i] = struct {
+		result1 <-chan event.Event
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeOCIRuntime) Invocations() map[string][][]interface{} {
@@ -559,8 +561,8 @@ func (fake *FakeOCIRuntime) Invocations() map[string][][]interface{} {
 	defer fake.stateMutex.RUnlock()
 	fake.statsMutex.RLock()
 	defer fake.statsMutex.RUnlock()
-	fake.watchEventsMutex.RLock()
-	defer fake.watchEventsMutex.RUnlock()
+	fake.eventsMutex.RLock()
+	defer fake.eventsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

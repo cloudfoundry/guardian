@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
+	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	fakes "code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
 )
@@ -20,7 +21,7 @@ var _ = Describe("Watching for Events", func() {
 		runcBinary    *fakes.FakeRuncBinary
 		logger        *lagertest.TestLogger
 
-		runner *runrunc.OomWatcher
+		oomWatcher *runrunc.OomWatcher
 	)
 
 	BeforeEach(func() {
@@ -28,7 +29,7 @@ var _ = Describe("Watching for Events", func() {
 		commandRunner = fake_command_runner.New()
 		logger = lagertest.NewTestLogger("test")
 
-		runner = runrunc.NewOomWatcher(commandRunner, runcBinary)
+		oomWatcher = runrunc.NewOomWatcher(commandRunner, runcBinary)
 
 		runcBinary.EventsCommandStub = func(handle string) *exec.Cmd {
 			return exec.Command("funC-events", "events", handle)
@@ -42,18 +43,17 @@ var _ = Describe("Watching for Events", func() {
 			return errors.New("boom")
 		})
 
-		Expect(runner.WatchEvents(logger, "some-container", nil)).To(MatchError("start: boom"))
+		Expect(oomWatcher.WatchEvents(logger, "some-container")).To(MatchError("start: boom"))
 	})
 
 	Context("when runc events succeeds", func() {
 		var (
-			eventsCh chan string
-
-			eventsNotifier *fakes.FakeEventsNotifier
+			eventsInputCh chan string
+			oomEventsCh   <-chan event.Event
 		)
 
 		BeforeEach(func() {
-			eventsCh = make(chan string, 2)
+			eventsInputCh = make(chan string, 2)
 
 			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 				Path: "funC-events",
@@ -64,16 +64,18 @@ var _ = Describe("Watching for Events", func() {
 					for eventJSON := range eventsCh {
 						stdoutW.Write([]byte(eventJSON))
 					}
-				}(eventsCh, cmd.Stdout.(io.WriteCloser))
+				}(eventsInputCh, cmd.Stdout.(io.WriteCloser))
 
 				return nil
 			})
 
-			eventsNotifier = new(fakes.FakeEventsNotifier)
+			var err error
+			oomEventsCh, err = oomWatcher.Events(logger)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("reports an event if one happens", func() {
-			defer close(eventsCh)
+			defer close(eventsInputCh)
 
 			waitCh := make(chan struct{})
 			defer close(waitCh)
@@ -84,36 +86,34 @@ var _ = Describe("Watching for Events", func() {
 				return nil
 			})
 
-			go runner.WatchEvents(logger, "some-container", eventsNotifier)
+			go oomWatcher.WatchEvents(logger, "some-container")
 
-			Consistently(eventsNotifier.OnEventCallCount).Should(Equal(0))
+			Consistently(oomEventsCh).Should(BeEmpty())
 
-			eventsCh <- `{"type":"oom"}`
-			Eventually(eventsNotifier.OnEventCallCount).Should(Equal(1))
-			handle, event := eventsNotifier.OnEventArgsForCall(0)
-			Expect(handle).To(Equal("some-container"))
-			Expect(event).To(Equal("Out of memory"))
+			eventsInputCh <- `{"type":"oom"}`
+			oomEvent := <-oomEventsCh
+			Expect(oomEvent.ContainerID).To(Equal("some-container"))
+			Expect(oomEvent.Message).To(Equal("Out of memory"))
 
-			eventsCh <- `{"type":"oom"}`
-			Eventually(eventsNotifier.OnEventCallCount).Should(Equal(2))
-			handle, event = eventsNotifier.OnEventArgsForCall(1)
-			Expect(handle).To(Equal("some-container"))
-			Expect(event).To(Equal("Out of memory"))
+			eventsInputCh <- `{"type":"oom"}`
+			oomEvent = <-oomEventsCh
+			Expect(oomEvent.ContainerID).To(Equal("some-container"))
+			Expect(oomEvent.Message).To(Equal("Out of memory"))
 		})
 
 		It("does not report non-OOM events", func() {
-			defer close(eventsCh)
+			defer close(eventsInputCh)
 
-			go runner.WatchEvents(logger, "some-container", eventsNotifier)
+			go oomWatcher.WatchEvents(logger, "some-container")
 
-			eventsCh <- `{"type":"stats"}`
-			Consistently(eventsNotifier.OnEventCallCount).Should(Equal(0))
+			eventsInputCh <- `{"type":"stats"}`
+			Consistently(oomEventsCh).Should(BeEmpty())
 		})
 
 		It("waits on the process to avoid zombies", func() {
-			close(eventsCh)
+			close(eventsInputCh)
 
-			Expect(runner.WatchEvents(logger, "some-container", eventsNotifier)).To(Succeed())
+			Expect(oomWatcher.WatchEvents(logger, "some-container")).To(Succeed())
 			Eventually(commandRunner.WaitedCommands).Should(HaveLen(1))
 			Expect(commandRunner.WaitedCommands()[0].Path).To(Equal("funC-events"))
 		})

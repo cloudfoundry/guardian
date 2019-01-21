@@ -54,6 +54,7 @@ type Containerizer interface {
 
 	Info(log lager.Logger, handle string) (spec.ActualContainerSpec, error)
 	Metrics(log lager.Logger, handle string) (ActualContainerMetrics, error)
+	WatchRuntimeEvents(log lager.Logger) error
 }
 
 type Networker interface {
@@ -467,6 +468,10 @@ func (g *Gardener) Start() error {
 
 	log.Info("starting")
 	defer log.Info("completed")
+
+	if err := g.Containerizer.WatchRuntimeEvents(log); err != nil {
+		return fmt.Errorf("watch runtime events: %s", err)
+	}
 
 	if err := g.BulkStarter.StartAll(); err != nil {
 		return fmt.Errorf("bulk starter: %s", err)

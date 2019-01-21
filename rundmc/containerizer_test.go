@@ -12,6 +12,7 @@ import (
 	specpkg "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
+	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	fakes "code.cloudfoundry.org/guardian/rundmc/rundmcfakes"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
@@ -132,35 +133,6 @@ var _ = Describe("Rundmc", func() {
 					BaseConfig: specs.Spec{Root: &specs.Root{}},
 				})).NotTo(Succeed())
 			})
-		})
-
-		It("should watch for events in a goroutine", func() {
-			fakeOCIRuntime.WatchEventsStub = func(_ lager.Logger, _ string, _ runrunc.EventsNotifier) error {
-				time.Sleep(10 * time.Second)
-				return nil
-			}
-
-			created := make(chan struct{})
-			go func() {
-				defer GinkgoRecover()
-				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{
-					Handle:     "some-container",
-					BaseConfig: specs.Spec{Root: &specs.Root{}},
-				})).To(Succeed())
-				close(created)
-			}()
-
-			select {
-			case <-time.After(2 * time.Second):
-				Fail("WatchEvents should be called in a goroutine")
-			case <-created:
-			}
-
-			Eventually(fakeOCIRuntime.WatchEventsCallCount).Should(Equal(1))
-
-			_, handle, eventsNotifier := fakeOCIRuntime.WatchEventsArgsForCall(0)
-			Expect(handle).To(Equal("some-container"))
-			Expect(eventsNotifier).To(Equal(fakeEventStore))
 		})
 	})
 
@@ -727,6 +699,46 @@ var _ = Describe("Rundmc", func() {
 			It("should return the error", func() {
 				_, err := containerizer.Handles()
 				Expect(err).To(MatchError(testErr))
+			})
+		})
+	})
+
+	Describe("WatchRuntimeEvents", func() {
+		var watchErr error
+
+		JustBeforeEach(func() {
+			watchErr = containerizer.WatchRuntimeEvents(logger)
+		})
+
+		Context("when the runtime publishes an event", func() {
+			BeforeEach(func() {
+				events := make(chan event.Event)
+				go func() {
+					events <- event.Event{Message: "1"}
+					events <- event.Event{Message: "2"}
+				}()
+				fakeOCIRuntime.EventsReturns(events, nil)
+			})
+
+			It("forwards the event to the event store", func() {
+				Expect(watchErr).NotTo(HaveOccurred())
+				Eventually(fakeEventStore.OnEventCallCount).Should(Equal(2))
+
+				_, msg := fakeEventStore.OnEventArgsForCall(0)
+				Expect(msg).To(Equal("1"))
+
+				_, msg = fakeEventStore.OnEventArgsForCall(1)
+				Expect(msg).To(Equal("2"))
+			})
+		})
+
+		Context("when getting the events channel errors", func() {
+			BeforeEach(func() {
+				fakeOCIRuntime.EventsReturns(nil, errors.New("boom"))
+			})
+
+			It("errors", func() {
+				Expect(watchErr).To(MatchError("boom"))
 			})
 		})
 	})

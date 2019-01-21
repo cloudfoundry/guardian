@@ -663,6 +663,22 @@ var _ = Describe("Gardener", func() {
 			containerizer.HandlesReturns(containers, nil)
 		})
 
+		It("starts watching runtime events", func() {
+			Expect(gdnr.Start()).To(Succeed())
+
+			Expect(containerizer.WatchRuntimeEventsCallCount()).To(Equal(1))
+		})
+
+		Context("when watching runtime events fails", func() {
+			BeforeEach(func() {
+				containerizer.WatchRuntimeEventsReturns(errors.New("boom"))
+			})
+
+			It("returns the error", func() {
+				Expect(gdnr.Start()).To(MatchError(ContainSubstring("boom")))
+			})
+		})
+
 		It("calls the bulk starter", func() {
 			Expect(gdnr.Start()).To(Succeed())
 

@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
@@ -241,4 +242,8 @@ func (n *Nerd) Signal(log lager.Logger, containerID, processID string, signal sy
 	}
 
 	return process.Kill(n.context, signal)
+}
+
+func (n *Nerd) Events(log lager.Logger) <-chan event.Event {
+	return make(chan event.Event)
 }

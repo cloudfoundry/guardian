@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
+	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
@@ -48,7 +49,7 @@ type OCIRuntime interface {
 	Delete(log lager.Logger, id string) error
 	State(log lager.Logger, id string) (runrunc.State, error)
 	Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)
-	WatchEvents(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error
+	Events(log lager.Logger) (<-chan event.Event, error)
 }
 
 type PeaCreator interface {
@@ -98,7 +99,7 @@ type Containerizer struct {
 }
 
 func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, events EventStore, states StateStore, rootfsFileCreator RootfsFileCreator, peaCreator PeaCreator, peaUsernameResolver PeaUsernameResolver, cpuEntitlementPerShare float64) *Containerizer {
-	return &Containerizer{
+	containerizer := &Containerizer{
 		depot:                  depot,
 		runtime:                runtime,
 		loader:                 loader,
@@ -111,6 +112,24 @@ func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner Nstar
 		peaUsernameResolver:    peaUsernameResolver,
 		cpuEntitlementPerShare: cpuEntitlementPerShare,
 	}
+	return containerizer
+}
+
+func (c *Containerizer) WatchRuntimeEvents(log lager.Logger) error {
+	events, err := c.runtime.Events(log)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for event := range events {
+			if err := c.events.OnEvent(event.ContainerID, event.Message); err != nil {
+				log.Error("failed to store event", err, lager.Data{"event": event})
+			}
+		}
+	}()
+
+	return nil
 }
 
 // Create creates a bundle in the depot and starts its init process
@@ -140,12 +159,6 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 		log.Error("runtime-create-failed", err)
 		return err
 	}
-
-	go func() {
-		if err := c.runtime.WatchEvents(log, spec.Handle, c.events); err != nil {
-			log.Error("watch-failed", err)
-		}
-	}()
 
 	return nil
 }

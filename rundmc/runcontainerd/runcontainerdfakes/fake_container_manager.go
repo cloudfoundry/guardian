@@ -5,6 +5,7 @@ import (
 	"io"
 	"sync"
 
+	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -81,6 +82,17 @@ type FakeContainerManager struct {
 	getContainerPIDReturnsOnCall map[int]struct {
 		result1 uint32
 		result2 error
+	}
+	EventsStub        func(log lager.Logger) <-chan event.Event
+	eventsMutex       sync.RWMutex
+	eventsArgsForCall []struct {
+		log lager.Logger
+	}
+	eventsReturns struct {
+		result1 <-chan event.Event
+	}
+	eventsReturnsOnCall map[int]struct {
+		result1 <-chan event.Event
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -345,6 +357,54 @@ func (fake *FakeContainerManager) GetContainerPIDReturnsOnCall(i int, result1 ui
 	}{result1, result2}
 }
 
+func (fake *FakeContainerManager) Events(log lager.Logger) <-chan event.Event {
+	fake.eventsMutex.Lock()
+	ret, specificReturn := fake.eventsReturnsOnCall[len(fake.eventsArgsForCall)]
+	fake.eventsArgsForCall = append(fake.eventsArgsForCall, struct {
+		log lager.Logger
+	}{log})
+	fake.recordInvocation("Events", []interface{}{log})
+	fake.eventsMutex.Unlock()
+	if fake.EventsStub != nil {
+		return fake.EventsStub(log)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.eventsReturns.result1
+}
+
+func (fake *FakeContainerManager) EventsCallCount() int {
+	fake.eventsMutex.RLock()
+	defer fake.eventsMutex.RUnlock()
+	return len(fake.eventsArgsForCall)
+}
+
+func (fake *FakeContainerManager) EventsArgsForCall(i int) lager.Logger {
+	fake.eventsMutex.RLock()
+	defer fake.eventsMutex.RUnlock()
+	return fake.eventsArgsForCall[i].log
+}
+
+func (fake *FakeContainerManager) EventsReturns(result1 <-chan event.Event) {
+	fake.EventsStub = nil
+	fake.eventsReturns = struct {
+		result1 <-chan event.Event
+	}{result1}
+}
+
+func (fake *FakeContainerManager) EventsReturnsOnCall(i int, result1 <-chan event.Event) {
+	fake.EventsStub = nil
+	if fake.eventsReturnsOnCall == nil {
+		fake.eventsReturnsOnCall = make(map[int]struct {
+			result1 <-chan event.Event
+		})
+	}
+	fake.eventsReturnsOnCall[i] = struct {
+		result1 <-chan event.Event
+	}{result1}
+}
+
 func (fake *FakeContainerManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -358,6 +418,8 @@ func (fake *FakeContainerManager) Invocations() map[string][][]interface{} {
 	defer fake.stateMutex.RUnlock()
 	fake.getContainerPIDMutex.RLock()
 	defer fake.getContainerPIDMutex.RUnlock()
+	fake.eventsMutex.RLock()
+	defer fake.eventsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

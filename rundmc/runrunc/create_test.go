@@ -14,6 +14,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -23,6 +24,7 @@ import (
 var _ = Describe("Create", func() {
 	var (
 		commandRunner  *fake_command_runner.FakeCommandRunner
+		eventsWatcher  *runruncfakes.FakeEventsWatcher
 		bundlePath     string
 		runcExtraArgs  = []string{"--some-arg", "some-value"}
 		logFilePath    string
@@ -39,6 +41,7 @@ var _ = Describe("Create", func() {
 		logs = ""
 		runcExitStatus = nil
 		commandRunner = fake_command_runner.New()
+		eventsWatcher = new(runruncfakes.FakeEventsWatcher)
 		logger = lagertest.NewTestLogger("test")
 
 		var err error
@@ -49,7 +52,7 @@ var _ = Describe("Create", func() {
 	})
 
 	JustBeforeEach(func() {
-		runner = runrunc.NewCreator(goci.RuncBinary{Path: "funC"}, runcExtraArgs, commandRunner)
+		runner = runrunc.NewCreator(goci.RuncBinary{Path: "funC"}, runcExtraArgs, commandRunner, eventsWatcher)
 
 		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: "funC",
@@ -112,6 +115,13 @@ var _ = Describe("Create", func() {
 		Expect(recievedStdin).To(Equal("some-stdin"))
 	})
 
+	It("subscribes for container events", func() {
+		Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(Succeed())
+		Eventually(eventsWatcher.WatchEventsCallCount).Should(Equal(1))
+		_, actualHandle := eventsWatcher.WatchEventsArgsForCall(0)
+		Expect(actualHandle).To(Equal("some-id"))
+	})
+
 	Context("when running runc fails", func() {
 		BeforeEach(func() {
 			runcExitStatus = errors.New("some-error")
@@ -119,6 +129,10 @@ var _ = Describe("Create", func() {
 
 		It("returns runc's exit status", func() {
 			Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc run: some-error: "))
+		})
+
+		It("does not subscribe for container events", func() {
+			Consistently(eventsWatcher.WatchEventsCallCount()).Should(BeZero())
 		})
 	})
 
@@ -163,4 +177,5 @@ var _ = Describe("Create", func() {
 			})
 		})
 	})
+
 })

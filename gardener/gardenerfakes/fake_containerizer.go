@@ -160,6 +160,17 @@ type FakeContainerizer struct {
 		result1 gardener.ActualContainerMetrics
 		result2 error
 	}
+	WatchRuntimeEventsStub        func(log lager.Logger) error
+	watchRuntimeEventsMutex       sync.RWMutex
+	watchRuntimeEventsArgsForCall []struct {
+		log lager.Logger
+	}
+	watchRuntimeEventsReturns struct {
+		result1 error
+	}
+	watchRuntimeEventsReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -719,6 +730,54 @@ func (fake *FakeContainerizer) MetricsReturnsOnCall(i int, result1 gardener.Actu
 	}{result1, result2}
 }
 
+func (fake *FakeContainerizer) WatchRuntimeEvents(log lager.Logger) error {
+	fake.watchRuntimeEventsMutex.Lock()
+	ret, specificReturn := fake.watchRuntimeEventsReturnsOnCall[len(fake.watchRuntimeEventsArgsForCall)]
+	fake.watchRuntimeEventsArgsForCall = append(fake.watchRuntimeEventsArgsForCall, struct {
+		log lager.Logger
+	}{log})
+	fake.recordInvocation("WatchRuntimeEvents", []interface{}{log})
+	fake.watchRuntimeEventsMutex.Unlock()
+	if fake.WatchRuntimeEventsStub != nil {
+		return fake.WatchRuntimeEventsStub(log)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.watchRuntimeEventsReturns.result1
+}
+
+func (fake *FakeContainerizer) WatchRuntimeEventsCallCount() int {
+	fake.watchRuntimeEventsMutex.RLock()
+	defer fake.watchRuntimeEventsMutex.RUnlock()
+	return len(fake.watchRuntimeEventsArgsForCall)
+}
+
+func (fake *FakeContainerizer) WatchRuntimeEventsArgsForCall(i int) lager.Logger {
+	fake.watchRuntimeEventsMutex.RLock()
+	defer fake.watchRuntimeEventsMutex.RUnlock()
+	return fake.watchRuntimeEventsArgsForCall[i].log
+}
+
+func (fake *FakeContainerizer) WatchRuntimeEventsReturns(result1 error) {
+	fake.WatchRuntimeEventsStub = nil
+	fake.watchRuntimeEventsReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeContainerizer) WatchRuntimeEventsReturnsOnCall(i int, result1 error) {
+	fake.WatchRuntimeEventsStub = nil
+	if fake.watchRuntimeEventsReturnsOnCall == nil {
+		fake.watchRuntimeEventsReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.watchRuntimeEventsReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeContainerizer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -744,6 +803,8 @@ func (fake *FakeContainerizer) Invocations() map[string][][]interface{} {
 	defer fake.infoMutex.RUnlock()
 	fake.metricsMutex.RLock()
 	defer fake.metricsMutex.RUnlock()
+	fake.watchRuntimeEventsMutex.RLock()
+	defer fake.watchRuntimeEventsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

@@ -68,7 +68,6 @@ func ContainerdConfig(containerdDataDir string) Config {
 			"snapshots-service",
 			"content",
 			"diff",
-			"events",
 			"healthcheck",
 			"images",
 			"namespaces",

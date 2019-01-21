@@ -7,6 +7,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/users"
@@ -24,6 +25,7 @@ type ContainerManager interface {
 
 	State(log lager.Logger, containerID string) (int, string, error)
 	GetContainerPID(log lager.Logger, containerID string) (uint32, error)
+	Events(log lager.Logger) <-chan event.Event
 }
 
 //go:generate counterfeiter . ProcessManager
@@ -167,6 +169,6 @@ func (r *RunContainerd) Stats(log lager.Logger, id string) (gardener.StatsContai
 	return r.statser.Stats(log, id)
 }
 
-func (r *RunContainerd) WatchEvents(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error {
-	return fmt.Errorf("WatchEvents is not implemented yet")
+func (r *RunContainerd) Events(log lager.Logger) (<-chan event.Event, error) {
+	return r.containerManager.Events(log), nil
 }
