@@ -24,6 +24,11 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
+const (
+	kb uint64 = 1024
+	mb        = 1024 * kb
+)
+
 var (
 	ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 	// the unprivileged user is baked into the cfgarden/garden-ci-ubuntu image

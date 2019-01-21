@@ -11,18 +11,24 @@ import (
 
 var _ = Describe("Info", func() {
 	var (
-		client    *runner.RunningGarden
-		container garden.Container
+		client          *runner.RunningGarden
+		container       garden.Container
+		containerLimits garden.Limits
 	)
 
 	BeforeEach(func() {
-		var err error
 		client = runner.Start(config)
+		containerLimits = garden.Limits{}
+	})
+
+	JustBeforeEach(func() {
+		var err error
 		container, err = client.Create(garden.ContainerSpec{
 			Network: "10.252.0.2",
 			Properties: garden.Properties{
 				"foo": "bar",
 			},
+			Limits: containerLimits,
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -71,7 +77,34 @@ var _ = Describe("Info", func() {
 		Expect(portMapping.HostPort).To(Equal(hostPort))
 		Expect(portMapping.ContainerPort).To(Equal(containerPort))
 	})
+
+	When("the container has a memory limit applied", func() {
+		BeforeEach(func() {
+			skipIfContainerd()
+			containerLimits = garden.Limits{Memory: garden.MemoryLimits{LimitInBytes: 4 * mb}}
+		})
+
+		It("adds an out of memory event", func() {
+			process, err := container.Run(garden.ProcessSpec{
+				Path: "/bin/sh",
+				Args: []string{"-c", "cat /dev/urandom > /dev/shm/foo"},
+			}, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = process.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(getEventsForContainer(container), "10s").Should(ContainElement("Out of memory"))
+		})
+	})
 })
+
+func getEventsForContainer(container garden.Container) func() []string {
+	return func() []string {
+		info, err := container.Info()
+		Expect(err).NotTo(HaveOccurred())
+		return info.Events
+	}
+}
 
 var _ = Describe("BulkInfo", func() {
 	var (
