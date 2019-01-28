@@ -81,13 +81,13 @@ var _ = Describe("Info", func() {
 	When("the container has a memory limit applied", func() {
 		BeforeEach(func() {
 			skipIfContainerd()
-			containerLimits = garden.Limits{Memory: garden.MemoryLimits{LimitInBytes: 4 * mb}}
+			containerLimits = garden.Limits{Memory: garden.MemoryLimits{LimitInBytes: 30 * mb}}
 		})
 
 		It("adds an out of memory event", func() {
 			process, err := container.Run(garden.ProcessSpec{
-				Path: "/bin/sh",
-				Args: []string{"-c", "cat /dev/urandom > /dev/shm/foo"},
+				Path: "dd",
+				Args: []string{"if=/dev/urandom", "of=/dev/shm/foo", "bs=1M", "count=32"},
 			}, garden.ProcessIO{})
 			Expect(err).NotTo(HaveOccurred())
 
