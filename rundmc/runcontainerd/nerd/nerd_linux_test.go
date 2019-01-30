@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/containerd/containerd"
+	apievents "github.com/containerd/containerd/api/events"
 	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/oci"
 	. "github.com/onsi/ginkgo"
@@ -349,6 +350,62 @@ var _ = Describe("Nerd", func() {
 			Expect(procls).To(ContainSubstring(strconv.Itoa(int(containerPid))))
 		})
 	})
+
+	Describe("OOMEvents", func() {
+		var (
+			processSpec *specs.Process
+			events      <-chan *apievents.TaskOOM
+		)
+
+		JustBeforeEach(func() {
+			spec := generateSpec(containerdContext, containerdClient, containerID, withLinuxResources(specs.LinuxResources{
+				Memory: &specs.LinuxMemory{
+					Limit: int64ptr(30 * 1024 * 1024),
+					Swap:  int64ptr(30 * 1024 * 1024),
+				},
+			}))
+			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
+
+			events = cnerd.OOMEvents(testLogger)
+
+			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = cnerd.Wait(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			cnerd.Delete(testLogger, containerID)
+		})
+
+		Context("when OOM does not occur", func() {
+			BeforeEach(func() {
+				processSpec = &specs.Process{
+					Args: []string{"/bin/echo", "hi"},
+					Cwd:  "/",
+				}
+			})
+
+			It("does not report OOM", func() {
+				Consistently(events).ShouldNot(Receive())
+			})
+		})
+
+		Context("when OOM occurs", func() {
+			BeforeEach(func() {
+				processSpec = &specs.Process{
+					Args: []string{"/bin/dd", "if=/dev/urandom", "of=/dev/shm/foo", "bs=1M", "count=31"},
+					Cwd:  "/",
+				}
+			})
+
+			It("reports OOM", func() {
+				var event *apievents.TaskOOM
+				Eventually(events).Should(Receive(&event))
+				Expect(event.ContainerID).To(Equal(containerID))
+			})
+		})
+	})
 })
 
 func createRootfs(modifyRootfs func(string), perm os.FileMode) string {
@@ -363,15 +420,22 @@ func createRootfs(modifyRootfs func(string), perm os.FileMode) string {
 	return unpackedRootfs
 }
 
-func generateSpec(context context.Context, client *containerd.Client, containerID string) *specs.Spec {
-	spec, err := oci.GenerateSpec(context, client, &containers.Container{ID: containerID})
+func generateSpec(context context.Context, client *containerd.Client, containerID string, opts ...oci.SpecOpts) *specs.Spec {
+	spec, err := oci.GenerateSpec(context, client, &containers.Container{ID: containerID}, opts...)
 	Expect(err).NotTo(HaveOccurred())
-	spec.Process.Args = []string{"sleep", "60"}
+	spec.Process.Args = []string{"sleep", "999999"}
 	spec.Root = &specs.Root{
 		Path: createRootfs(func(_ string) {}, 0755),
 	}
 
 	return spec
+}
+
+func withLinuxResources(resources specs.LinuxResources) func(context.Context, oci.Client, *containers.Container, *oci.Spec) error {
+	return func(_ context.Context, _ oci.Client, _ *containers.Container, spec *oci.Spec) error {
+		spec.Linux.Resources = &resources
+		return nil
+	}
 }
 
 func listContainers(ctr, socket string) string {
@@ -414,4 +478,8 @@ func findFilesContaining(substring string) bool {
 	}
 
 	return false
+}
+
+func int64ptr(i int64) *int64 {
+	return &i
 }

@@ -435,6 +435,33 @@ var _ = Describe("Containerd", func() {
 			})
 		})
 	})
+
+	Describe("containerd restart", func() {
+		var container garden.Container
+
+		JustBeforeEach(func() {
+			var err error
+			restartContainerd()
+			container, err = client.Create(garden.ContainerSpec{Limits: garden.Limits{Memory: garden.MemoryLimits{LimitInBytes: 30 * mb}}})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			Expect(client.Destroy(container.Handle())).To(Succeed())
+		})
+
+		It("continues to receive OOM events", func() {
+			process, err := container.Run(garden.ProcessSpec{
+				Path: "dd",
+				Args: []string{"if=/dev/urandom", "of=/dev/shm/foo", "bs=1M", "count=32"},
+			}, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = process.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(getEventsForContainer(container), "10s").Should(ContainElement("Out of memory"))
+		})
+	})
 })
 
 func listContainers(ctr, socket string) string {

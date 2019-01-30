@@ -5,9 +5,9 @@ import (
 	"io"
 	"sync"
 
-	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/lager"
+	"github.com/containerd/containerd/api/events"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -38,17 +38,6 @@ type FakeContainerManager struct {
 	deleteReturnsOnCall map[int]struct {
 		result1 error
 	}
-	EventsStub        func(lager.Logger) <-chan event.Event
-	eventsMutex       sync.RWMutex
-	eventsArgsForCall []struct {
-		arg1 lager.Logger
-	}
-	eventsReturns struct {
-		result1 <-chan event.Event
-	}
-	eventsReturnsOnCall map[int]struct {
-		result1 <-chan event.Event
-	}
 	ExecStub        func(lager.Logger, string, string, *specs.Process, func() (io.Reader, io.Writer, io.Writer)) error
 	execMutex       sync.RWMutex
 	execArgsForCall []struct {
@@ -77,6 +66,17 @@ type FakeContainerManager struct {
 	getContainerPIDReturnsOnCall map[int]struct {
 		result1 uint32
 		result2 error
+	}
+	OOMEventsStub        func(lager.Logger) <-chan *events.TaskOOM
+	oOMEventsMutex       sync.RWMutex
+	oOMEventsArgsForCall []struct {
+		arg1 lager.Logger
+	}
+	oOMEventsReturns struct {
+		result1 <-chan *events.TaskOOM
+	}
+	oOMEventsReturnsOnCall map[int]struct {
+		result1 <-chan *events.TaskOOM
 	}
 	StateStub        func(lager.Logger, string) (int, string, error)
 	stateMutex       sync.RWMutex
@@ -222,66 +222,6 @@ func (fake *FakeContainerManager) DeleteReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeContainerManager) Events(arg1 lager.Logger) <-chan event.Event {
-	fake.eventsMutex.Lock()
-	ret, specificReturn := fake.eventsReturnsOnCall[len(fake.eventsArgsForCall)]
-	fake.eventsArgsForCall = append(fake.eventsArgsForCall, struct {
-		arg1 lager.Logger
-	}{arg1})
-	fake.recordInvocation("Events", []interface{}{arg1})
-	fake.eventsMutex.Unlock()
-	if fake.EventsStub != nil {
-		return fake.EventsStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	fakeReturns := fake.eventsReturns
-	return fakeReturns.result1
-}
-
-func (fake *FakeContainerManager) EventsCallCount() int {
-	fake.eventsMutex.RLock()
-	defer fake.eventsMutex.RUnlock()
-	return len(fake.eventsArgsForCall)
-}
-
-func (fake *FakeContainerManager) EventsCalls(stub func(lager.Logger) <-chan event.Event) {
-	fake.eventsMutex.Lock()
-	defer fake.eventsMutex.Unlock()
-	fake.EventsStub = stub
-}
-
-func (fake *FakeContainerManager) EventsArgsForCall(i int) lager.Logger {
-	fake.eventsMutex.RLock()
-	defer fake.eventsMutex.RUnlock()
-	argsForCall := fake.eventsArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *FakeContainerManager) EventsReturns(result1 <-chan event.Event) {
-	fake.eventsMutex.Lock()
-	defer fake.eventsMutex.Unlock()
-	fake.EventsStub = nil
-	fake.eventsReturns = struct {
-		result1 <-chan event.Event
-	}{result1}
-}
-
-func (fake *FakeContainerManager) EventsReturnsOnCall(i int, result1 <-chan event.Event) {
-	fake.eventsMutex.Lock()
-	defer fake.eventsMutex.Unlock()
-	fake.EventsStub = nil
-	if fake.eventsReturnsOnCall == nil {
-		fake.eventsReturnsOnCall = make(map[int]struct {
-			result1 <-chan event.Event
-		})
-	}
-	fake.eventsReturnsOnCall[i] = struct {
-		result1 <-chan event.Event
-	}{result1}
-}
-
 func (fake *FakeContainerManager) Exec(arg1 lager.Logger, arg2 string, arg3 string, arg4 *specs.Process, arg5 func() (io.Reader, io.Writer, io.Writer)) error {
 	fake.execMutex.Lock()
 	ret, specificReturn := fake.execReturnsOnCall[len(fake.execArgsForCall)]
@@ -410,6 +350,66 @@ func (fake *FakeContainerManager) GetContainerPIDReturnsOnCall(i int, result1 ui
 	}{result1, result2}
 }
 
+func (fake *FakeContainerManager) OOMEvents(arg1 lager.Logger) <-chan *events.TaskOOM {
+	fake.oOMEventsMutex.Lock()
+	ret, specificReturn := fake.oOMEventsReturnsOnCall[len(fake.oOMEventsArgsForCall)]
+	fake.oOMEventsArgsForCall = append(fake.oOMEventsArgsForCall, struct {
+		arg1 lager.Logger
+	}{arg1})
+	fake.recordInvocation("OOMEvents", []interface{}{arg1})
+	fake.oOMEventsMutex.Unlock()
+	if fake.OOMEventsStub != nil {
+		return fake.OOMEventsStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.oOMEventsReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeContainerManager) OOMEventsCallCount() int {
+	fake.oOMEventsMutex.RLock()
+	defer fake.oOMEventsMutex.RUnlock()
+	return len(fake.oOMEventsArgsForCall)
+}
+
+func (fake *FakeContainerManager) OOMEventsCalls(stub func(lager.Logger) <-chan *events.TaskOOM) {
+	fake.oOMEventsMutex.Lock()
+	defer fake.oOMEventsMutex.Unlock()
+	fake.OOMEventsStub = stub
+}
+
+func (fake *FakeContainerManager) OOMEventsArgsForCall(i int) lager.Logger {
+	fake.oOMEventsMutex.RLock()
+	defer fake.oOMEventsMutex.RUnlock()
+	argsForCall := fake.oOMEventsArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeContainerManager) OOMEventsReturns(result1 <-chan *events.TaskOOM) {
+	fake.oOMEventsMutex.Lock()
+	defer fake.oOMEventsMutex.Unlock()
+	fake.OOMEventsStub = nil
+	fake.oOMEventsReturns = struct {
+		result1 <-chan *events.TaskOOM
+	}{result1}
+}
+
+func (fake *FakeContainerManager) OOMEventsReturnsOnCall(i int, result1 <-chan *events.TaskOOM) {
+	fake.oOMEventsMutex.Lock()
+	defer fake.oOMEventsMutex.Unlock()
+	fake.OOMEventsStub = nil
+	if fake.oOMEventsReturnsOnCall == nil {
+		fake.oOMEventsReturnsOnCall = make(map[int]struct {
+			result1 <-chan *events.TaskOOM
+		})
+	}
+	fake.oOMEventsReturnsOnCall[i] = struct {
+		result1 <-chan *events.TaskOOM
+	}{result1}
+}
+
 func (fake *FakeContainerManager) State(arg1 lager.Logger, arg2 string) (int, string, error) {
 	fake.stateMutex.Lock()
 	ret, specificReturn := fake.stateReturnsOnCall[len(fake.stateArgsForCall)]
@@ -484,12 +484,12 @@ func (fake *FakeContainerManager) Invocations() map[string][][]interface{} {
 	defer fake.createMutex.RUnlock()
 	fake.deleteMutex.RLock()
 	defer fake.deleteMutex.RUnlock()
-	fake.eventsMutex.RLock()
-	defer fake.eventsMutex.RUnlock()
 	fake.execMutex.RLock()
 	defer fake.execMutex.RUnlock()
 	fake.getContainerPIDMutex.RLock()
 	defer fake.getContainerPIDMutex.RUnlock()
+	fake.oOMEventsMutex.RLock()
+	defer fake.oOMEventsMutex.RUnlock()
 	fake.stateMutex.RLock()
 	defer fake.stateMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

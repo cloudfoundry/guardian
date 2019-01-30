@@ -151,9 +151,11 @@
   revision = "0650fd9eeb50bab4fc99dceb9f2e14cf58f36e7f"
 
 [[projects]]
+  digest = "1:63c999aa5074396c7bf7b4be88e11c56fb3d182755cf42c66216a5aaaeed4b22"
   name = "github.com/containerd/containerd"
   packages = [
     ".",
+    "api/events",
     "api/services/containers/v1",
     "api/services/content/v1",
     "api/services/diff/v1",

@@ -80,7 +80,6 @@ var _ = Describe("Info", func() {
 
 	When("the container has a memory limit applied", func() {
 		BeforeEach(func() {
-			skipIfContainerd()
 			containerLimits = garden.Limits{Memory: garden.MemoryLimits{LimitInBytes: 30 * mb}}
 		})
 

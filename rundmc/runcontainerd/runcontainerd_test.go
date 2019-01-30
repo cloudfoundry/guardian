@@ -18,6 +18,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/users/usersfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
+	apievents "github.com/containerd/containerd/api/events"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -561,15 +562,64 @@ var _ = Describe("Runcontainerd", func() {
 	})
 
 	Describe("Events", func() {
-		var eventsCh <-chan event.Event
+		var (
+			eventsChannel <-chan event.Event
+			eventsErr     error
+			oomEvents     chan *apievents.TaskOOM
+		)
 
 		BeforeEach(func() {
-			eventsCh = make(<-chan event.Event)
-			containerManager.EventsReturns(eventsCh)
+			oomEvents = make(chan *apievents.TaskOOM)
+			containerManager.OOMEventsReturnsOnCall(0, oomEvents)
+
 		})
 
-		It("returns the event channel", func() {
-			Expect(runContainerd.Events(logger)).To(Equal(eventsCh))
+		JustBeforeEach(func() {
+			eventsChannel, eventsErr = runContainerd.Events(logger)
+		})
+
+		AfterEach(func() {
+			close(oomEvents)
+		})
+
+		It("succeeds", func() {
+			Expect(eventsErr).NotTo(HaveOccurred())
+		})
+
+		It("reports OOM events", func() {
+			Eventually(containerManager.OOMEventsCallCount, "10s").Should(Equal(1))
+			actualLogger := containerManager.OOMEventsArgsForCall(0)
+			Expect(actualLogger).To(Equal(logger))
+
+			var oomEvent event.Event
+			oomEvents <- &apievents.TaskOOM{ContainerID: "my-container-id"}
+			Eventually(eventsChannel).Should(Receive(&oomEvent))
+			Expect(oomEvent.ContainerID).To(Equal("my-container-id"))
+		})
+
+		When("the events channel gets closed unexpectedly", func() {
+			var (
+				events      chan *apievents.TaskOOM
+				eventsAgain chan *apievents.TaskOOM
+			)
+
+			BeforeEach(func() {
+				events = make(chan *apievents.TaskOOM)
+				eventsAgain = make(chan *apievents.TaskOOM)
+				containerManager.OOMEventsReturnsOnCall(0, events)
+				containerManager.OOMEventsReturnsOnCall(1, eventsAgain)
+			})
+
+			It("contiues to report OOM events", func() {
+				close(events)
+				Eventually(containerManager.OOMEventsCallCount, "10s").Should(Equal(2))
+
+				var oomEvent event.Event
+				eventsAgain <- &apievents.TaskOOM{ContainerID: "my-second-container-id"}
+				Eventually(eventsChannel).Should(Receive(&oomEvent))
+				Expect(oomEvent.ContainerID).To(Equal("my-second-container-id"))
+			})
+
 		})
 	})
 })

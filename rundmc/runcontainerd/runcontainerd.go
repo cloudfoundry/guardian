@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"syscall"
+	"time"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -12,6 +13,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/lager"
+	apievents "github.com/containerd/containerd/api/events"
 	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -25,7 +27,7 @@ type ContainerManager interface {
 
 	State(log lager.Logger, containerID string) (int, string, error)
 	GetContainerPID(log lager.Logger, containerID string) (uint32, error)
-	Events(log lager.Logger) <-chan event.Event
+	OOMEvents(log lager.Logger) <-chan *apievents.TaskOOM
 }
 
 //go:generate counterfeiter . ProcessManager
@@ -170,5 +172,17 @@ func (r *RunContainerd) Stats(log lager.Logger, id string) (gardener.StatsContai
 }
 
 func (r *RunContainerd) Events(log lager.Logger) (<-chan event.Event, error) {
-	return r.containerManager.Events(log), nil
+	events := make(chan event.Event)
+
+	go func() {
+		for {
+			for oomEvent := range r.containerManager.OOMEvents(log) {
+				events <- event.NewOOMEvent(oomEvent.ContainerID)
+			}
+
+			time.Sleep(time.Second)
+		}
+	}()
+
+	return events, nil
 }

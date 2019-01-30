@@ -3,6 +3,7 @@ package nerd
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -10,11 +11,13 @@ import (
 	"syscall"
 	"time"
 
-	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
+	apievents "github.com/containerd/containerd/api/events"
 	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/errdefs"
+	ctrdevents "github.com/containerd/containerd/events"
+	"github.com/containerd/typeurl"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -244,6 +247,55 @@ func (n *Nerd) Signal(log lager.Logger, containerID, processID string, signal sy
 	return process.Kill(n.context, signal)
 }
 
-func (n *Nerd) Events(log lager.Logger) <-chan event.Event {
-	return make(chan event.Event)
+func (n *Nerd) OOMEvents(log lager.Logger) <-chan *apievents.TaskOOM {
+	events, errs := n.client.Subscribe(n.context, `topic=="/tasks/oom"`)
+	oomEvents := make(chan *apievents.TaskOOM)
+
+	go func() {
+		for {
+			select {
+			case err, ok := <-errs:
+				if !ok {
+					log.Info("event service has been closed")
+				}
+
+				if err != nil {
+					log.Error("event service received an error", err)
+				}
+
+				close(oomEvents)
+				return
+
+			case e := <-events:
+				event, err := coerceEvent(e)
+				if err != nil {
+					log.Error("failed to coerce containerd event", err, lager.Data{"event": e})
+					continue
+				}
+
+				log.Debug("received an OOM event", lager.Data{"containerID": event.ContainerID})
+				oomEvents <- event
+			}
+		}
+	}()
+
+	return oomEvents
+}
+
+func coerceEvent(event *ctrdevents.Envelope) (*apievents.TaskOOM, error) {
+	if event.Event == nil {
+		return nil, errors.New("empty event")
+	}
+
+	unmarshalledEvent, err := typeurl.UnmarshalAny(event.Event)
+	if err != nil {
+		return nil, err
+	}
+
+	oom, ok := unmarshalledEvent.(*apievents.TaskOOM)
+	if !ok {
+		return nil, errors.New("unexpected event")
+	}
+
+	return oom, nil
 }
