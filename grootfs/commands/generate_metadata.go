@@ -2,11 +2,8 @@ package commands // import "code.cloudfoundry.org/grootfs/commands"
 
 import (
 	"fmt"
-	"os"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/grootfs/store/filesystems"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/lager"
 
@@ -41,24 +38,9 @@ var GenerateVolumeSizeMetadata = cli.Command{
 		}
 
 		for _, volumeID := range volumes {
-			_, err := driver.VolumeSize(logger, volumeID)
-			if os.IsNotExist(errorspkg.Cause(err)) {
-				logger.Info("volume-meta-missing", lager.Data{"volumeID": volumeID})
-
-				volumePath, err := driver.VolumePath(logger, volumeID)
-				if err != nil {
-					return err
-				}
-
-				size, err := filesystems.CalculatePathSize(logger, volumePath)
-				if err != nil {
-					return err
-				}
-
-				err = driver.WriteVolumeMeta(logger, volumeID, base_image_puller.VolumeMeta{Size: size})
-				if err != nil {
-					return err
-				}
+			err = driver.GenerateVolumeMeta(logger, volumeID)
+			if err != nil {
+				return err
 			}
 		}
 

@@ -1227,25 +1227,115 @@ var _ = Describe("Driver", func() {
 	})
 
 	Describe("VolumeSize", func() {
+		var (
+			volumeID string
+			size     int64
+			sizeErr  error
+		)
+
+		BeforeEach(func() {
+			volumeID = randVolumeID()
+			createVolume(storePath, driver, "parent-id", volumeID, 3000)
+		})
+
+		JustBeforeEach(func() {
+			size, sizeErr = driver.VolumeSize(logger, volumeID)
+		})
+
 		It("returns the volume size", func() {
-			volumeID := randVolumeID()
-			createVolume(storePath, driver, "parent-id", volumeID, 3000000)
-			size, err := driver.VolumeSize(logger, volumeID)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(size).To(BeEquivalentTo(3000000))
+			Expect(sizeErr).NotTo(HaveOccurred())
+			Expect(size).To(BeEquivalentTo(3000))
+		})
+
+		Context("when metadata is missing", func() {
+			BeforeEach(func() {
+				Expect(os.Remove(volumeMetaPath(storePath, volumeID))).To(Succeed())
+			})
+
+			It("fails", func() {
+				Expect(sizeErr).To(MatchError(HavePrefix("failed to open metadata file for %s", volumeID)))
+			})
+		})
+	})
+
+	Describe("GenerateVolumeMeta", func() {
+		var (
+			volumeID              string
+			generateMetadataError error
+		)
+
+		BeforeEach(func() {
+			volumeID = randVolumeID()
+		})
+
+		JustBeforeEach(func() {
+			generateMetadataError = driver.GenerateVolumeMeta(logger, volumeID)
+		})
+
+		Context("when the volume does not exist", func() {
+			It("returns an error", func() {
+				Expect(generateMetadataError).To(MatchError(ContainSubstring("volume does not exist `%s`", volumeID)))
+			})
+		})
+
+		Context("when the volume exists", func() {
+			BeforeEach(func() {
+				createVolume(storePath, driver, "parent-id", volumeID, 3000)
+			})
+
+			It("succeeds", func() {
+				Expect(generateMetadataError).NotTo(HaveOccurred())
+			})
+
+			Context("when the meta file does not exist", func() {
+				BeforeEach(func() {
+					Expect(os.Remove(volumeMetaPath(storePath, volumeID))).To(Succeed())
+				})
+
+				It("generates the meta file", func() {
+					var generatedVolumeMeta base_image_puller.VolumeMeta
+					metadataFile, err := os.Open(volumeMetaPath(storePath, volumeID))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(json.NewDecoder(metadataFile).Decode(&generatedVolumeMeta)).To(Succeed())
+					Expect(generatedVolumeMeta.Size).To(BeNumerically("~", 3000, 50))
+				})
+			})
+
+			Context("when the meta file exists", func() {
+				BeforeEach(func() {
+					Expect(ioutil.WriteFile(volumeMetaPath(storePath, volumeID), []byte("some random stuff"), 0755)).To(Succeed())
+				})
+
+				It("regenerates the meta file", func() {
+					var generatedVolumeMeta base_image_puller.VolumeMeta
+					metadataFile, err := os.Open(volumeMetaPath(storePath, volumeID))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(json.NewDecoder(metadataFile).Decode(&generatedVolumeMeta)).To(Succeed())
+					Expect(generatedVolumeMeta.Size).To(BeNumerically("~", 3000, 50))
+				})
+			})
 		})
 	})
 })
 
 func randVolumeID() string {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	return fmt.Sprintf("volume-%d", r.Int())
+	return fmt.Sprintf("%d", r.Int())
+}
+
+func volumeMetaPath(storePath string, id string) string {
+	return filepath.Join(storePath, store.MetaDirName, fmt.Sprintf("volume-%s", id))
 }
 
 func createVolume(storePath string, driver *overlayxfs.Driver, parentID, id string, size int64) string {
 	path, err := driver.CreateVolume(lagertest.NewTestLogger("test"), parentID, id)
 	Expect(err).NotTo(HaveOccurred())
-	metaFilePath := filepath.Join(storePath, store.MetaDirName, fmt.Sprintf("volume-%s", id))
+
+	volumeContentsPath := filepath.Join(storePath, store.VolumesDirName, id, "contents")
+	Expect(ioutil.WriteFile(volumeContentsPath, []byte{}, 0755)).To(Succeed())
+	Expect(os.Truncate(volumeContentsPath, size)).To(Succeed())
+
+	metaFilePath := volumeMetaPath(storePath, id)
 	metaContents := fmt.Sprintf(`{"Size": %d}`, size)
 	Expect(ioutil.WriteFile(metaFilePath, []byte(metaContents), 0644)).To(Succeed())
 

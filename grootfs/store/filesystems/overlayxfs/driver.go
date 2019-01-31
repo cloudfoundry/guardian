@@ -188,7 +188,7 @@ func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 		return err
 	}
 
-	volumeMetaFilePath := filesystems.VolumeMetaFilePath(d.storePath, id)
+	volumeMetaFilePath := d.volumeMetaFilePath(id)
 	if err := os.Remove(volumeMetaFilePath); err != nil && !os.IsNotExist(err) {
 		logger.Error("deleting-metadata-file-failed", err, lager.Data{"path": volumeMetaFilePath})
 	}
@@ -368,7 +368,16 @@ func (d *Driver) WriteVolumeMeta(logger lager.Logger, id string, metadata base_i
 	logger = logger.Session("overlayxfs-writing-volume-metadata", lager.Data{"volumeID": id})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
-	return filesystems.WriteVolumeMeta(logger, d.storePath, id, metadata)
+	metaFile, err := os.Create(d.volumeMetaFilePath(id))
+	if err != nil {
+		return errorspkg.Wrap(err, "creating metadata file")
+	}
+
+	if err = json.NewEncoder(metaFile).Encode(metadata); err != nil {
+		return errorspkg.Wrap(err, "writing metadata file")
+	}
+
+	return nil
 }
 
 func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath string) error {
@@ -527,7 +536,61 @@ func (d *Driver) VolumeSize(logger lager.Logger, id string) (int64, error) {
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	return filesystems.VolumeSize(logger, d.storePath, id)
+	metaFile, err := os.Open(d.volumeMetaFilePath(id))
+	if err != nil {
+		return 0, fmt.Errorf("failed to open metadata file for %s: %s", id, err.Error())
+	}
+
+	var metadata base_image_puller.VolumeMeta
+	err = json.NewDecoder(metaFile).Decode(&metadata)
+	if err != nil {
+		return 0, err
+	}
+
+	return metadata.Size, nil
+}
+
+func (d *Driver) volumeMetaFilePath(id string) string {
+	id = strings.Replace(id, "gc.", "", 1)
+	return filepath.Join(d.storePath, store.MetaDirName, fmt.Sprintf("volume-%s", id))
+}
+
+func (d *Driver) GenerateVolumeMeta(logger lager.Logger, id string) error {
+	volumePath, err := d.volumePath(logger, id)
+	if err != nil {
+		return err
+	}
+
+	size, err := calculatePathSize(logger, volumePath)
+	if err != nil {
+		return err
+	}
+
+	return d.WriteVolumeMeta(logger, id, base_image_puller.VolumeMeta{Size: size})
+}
+
+func (d *Driver) volumePath(logger lager.Logger, id string) (string, error) {
+	volPath := filepath.Join(d.storePath, store.VolumesDirName, id)
+	_, err := os.Stat(volPath)
+	if err == nil {
+		return volPath, nil
+	}
+
+	return "", errorspkg.Wrapf(err, "volume does not exist `%s`", id)
+}
+
+func calculatePathSize(logger lager.Logger, path string) (int64, error) {
+	cmd := exec.Command("du", "-bs", path)
+	stdoutBuffer := bytes.NewBuffer([]byte{})
+	stderrBuffer := bytes.NewBuffer([]byte{})
+	cmd.Stdout = stdoutBuffer
+	cmd.Stderr = stderrBuffer
+	if err := cmd.Run(); err != nil {
+		return 0, errorspkg.Wrapf(err, "du failed: %s", stderrBuffer.String())
+	}
+
+	usageString := strings.Split(stdoutBuffer.String(), "\t")[0]
+	return strconv.ParseInt(usageString, 10, 64)
 }
 
 func (d *Driver) createWhiteoutDevice(logger lager.Logger, storePath string, ownerUID, ownerGID int) error {
