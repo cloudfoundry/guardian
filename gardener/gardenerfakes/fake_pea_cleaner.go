@@ -9,22 +9,11 @@ import (
 )
 
 type FakePeaCleaner struct {
-	CleanAllStub        func(logger lager.Logger) error
-	cleanAllMutex       sync.RWMutex
-	cleanAllArgsForCall []struct {
-		logger lager.Logger
-	}
-	cleanAllReturns struct {
-		result1 error
-	}
-	cleanAllReturnsOnCall map[int]struct {
-		result1 error
-	}
-	CleanStub        func(logger lager.Logger, handle string) error
+	CleanStub        func(lager.Logger, string) error
 	cleanMutex       sync.RWMutex
 	cleanArgsForCall []struct {
-		logger lager.Logger
-		handle string
+		arg1 lager.Logger
+		arg2 string
 	}
 	cleanReturns struct {
 		result1 error
@@ -32,74 +21,38 @@ type FakePeaCleaner struct {
 	cleanReturnsOnCall map[int]struct {
 		result1 error
 	}
+	CleanAllStub        func(lager.Logger) error
+	cleanAllMutex       sync.RWMutex
+	cleanAllArgsForCall []struct {
+		arg1 lager.Logger
+	}
+	cleanAllReturns struct {
+		result1 error
+	}
+	cleanAllReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakePeaCleaner) CleanAll(logger lager.Logger) error {
-	fake.cleanAllMutex.Lock()
-	ret, specificReturn := fake.cleanAllReturnsOnCall[len(fake.cleanAllArgsForCall)]
-	fake.cleanAllArgsForCall = append(fake.cleanAllArgsForCall, struct {
-		logger lager.Logger
-	}{logger})
-	fake.recordInvocation("CleanAll", []interface{}{logger})
-	fake.cleanAllMutex.Unlock()
-	if fake.CleanAllStub != nil {
-		return fake.CleanAllStub(logger)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.cleanAllReturns.result1
-}
-
-func (fake *FakePeaCleaner) CleanAllCallCount() int {
-	fake.cleanAllMutex.RLock()
-	defer fake.cleanAllMutex.RUnlock()
-	return len(fake.cleanAllArgsForCall)
-}
-
-func (fake *FakePeaCleaner) CleanAllArgsForCall(i int) lager.Logger {
-	fake.cleanAllMutex.RLock()
-	defer fake.cleanAllMutex.RUnlock()
-	return fake.cleanAllArgsForCall[i].logger
-}
-
-func (fake *FakePeaCleaner) CleanAllReturns(result1 error) {
-	fake.CleanAllStub = nil
-	fake.cleanAllReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakePeaCleaner) CleanAllReturnsOnCall(i int, result1 error) {
-	fake.CleanAllStub = nil
-	if fake.cleanAllReturnsOnCall == nil {
-		fake.cleanAllReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.cleanAllReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakePeaCleaner) Clean(logger lager.Logger, handle string) error {
+func (fake *FakePeaCleaner) Clean(arg1 lager.Logger, arg2 string) error {
 	fake.cleanMutex.Lock()
 	ret, specificReturn := fake.cleanReturnsOnCall[len(fake.cleanArgsForCall)]
 	fake.cleanArgsForCall = append(fake.cleanArgsForCall, struct {
-		logger lager.Logger
-		handle string
-	}{logger, handle})
-	fake.recordInvocation("Clean", []interface{}{logger, handle})
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Clean", []interface{}{arg1, arg2})
 	fake.cleanMutex.Unlock()
 	if fake.CleanStub != nil {
-		return fake.CleanStub(logger, handle)
+		return fake.CleanStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.cleanReturns.result1
+	fakeReturns := fake.cleanReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakePeaCleaner) CleanCallCount() int {
@@ -108,13 +61,22 @@ func (fake *FakePeaCleaner) CleanCallCount() int {
 	return len(fake.cleanArgsForCall)
 }
 
+func (fake *FakePeaCleaner) CleanCalls(stub func(lager.Logger, string) error) {
+	fake.cleanMutex.Lock()
+	defer fake.cleanMutex.Unlock()
+	fake.CleanStub = stub
+}
+
 func (fake *FakePeaCleaner) CleanArgsForCall(i int) (lager.Logger, string) {
 	fake.cleanMutex.RLock()
 	defer fake.cleanMutex.RUnlock()
-	return fake.cleanArgsForCall[i].logger, fake.cleanArgsForCall[i].handle
+	argsForCall := fake.cleanArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakePeaCleaner) CleanReturns(result1 error) {
+	fake.cleanMutex.Lock()
+	defer fake.cleanMutex.Unlock()
 	fake.CleanStub = nil
 	fake.cleanReturns = struct {
 		result1 error
@@ -122,6 +84,8 @@ func (fake *FakePeaCleaner) CleanReturns(result1 error) {
 }
 
 func (fake *FakePeaCleaner) CleanReturnsOnCall(i int, result1 error) {
+	fake.cleanMutex.Lock()
+	defer fake.cleanMutex.Unlock()
 	fake.CleanStub = nil
 	if fake.cleanReturnsOnCall == nil {
 		fake.cleanReturnsOnCall = make(map[int]struct {
@@ -133,13 +97,73 @@ func (fake *FakePeaCleaner) CleanReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakePeaCleaner) CleanAll(arg1 lager.Logger) error {
+	fake.cleanAllMutex.Lock()
+	ret, specificReturn := fake.cleanAllReturnsOnCall[len(fake.cleanAllArgsForCall)]
+	fake.cleanAllArgsForCall = append(fake.cleanAllArgsForCall, struct {
+		arg1 lager.Logger
+	}{arg1})
+	fake.recordInvocation("CleanAll", []interface{}{arg1})
+	fake.cleanAllMutex.Unlock()
+	if fake.CleanAllStub != nil {
+		return fake.CleanAllStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.cleanAllReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakePeaCleaner) CleanAllCallCount() int {
+	fake.cleanAllMutex.RLock()
+	defer fake.cleanAllMutex.RUnlock()
+	return len(fake.cleanAllArgsForCall)
+}
+
+func (fake *FakePeaCleaner) CleanAllCalls(stub func(lager.Logger) error) {
+	fake.cleanAllMutex.Lock()
+	defer fake.cleanAllMutex.Unlock()
+	fake.CleanAllStub = stub
+}
+
+func (fake *FakePeaCleaner) CleanAllArgsForCall(i int) lager.Logger {
+	fake.cleanAllMutex.RLock()
+	defer fake.cleanAllMutex.RUnlock()
+	argsForCall := fake.cleanAllArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakePeaCleaner) CleanAllReturns(result1 error) {
+	fake.cleanAllMutex.Lock()
+	defer fake.cleanAllMutex.Unlock()
+	fake.CleanAllStub = nil
+	fake.cleanAllReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakePeaCleaner) CleanAllReturnsOnCall(i int, result1 error) {
+	fake.cleanAllMutex.Lock()
+	defer fake.cleanAllMutex.Unlock()
+	fake.CleanAllStub = nil
+	if fake.cleanAllReturnsOnCall == nil {
+		fake.cleanAllReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.cleanAllReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakePeaCleaner) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.cleanAllMutex.RLock()
-	defer fake.cleanAllMutex.RUnlock()
 	fake.cleanMutex.RLock()
 	defer fake.cleanMutex.RUnlock()
+	fake.cleanAllMutex.RLock()
+	defer fake.cleanAllMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

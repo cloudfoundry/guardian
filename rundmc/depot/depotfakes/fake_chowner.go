@@ -8,12 +8,12 @@ import (
 )
 
 type FakeChowner struct {
-	ChownStub        func(path string, uid, gid int) error
+	ChownStub        func(string, int, int) error
 	chownMutex       sync.RWMutex
 	chownArgsForCall []struct {
-		path string
-		uid  int
-		gid  int
+		arg1 string
+		arg2 int
+		arg3 int
 	}
 	chownReturns struct {
 		result1 error
@@ -25,23 +25,24 @@ type FakeChowner struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeChowner) Chown(path string, uid int, gid int) error {
+func (fake *FakeChowner) Chown(arg1 string, arg2 int, arg3 int) error {
 	fake.chownMutex.Lock()
 	ret, specificReturn := fake.chownReturnsOnCall[len(fake.chownArgsForCall)]
 	fake.chownArgsForCall = append(fake.chownArgsForCall, struct {
-		path string
-		uid  int
-		gid  int
-	}{path, uid, gid})
-	fake.recordInvocation("Chown", []interface{}{path, uid, gid})
+		arg1 string
+		arg2 int
+		arg3 int
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("Chown", []interface{}{arg1, arg2, arg3})
 	fake.chownMutex.Unlock()
 	if fake.ChownStub != nil {
-		return fake.ChownStub(path, uid, gid)
+		return fake.ChownStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.chownReturns.result1
+	fakeReturns := fake.chownReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeChowner) ChownCallCount() int {
@@ -50,13 +51,22 @@ func (fake *FakeChowner) ChownCallCount() int {
 	return len(fake.chownArgsForCall)
 }
 
+func (fake *FakeChowner) ChownCalls(stub func(string, int, int) error) {
+	fake.chownMutex.Lock()
+	defer fake.chownMutex.Unlock()
+	fake.ChownStub = stub
+}
+
 func (fake *FakeChowner) ChownArgsForCall(i int) (string, int, int) {
 	fake.chownMutex.RLock()
 	defer fake.chownMutex.RUnlock()
-	return fake.chownArgsForCall[i].path, fake.chownArgsForCall[i].uid, fake.chownArgsForCall[i].gid
+	argsForCall := fake.chownArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeChowner) ChownReturns(result1 error) {
+	fake.chownMutex.Lock()
+	defer fake.chownMutex.Unlock()
 	fake.ChownStub = nil
 	fake.chownReturns = struct {
 		result1 error
@@ -64,6 +74,8 @@ func (fake *FakeChowner) ChownReturns(result1 error) {
 }
 
 func (fake *FakeChowner) ChownReturnsOnCall(i int, result1 error) {
+	fake.chownMutex.Lock()
+	defer fake.chownMutex.Unlock()
 	fake.ChownStub = nil
 	if fake.chownReturnsOnCall == nil {
 		fake.chownReturnsOnCall = make(map[int]struct {

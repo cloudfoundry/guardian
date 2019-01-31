@@ -9,15 +9,15 @@ import (
 )
 
 type FakeMkdirer struct {
-	MkdirAsStub        func(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
+	MkdirAsStub        func(string, int, int, os.FileMode, bool, ...string) error
 	mkdirAsMutex       sync.RWMutex
 	mkdirAsArgsForCall []struct {
-		rootFSPathFile string
-		uid            int
-		gid            int
-		mode           os.FileMode
-		recreate       bool
-		path           []string
+		arg1 string
+		arg2 int
+		arg3 int
+		arg4 os.FileMode
+		arg5 bool
+		arg6 []string
 	}
 	mkdirAsReturns struct {
 		result1 error
@@ -29,26 +29,27 @@ type FakeMkdirer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeMkdirer) MkdirAs(rootFSPathFile string, uid int, gid int, mode os.FileMode, recreate bool, path ...string) error {
+func (fake *FakeMkdirer) MkdirAs(arg1 string, arg2 int, arg3 int, arg4 os.FileMode, arg5 bool, arg6 ...string) error {
 	fake.mkdirAsMutex.Lock()
 	ret, specificReturn := fake.mkdirAsReturnsOnCall[len(fake.mkdirAsArgsForCall)]
 	fake.mkdirAsArgsForCall = append(fake.mkdirAsArgsForCall, struct {
-		rootFSPathFile string
-		uid            int
-		gid            int
-		mode           os.FileMode
-		recreate       bool
-		path           []string
-	}{rootFSPathFile, uid, gid, mode, recreate, path})
-	fake.recordInvocation("MkdirAs", []interface{}{rootFSPathFile, uid, gid, mode, recreate, path})
+		arg1 string
+		arg2 int
+		arg3 int
+		arg4 os.FileMode
+		arg5 bool
+		arg6 []string
+	}{arg1, arg2, arg3, arg4, arg5, arg6})
+	fake.recordInvocation("MkdirAs", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6})
 	fake.mkdirAsMutex.Unlock()
 	if fake.MkdirAsStub != nil {
-		return fake.MkdirAsStub(rootFSPathFile, uid, gid, mode, recreate, path...)
+		return fake.MkdirAsStub(arg1, arg2, arg3, arg4, arg5, arg6...)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.mkdirAsReturns.result1
+	fakeReturns := fake.mkdirAsReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeMkdirer) MkdirAsCallCount() int {
@@ -57,13 +58,22 @@ func (fake *FakeMkdirer) MkdirAsCallCount() int {
 	return len(fake.mkdirAsArgsForCall)
 }
 
+func (fake *FakeMkdirer) MkdirAsCalls(stub func(string, int, int, os.FileMode, bool, ...string) error) {
+	fake.mkdirAsMutex.Lock()
+	defer fake.mkdirAsMutex.Unlock()
+	fake.MkdirAsStub = stub
+}
+
 func (fake *FakeMkdirer) MkdirAsArgsForCall(i int) (string, int, int, os.FileMode, bool, []string) {
 	fake.mkdirAsMutex.RLock()
 	defer fake.mkdirAsMutex.RUnlock()
-	return fake.mkdirAsArgsForCall[i].rootFSPathFile, fake.mkdirAsArgsForCall[i].uid, fake.mkdirAsArgsForCall[i].gid, fake.mkdirAsArgsForCall[i].mode, fake.mkdirAsArgsForCall[i].recreate, fake.mkdirAsArgsForCall[i].path
+	argsForCall := fake.mkdirAsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6
 }
 
 func (fake *FakeMkdirer) MkdirAsReturns(result1 error) {
+	fake.mkdirAsMutex.Lock()
+	defer fake.mkdirAsMutex.Unlock()
 	fake.MkdirAsStub = nil
 	fake.mkdirAsReturns = struct {
 		result1 error
@@ -71,6 +81,8 @@ func (fake *FakeMkdirer) MkdirAsReturns(result1 error) {
 }
 
 func (fake *FakeMkdirer) MkdirAsReturnsOnCall(i int, result1 error) {
+	fake.mkdirAsMutex.Lock()
+	defer fake.mkdirAsMutex.Unlock()
 	fake.MkdirAsStub = nil
 	if fake.mkdirAsReturnsOnCall == nil {
 		fake.mkdirAsReturnsOnCall = make(map[int]struct {

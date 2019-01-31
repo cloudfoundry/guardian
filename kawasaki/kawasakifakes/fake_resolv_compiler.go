@@ -9,15 +9,15 @@ import (
 )
 
 type FakeResolvCompiler struct {
-	DetermineStub        func(resolvContents string, hostIP net.IP, pluginNameservers, operatorNameservers, additionalNameservers []net.IP, pluginSearchDomains []string) []string
+	DetermineStub        func(string, net.IP, []net.IP, []net.IP, []net.IP, []string) []string
 	determineMutex       sync.RWMutex
 	determineArgsForCall []struct {
-		resolvContents        string
-		hostIP                net.IP
-		pluginNameservers     []net.IP
-		operatorNameservers   []net.IP
-		additionalNameservers []net.IP
-		pluginSearchDomains   []string
+		arg1 string
+		arg2 net.IP
+		arg3 []net.IP
+		arg4 []net.IP
+		arg5 []net.IP
+		arg6 []string
 	}
 	determineReturns struct {
 		result1 []string
@@ -29,46 +29,47 @@ type FakeResolvCompiler struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeResolvCompiler) Determine(resolvContents string, hostIP net.IP, pluginNameservers []net.IP, operatorNameservers []net.IP, additionalNameservers []net.IP, pluginSearchDomains []string) []string {
-	var pluginNameserversCopy []net.IP
-	if pluginNameservers != nil {
-		pluginNameserversCopy = make([]net.IP, len(pluginNameservers))
-		copy(pluginNameserversCopy, pluginNameservers)
+func (fake *FakeResolvCompiler) Determine(arg1 string, arg2 net.IP, arg3 []net.IP, arg4 []net.IP, arg5 []net.IP, arg6 []string) []string {
+	var arg3Copy []net.IP
+	if arg3 != nil {
+		arg3Copy = make([]net.IP, len(arg3))
+		copy(arg3Copy, arg3)
 	}
-	var operatorNameserversCopy []net.IP
-	if operatorNameservers != nil {
-		operatorNameserversCopy = make([]net.IP, len(operatorNameservers))
-		copy(operatorNameserversCopy, operatorNameservers)
+	var arg4Copy []net.IP
+	if arg4 != nil {
+		arg4Copy = make([]net.IP, len(arg4))
+		copy(arg4Copy, arg4)
 	}
-	var additionalNameserversCopy []net.IP
-	if additionalNameservers != nil {
-		additionalNameserversCopy = make([]net.IP, len(additionalNameservers))
-		copy(additionalNameserversCopy, additionalNameservers)
+	var arg5Copy []net.IP
+	if arg5 != nil {
+		arg5Copy = make([]net.IP, len(arg5))
+		copy(arg5Copy, arg5)
 	}
-	var pluginSearchDomainsCopy []string
-	if pluginSearchDomains != nil {
-		pluginSearchDomainsCopy = make([]string, len(pluginSearchDomains))
-		copy(pluginSearchDomainsCopy, pluginSearchDomains)
+	var arg6Copy []string
+	if arg6 != nil {
+		arg6Copy = make([]string, len(arg6))
+		copy(arg6Copy, arg6)
 	}
 	fake.determineMutex.Lock()
 	ret, specificReturn := fake.determineReturnsOnCall[len(fake.determineArgsForCall)]
 	fake.determineArgsForCall = append(fake.determineArgsForCall, struct {
-		resolvContents        string
-		hostIP                net.IP
-		pluginNameservers     []net.IP
-		operatorNameservers   []net.IP
-		additionalNameservers []net.IP
-		pluginSearchDomains   []string
-	}{resolvContents, hostIP, pluginNameserversCopy, operatorNameserversCopy, additionalNameserversCopy, pluginSearchDomainsCopy})
-	fake.recordInvocation("Determine", []interface{}{resolvContents, hostIP, pluginNameserversCopy, operatorNameserversCopy, additionalNameserversCopy, pluginSearchDomainsCopy})
+		arg1 string
+		arg2 net.IP
+		arg3 []net.IP
+		arg4 []net.IP
+		arg5 []net.IP
+		arg6 []string
+	}{arg1, arg2, arg3Copy, arg4Copy, arg5Copy, arg6Copy})
+	fake.recordInvocation("Determine", []interface{}{arg1, arg2, arg3Copy, arg4Copy, arg5Copy, arg6Copy})
 	fake.determineMutex.Unlock()
 	if fake.DetermineStub != nil {
-		return fake.DetermineStub(resolvContents, hostIP, pluginNameservers, operatorNameservers, additionalNameservers, pluginSearchDomains)
+		return fake.DetermineStub(arg1, arg2, arg3, arg4, arg5, arg6)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.determineReturns.result1
+	fakeReturns := fake.determineReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeResolvCompiler) DetermineCallCount() int {
@@ -77,13 +78,22 @@ func (fake *FakeResolvCompiler) DetermineCallCount() int {
 	return len(fake.determineArgsForCall)
 }
 
+func (fake *FakeResolvCompiler) DetermineCalls(stub func(string, net.IP, []net.IP, []net.IP, []net.IP, []string) []string) {
+	fake.determineMutex.Lock()
+	defer fake.determineMutex.Unlock()
+	fake.DetermineStub = stub
+}
+
 func (fake *FakeResolvCompiler) DetermineArgsForCall(i int) (string, net.IP, []net.IP, []net.IP, []net.IP, []string) {
 	fake.determineMutex.RLock()
 	defer fake.determineMutex.RUnlock()
-	return fake.determineArgsForCall[i].resolvContents, fake.determineArgsForCall[i].hostIP, fake.determineArgsForCall[i].pluginNameservers, fake.determineArgsForCall[i].operatorNameservers, fake.determineArgsForCall[i].additionalNameservers, fake.determineArgsForCall[i].pluginSearchDomains
+	argsForCall := fake.determineArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6
 }
 
 func (fake *FakeResolvCompiler) DetermineReturns(result1 []string) {
+	fake.determineMutex.Lock()
+	defer fake.determineMutex.Unlock()
 	fake.DetermineStub = nil
 	fake.determineReturns = struct {
 		result1 []string
@@ -91,6 +101,8 @@ func (fake *FakeResolvCompiler) DetermineReturns(result1 []string) {
 }
 
 func (fake *FakeResolvCompiler) DetermineReturnsOnCall(i int, result1 []string) {
+	fake.determineMutex.Lock()
+	defer fake.determineMutex.Unlock()
 	fake.DetermineStub = nil
 	if fake.determineReturnsOnCall == nil {
 		fake.determineReturnsOnCall = make(map[int]struct {

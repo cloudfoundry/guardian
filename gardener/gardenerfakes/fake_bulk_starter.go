@@ -10,8 +10,9 @@ import (
 type FakeBulkStarter struct {
 	StartAllStub        func() error
 	startAllMutex       sync.RWMutex
-	startAllArgsForCall []struct{}
-	startAllReturns     struct {
+	startAllArgsForCall []struct {
+	}
+	startAllReturns struct {
 		result1 error
 	}
 	startAllReturnsOnCall map[int]struct {
@@ -24,7 +25,8 @@ type FakeBulkStarter struct {
 func (fake *FakeBulkStarter) StartAll() error {
 	fake.startAllMutex.Lock()
 	ret, specificReturn := fake.startAllReturnsOnCall[len(fake.startAllArgsForCall)]
-	fake.startAllArgsForCall = append(fake.startAllArgsForCall, struct{}{})
+	fake.startAllArgsForCall = append(fake.startAllArgsForCall, struct {
+	}{})
 	fake.recordInvocation("StartAll", []interface{}{})
 	fake.startAllMutex.Unlock()
 	if fake.StartAllStub != nil {
@@ -33,7 +35,8 @@ func (fake *FakeBulkStarter) StartAll() error {
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.startAllReturns.result1
+	fakeReturns := fake.startAllReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeBulkStarter) StartAllCallCount() int {
@@ -42,7 +45,15 @@ func (fake *FakeBulkStarter) StartAllCallCount() int {
 	return len(fake.startAllArgsForCall)
 }
 
+func (fake *FakeBulkStarter) StartAllCalls(stub func() error) {
+	fake.startAllMutex.Lock()
+	defer fake.startAllMutex.Unlock()
+	fake.StartAllStub = stub
+}
+
 func (fake *FakeBulkStarter) StartAllReturns(result1 error) {
+	fake.startAllMutex.Lock()
+	defer fake.startAllMutex.Unlock()
 	fake.StartAllStub = nil
 	fake.startAllReturns = struct {
 		result1 error
@@ -50,6 +61,8 @@ func (fake *FakeBulkStarter) StartAllReturns(result1 error) {
 }
 
 func (fake *FakeBulkStarter) StartAllReturnsOnCall(i int, result1 error) {
+	fake.startAllMutex.Lock()
+	defer fake.startAllMutex.Unlock()
 	fake.StartAllStub = nil
 	if fake.startAllReturnsOnCall == nil {
 		fake.startAllReturnsOnCall = make(map[int]struct {

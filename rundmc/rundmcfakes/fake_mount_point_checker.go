@@ -8,10 +8,10 @@ import (
 )
 
 type FakeMountPointChecker struct {
-	Stub        func(path string) (bool, error)
+	Stub        func(string) (bool, error)
 	mutex       sync.RWMutex
 	argsForCall []struct {
-		path string
+		arg1 string
 	}
 	returns struct {
 		result1 bool
@@ -25,16 +25,16 @@ type FakeMountPointChecker struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeMountPointChecker) Spy(path string) (bool, error) {
+func (fake *FakeMountPointChecker) Spy(arg1 string) (bool, error) {
 	fake.mutex.Lock()
 	ret, specificReturn := fake.returnsOnCall[len(fake.argsForCall)]
 	fake.argsForCall = append(fake.argsForCall, struct {
-		path string
-	}{path})
-	fake.recordInvocation("MountPointChecker", []interface{}{path})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("MountPointChecker", []interface{}{arg1})
 	fake.mutex.Unlock()
 	if fake.Stub != nil {
-		return fake.Stub(path)
+		return fake.Stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -48,13 +48,21 @@ func (fake *FakeMountPointChecker) CallCount() int {
 	return len(fake.argsForCall)
 }
 
+func (fake *FakeMountPointChecker) Calls(stub func(string) (bool, error)) {
+	fake.mutex.Lock()
+	defer fake.mutex.Unlock()
+	fake.Stub = stub
+}
+
 func (fake *FakeMountPointChecker) ArgsForCall(i int) string {
 	fake.mutex.RLock()
 	defer fake.mutex.RUnlock()
-	return fake.argsForCall[i].path
+	return fake.argsForCall[i].arg1
 }
 
 func (fake *FakeMountPointChecker) Returns(result1 bool, result2 error) {
+	fake.mutex.Lock()
+	defer fake.mutex.Unlock()
 	fake.Stub = nil
 	fake.returns = struct {
 		result1 bool
@@ -63,6 +71,8 @@ func (fake *FakeMountPointChecker) Returns(result1 bool, result2 error) {
 }
 
 func (fake *FakeMountPointChecker) ReturnsOnCall(i int, result1 bool, result2 error) {
+	fake.mutex.Lock()
+	defer fake.mutex.Unlock()
 	fake.Stub = nil
 	if fake.returnsOnCall == nil {
 		fake.returnsOnCall = make(map[int]struct {

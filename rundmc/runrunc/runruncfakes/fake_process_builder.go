@@ -11,13 +11,13 @@ import (
 )
 
 type FakeProcessBuilder struct {
-	BuildProcessStub        func(bndl goci.Bndl, processSpec garden.ProcessSpec, containerUID, containerGID int) *specs.Process
+	BuildProcessStub        func(goci.Bndl, garden.ProcessSpec, int, int) *specs.Process
 	buildProcessMutex       sync.RWMutex
 	buildProcessArgsForCall []struct {
-		bndl         goci.Bndl
-		processSpec  garden.ProcessSpec
-		containerUID int
-		containerGID int
+		arg1 goci.Bndl
+		arg2 garden.ProcessSpec
+		arg3 int
+		arg4 int
 	}
 	buildProcessReturns struct {
 		result1 *specs.Process
@@ -29,24 +29,25 @@ type FakeProcessBuilder struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeProcessBuilder) BuildProcess(bndl goci.Bndl, processSpec garden.ProcessSpec, containerUID int, containerGID int) *specs.Process {
+func (fake *FakeProcessBuilder) BuildProcess(arg1 goci.Bndl, arg2 garden.ProcessSpec, arg3 int, arg4 int) *specs.Process {
 	fake.buildProcessMutex.Lock()
 	ret, specificReturn := fake.buildProcessReturnsOnCall[len(fake.buildProcessArgsForCall)]
 	fake.buildProcessArgsForCall = append(fake.buildProcessArgsForCall, struct {
-		bndl         goci.Bndl
-		processSpec  garden.ProcessSpec
-		containerUID int
-		containerGID int
-	}{bndl, processSpec, containerUID, containerGID})
-	fake.recordInvocation("BuildProcess", []interface{}{bndl, processSpec, containerUID, containerGID})
+		arg1 goci.Bndl
+		arg2 garden.ProcessSpec
+		arg3 int
+		arg4 int
+	}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("BuildProcess", []interface{}{arg1, arg2, arg3, arg4})
 	fake.buildProcessMutex.Unlock()
 	if fake.BuildProcessStub != nil {
-		return fake.BuildProcessStub(bndl, processSpec, containerUID, containerGID)
+		return fake.BuildProcessStub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.buildProcessReturns.result1
+	fakeReturns := fake.buildProcessReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeProcessBuilder) BuildProcessCallCount() int {
@@ -55,13 +56,22 @@ func (fake *FakeProcessBuilder) BuildProcessCallCount() int {
 	return len(fake.buildProcessArgsForCall)
 }
 
+func (fake *FakeProcessBuilder) BuildProcessCalls(stub func(goci.Bndl, garden.ProcessSpec, int, int) *specs.Process) {
+	fake.buildProcessMutex.Lock()
+	defer fake.buildProcessMutex.Unlock()
+	fake.BuildProcessStub = stub
+}
+
 func (fake *FakeProcessBuilder) BuildProcessArgsForCall(i int) (goci.Bndl, garden.ProcessSpec, int, int) {
 	fake.buildProcessMutex.RLock()
 	defer fake.buildProcessMutex.RUnlock()
-	return fake.buildProcessArgsForCall[i].bndl, fake.buildProcessArgsForCall[i].processSpec, fake.buildProcessArgsForCall[i].containerUID, fake.buildProcessArgsForCall[i].containerGID
+	argsForCall := fake.buildProcessArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeProcessBuilder) BuildProcessReturns(result1 *specs.Process) {
+	fake.buildProcessMutex.Lock()
+	defer fake.buildProcessMutex.Unlock()
 	fake.BuildProcessStub = nil
 	fake.buildProcessReturns = struct {
 		result1 *specs.Process
@@ -69,6 +79,8 @@ func (fake *FakeProcessBuilder) BuildProcessReturns(result1 *specs.Process) {
 }
 
 func (fake *FakeProcessBuilder) BuildProcessReturnsOnCall(i int, result1 *specs.Process) {
+	fake.buildProcessMutex.Lock()
+	defer fake.buildProcessMutex.Unlock()
 	fake.BuildProcessStub = nil
 	if fake.buildProcessReturnsOnCall == nil {
 		fake.buildProcessReturnsOnCall = make(map[int]struct {

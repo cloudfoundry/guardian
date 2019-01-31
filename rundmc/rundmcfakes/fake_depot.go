@@ -4,18 +4,18 @@ package rundmcfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/guardian/gardener/container-spec"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/lager"
 )
 
 type FakeDepot struct {
-	CreateStub        func(log lager.Logger, handle string, desiredContainerSpec spec.DesiredContainerSpec) error
+	CreateStub        func(lager.Logger, string, spec.DesiredContainerSpec) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
-		log                  lager.Logger
-		handle               string
-		desiredContainerSpec spec.DesiredContainerSpec
+		arg1 lager.Logger
+		arg2 string
+		arg3 spec.DesiredContainerSpec
 	}
 	createReturns struct {
 		result1 error
@@ -23,25 +23,11 @@ type FakeDepot struct {
 	createReturnsOnCall map[int]struct {
 		result1 error
 	}
-	LookupStub        func(log lager.Logger, handle string) (path string, err error)
-	lookupMutex       sync.RWMutex
-	lookupArgsForCall []struct {
-		log    lager.Logger
-		handle string
-	}
-	lookupReturns struct {
-		result1 string
-		result2 error
-	}
-	lookupReturnsOnCall map[int]struct {
-		result1 string
-		result2 error
-	}
-	DestroyStub        func(log lager.Logger, handle string) error
+	DestroyStub        func(lager.Logger, string) error
 	destroyMutex       sync.RWMutex
 	destroyArgsForCall []struct {
-		log    lager.Logger
-		handle string
+		arg1 lager.Logger
+		arg2 string
 	}
 	destroyReturns struct {
 		result1 error
@@ -51,8 +37,9 @@ type FakeDepot struct {
 	}
 	HandlesStub        func() ([]string, error)
 	handlesMutex       sync.RWMutex
-	handlesArgsForCall []struct{}
-	handlesReturns     struct {
+	handlesArgsForCall []struct {
+	}
+	handlesReturns struct {
 		result1 []string
 		result2 error
 	}
@@ -60,27 +47,42 @@ type FakeDepot struct {
 		result1 []string
 		result2 error
 	}
+	LookupStub        func(lager.Logger, string) (string, error)
+	lookupMutex       sync.RWMutex
+	lookupArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+	}
+	lookupReturns struct {
+		result1 string
+		result2 error
+	}
+	lookupReturnsOnCall map[int]struct {
+		result1 string
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeDepot) Create(log lager.Logger, handle string, desiredContainerSpec spec.DesiredContainerSpec) error {
+func (fake *FakeDepot) Create(arg1 lager.Logger, arg2 string, arg3 spec.DesiredContainerSpec) error {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		log                  lager.Logger
-		handle               string
-		desiredContainerSpec spec.DesiredContainerSpec
-	}{log, handle, desiredContainerSpec})
-	fake.recordInvocation("Create", []interface{}{log, handle, desiredContainerSpec})
+		arg1 lager.Logger
+		arg2 string
+		arg3 spec.DesiredContainerSpec
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(log, handle, desiredContainerSpec)
+		return fake.CreateStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.createReturns.result1
+	fakeReturns := fake.createReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeDepot) CreateCallCount() int {
@@ -89,13 +91,22 @@ func (fake *FakeDepot) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
+func (fake *FakeDepot) CreateCalls(stub func(lager.Logger, string, spec.DesiredContainerSpec) error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
+	fake.CreateStub = stub
+}
+
 func (fake *FakeDepot) CreateArgsForCall(i int) (lager.Logger, string, spec.DesiredContainerSpec) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].handle, fake.createArgsForCall[i].desiredContainerSpec
+	argsForCall := fake.createArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeDepot) CreateReturns(result1 error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	fake.createReturns = struct {
 		result1 error
@@ -103,6 +114,8 @@ func (fake *FakeDepot) CreateReturns(result1 error) {
 }
 
 func (fake *FakeDepot) CreateReturnsOnCall(i int, result1 error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {
@@ -114,74 +127,23 @@ func (fake *FakeDepot) CreateReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeDepot) Lookup(log lager.Logger, handle string) (path string, err error) {
-	fake.lookupMutex.Lock()
-	ret, specificReturn := fake.lookupReturnsOnCall[len(fake.lookupArgsForCall)]
-	fake.lookupArgsForCall = append(fake.lookupArgsForCall, struct {
-		log    lager.Logger
-		handle string
-	}{log, handle})
-	fake.recordInvocation("Lookup", []interface{}{log, handle})
-	fake.lookupMutex.Unlock()
-	if fake.LookupStub != nil {
-		return fake.LookupStub(log, handle)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.lookupReturns.result1, fake.lookupReturns.result2
-}
-
-func (fake *FakeDepot) LookupCallCount() int {
-	fake.lookupMutex.RLock()
-	defer fake.lookupMutex.RUnlock()
-	return len(fake.lookupArgsForCall)
-}
-
-func (fake *FakeDepot) LookupArgsForCall(i int) (lager.Logger, string) {
-	fake.lookupMutex.RLock()
-	defer fake.lookupMutex.RUnlock()
-	return fake.lookupArgsForCall[i].log, fake.lookupArgsForCall[i].handle
-}
-
-func (fake *FakeDepot) LookupReturns(result1 string, result2 error) {
-	fake.LookupStub = nil
-	fake.lookupReturns = struct {
-		result1 string
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeDepot) LookupReturnsOnCall(i int, result1 string, result2 error) {
-	fake.LookupStub = nil
-	if fake.lookupReturnsOnCall == nil {
-		fake.lookupReturnsOnCall = make(map[int]struct {
-			result1 string
-			result2 error
-		})
-	}
-	fake.lookupReturnsOnCall[i] = struct {
-		result1 string
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeDepot) Destroy(log lager.Logger, handle string) error {
+func (fake *FakeDepot) Destroy(arg1 lager.Logger, arg2 string) error {
 	fake.destroyMutex.Lock()
 	ret, specificReturn := fake.destroyReturnsOnCall[len(fake.destroyArgsForCall)]
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
-		log    lager.Logger
-		handle string
-	}{log, handle})
-	fake.recordInvocation("Destroy", []interface{}{log, handle})
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Destroy", []interface{}{arg1, arg2})
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
-		return fake.DestroyStub(log, handle)
+		return fake.DestroyStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.destroyReturns.result1
+	fakeReturns := fake.destroyReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeDepot) DestroyCallCount() int {
@@ -190,13 +152,22 @@ func (fake *FakeDepot) DestroyCallCount() int {
 	return len(fake.destroyArgsForCall)
 }
 
+func (fake *FakeDepot) DestroyCalls(stub func(lager.Logger, string) error) {
+	fake.destroyMutex.Lock()
+	defer fake.destroyMutex.Unlock()
+	fake.DestroyStub = stub
+}
+
 func (fake *FakeDepot) DestroyArgsForCall(i int) (lager.Logger, string) {
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
-	return fake.destroyArgsForCall[i].log, fake.destroyArgsForCall[i].handle
+	argsForCall := fake.destroyArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeDepot) DestroyReturns(result1 error) {
+	fake.destroyMutex.Lock()
+	defer fake.destroyMutex.Unlock()
 	fake.DestroyStub = nil
 	fake.destroyReturns = struct {
 		result1 error
@@ -204,6 +175,8 @@ func (fake *FakeDepot) DestroyReturns(result1 error) {
 }
 
 func (fake *FakeDepot) DestroyReturnsOnCall(i int, result1 error) {
+	fake.destroyMutex.Lock()
+	defer fake.destroyMutex.Unlock()
 	fake.DestroyStub = nil
 	if fake.destroyReturnsOnCall == nil {
 		fake.destroyReturnsOnCall = make(map[int]struct {
@@ -218,7 +191,8 @@ func (fake *FakeDepot) DestroyReturnsOnCall(i int, result1 error) {
 func (fake *FakeDepot) Handles() ([]string, error) {
 	fake.handlesMutex.Lock()
 	ret, specificReturn := fake.handlesReturnsOnCall[len(fake.handlesArgsForCall)]
-	fake.handlesArgsForCall = append(fake.handlesArgsForCall, struct{}{})
+	fake.handlesArgsForCall = append(fake.handlesArgsForCall, struct {
+	}{})
 	fake.recordInvocation("Handles", []interface{}{})
 	fake.handlesMutex.Unlock()
 	if fake.HandlesStub != nil {
@@ -227,7 +201,8 @@ func (fake *FakeDepot) Handles() ([]string, error) {
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.handlesReturns.result1, fake.handlesReturns.result2
+	fakeReturns := fake.handlesReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeDepot) HandlesCallCount() int {
@@ -236,7 +211,15 @@ func (fake *FakeDepot) HandlesCallCount() int {
 	return len(fake.handlesArgsForCall)
 }
 
+func (fake *FakeDepot) HandlesCalls(stub func() ([]string, error)) {
+	fake.handlesMutex.Lock()
+	defer fake.handlesMutex.Unlock()
+	fake.HandlesStub = stub
+}
+
 func (fake *FakeDepot) HandlesReturns(result1 []string, result2 error) {
+	fake.handlesMutex.Lock()
+	defer fake.handlesMutex.Unlock()
 	fake.HandlesStub = nil
 	fake.handlesReturns = struct {
 		result1 []string
@@ -245,6 +228,8 @@ func (fake *FakeDepot) HandlesReturns(result1 []string, result2 error) {
 }
 
 func (fake *FakeDepot) HandlesReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.handlesMutex.Lock()
+	defer fake.handlesMutex.Unlock()
 	fake.HandlesStub = nil
 	if fake.handlesReturnsOnCall == nil {
 		fake.handlesReturnsOnCall = make(map[int]struct {
@@ -258,17 +243,81 @@ func (fake *FakeDepot) HandlesReturnsOnCall(i int, result1 []string, result2 err
 	}{result1, result2}
 }
 
+func (fake *FakeDepot) Lookup(arg1 lager.Logger, arg2 string) (string, error) {
+	fake.lookupMutex.Lock()
+	ret, specificReturn := fake.lookupReturnsOnCall[len(fake.lookupArgsForCall)]
+	fake.lookupArgsForCall = append(fake.lookupArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Lookup", []interface{}{arg1, arg2})
+	fake.lookupMutex.Unlock()
+	if fake.LookupStub != nil {
+		return fake.LookupStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.lookupReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeDepot) LookupCallCount() int {
+	fake.lookupMutex.RLock()
+	defer fake.lookupMutex.RUnlock()
+	return len(fake.lookupArgsForCall)
+}
+
+func (fake *FakeDepot) LookupCalls(stub func(lager.Logger, string) (string, error)) {
+	fake.lookupMutex.Lock()
+	defer fake.lookupMutex.Unlock()
+	fake.LookupStub = stub
+}
+
+func (fake *FakeDepot) LookupArgsForCall(i int) (lager.Logger, string) {
+	fake.lookupMutex.RLock()
+	defer fake.lookupMutex.RUnlock()
+	argsForCall := fake.lookupArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeDepot) LookupReturns(result1 string, result2 error) {
+	fake.lookupMutex.Lock()
+	defer fake.lookupMutex.Unlock()
+	fake.LookupStub = nil
+	fake.lookupReturns = struct {
+		result1 string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeDepot) LookupReturnsOnCall(i int, result1 string, result2 error) {
+	fake.lookupMutex.Lock()
+	defer fake.lookupMutex.Unlock()
+	fake.LookupStub = nil
+	if fake.lookupReturnsOnCall == nil {
+		fake.lookupReturnsOnCall = make(map[int]struct {
+			result1 string
+			result2 error
+		})
+	}
+	fake.lookupReturnsOnCall[i] = struct {
+		result1 string
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeDepot) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	fake.lookupMutex.RLock()
-	defer fake.lookupMutex.RUnlock()
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
 	fake.handlesMutex.RLock()
 	defer fake.handlesMutex.RUnlock()
+	fake.lookupMutex.RLock()
+	defer fake.lookupMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

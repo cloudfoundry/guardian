@@ -8,10 +8,10 @@ import (
 )
 
 type FakePrivilegedGetter struct {
-	PrivilegedStub        func(bundlePath string) (bool, error)
+	PrivilegedStub        func(string) (bool, error)
 	privilegedMutex       sync.RWMutex
 	privilegedArgsForCall []struct {
-		bundlePath string
+		arg1 string
 	}
 	privilegedReturns struct {
 		result1 bool
@@ -25,21 +25,22 @@ type FakePrivilegedGetter struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakePrivilegedGetter) Privileged(bundlePath string) (bool, error) {
+func (fake *FakePrivilegedGetter) Privileged(arg1 string) (bool, error) {
 	fake.privilegedMutex.Lock()
 	ret, specificReturn := fake.privilegedReturnsOnCall[len(fake.privilegedArgsForCall)]
 	fake.privilegedArgsForCall = append(fake.privilegedArgsForCall, struct {
-		bundlePath string
-	}{bundlePath})
-	fake.recordInvocation("Privileged", []interface{}{bundlePath})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("Privileged", []interface{}{arg1})
 	fake.privilegedMutex.Unlock()
 	if fake.PrivilegedStub != nil {
-		return fake.PrivilegedStub(bundlePath)
+		return fake.PrivilegedStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.privilegedReturns.result1, fake.privilegedReturns.result2
+	fakeReturns := fake.privilegedReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakePrivilegedGetter) PrivilegedCallCount() int {
@@ -48,13 +49,22 @@ func (fake *FakePrivilegedGetter) PrivilegedCallCount() int {
 	return len(fake.privilegedArgsForCall)
 }
 
+func (fake *FakePrivilegedGetter) PrivilegedCalls(stub func(string) (bool, error)) {
+	fake.privilegedMutex.Lock()
+	defer fake.privilegedMutex.Unlock()
+	fake.PrivilegedStub = stub
+}
+
 func (fake *FakePrivilegedGetter) PrivilegedArgsForCall(i int) string {
 	fake.privilegedMutex.RLock()
 	defer fake.privilegedMutex.RUnlock()
-	return fake.privilegedArgsForCall[i].bundlePath
+	argsForCall := fake.privilegedArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakePrivilegedGetter) PrivilegedReturns(result1 bool, result2 error) {
+	fake.privilegedMutex.Lock()
+	defer fake.privilegedMutex.Unlock()
 	fake.PrivilegedStub = nil
 	fake.privilegedReturns = struct {
 		result1 bool
@@ -63,6 +73,8 @@ func (fake *FakePrivilegedGetter) PrivilegedReturns(result1 bool, result2 error)
 }
 
 func (fake *FakePrivilegedGetter) PrivilegedReturnsOnCall(i int, result1 bool, result2 error) {
+	fake.privilegedMutex.Lock()
+	defer fake.privilegedMutex.Unlock()
 	fake.PrivilegedStub = nil
 	if fake.privilegedReturnsOnCall == nil {
 		fake.privilegedReturnsOnCall = make(map[int]struct {

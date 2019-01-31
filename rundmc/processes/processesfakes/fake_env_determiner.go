@@ -10,12 +10,12 @@ import (
 )
 
 type FakeEnvDeterminer struct {
-	EnvForStub        func(bndl goci.Bndl, spec garden.ProcessSpec, containerUID int) []string
+	EnvForStub        func(goci.Bndl, garden.ProcessSpec, int) []string
 	envForMutex       sync.RWMutex
 	envForArgsForCall []struct {
-		bndl         goci.Bndl
-		spec         garden.ProcessSpec
-		containerUID int
+		arg1 goci.Bndl
+		arg2 garden.ProcessSpec
+		arg3 int
 	}
 	envForReturns struct {
 		result1 []string
@@ -27,23 +27,24 @@ type FakeEnvDeterminer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeEnvDeterminer) EnvFor(bndl goci.Bndl, spec garden.ProcessSpec, containerUID int) []string {
+func (fake *FakeEnvDeterminer) EnvFor(arg1 goci.Bndl, arg2 garden.ProcessSpec, arg3 int) []string {
 	fake.envForMutex.Lock()
 	ret, specificReturn := fake.envForReturnsOnCall[len(fake.envForArgsForCall)]
 	fake.envForArgsForCall = append(fake.envForArgsForCall, struct {
-		bndl         goci.Bndl
-		spec         garden.ProcessSpec
-		containerUID int
-	}{bndl, spec, containerUID})
-	fake.recordInvocation("EnvFor", []interface{}{bndl, spec, containerUID})
+		arg1 goci.Bndl
+		arg2 garden.ProcessSpec
+		arg3 int
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("EnvFor", []interface{}{arg1, arg2, arg3})
 	fake.envForMutex.Unlock()
 	if fake.EnvForStub != nil {
-		return fake.EnvForStub(bndl, spec, containerUID)
+		return fake.EnvForStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.envForReturns.result1
+	fakeReturns := fake.envForReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeEnvDeterminer) EnvForCallCount() int {
@@ -52,13 +53,22 @@ func (fake *FakeEnvDeterminer) EnvForCallCount() int {
 	return len(fake.envForArgsForCall)
 }
 
+func (fake *FakeEnvDeterminer) EnvForCalls(stub func(goci.Bndl, garden.ProcessSpec, int) []string) {
+	fake.envForMutex.Lock()
+	defer fake.envForMutex.Unlock()
+	fake.EnvForStub = stub
+}
+
 func (fake *FakeEnvDeterminer) EnvForArgsForCall(i int) (goci.Bndl, garden.ProcessSpec, int) {
 	fake.envForMutex.RLock()
 	defer fake.envForMutex.RUnlock()
-	return fake.envForArgsForCall[i].bndl, fake.envForArgsForCall[i].spec, fake.envForArgsForCall[i].containerUID
+	argsForCall := fake.envForArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeEnvDeterminer) EnvForReturns(result1 []string) {
+	fake.envForMutex.Lock()
+	defer fake.envForMutex.Unlock()
 	fake.EnvForStub = nil
 	fake.envForReturns = struct {
 		result1 []string
@@ -66,6 +76,8 @@ func (fake *FakeEnvDeterminer) EnvForReturns(result1 []string) {
 }
 
 func (fake *FakeEnvDeterminer) EnvForReturnsOnCall(i int, result1 []string) {
+	fake.envForMutex.Lock()
+	defer fake.envForMutex.Unlock()
 	fake.EnvForStub = nil
 	if fake.envForReturnsOnCall == nil {
 		fake.envForReturnsOnCall = make(map[int]struct {

@@ -8,11 +8,11 @@ import (
 )
 
 type FakeUserLookupper struct {
-	LookupStub        func(rootFsPath string, user string) (*users.ExecUser, error)
+	LookupStub        func(string, string) (*users.ExecUser, error)
 	lookupMutex       sync.RWMutex
 	lookupArgsForCall []struct {
-		rootFsPath string
-		user       string
+		arg1 string
+		arg2 string
 	}
 	lookupReturns struct {
 		result1 *users.ExecUser
@@ -26,22 +26,23 @@ type FakeUserLookupper struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeUserLookupper) Lookup(rootFsPath string, user string) (*users.ExecUser, error) {
+func (fake *FakeUserLookupper) Lookup(arg1 string, arg2 string) (*users.ExecUser, error) {
 	fake.lookupMutex.Lock()
 	ret, specificReturn := fake.lookupReturnsOnCall[len(fake.lookupArgsForCall)]
 	fake.lookupArgsForCall = append(fake.lookupArgsForCall, struct {
-		rootFsPath string
-		user       string
-	}{rootFsPath, user})
-	fake.recordInvocation("Lookup", []interface{}{rootFsPath, user})
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Lookup", []interface{}{arg1, arg2})
 	fake.lookupMutex.Unlock()
 	if fake.LookupStub != nil {
-		return fake.LookupStub(rootFsPath, user)
+		return fake.LookupStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.lookupReturns.result1, fake.lookupReturns.result2
+	fakeReturns := fake.lookupReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeUserLookupper) LookupCallCount() int {
@@ -50,13 +51,22 @@ func (fake *FakeUserLookupper) LookupCallCount() int {
 	return len(fake.lookupArgsForCall)
 }
 
+func (fake *FakeUserLookupper) LookupCalls(stub func(string, string) (*users.ExecUser, error)) {
+	fake.lookupMutex.Lock()
+	defer fake.lookupMutex.Unlock()
+	fake.LookupStub = stub
+}
+
 func (fake *FakeUserLookupper) LookupArgsForCall(i int) (string, string) {
 	fake.lookupMutex.RLock()
 	defer fake.lookupMutex.RUnlock()
-	return fake.lookupArgsForCall[i].rootFsPath, fake.lookupArgsForCall[i].user
+	argsForCall := fake.lookupArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeUserLookupper) LookupReturns(result1 *users.ExecUser, result2 error) {
+	fake.lookupMutex.Lock()
+	defer fake.lookupMutex.Unlock()
 	fake.LookupStub = nil
 	fake.lookupReturns = struct {
 		result1 *users.ExecUser
@@ -65,6 +75,8 @@ func (fake *FakeUserLookupper) LookupReturns(result1 *users.ExecUser, result2 er
 }
 
 func (fake *FakeUserLookupper) LookupReturnsOnCall(i int, result1 *users.ExecUser, result2 error) {
+	fake.lookupMutex.Lock()
+	defer fake.lookupMutex.Unlock()
 	fake.LookupStub = nil
 	if fake.lookupReturnsOnCall == nil {
 		fake.lookupReturnsOnCall = make(map[int]struct {

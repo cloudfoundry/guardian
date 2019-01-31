@@ -42,7 +42,8 @@ func (fake *FakeDepot) Lookup(arg1 lager.Logger, arg2 string) (string, error) {
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.lookupReturns.result1, fake.lookupReturns.result2
+	fakeReturns := fake.lookupReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeDepot) LookupCallCount() int {
@@ -51,13 +52,22 @@ func (fake *FakeDepot) LookupCallCount() int {
 	return len(fake.lookupArgsForCall)
 }
 
+func (fake *FakeDepot) LookupCalls(stub func(lager.Logger, string) (string, error)) {
+	fake.lookupMutex.Lock()
+	defer fake.lookupMutex.Unlock()
+	fake.LookupStub = stub
+}
+
 func (fake *FakeDepot) LookupArgsForCall(i int) (lager.Logger, string) {
 	fake.lookupMutex.RLock()
 	defer fake.lookupMutex.RUnlock()
-	return fake.lookupArgsForCall[i].arg1, fake.lookupArgsForCall[i].arg2
+	argsForCall := fake.lookupArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeDepot) LookupReturns(result1 string, result2 error) {
+	fake.lookupMutex.Lock()
+	defer fake.lookupMutex.Unlock()
 	fake.LookupStub = nil
 	fake.lookupReturns = struct {
 		result1 string
@@ -66,6 +76,8 @@ func (fake *FakeDepot) LookupReturns(result1 string, result2 error) {
 }
 
 func (fake *FakeDepot) LookupReturnsOnCall(i int, result1 string, result2 error) {
+	fake.lookupMutex.Lock()
+	defer fake.lookupMutex.Unlock()
 	fake.LookupStub = nil
 	if fake.lookupReturnsOnCall == nil {
 		fake.lookupReturnsOnCall = make(map[int]struct {

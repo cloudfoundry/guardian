@@ -8,18 +8,11 @@ import (
 )
 
 type FakeConfigStore struct {
-	SetStub        func(handle string, name string, value string)
-	setMutex       sync.RWMutex
-	setArgsForCall []struct {
-		handle string
-		name   string
-		value  string
-	}
-	GetStub        func(handle string, name string) (string, bool)
+	GetStub        func(string, string) (string, bool)
 	getMutex       sync.RWMutex
 	getArgsForCall []struct {
-		handle string
-		name   string
+		arg1 string
+		arg2 string
 	}
 	getReturns struct {
 		result1 string
@@ -29,52 +22,34 @@ type FakeConfigStore struct {
 		result1 string
 		result2 bool
 	}
+	SetStub        func(string, string, string)
+	setMutex       sync.RWMutex
+	setArgsForCall []struct {
+		arg1 string
+		arg2 string
+		arg3 string
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeConfigStore) Set(handle string, name string, value string) {
-	fake.setMutex.Lock()
-	fake.setArgsForCall = append(fake.setArgsForCall, struct {
-		handle string
-		name   string
-		value  string
-	}{handle, name, value})
-	fake.recordInvocation("Set", []interface{}{handle, name, value})
-	fake.setMutex.Unlock()
-	if fake.SetStub != nil {
-		fake.SetStub(handle, name, value)
-	}
-}
-
-func (fake *FakeConfigStore) SetCallCount() int {
-	fake.setMutex.RLock()
-	defer fake.setMutex.RUnlock()
-	return len(fake.setArgsForCall)
-}
-
-func (fake *FakeConfigStore) SetArgsForCall(i int) (string, string, string) {
-	fake.setMutex.RLock()
-	defer fake.setMutex.RUnlock()
-	return fake.setArgsForCall[i].handle, fake.setArgsForCall[i].name, fake.setArgsForCall[i].value
-}
-
-func (fake *FakeConfigStore) Get(handle string, name string) (string, bool) {
+func (fake *FakeConfigStore) Get(arg1 string, arg2 string) (string, bool) {
 	fake.getMutex.Lock()
 	ret, specificReturn := fake.getReturnsOnCall[len(fake.getArgsForCall)]
 	fake.getArgsForCall = append(fake.getArgsForCall, struct {
-		handle string
-		name   string
-	}{handle, name})
-	fake.recordInvocation("Get", []interface{}{handle, name})
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Get", []interface{}{arg1, arg2})
 	fake.getMutex.Unlock()
 	if fake.GetStub != nil {
-		return fake.GetStub(handle, name)
+		return fake.GetStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.getReturns.result1, fake.getReturns.result2
+	fakeReturns := fake.getReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeConfigStore) GetCallCount() int {
@@ -83,13 +58,22 @@ func (fake *FakeConfigStore) GetCallCount() int {
 	return len(fake.getArgsForCall)
 }
 
+func (fake *FakeConfigStore) GetCalls(stub func(string, string) (string, bool)) {
+	fake.getMutex.Lock()
+	defer fake.getMutex.Unlock()
+	fake.GetStub = stub
+}
+
 func (fake *FakeConfigStore) GetArgsForCall(i int) (string, string) {
 	fake.getMutex.RLock()
 	defer fake.getMutex.RUnlock()
-	return fake.getArgsForCall[i].handle, fake.getArgsForCall[i].name
+	argsForCall := fake.getArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeConfigStore) GetReturns(result1 string, result2 bool) {
+	fake.getMutex.Lock()
+	defer fake.getMutex.Unlock()
 	fake.GetStub = nil
 	fake.getReturns = struct {
 		result1 string
@@ -98,6 +82,8 @@ func (fake *FakeConfigStore) GetReturns(result1 string, result2 bool) {
 }
 
 func (fake *FakeConfigStore) GetReturnsOnCall(i int, result1 string, result2 bool) {
+	fake.getMutex.Lock()
+	defer fake.getMutex.Unlock()
 	fake.GetStub = nil
 	if fake.getReturnsOnCall == nil {
 		fake.getReturnsOnCall = make(map[int]struct {
@@ -111,13 +97,46 @@ func (fake *FakeConfigStore) GetReturnsOnCall(i int, result1 string, result2 boo
 	}{result1, result2}
 }
 
+func (fake *FakeConfigStore) Set(arg1 string, arg2 string, arg3 string) {
+	fake.setMutex.Lock()
+	fake.setArgsForCall = append(fake.setArgsForCall, struct {
+		arg1 string
+		arg2 string
+		arg3 string
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("Set", []interface{}{arg1, arg2, arg3})
+	fake.setMutex.Unlock()
+	if fake.SetStub != nil {
+		fake.SetStub(arg1, arg2, arg3)
+	}
+}
+
+func (fake *FakeConfigStore) SetCallCount() int {
+	fake.setMutex.RLock()
+	defer fake.setMutex.RUnlock()
+	return len(fake.setArgsForCall)
+}
+
+func (fake *FakeConfigStore) SetCalls(stub func(string, string, string)) {
+	fake.setMutex.Lock()
+	defer fake.setMutex.Unlock()
+	fake.SetStub = stub
+}
+
+func (fake *FakeConfigStore) SetArgsForCall(i int) (string, string, string) {
+	fake.setMutex.RLock()
+	defer fake.setMutex.RUnlock()
+	argsForCall := fake.setArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
 func (fake *FakeConfigStore) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.setMutex.RLock()
-	defer fake.setMutex.RUnlock()
 	fake.getMutex.RLock()
 	defer fake.getMutex.RUnlock()
+	fake.setMutex.RLock()
+	defer fake.setMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

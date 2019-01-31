@@ -10,11 +10,11 @@ import (
 )
 
 type FakeStatser struct {
-	StatsStub        func(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)
+	StatsStub        func(lager.Logger, string) (gardener.StatsContainerMetrics, error)
 	statsMutex       sync.RWMutex
 	statsArgsForCall []struct {
-		log lager.Logger
-		id  string
+		arg1 lager.Logger
+		arg2 string
 	}
 	statsReturns struct {
 		result1 gardener.StatsContainerMetrics
@@ -28,22 +28,23 @@ type FakeStatser struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeStatser) Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error) {
+func (fake *FakeStatser) Stats(arg1 lager.Logger, arg2 string) (gardener.StatsContainerMetrics, error) {
 	fake.statsMutex.Lock()
 	ret, specificReturn := fake.statsReturnsOnCall[len(fake.statsArgsForCall)]
 	fake.statsArgsForCall = append(fake.statsArgsForCall, struct {
-		log lager.Logger
-		id  string
-	}{log, id})
-	fake.recordInvocation("Stats", []interface{}{log, id})
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Stats", []interface{}{arg1, arg2})
 	fake.statsMutex.Unlock()
 	if fake.StatsStub != nil {
-		return fake.StatsStub(log, id)
+		return fake.StatsStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.statsReturns.result1, fake.statsReturns.result2
+	fakeReturns := fake.statsReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeStatser) StatsCallCount() int {
@@ -52,13 +53,22 @@ func (fake *FakeStatser) StatsCallCount() int {
 	return len(fake.statsArgsForCall)
 }
 
+func (fake *FakeStatser) StatsCalls(stub func(lager.Logger, string) (gardener.StatsContainerMetrics, error)) {
+	fake.statsMutex.Lock()
+	defer fake.statsMutex.Unlock()
+	fake.StatsStub = stub
+}
+
 func (fake *FakeStatser) StatsArgsForCall(i int) (lager.Logger, string) {
 	fake.statsMutex.RLock()
 	defer fake.statsMutex.RUnlock()
-	return fake.statsArgsForCall[i].log, fake.statsArgsForCall[i].id
+	argsForCall := fake.statsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeStatser) StatsReturns(result1 gardener.StatsContainerMetrics, result2 error) {
+	fake.statsMutex.Lock()
+	defer fake.statsMutex.Unlock()
 	fake.StatsStub = nil
 	fake.statsReturns = struct {
 		result1 gardener.StatsContainerMetrics
@@ -67,6 +77,8 @@ func (fake *FakeStatser) StatsReturns(result1 gardener.StatsContainerMetrics, re
 }
 
 func (fake *FakeStatser) StatsReturnsOnCall(i int, result1 gardener.StatsContainerMetrics, result2 error) {
+	fake.statsMutex.Lock()
+	defer fake.statsMutex.Unlock()
 	fake.StatsStub = nil
 	if fake.statsReturnsOnCall == nil {
 		fake.statsReturnsOnCall = make(map[int]struct {

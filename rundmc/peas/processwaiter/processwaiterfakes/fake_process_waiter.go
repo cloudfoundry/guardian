@@ -8,10 +8,10 @@ import (
 )
 
 type FakeProcessWaiter struct {
-	Stub        func(pid int) error
+	Stub        func(int) error
 	mutex       sync.RWMutex
 	argsForCall []struct {
-		pid int
+		arg1 int
 	}
 	returns struct {
 		result1 error
@@ -23,16 +23,16 @@ type FakeProcessWaiter struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeProcessWaiter) Spy(pid int) error {
+func (fake *FakeProcessWaiter) Spy(arg1 int) error {
 	fake.mutex.Lock()
 	ret, specificReturn := fake.returnsOnCall[len(fake.argsForCall)]
 	fake.argsForCall = append(fake.argsForCall, struct {
-		pid int
-	}{pid})
-	fake.recordInvocation("ProcessWaiter", []interface{}{pid})
+		arg1 int
+	}{arg1})
+	fake.recordInvocation("ProcessWaiter", []interface{}{arg1})
 	fake.mutex.Unlock()
 	if fake.Stub != nil {
-		return fake.Stub(pid)
+		return fake.Stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
@@ -46,13 +46,21 @@ func (fake *FakeProcessWaiter) CallCount() int {
 	return len(fake.argsForCall)
 }
 
+func (fake *FakeProcessWaiter) Calls(stub func(int) error) {
+	fake.mutex.Lock()
+	defer fake.mutex.Unlock()
+	fake.Stub = stub
+}
+
 func (fake *FakeProcessWaiter) ArgsForCall(i int) int {
 	fake.mutex.RLock()
 	defer fake.mutex.RUnlock()
-	return fake.argsForCall[i].pid
+	return fake.argsForCall[i].arg1
 }
 
 func (fake *FakeProcessWaiter) Returns(result1 error) {
+	fake.mutex.Lock()
+	defer fake.mutex.Unlock()
 	fake.Stub = nil
 	fake.returns = struct {
 		result1 error
@@ -60,6 +68,8 @@ func (fake *FakeProcessWaiter) Returns(result1 error) {
 }
 
 func (fake *FakeProcessWaiter) ReturnsOnCall(i int, result1 error) {
+	fake.mutex.Lock()
+	defer fake.mutex.Unlock()
 	fake.Stub = nil
 	if fake.returnsOnCall == nil {
 		fake.returnsOnCall = make(map[int]struct {

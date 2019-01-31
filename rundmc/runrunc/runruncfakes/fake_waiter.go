@@ -10,8 +10,9 @@ import (
 type FakeWaiter struct {
 	WaitStub        func() (int, error)
 	waitMutex       sync.RWMutex
-	waitArgsForCall []struct{}
-	waitReturns     struct {
+	waitArgsForCall []struct {
+	}
+	waitReturns struct {
 		result1 int
 		result2 error
 	}
@@ -26,7 +27,8 @@ type FakeWaiter struct {
 func (fake *FakeWaiter) Wait() (int, error) {
 	fake.waitMutex.Lock()
 	ret, specificReturn := fake.waitReturnsOnCall[len(fake.waitArgsForCall)]
-	fake.waitArgsForCall = append(fake.waitArgsForCall, struct{}{})
+	fake.waitArgsForCall = append(fake.waitArgsForCall, struct {
+	}{})
 	fake.recordInvocation("Wait", []interface{}{})
 	fake.waitMutex.Unlock()
 	if fake.WaitStub != nil {
@@ -35,7 +37,8 @@ func (fake *FakeWaiter) Wait() (int, error) {
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.waitReturns.result1, fake.waitReturns.result2
+	fakeReturns := fake.waitReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeWaiter) WaitCallCount() int {
@@ -44,7 +47,15 @@ func (fake *FakeWaiter) WaitCallCount() int {
 	return len(fake.waitArgsForCall)
 }
 
+func (fake *FakeWaiter) WaitCalls(stub func() (int, error)) {
+	fake.waitMutex.Lock()
+	defer fake.waitMutex.Unlock()
+	fake.WaitStub = stub
+}
+
 func (fake *FakeWaiter) WaitReturns(result1 int, result2 error) {
+	fake.waitMutex.Lock()
+	defer fake.waitMutex.Unlock()
 	fake.WaitStub = nil
 	fake.waitReturns = struct {
 		result1 int
@@ -53,6 +64,8 @@ func (fake *FakeWaiter) WaitReturns(result1 int, result2 error) {
 }
 
 func (fake *FakeWaiter) WaitReturnsOnCall(i int, result1 int, result2 error) {
+	fake.waitMutex.Lock()
+	defer fake.waitMutex.Unlock()
 	fake.WaitStub = nil
 	if fake.waitReturnsOnCall == nil {
 		fake.waitReturnsOnCall = make(map[int]struct {

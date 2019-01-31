@@ -10,13 +10,13 @@ import (
 )
 
 type FakeConfigCreator struct {
-	CreateStub        func(log lager.Logger, handle string, subnet *net.IPNet, ip net.IP) (kawasaki.NetworkConfig, error)
+	CreateStub        func(lager.Logger, string, *net.IPNet, net.IP) (kawasaki.NetworkConfig, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
-		log    lager.Logger
-		handle string
-		subnet *net.IPNet
-		ip     net.IP
+		arg1 lager.Logger
+		arg2 string
+		arg3 *net.IPNet
+		arg4 net.IP
 	}
 	createReturns struct {
 		result1 kawasaki.NetworkConfig
@@ -30,24 +30,25 @@ type FakeConfigCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeConfigCreator) Create(log lager.Logger, handle string, subnet *net.IPNet, ip net.IP) (kawasaki.NetworkConfig, error) {
+func (fake *FakeConfigCreator) Create(arg1 lager.Logger, arg2 string, arg3 *net.IPNet, arg4 net.IP) (kawasaki.NetworkConfig, error) {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		log    lager.Logger
-		handle string
-		subnet *net.IPNet
-		ip     net.IP
-	}{log, handle, subnet, ip})
-	fake.recordInvocation("Create", []interface{}{log, handle, subnet, ip})
+		arg1 lager.Logger
+		arg2 string
+		arg3 *net.IPNet
+		arg4 net.IP
+	}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3, arg4})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(log, handle, subnet, ip)
+		return fake.CreateStub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.createReturns.result1, fake.createReturns.result2
+	fakeReturns := fake.createReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeConfigCreator) CreateCallCount() int {
@@ -56,13 +57,22 @@ func (fake *FakeConfigCreator) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
+func (fake *FakeConfigCreator) CreateCalls(stub func(lager.Logger, string, *net.IPNet, net.IP) (kawasaki.NetworkConfig, error)) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
+	fake.CreateStub = stub
+}
+
 func (fake *FakeConfigCreator) CreateArgsForCall(i int) (lager.Logger, string, *net.IPNet, net.IP) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].handle, fake.createArgsForCall[i].subnet, fake.createArgsForCall[i].ip
+	argsForCall := fake.createArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeConfigCreator) CreateReturns(result1 kawasaki.NetworkConfig, result2 error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	fake.createReturns = struct {
 		result1 kawasaki.NetworkConfig
@@ -71,6 +81,8 @@ func (fake *FakeConfigCreator) CreateReturns(result1 kawasaki.NetworkConfig, res
 }
 
 func (fake *FakeConfigCreator) CreateReturnsOnCall(i int, result1 kawasaki.NetworkConfig, result2 error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {

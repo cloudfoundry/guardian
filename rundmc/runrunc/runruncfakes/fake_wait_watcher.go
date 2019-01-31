@@ -9,28 +9,28 @@ import (
 )
 
 type FakeWaitWatcher struct {
-	OnExitStub        func(log lager.Logger, process runrunc.Waiter, onExit runrunc.Runner)
+	OnExitStub        func(lager.Logger, runrunc.Waiter, runrunc.Runner)
 	onExitMutex       sync.RWMutex
 	onExitArgsForCall []struct {
-		log     lager.Logger
-		process runrunc.Waiter
-		onExit  runrunc.Runner
+		arg1 lager.Logger
+		arg2 runrunc.Waiter
+		arg3 runrunc.Runner
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeWaitWatcher) OnExit(log lager.Logger, process runrunc.Waiter, onExit runrunc.Runner) {
+func (fake *FakeWaitWatcher) OnExit(arg1 lager.Logger, arg2 runrunc.Waiter, arg3 runrunc.Runner) {
 	fake.onExitMutex.Lock()
 	fake.onExitArgsForCall = append(fake.onExitArgsForCall, struct {
-		log     lager.Logger
-		process runrunc.Waiter
-		onExit  runrunc.Runner
-	}{log, process, onExit})
-	fake.recordInvocation("OnExit", []interface{}{log, process, onExit})
+		arg1 lager.Logger
+		arg2 runrunc.Waiter
+		arg3 runrunc.Runner
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("OnExit", []interface{}{arg1, arg2, arg3})
 	fake.onExitMutex.Unlock()
 	if fake.OnExitStub != nil {
-		fake.OnExitStub(log, process, onExit)
+		fake.OnExitStub(arg1, arg2, arg3)
 	}
 }
 
@@ -40,10 +40,17 @@ func (fake *FakeWaitWatcher) OnExitCallCount() int {
 	return len(fake.onExitArgsForCall)
 }
 
+func (fake *FakeWaitWatcher) OnExitCalls(stub func(lager.Logger, runrunc.Waiter, runrunc.Runner)) {
+	fake.onExitMutex.Lock()
+	defer fake.onExitMutex.Unlock()
+	fake.OnExitStub = stub
+}
+
 func (fake *FakeWaitWatcher) OnExitArgsForCall(i int) (lager.Logger, runrunc.Waiter, runrunc.Runner) {
 	fake.onExitMutex.RLock()
 	defer fake.onExitMutex.RUnlock()
-	return fake.onExitArgsForCall[i].log, fake.onExitArgsForCall[i].process, fake.onExitArgsForCall[i].onExit
+	argsForCall := fake.onExitArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeWaitWatcher) Invocations() map[string][][]interface{} {

@@ -4,18 +4,18 @@ package rundmcfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/guardian/gardener/container-spec"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
 type FakeBundlerRule struct {
-	ApplyStub        func(bndle goci.Bndl, desiredContainerSpec spec.DesiredContainerSpec, containerDir string) (goci.Bndl, error)
+	ApplyStub        func(goci.Bndl, spec.DesiredContainerSpec, string) (goci.Bndl, error)
 	applyMutex       sync.RWMutex
 	applyArgsForCall []struct {
-		bndle                goci.Bndl
-		desiredContainerSpec spec.DesiredContainerSpec
-		containerDir         string
+		arg1 goci.Bndl
+		arg2 spec.DesiredContainerSpec
+		arg3 string
 	}
 	applyReturns struct {
 		result1 goci.Bndl
@@ -29,23 +29,24 @@ type FakeBundlerRule struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBundlerRule) Apply(bndle goci.Bndl, desiredContainerSpec spec.DesiredContainerSpec, containerDir string) (goci.Bndl, error) {
+func (fake *FakeBundlerRule) Apply(arg1 goci.Bndl, arg2 spec.DesiredContainerSpec, arg3 string) (goci.Bndl, error) {
 	fake.applyMutex.Lock()
 	ret, specificReturn := fake.applyReturnsOnCall[len(fake.applyArgsForCall)]
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
-		bndle                goci.Bndl
-		desiredContainerSpec spec.DesiredContainerSpec
-		containerDir         string
-	}{bndle, desiredContainerSpec, containerDir})
-	fake.recordInvocation("Apply", []interface{}{bndle, desiredContainerSpec, containerDir})
+		arg1 goci.Bndl
+		arg2 spec.DesiredContainerSpec
+		arg3 string
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("Apply", []interface{}{arg1, arg2, arg3})
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
-		return fake.ApplyStub(bndle, desiredContainerSpec, containerDir)
+		return fake.ApplyStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.applyReturns.result1, fake.applyReturns.result2
+	fakeReturns := fake.applyReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeBundlerRule) ApplyCallCount() int {
@@ -54,13 +55,22 @@ func (fake *FakeBundlerRule) ApplyCallCount() int {
 	return len(fake.applyArgsForCall)
 }
 
+func (fake *FakeBundlerRule) ApplyCalls(stub func(goci.Bndl, spec.DesiredContainerSpec, string) (goci.Bndl, error)) {
+	fake.applyMutex.Lock()
+	defer fake.applyMutex.Unlock()
+	fake.ApplyStub = stub
+}
+
 func (fake *FakeBundlerRule) ApplyArgsForCall(i int) (goci.Bndl, spec.DesiredContainerSpec, string) {
 	fake.applyMutex.RLock()
 	defer fake.applyMutex.RUnlock()
-	return fake.applyArgsForCall[i].bndle, fake.applyArgsForCall[i].desiredContainerSpec, fake.applyArgsForCall[i].containerDir
+	argsForCall := fake.applyArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeBundlerRule) ApplyReturns(result1 goci.Bndl, result2 error) {
+	fake.applyMutex.Lock()
+	defer fake.applyMutex.Unlock()
 	fake.ApplyStub = nil
 	fake.applyReturns = struct {
 		result1 goci.Bndl
@@ -69,6 +79,8 @@ func (fake *FakeBundlerRule) ApplyReturns(result1 goci.Bndl, result2 error) {
 }
 
 func (fake *FakeBundlerRule) ApplyReturnsOnCall(i int, result1 goci.Bndl, result2 error) {
+	fake.applyMutex.Lock()
+	defer fake.applyMutex.Unlock()
 	fake.ApplyStub = nil
 	if fake.applyReturnsOnCall == nil {
 		fake.applyReturnsOnCall = make(map[int]struct {

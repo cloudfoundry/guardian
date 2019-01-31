@@ -9,11 +9,11 @@ import (
 )
 
 type FakeBundleSaver struct {
-	SaveStub        func(bundle goci.Bndl, path string) error
+	SaveStub        func(goci.Bndl, string) error
 	saveMutex       sync.RWMutex
 	saveArgsForCall []struct {
-		bundle goci.Bndl
-		path   string
+		arg1 goci.Bndl
+		arg2 string
 	}
 	saveReturns struct {
 		result1 error
@@ -25,22 +25,23 @@ type FakeBundleSaver struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBundleSaver) Save(bundle goci.Bndl, path string) error {
+func (fake *FakeBundleSaver) Save(arg1 goci.Bndl, arg2 string) error {
 	fake.saveMutex.Lock()
 	ret, specificReturn := fake.saveReturnsOnCall[len(fake.saveArgsForCall)]
 	fake.saveArgsForCall = append(fake.saveArgsForCall, struct {
-		bundle goci.Bndl
-		path   string
-	}{bundle, path})
-	fake.recordInvocation("Save", []interface{}{bundle, path})
+		arg1 goci.Bndl
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Save", []interface{}{arg1, arg2})
 	fake.saveMutex.Unlock()
 	if fake.SaveStub != nil {
-		return fake.SaveStub(bundle, path)
+		return fake.SaveStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.saveReturns.result1
+	fakeReturns := fake.saveReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeBundleSaver) SaveCallCount() int {
@@ -49,13 +50,22 @@ func (fake *FakeBundleSaver) SaveCallCount() int {
 	return len(fake.saveArgsForCall)
 }
 
+func (fake *FakeBundleSaver) SaveCalls(stub func(goci.Bndl, string) error) {
+	fake.saveMutex.Lock()
+	defer fake.saveMutex.Unlock()
+	fake.SaveStub = stub
+}
+
 func (fake *FakeBundleSaver) SaveArgsForCall(i int) (goci.Bndl, string) {
 	fake.saveMutex.RLock()
 	defer fake.saveMutex.RUnlock()
-	return fake.saveArgsForCall[i].bundle, fake.saveArgsForCall[i].path
+	argsForCall := fake.saveArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeBundleSaver) SaveReturns(result1 error) {
+	fake.saveMutex.Lock()
+	defer fake.saveMutex.Unlock()
 	fake.SaveStub = nil
 	fake.saveReturns = struct {
 		result1 error
@@ -63,6 +73,8 @@ func (fake *FakeBundleSaver) SaveReturns(result1 error) {
 }
 
 func (fake *FakeBundleSaver) SaveReturnsOnCall(i int, result1 error) {
+	fake.saveMutex.Lock()
+	defer fake.saveMutex.Unlock()
 	fake.SaveStub = nil
 	if fake.saveReturnsOnCall == nil {
 		fake.saveReturnsOnCall = make(map[int]struct {

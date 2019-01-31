@@ -9,12 +9,12 @@ import (
 )
 
 type FakeConfigurer struct {
-	ApplyStub        func(log lager.Logger, cfg kawasaki.NetworkConfig, pid int) error
+	ApplyStub        func(lager.Logger, kawasaki.NetworkConfig, int) error
 	applyMutex       sync.RWMutex
 	applyArgsForCall []struct {
-		log lager.Logger
-		cfg kawasaki.NetworkConfig
-		pid int
+		arg1 lager.Logger
+		arg2 kawasaki.NetworkConfig
+		arg3 int
 	}
 	applyReturns struct {
 		result1 error
@@ -22,11 +22,11 @@ type FakeConfigurer struct {
 	applyReturnsOnCall map[int]struct {
 		result1 error
 	}
-	DestroyBridgeStub        func(log lager.Logger, cfg kawasaki.NetworkConfig) error
+	DestroyBridgeStub        func(lager.Logger, kawasaki.NetworkConfig) error
 	destroyBridgeMutex       sync.RWMutex
 	destroyBridgeArgsForCall []struct {
-		log lager.Logger
-		cfg kawasaki.NetworkConfig
+		arg1 lager.Logger
+		arg2 kawasaki.NetworkConfig
 	}
 	destroyBridgeReturns struct {
 		result1 error
@@ -34,11 +34,11 @@ type FakeConfigurer struct {
 	destroyBridgeReturnsOnCall map[int]struct {
 		result1 error
 	}
-	DestroyIPTablesRulesStub        func(log lager.Logger, cfg kawasaki.NetworkConfig) error
+	DestroyIPTablesRulesStub        func(lager.Logger, kawasaki.NetworkConfig) error
 	destroyIPTablesRulesMutex       sync.RWMutex
 	destroyIPTablesRulesArgsForCall []struct {
-		log lager.Logger
-		cfg kawasaki.NetworkConfig
+		arg1 lager.Logger
+		arg2 kawasaki.NetworkConfig
 	}
 	destroyIPTablesRulesReturns struct {
 		result1 error
@@ -50,23 +50,24 @@ type FakeConfigurer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeConfigurer) Apply(log lager.Logger, cfg kawasaki.NetworkConfig, pid int) error {
+func (fake *FakeConfigurer) Apply(arg1 lager.Logger, arg2 kawasaki.NetworkConfig, arg3 int) error {
 	fake.applyMutex.Lock()
 	ret, specificReturn := fake.applyReturnsOnCall[len(fake.applyArgsForCall)]
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
-		log lager.Logger
-		cfg kawasaki.NetworkConfig
-		pid int
-	}{log, cfg, pid})
-	fake.recordInvocation("Apply", []interface{}{log, cfg, pid})
+		arg1 lager.Logger
+		arg2 kawasaki.NetworkConfig
+		arg3 int
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("Apply", []interface{}{arg1, arg2, arg3})
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
-		return fake.ApplyStub(log, cfg, pid)
+		return fake.ApplyStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.applyReturns.result1
+	fakeReturns := fake.applyReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeConfigurer) ApplyCallCount() int {
@@ -75,13 +76,22 @@ func (fake *FakeConfigurer) ApplyCallCount() int {
 	return len(fake.applyArgsForCall)
 }
 
+func (fake *FakeConfigurer) ApplyCalls(stub func(lager.Logger, kawasaki.NetworkConfig, int) error) {
+	fake.applyMutex.Lock()
+	defer fake.applyMutex.Unlock()
+	fake.ApplyStub = stub
+}
+
 func (fake *FakeConfigurer) ApplyArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig, int) {
 	fake.applyMutex.RLock()
 	defer fake.applyMutex.RUnlock()
-	return fake.applyArgsForCall[i].log, fake.applyArgsForCall[i].cfg, fake.applyArgsForCall[i].pid
+	argsForCall := fake.applyArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeConfigurer) ApplyReturns(result1 error) {
+	fake.applyMutex.Lock()
+	defer fake.applyMutex.Unlock()
 	fake.ApplyStub = nil
 	fake.applyReturns = struct {
 		result1 error
@@ -89,6 +99,8 @@ func (fake *FakeConfigurer) ApplyReturns(result1 error) {
 }
 
 func (fake *FakeConfigurer) ApplyReturnsOnCall(i int, result1 error) {
+	fake.applyMutex.Lock()
+	defer fake.applyMutex.Unlock()
 	fake.ApplyStub = nil
 	if fake.applyReturnsOnCall == nil {
 		fake.applyReturnsOnCall = make(map[int]struct {
@@ -100,22 +112,23 @@ func (fake *FakeConfigurer) ApplyReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeConfigurer) DestroyBridge(log lager.Logger, cfg kawasaki.NetworkConfig) error {
+func (fake *FakeConfigurer) DestroyBridge(arg1 lager.Logger, arg2 kawasaki.NetworkConfig) error {
 	fake.destroyBridgeMutex.Lock()
 	ret, specificReturn := fake.destroyBridgeReturnsOnCall[len(fake.destroyBridgeArgsForCall)]
 	fake.destroyBridgeArgsForCall = append(fake.destroyBridgeArgsForCall, struct {
-		log lager.Logger
-		cfg kawasaki.NetworkConfig
-	}{log, cfg})
-	fake.recordInvocation("DestroyBridge", []interface{}{log, cfg})
+		arg1 lager.Logger
+		arg2 kawasaki.NetworkConfig
+	}{arg1, arg2})
+	fake.recordInvocation("DestroyBridge", []interface{}{arg1, arg2})
 	fake.destroyBridgeMutex.Unlock()
 	if fake.DestroyBridgeStub != nil {
-		return fake.DestroyBridgeStub(log, cfg)
+		return fake.DestroyBridgeStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.destroyBridgeReturns.result1
+	fakeReturns := fake.destroyBridgeReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeConfigurer) DestroyBridgeCallCount() int {
@@ -124,13 +137,22 @@ func (fake *FakeConfigurer) DestroyBridgeCallCount() int {
 	return len(fake.destroyBridgeArgsForCall)
 }
 
+func (fake *FakeConfigurer) DestroyBridgeCalls(stub func(lager.Logger, kawasaki.NetworkConfig) error) {
+	fake.destroyBridgeMutex.Lock()
+	defer fake.destroyBridgeMutex.Unlock()
+	fake.DestroyBridgeStub = stub
+}
+
 func (fake *FakeConfigurer) DestroyBridgeArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig) {
 	fake.destroyBridgeMutex.RLock()
 	defer fake.destroyBridgeMutex.RUnlock()
-	return fake.destroyBridgeArgsForCall[i].log, fake.destroyBridgeArgsForCall[i].cfg
+	argsForCall := fake.destroyBridgeArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeConfigurer) DestroyBridgeReturns(result1 error) {
+	fake.destroyBridgeMutex.Lock()
+	defer fake.destroyBridgeMutex.Unlock()
 	fake.DestroyBridgeStub = nil
 	fake.destroyBridgeReturns = struct {
 		result1 error
@@ -138,6 +160,8 @@ func (fake *FakeConfigurer) DestroyBridgeReturns(result1 error) {
 }
 
 func (fake *FakeConfigurer) DestroyBridgeReturnsOnCall(i int, result1 error) {
+	fake.destroyBridgeMutex.Lock()
+	defer fake.destroyBridgeMutex.Unlock()
 	fake.DestroyBridgeStub = nil
 	if fake.destroyBridgeReturnsOnCall == nil {
 		fake.destroyBridgeReturnsOnCall = make(map[int]struct {
@@ -149,22 +173,23 @@ func (fake *FakeConfigurer) DestroyBridgeReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeConfigurer) DestroyIPTablesRules(log lager.Logger, cfg kawasaki.NetworkConfig) error {
+func (fake *FakeConfigurer) DestroyIPTablesRules(arg1 lager.Logger, arg2 kawasaki.NetworkConfig) error {
 	fake.destroyIPTablesRulesMutex.Lock()
 	ret, specificReturn := fake.destroyIPTablesRulesReturnsOnCall[len(fake.destroyIPTablesRulesArgsForCall)]
 	fake.destroyIPTablesRulesArgsForCall = append(fake.destroyIPTablesRulesArgsForCall, struct {
-		log lager.Logger
-		cfg kawasaki.NetworkConfig
-	}{log, cfg})
-	fake.recordInvocation("DestroyIPTablesRules", []interface{}{log, cfg})
+		arg1 lager.Logger
+		arg2 kawasaki.NetworkConfig
+	}{arg1, arg2})
+	fake.recordInvocation("DestroyIPTablesRules", []interface{}{arg1, arg2})
 	fake.destroyIPTablesRulesMutex.Unlock()
 	if fake.DestroyIPTablesRulesStub != nil {
-		return fake.DestroyIPTablesRulesStub(log, cfg)
+		return fake.DestroyIPTablesRulesStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.destroyIPTablesRulesReturns.result1
+	fakeReturns := fake.destroyIPTablesRulesReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeConfigurer) DestroyIPTablesRulesCallCount() int {
@@ -173,13 +198,22 @@ func (fake *FakeConfigurer) DestroyIPTablesRulesCallCount() int {
 	return len(fake.destroyIPTablesRulesArgsForCall)
 }
 
+func (fake *FakeConfigurer) DestroyIPTablesRulesCalls(stub func(lager.Logger, kawasaki.NetworkConfig) error) {
+	fake.destroyIPTablesRulesMutex.Lock()
+	defer fake.destroyIPTablesRulesMutex.Unlock()
+	fake.DestroyIPTablesRulesStub = stub
+}
+
 func (fake *FakeConfigurer) DestroyIPTablesRulesArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig) {
 	fake.destroyIPTablesRulesMutex.RLock()
 	defer fake.destroyIPTablesRulesMutex.RUnlock()
-	return fake.destroyIPTablesRulesArgsForCall[i].log, fake.destroyIPTablesRulesArgsForCall[i].cfg
+	argsForCall := fake.destroyIPTablesRulesArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeConfigurer) DestroyIPTablesRulesReturns(result1 error) {
+	fake.destroyIPTablesRulesMutex.Lock()
+	defer fake.destroyIPTablesRulesMutex.Unlock()
 	fake.DestroyIPTablesRulesStub = nil
 	fake.destroyIPTablesRulesReturns = struct {
 		result1 error
@@ -187,6 +221,8 @@ func (fake *FakeConfigurer) DestroyIPTablesRulesReturns(result1 error) {
 }
 
 func (fake *FakeConfigurer) DestroyIPTablesRulesReturnsOnCall(i int, result1 error) {
+	fake.destroyIPTablesRulesMutex.Lock()
+	defer fake.destroyIPTablesRulesMutex.Unlock()
 	fake.DestroyIPTablesRulesStub = nil
 	if fake.destroyIPTablesRulesReturnsOnCall == nil {
 		fake.destroyIPTablesRulesReturnsOnCall = make(map[int]struct {

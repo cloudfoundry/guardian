@@ -8,10 +8,10 @@ import (
 )
 
 type FakeRetrier struct {
-	RunStub        func(work func() error) error
+	RunStub        func(func() error) error
 	runMutex       sync.RWMutex
 	runArgsForCall []struct {
-		work func() error
+		arg1 func() error
 	}
 	runReturns struct {
 		result1 error
@@ -23,21 +23,22 @@ type FakeRetrier struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRetrier) Run(work func() error) error {
+func (fake *FakeRetrier) Run(arg1 func() error) error {
 	fake.runMutex.Lock()
 	ret, specificReturn := fake.runReturnsOnCall[len(fake.runArgsForCall)]
 	fake.runArgsForCall = append(fake.runArgsForCall, struct {
-		work func() error
-	}{work})
-	fake.recordInvocation("Run", []interface{}{work})
+		arg1 func() error
+	}{arg1})
+	fake.recordInvocation("Run", []interface{}{arg1})
 	fake.runMutex.Unlock()
 	if fake.RunStub != nil {
-		return fake.RunStub(work)
+		return fake.RunStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.runReturns.result1
+	fakeReturns := fake.runReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeRetrier) RunCallCount() int {
@@ -46,13 +47,22 @@ func (fake *FakeRetrier) RunCallCount() int {
 	return len(fake.runArgsForCall)
 }
 
+func (fake *FakeRetrier) RunCalls(stub func(func() error) error) {
+	fake.runMutex.Lock()
+	defer fake.runMutex.Unlock()
+	fake.RunStub = stub
+}
+
 func (fake *FakeRetrier) RunArgsForCall(i int) func() error {
 	fake.runMutex.RLock()
 	defer fake.runMutex.RUnlock()
-	return fake.runArgsForCall[i].work
+	argsForCall := fake.runArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeRetrier) RunReturns(result1 error) {
+	fake.runMutex.Lock()
+	defer fake.runMutex.Unlock()
 	fake.RunStub = nil
 	fake.runReturns = struct {
 		result1 error
@@ -60,6 +70,8 @@ func (fake *FakeRetrier) RunReturns(result1 error) {
 }
 
 func (fake *FakeRetrier) RunReturnsOnCall(i int, result1 error) {
+	fake.runMutex.Lock()
+	defer fake.runMutex.Unlock()
 	fake.RunStub = nil
 	if fake.runReturnsOnCall == nil {
 		fake.runReturnsOnCall = make(map[int]struct {

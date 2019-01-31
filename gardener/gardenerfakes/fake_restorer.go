@@ -9,11 +9,11 @@ import (
 )
 
 type FakeRestorer struct {
-	RestoreStub        func(logger lager.Logger, handles []string) []string
+	RestoreStub        func(lager.Logger, []string) []string
 	restoreMutex       sync.RWMutex
 	restoreArgsForCall []struct {
-		logger  lager.Logger
-		handles []string
+		arg1 lager.Logger
+		arg2 []string
 	}
 	restoreReturns struct {
 		result1 []string
@@ -25,27 +25,28 @@ type FakeRestorer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRestorer) Restore(logger lager.Logger, handles []string) []string {
-	var handlesCopy []string
-	if handles != nil {
-		handlesCopy = make([]string, len(handles))
-		copy(handlesCopy, handles)
+func (fake *FakeRestorer) Restore(arg1 lager.Logger, arg2 []string) []string {
+	var arg2Copy []string
+	if arg2 != nil {
+		arg2Copy = make([]string, len(arg2))
+		copy(arg2Copy, arg2)
 	}
 	fake.restoreMutex.Lock()
 	ret, specificReturn := fake.restoreReturnsOnCall[len(fake.restoreArgsForCall)]
 	fake.restoreArgsForCall = append(fake.restoreArgsForCall, struct {
-		logger  lager.Logger
-		handles []string
-	}{logger, handlesCopy})
-	fake.recordInvocation("Restore", []interface{}{logger, handlesCopy})
+		arg1 lager.Logger
+		arg2 []string
+	}{arg1, arg2Copy})
+	fake.recordInvocation("Restore", []interface{}{arg1, arg2Copy})
 	fake.restoreMutex.Unlock()
 	if fake.RestoreStub != nil {
-		return fake.RestoreStub(logger, handles)
+		return fake.RestoreStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.restoreReturns.result1
+	fakeReturns := fake.restoreReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeRestorer) RestoreCallCount() int {
@@ -54,13 +55,22 @@ func (fake *FakeRestorer) RestoreCallCount() int {
 	return len(fake.restoreArgsForCall)
 }
 
+func (fake *FakeRestorer) RestoreCalls(stub func(lager.Logger, []string) []string) {
+	fake.restoreMutex.Lock()
+	defer fake.restoreMutex.Unlock()
+	fake.RestoreStub = stub
+}
+
 func (fake *FakeRestorer) RestoreArgsForCall(i int) (lager.Logger, []string) {
 	fake.restoreMutex.RLock()
 	defer fake.restoreMutex.RUnlock()
-	return fake.restoreArgsForCall[i].logger, fake.restoreArgsForCall[i].handles
+	argsForCall := fake.restoreArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeRestorer) RestoreReturns(result1 []string) {
+	fake.restoreMutex.Lock()
+	defer fake.restoreMutex.Unlock()
 	fake.RestoreStub = nil
 	fake.restoreReturns = struct {
 		result1 []string
@@ -68,6 +78,8 @@ func (fake *FakeRestorer) RestoreReturns(result1 []string) {
 }
 
 func (fake *FakeRestorer) RestoreReturnsOnCall(i int, result1 []string) {
+	fake.restoreMutex.Lock()
+	defer fake.restoreMutex.Unlock()
 	fake.RestoreStub = nil
 	if fake.restoreReturnsOnCall == nil {
 		fake.restoreReturnsOnCall = make(map[int]struct {

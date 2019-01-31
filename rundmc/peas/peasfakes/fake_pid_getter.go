@@ -9,11 +9,11 @@ import (
 )
 
 type FakePidGetter struct {
-	GetPidStub        func(log lager.Logger, handle string) (int, error)
+	GetPidStub        func(lager.Logger, string) (int, error)
 	getPidMutex       sync.RWMutex
 	getPidArgsForCall []struct {
-		log    lager.Logger
-		handle string
+		arg1 lager.Logger
+		arg2 string
 	}
 	getPidReturns struct {
 		result1 int
@@ -27,22 +27,23 @@ type FakePidGetter struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakePidGetter) GetPid(log lager.Logger, handle string) (int, error) {
+func (fake *FakePidGetter) GetPid(arg1 lager.Logger, arg2 string) (int, error) {
 	fake.getPidMutex.Lock()
 	ret, specificReturn := fake.getPidReturnsOnCall[len(fake.getPidArgsForCall)]
 	fake.getPidArgsForCall = append(fake.getPidArgsForCall, struct {
-		log    lager.Logger
-		handle string
-	}{log, handle})
-	fake.recordInvocation("GetPid", []interface{}{log, handle})
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("GetPid", []interface{}{arg1, arg2})
 	fake.getPidMutex.Unlock()
 	if fake.GetPidStub != nil {
-		return fake.GetPidStub(log, handle)
+		return fake.GetPidStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.getPidReturns.result1, fake.getPidReturns.result2
+	fakeReturns := fake.getPidReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakePidGetter) GetPidCallCount() int {
@@ -51,13 +52,22 @@ func (fake *FakePidGetter) GetPidCallCount() int {
 	return len(fake.getPidArgsForCall)
 }
 
+func (fake *FakePidGetter) GetPidCalls(stub func(lager.Logger, string) (int, error)) {
+	fake.getPidMutex.Lock()
+	defer fake.getPidMutex.Unlock()
+	fake.GetPidStub = stub
+}
+
 func (fake *FakePidGetter) GetPidArgsForCall(i int) (lager.Logger, string) {
 	fake.getPidMutex.RLock()
 	defer fake.getPidMutex.RUnlock()
-	return fake.getPidArgsForCall[i].log, fake.getPidArgsForCall[i].handle
+	argsForCall := fake.getPidArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakePidGetter) GetPidReturns(result1 int, result2 error) {
+	fake.getPidMutex.Lock()
+	defer fake.getPidMutex.Unlock()
 	fake.GetPidStub = nil
 	fake.getPidReturns = struct {
 		result1 int
@@ -66,6 +76,8 @@ func (fake *FakePidGetter) GetPidReturns(result1 int, result2 error) {
 }
 
 func (fake *FakePidGetter) GetPidReturnsOnCall(i int, result1 int, result2 error) {
+	fake.getPidMutex.Lock()
+	defer fake.getPidMutex.Unlock()
 	fake.GetPidStub = nil
 	if fake.getPidReturnsOnCall == nil {
 		fake.getPidReturnsOnCall = make(map[int]struct {

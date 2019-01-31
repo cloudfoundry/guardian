@@ -8,10 +8,10 @@ import (
 )
 
 type FakePortForwarder struct {
-	ForwardStub        func(spec kawasaki.PortForwarderSpec) error
+	ForwardStub        func(kawasaki.PortForwarderSpec) error
 	forwardMutex       sync.RWMutex
 	forwardArgsForCall []struct {
-		spec kawasaki.PortForwarderSpec
+		arg1 kawasaki.PortForwarderSpec
 	}
 	forwardReturns struct {
 		result1 error
@@ -23,21 +23,22 @@ type FakePortForwarder struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakePortForwarder) Forward(spec kawasaki.PortForwarderSpec) error {
+func (fake *FakePortForwarder) Forward(arg1 kawasaki.PortForwarderSpec) error {
 	fake.forwardMutex.Lock()
 	ret, specificReturn := fake.forwardReturnsOnCall[len(fake.forwardArgsForCall)]
 	fake.forwardArgsForCall = append(fake.forwardArgsForCall, struct {
-		spec kawasaki.PortForwarderSpec
-	}{spec})
-	fake.recordInvocation("Forward", []interface{}{spec})
+		arg1 kawasaki.PortForwarderSpec
+	}{arg1})
+	fake.recordInvocation("Forward", []interface{}{arg1})
 	fake.forwardMutex.Unlock()
 	if fake.ForwardStub != nil {
-		return fake.ForwardStub(spec)
+		return fake.ForwardStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.forwardReturns.result1
+	fakeReturns := fake.forwardReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakePortForwarder) ForwardCallCount() int {
@@ -46,13 +47,22 @@ func (fake *FakePortForwarder) ForwardCallCount() int {
 	return len(fake.forwardArgsForCall)
 }
 
+func (fake *FakePortForwarder) ForwardCalls(stub func(kawasaki.PortForwarderSpec) error) {
+	fake.forwardMutex.Lock()
+	defer fake.forwardMutex.Unlock()
+	fake.ForwardStub = stub
+}
+
 func (fake *FakePortForwarder) ForwardArgsForCall(i int) kawasaki.PortForwarderSpec {
 	fake.forwardMutex.RLock()
 	defer fake.forwardMutex.RUnlock()
-	return fake.forwardArgsForCall[i].spec
+	argsForCall := fake.forwardArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakePortForwarder) ForwardReturns(result1 error) {
+	fake.forwardMutex.Lock()
+	defer fake.forwardMutex.Unlock()
 	fake.ForwardStub = nil
 	fake.forwardReturns = struct {
 		result1 error
@@ -60,6 +70,8 @@ func (fake *FakePortForwarder) ForwardReturns(result1 error) {
 }
 
 func (fake *FakePortForwarder) ForwardReturnsOnCall(i int, result1 error) {
+	fake.forwardMutex.Lock()
+	defer fake.forwardMutex.Unlock()
 	fake.ForwardStub = nil
 	if fake.forwardReturnsOnCall == nil {
 		fake.forwardReturnsOnCall = make(map[int]struct {

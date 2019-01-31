@@ -11,34 +11,13 @@ import (
 )
 
 type FakeExecRunner struct {
-	RunStub        func(log lager.Logger, processID, processPath, sandboxHandle, sandboxBundlePath string, pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error) (garden.Process, error)
-	runMutex       sync.RWMutex
-	runArgsForCall []struct {
-		log               lager.Logger
-		processID         string
-		processPath       string
-		sandboxHandle     string
-		sandboxBundlePath string
-		pio               garden.ProcessIO
-		tty               bool
-		procJSON          io.Reader
-		extraCleanup      func() error
-	}
-	runReturns struct {
-		result1 garden.Process
-		result2 error
-	}
-	runReturnsOnCall map[int]struct {
-		result1 garden.Process
-		result2 error
-	}
-	AttachStub        func(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error)
+	AttachStub        func(lager.Logger, string, garden.ProcessIO, string) (garden.Process, error)
 	attachMutex       sync.RWMutex
 	attachArgsForCall []struct {
-		log           lager.Logger
-		processID     string
-		io            garden.ProcessIO
-		processesPath string
+		arg1 lager.Logger
+		arg2 string
+		arg3 garden.ProcessIO
+		arg4 string
 	}
 	attachReturns struct {
 		result1 garden.Process
@@ -48,87 +27,50 @@ type FakeExecRunner struct {
 		result1 garden.Process
 		result2 error
 	}
+	RunStub        func(lager.Logger, string, string, string, string, garden.ProcessIO, bool, io.Reader, func() error) (garden.Process, error)
+	runMutex       sync.RWMutex
+	runArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+		arg3 string
+		arg4 string
+		arg5 string
+		arg6 garden.ProcessIO
+		arg7 bool
+		arg8 io.Reader
+		arg9 func() error
+	}
+	runReturns struct {
+		result1 garden.Process
+		result2 error
+	}
+	runReturnsOnCall map[int]struct {
+		result1 garden.Process
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeExecRunner) Run(log lager.Logger, processID string, processPath string, sandboxHandle string, sandboxBundlePath string, pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error) (garden.Process, error) {
-	fake.runMutex.Lock()
-	ret, specificReturn := fake.runReturnsOnCall[len(fake.runArgsForCall)]
-	fake.runArgsForCall = append(fake.runArgsForCall, struct {
-		log               lager.Logger
-		processID         string
-		processPath       string
-		sandboxHandle     string
-		sandboxBundlePath string
-		pio               garden.ProcessIO
-		tty               bool
-		procJSON          io.Reader
-		extraCleanup      func() error
-	}{log, processID, processPath, sandboxHandle, sandboxBundlePath, pio, tty, procJSON, extraCleanup})
-	fake.recordInvocation("Run", []interface{}{log, processID, processPath, sandboxHandle, sandboxBundlePath, pio, tty, procJSON, extraCleanup})
-	fake.runMutex.Unlock()
-	if fake.RunStub != nil {
-		return fake.RunStub(log, processID, processPath, sandboxHandle, sandboxBundlePath, pio, tty, procJSON, extraCleanup)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.runReturns.result1, fake.runReturns.result2
-}
-
-func (fake *FakeExecRunner) RunCallCount() int {
-	fake.runMutex.RLock()
-	defer fake.runMutex.RUnlock()
-	return len(fake.runArgsForCall)
-}
-
-func (fake *FakeExecRunner) RunArgsForCall(i int) (lager.Logger, string, string, string, string, garden.ProcessIO, bool, io.Reader, func() error) {
-	fake.runMutex.RLock()
-	defer fake.runMutex.RUnlock()
-	return fake.runArgsForCall[i].log, fake.runArgsForCall[i].processID, fake.runArgsForCall[i].processPath, fake.runArgsForCall[i].sandboxHandle, fake.runArgsForCall[i].sandboxBundlePath, fake.runArgsForCall[i].pio, fake.runArgsForCall[i].tty, fake.runArgsForCall[i].procJSON, fake.runArgsForCall[i].extraCleanup
-}
-
-func (fake *FakeExecRunner) RunReturns(result1 garden.Process, result2 error) {
-	fake.RunStub = nil
-	fake.runReturns = struct {
-		result1 garden.Process
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeExecRunner) RunReturnsOnCall(i int, result1 garden.Process, result2 error) {
-	fake.RunStub = nil
-	if fake.runReturnsOnCall == nil {
-		fake.runReturnsOnCall = make(map[int]struct {
-			result1 garden.Process
-			result2 error
-		})
-	}
-	fake.runReturnsOnCall[i] = struct {
-		result1 garden.Process
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
+func (fake *FakeExecRunner) Attach(arg1 lager.Logger, arg2 string, arg3 garden.ProcessIO, arg4 string) (garden.Process, error) {
 	fake.attachMutex.Lock()
 	ret, specificReturn := fake.attachReturnsOnCall[len(fake.attachArgsForCall)]
 	fake.attachArgsForCall = append(fake.attachArgsForCall, struct {
-		log           lager.Logger
-		processID     string
-		io            garden.ProcessIO
-		processesPath string
-	}{log, processID, io, processesPath})
-	fake.recordInvocation("Attach", []interface{}{log, processID, io, processesPath})
+		arg1 lager.Logger
+		arg2 string
+		arg3 garden.ProcessIO
+		arg4 string
+	}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("Attach", []interface{}{arg1, arg2, arg3, arg4})
 	fake.attachMutex.Unlock()
 	if fake.AttachStub != nil {
-		return fake.AttachStub(log, processID, io, processesPath)
+		return fake.AttachStub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.attachReturns.result1, fake.attachReturns.result2
+	fakeReturns := fake.attachReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeExecRunner) AttachCallCount() int {
@@ -137,13 +79,22 @@ func (fake *FakeExecRunner) AttachCallCount() int {
 	return len(fake.attachArgsForCall)
 }
 
+func (fake *FakeExecRunner) AttachCalls(stub func(lager.Logger, string, garden.ProcessIO, string) (garden.Process, error)) {
+	fake.attachMutex.Lock()
+	defer fake.attachMutex.Unlock()
+	fake.AttachStub = stub
+}
+
 func (fake *FakeExecRunner) AttachArgsForCall(i int) (lager.Logger, string, garden.ProcessIO, string) {
 	fake.attachMutex.RLock()
 	defer fake.attachMutex.RUnlock()
-	return fake.attachArgsForCall[i].log, fake.attachArgsForCall[i].processID, fake.attachArgsForCall[i].io, fake.attachArgsForCall[i].processesPath
+	argsForCall := fake.attachArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeExecRunner) AttachReturns(result1 garden.Process, result2 error) {
+	fake.attachMutex.Lock()
+	defer fake.attachMutex.Unlock()
 	fake.AttachStub = nil
 	fake.attachReturns = struct {
 		result1 garden.Process
@@ -152,6 +103,8 @@ func (fake *FakeExecRunner) AttachReturns(result1 garden.Process, result2 error)
 }
 
 func (fake *FakeExecRunner) AttachReturnsOnCall(i int, result1 garden.Process, result2 error) {
+	fake.attachMutex.Lock()
+	defer fake.attachMutex.Unlock()
 	fake.AttachStub = nil
 	if fake.attachReturnsOnCall == nil {
 		fake.attachReturnsOnCall = make(map[int]struct {
@@ -165,13 +118,84 @@ func (fake *FakeExecRunner) AttachReturnsOnCall(i int, result1 garden.Process, r
 	}{result1, result2}
 }
 
+func (fake *FakeExecRunner) Run(arg1 lager.Logger, arg2 string, arg3 string, arg4 string, arg5 string, arg6 garden.ProcessIO, arg7 bool, arg8 io.Reader, arg9 func() error) (garden.Process, error) {
+	fake.runMutex.Lock()
+	ret, specificReturn := fake.runReturnsOnCall[len(fake.runArgsForCall)]
+	fake.runArgsForCall = append(fake.runArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+		arg3 string
+		arg4 string
+		arg5 string
+		arg6 garden.ProcessIO
+		arg7 bool
+		arg8 io.Reader
+		arg9 func() error
+	}{arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9})
+	fake.recordInvocation("Run", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9})
+	fake.runMutex.Unlock()
+	if fake.RunStub != nil {
+		return fake.RunStub(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.runReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeExecRunner) RunCallCount() int {
+	fake.runMutex.RLock()
+	defer fake.runMutex.RUnlock()
+	return len(fake.runArgsForCall)
+}
+
+func (fake *FakeExecRunner) RunCalls(stub func(lager.Logger, string, string, string, string, garden.ProcessIO, bool, io.Reader, func() error) (garden.Process, error)) {
+	fake.runMutex.Lock()
+	defer fake.runMutex.Unlock()
+	fake.RunStub = stub
+}
+
+func (fake *FakeExecRunner) RunArgsForCall(i int) (lager.Logger, string, string, string, string, garden.ProcessIO, bool, io.Reader, func() error) {
+	fake.runMutex.RLock()
+	defer fake.runMutex.RUnlock()
+	argsForCall := fake.runArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6, argsForCall.arg7, argsForCall.arg8, argsForCall.arg9
+}
+
+func (fake *FakeExecRunner) RunReturns(result1 garden.Process, result2 error) {
+	fake.runMutex.Lock()
+	defer fake.runMutex.Unlock()
+	fake.RunStub = nil
+	fake.runReturns = struct {
+		result1 garden.Process
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeExecRunner) RunReturnsOnCall(i int, result1 garden.Process, result2 error) {
+	fake.runMutex.Lock()
+	defer fake.runMutex.Unlock()
+	fake.RunStub = nil
+	if fake.runReturnsOnCall == nil {
+		fake.runReturnsOnCall = make(map[int]struct {
+			result1 garden.Process
+			result2 error
+		})
+	}
+	fake.runReturnsOnCall[i] = struct {
+		result1 garden.Process
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeExecRunner) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.runMutex.RLock()
-	defer fake.runMutex.RUnlock()
 	fake.attachMutex.RLock()
 	defer fake.attachMutex.RUnlock()
+	fake.runMutex.RLock()
+	defer fake.runMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

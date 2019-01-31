@@ -42,7 +42,8 @@ func (fake *FakeRuncStater) State(arg1 lager.Logger, arg2 string) (runrunc.State
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.stateReturns.result1, fake.stateReturns.result2
+	fakeReturns := fake.stateReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeRuncStater) StateCallCount() int {
@@ -51,13 +52,22 @@ func (fake *FakeRuncStater) StateCallCount() int {
 	return len(fake.stateArgsForCall)
 }
 
+func (fake *FakeRuncStater) StateCalls(stub func(lager.Logger, string) (runrunc.State, error)) {
+	fake.stateMutex.Lock()
+	defer fake.stateMutex.Unlock()
+	fake.StateStub = stub
+}
+
 func (fake *FakeRuncStater) StateArgsForCall(i int) (lager.Logger, string) {
 	fake.stateMutex.RLock()
 	defer fake.stateMutex.RUnlock()
-	return fake.stateArgsForCall[i].arg1, fake.stateArgsForCall[i].arg2
+	argsForCall := fake.stateArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeRuncStater) StateReturns(result1 runrunc.State, result2 error) {
+	fake.stateMutex.Lock()
+	defer fake.stateMutex.Unlock()
 	fake.StateStub = nil
 	fake.stateReturns = struct {
 		result1 runrunc.State
@@ -66,6 +76,8 @@ func (fake *FakeRuncStater) StateReturns(result1 runrunc.State, result2 error) {
 }
 
 func (fake *FakeRuncStater) StateReturnsOnCall(i int, result1 runrunc.State, result2 error) {
+	fake.stateMutex.Lock()
+	defer fake.stateMutex.Unlock()
 	fake.StateStub = nil
 	if fake.stateReturnsOnCall == nil {
 		fake.stateReturnsOnCall = make(map[int]struct {

@@ -9,10 +9,10 @@ import (
 )
 
 type FakeSignaller struct {
-	SignalStub        func(signal garden.Signal) error
+	SignalStub        func(garden.Signal) error
 	signalMutex       sync.RWMutex
 	signalArgsForCall []struct {
-		signal garden.Signal
+		arg1 garden.Signal
 	}
 	signalReturns struct {
 		result1 error
@@ -24,21 +24,22 @@ type FakeSignaller struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeSignaller) Signal(signal garden.Signal) error {
+func (fake *FakeSignaller) Signal(arg1 garden.Signal) error {
 	fake.signalMutex.Lock()
 	ret, specificReturn := fake.signalReturnsOnCall[len(fake.signalArgsForCall)]
 	fake.signalArgsForCall = append(fake.signalArgsForCall, struct {
-		signal garden.Signal
-	}{signal})
-	fake.recordInvocation("Signal", []interface{}{signal})
+		arg1 garden.Signal
+	}{arg1})
+	fake.recordInvocation("Signal", []interface{}{arg1})
 	fake.signalMutex.Unlock()
 	if fake.SignalStub != nil {
-		return fake.SignalStub(signal)
+		return fake.SignalStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.signalReturns.result1
+	fakeReturns := fake.signalReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeSignaller) SignalCallCount() int {
@@ -47,13 +48,22 @@ func (fake *FakeSignaller) SignalCallCount() int {
 	return len(fake.signalArgsForCall)
 }
 
+func (fake *FakeSignaller) SignalCalls(stub func(garden.Signal) error) {
+	fake.signalMutex.Lock()
+	defer fake.signalMutex.Unlock()
+	fake.SignalStub = stub
+}
+
 func (fake *FakeSignaller) SignalArgsForCall(i int) garden.Signal {
 	fake.signalMutex.RLock()
 	defer fake.signalMutex.RUnlock()
-	return fake.signalArgsForCall[i].signal
+	argsForCall := fake.signalArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeSignaller) SignalReturns(result1 error) {
+	fake.signalMutex.Lock()
+	defer fake.signalMutex.Unlock()
 	fake.SignalStub = nil
 	fake.signalReturns = struct {
 		result1 error
@@ -61,6 +71,8 @@ func (fake *FakeSignaller) SignalReturns(result1 error) {
 }
 
 func (fake *FakeSignaller) SignalReturnsOnCall(i int, result1 error) {
+	fake.signalMutex.Lock()
+	defer fake.signalMutex.Unlock()
 	fake.SignalStub = nil
 	if fake.signalReturnsOnCall == nil {
 		fake.signalReturnsOnCall = make(map[int]struct {

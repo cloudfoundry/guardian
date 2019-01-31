@@ -40,7 +40,8 @@ func (fake *FakeBundleLoader) Load(arg1 string) (goci.Bndl, error) {
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.loadReturns.result1, fake.loadReturns.result2
+	fakeReturns := fake.loadReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeBundleLoader) LoadCallCount() int {
@@ -49,13 +50,22 @@ func (fake *FakeBundleLoader) LoadCallCount() int {
 	return len(fake.loadArgsForCall)
 }
 
+func (fake *FakeBundleLoader) LoadCalls(stub func(string) (goci.Bndl, error)) {
+	fake.loadMutex.Lock()
+	defer fake.loadMutex.Unlock()
+	fake.LoadStub = stub
+}
+
 func (fake *FakeBundleLoader) LoadArgsForCall(i int) string {
 	fake.loadMutex.RLock()
 	defer fake.loadMutex.RUnlock()
-	return fake.loadArgsForCall[i].arg1
+	argsForCall := fake.loadArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeBundleLoader) LoadReturns(result1 goci.Bndl, result2 error) {
+	fake.loadMutex.Lock()
+	defer fake.loadMutex.Unlock()
 	fake.LoadStub = nil
 	fake.loadReturns = struct {
 		result1 goci.Bndl
@@ -64,6 +74,8 @@ func (fake *FakeBundleLoader) LoadReturns(result1 goci.Bndl, result2 error) {
 }
 
 func (fake *FakeBundleLoader) LoadReturnsOnCall(i int, result1 goci.Bndl, result2 error) {
+	fake.loadMutex.Lock()
+	defer fake.loadMutex.Unlock()
 	fake.LoadStub = nil
 	if fake.loadReturnsOnCall == nil {
 		fake.loadReturnsOnCall = make(map[int]struct {

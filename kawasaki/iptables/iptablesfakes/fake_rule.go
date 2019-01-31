@@ -8,10 +8,10 @@ import (
 )
 
 type FakeRule struct {
-	FlagsStub        func(chain string) []string
+	FlagsStub        func(string) []string
 	flagsMutex       sync.RWMutex
 	flagsArgsForCall []struct {
-		chain string
+		arg1 string
 	}
 	flagsReturns struct {
 		result1 []string
@@ -23,21 +23,22 @@ type FakeRule struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRule) Flags(chain string) []string {
+func (fake *FakeRule) Flags(arg1 string) []string {
 	fake.flagsMutex.Lock()
 	ret, specificReturn := fake.flagsReturnsOnCall[len(fake.flagsArgsForCall)]
 	fake.flagsArgsForCall = append(fake.flagsArgsForCall, struct {
-		chain string
-	}{chain})
-	fake.recordInvocation("Flags", []interface{}{chain})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("Flags", []interface{}{arg1})
 	fake.flagsMutex.Unlock()
 	if fake.FlagsStub != nil {
-		return fake.FlagsStub(chain)
+		return fake.FlagsStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.flagsReturns.result1
+	fakeReturns := fake.flagsReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeRule) FlagsCallCount() int {
@@ -46,13 +47,22 @@ func (fake *FakeRule) FlagsCallCount() int {
 	return len(fake.flagsArgsForCall)
 }
 
+func (fake *FakeRule) FlagsCalls(stub func(string) []string) {
+	fake.flagsMutex.Lock()
+	defer fake.flagsMutex.Unlock()
+	fake.FlagsStub = stub
+}
+
 func (fake *FakeRule) FlagsArgsForCall(i int) string {
 	fake.flagsMutex.RLock()
 	defer fake.flagsMutex.RUnlock()
-	return fake.flagsArgsForCall[i].chain
+	argsForCall := fake.flagsArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeRule) FlagsReturns(result1 []string) {
+	fake.flagsMutex.Lock()
+	defer fake.flagsMutex.Unlock()
 	fake.FlagsStub = nil
 	fake.flagsReturns = struct {
 		result1 []string
@@ -60,6 +70,8 @@ func (fake *FakeRule) FlagsReturns(result1 []string) {
 }
 
 func (fake *FakeRule) FlagsReturnsOnCall(i int, result1 []string) {
+	fake.flagsMutex.Lock()
+	defer fake.flagsMutex.Unlock()
 	fake.FlagsStub = nil
 	if fake.flagsReturnsOnCall == nil {
 		fake.flagsReturnsOnCall = make(map[int]struct {

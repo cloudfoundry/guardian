@@ -4,17 +4,17 @@ package depotfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/guardian/gardener/container-spec"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
 type FakeBundleGenerator struct {
-	GenerateStub        func(desiredContainerSpec spec.DesiredContainerSpec, containerDir string) (goci.Bndl, error)
+	GenerateStub        func(spec.DesiredContainerSpec, string) (goci.Bndl, error)
 	generateMutex       sync.RWMutex
 	generateArgsForCall []struct {
-		desiredContainerSpec spec.DesiredContainerSpec
-		containerDir         string
+		arg1 spec.DesiredContainerSpec
+		arg2 string
 	}
 	generateReturns struct {
 		result1 goci.Bndl
@@ -28,22 +28,23 @@ type FakeBundleGenerator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBundleGenerator) Generate(desiredContainerSpec spec.DesiredContainerSpec, containerDir string) (goci.Bndl, error) {
+func (fake *FakeBundleGenerator) Generate(arg1 spec.DesiredContainerSpec, arg2 string) (goci.Bndl, error) {
 	fake.generateMutex.Lock()
 	ret, specificReturn := fake.generateReturnsOnCall[len(fake.generateArgsForCall)]
 	fake.generateArgsForCall = append(fake.generateArgsForCall, struct {
-		desiredContainerSpec spec.DesiredContainerSpec
-		containerDir         string
-	}{desiredContainerSpec, containerDir})
-	fake.recordInvocation("Generate", []interface{}{desiredContainerSpec, containerDir})
+		arg1 spec.DesiredContainerSpec
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Generate", []interface{}{arg1, arg2})
 	fake.generateMutex.Unlock()
 	if fake.GenerateStub != nil {
-		return fake.GenerateStub(desiredContainerSpec, containerDir)
+		return fake.GenerateStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.generateReturns.result1, fake.generateReturns.result2
+	fakeReturns := fake.generateReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeBundleGenerator) GenerateCallCount() int {
@@ -52,13 +53,22 @@ func (fake *FakeBundleGenerator) GenerateCallCount() int {
 	return len(fake.generateArgsForCall)
 }
 
+func (fake *FakeBundleGenerator) GenerateCalls(stub func(spec.DesiredContainerSpec, string) (goci.Bndl, error)) {
+	fake.generateMutex.Lock()
+	defer fake.generateMutex.Unlock()
+	fake.GenerateStub = stub
+}
+
 func (fake *FakeBundleGenerator) GenerateArgsForCall(i int) (spec.DesiredContainerSpec, string) {
 	fake.generateMutex.RLock()
 	defer fake.generateMutex.RUnlock()
-	return fake.generateArgsForCall[i].desiredContainerSpec, fake.generateArgsForCall[i].containerDir
+	argsForCall := fake.generateArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeBundleGenerator) GenerateReturns(result1 goci.Bndl, result2 error) {
+	fake.generateMutex.Lock()
+	defer fake.generateMutex.Unlock()
 	fake.GenerateStub = nil
 	fake.generateReturns = struct {
 		result1 goci.Bndl
@@ -67,6 +77,8 @@ func (fake *FakeBundleGenerator) GenerateReturns(result1 goci.Bndl, result2 erro
 }
 
 func (fake *FakeBundleGenerator) GenerateReturnsOnCall(i int, result1 goci.Bndl, result2 error) {
+	fake.generateMutex.Lock()
+	defer fake.generateMutex.Unlock()
 	fake.GenerateStub = nil
 	if fake.generateReturnsOnCall == nil {
 		fake.generateReturnsOnCall = make(map[int]struct {

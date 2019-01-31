@@ -10,12 +10,12 @@ import (
 )
 
 type FakeVolumeCreator struct {
-	CreateStub        func(log lager.Logger, handle string, spec gardener.RootfsSpec) (specs.Spec, error)
+	CreateStub        func(lager.Logger, string, gardener.RootfsSpec) (specs.Spec, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
-		log    lager.Logger
-		handle string
-		spec   gardener.RootfsSpec
+		arg1 lager.Logger
+		arg2 string
+		arg3 gardener.RootfsSpec
 	}
 	createReturns struct {
 		result1 specs.Spec
@@ -29,23 +29,24 @@ type FakeVolumeCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeVolumeCreator) Create(log lager.Logger, handle string, spec gardener.RootfsSpec) (specs.Spec, error) {
+func (fake *FakeVolumeCreator) Create(arg1 lager.Logger, arg2 string, arg3 gardener.RootfsSpec) (specs.Spec, error) {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		log    lager.Logger
-		handle string
-		spec   gardener.RootfsSpec
-	}{log, handle, spec})
-	fake.recordInvocation("Create", []interface{}{log, handle, spec})
+		arg1 lager.Logger
+		arg2 string
+		arg3 gardener.RootfsSpec
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(log, handle, spec)
+		return fake.CreateStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.createReturns.result1, fake.createReturns.result2
+	fakeReturns := fake.createReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeVolumeCreator) CreateCallCount() int {
@@ -54,13 +55,22 @@ func (fake *FakeVolumeCreator) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
+func (fake *FakeVolumeCreator) CreateCalls(stub func(lager.Logger, string, gardener.RootfsSpec) (specs.Spec, error)) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
+	fake.CreateStub = stub
+}
+
 func (fake *FakeVolumeCreator) CreateArgsForCall(i int) (lager.Logger, string, gardener.RootfsSpec) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].handle, fake.createArgsForCall[i].spec
+	argsForCall := fake.createArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeVolumeCreator) CreateReturns(result1 specs.Spec, result2 error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	fake.createReturns = struct {
 		result1 specs.Spec
@@ -69,6 +79,8 @@ func (fake *FakeVolumeCreator) CreateReturns(result1 specs.Spec, result2 error) 
 }
 
 func (fake *FakeVolumeCreator) CreateReturnsOnCall(i int, result1 specs.Spec, result2 error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {

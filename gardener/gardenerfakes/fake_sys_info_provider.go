@@ -8,21 +8,11 @@ import (
 )
 
 type FakeSysInfoProvider struct {
-	TotalMemoryStub        func() (uint64, error)
-	totalMemoryMutex       sync.RWMutex
-	totalMemoryArgsForCall []struct{}
-	totalMemoryReturns     struct {
-		result1 uint64
-		result2 error
-	}
-	totalMemoryReturnsOnCall map[int]struct {
-		result1 uint64
-		result2 error
-	}
 	TotalDiskStub        func() (uint64, error)
 	totalDiskMutex       sync.RWMutex
-	totalDiskArgsForCall []struct{}
-	totalDiskReturns     struct {
+	totalDiskArgsForCall []struct {
+	}
+	totalDiskReturns struct {
 		result1 uint64
 		result2 error
 	}
@@ -30,57 +20,27 @@ type FakeSysInfoProvider struct {
 		result1 uint64
 		result2 error
 	}
+	TotalMemoryStub        func() (uint64, error)
+	totalMemoryMutex       sync.RWMutex
+	totalMemoryArgsForCall []struct {
+	}
+	totalMemoryReturns struct {
+		result1 uint64
+		result2 error
+	}
+	totalMemoryReturnsOnCall map[int]struct {
+		result1 uint64
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *FakeSysInfoProvider) TotalMemory() (uint64, error) {
-	fake.totalMemoryMutex.Lock()
-	ret, specificReturn := fake.totalMemoryReturnsOnCall[len(fake.totalMemoryArgsForCall)]
-	fake.totalMemoryArgsForCall = append(fake.totalMemoryArgsForCall, struct{}{})
-	fake.recordInvocation("TotalMemory", []interface{}{})
-	fake.totalMemoryMutex.Unlock()
-	if fake.TotalMemoryStub != nil {
-		return fake.TotalMemoryStub()
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.totalMemoryReturns.result1, fake.totalMemoryReturns.result2
-}
-
-func (fake *FakeSysInfoProvider) TotalMemoryCallCount() int {
-	fake.totalMemoryMutex.RLock()
-	defer fake.totalMemoryMutex.RUnlock()
-	return len(fake.totalMemoryArgsForCall)
-}
-
-func (fake *FakeSysInfoProvider) TotalMemoryReturns(result1 uint64, result2 error) {
-	fake.TotalMemoryStub = nil
-	fake.totalMemoryReturns = struct {
-		result1 uint64
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeSysInfoProvider) TotalMemoryReturnsOnCall(i int, result1 uint64, result2 error) {
-	fake.TotalMemoryStub = nil
-	if fake.totalMemoryReturnsOnCall == nil {
-		fake.totalMemoryReturnsOnCall = make(map[int]struct {
-			result1 uint64
-			result2 error
-		})
-	}
-	fake.totalMemoryReturnsOnCall[i] = struct {
-		result1 uint64
-		result2 error
-	}{result1, result2}
 }
 
 func (fake *FakeSysInfoProvider) TotalDisk() (uint64, error) {
 	fake.totalDiskMutex.Lock()
 	ret, specificReturn := fake.totalDiskReturnsOnCall[len(fake.totalDiskArgsForCall)]
-	fake.totalDiskArgsForCall = append(fake.totalDiskArgsForCall, struct{}{})
+	fake.totalDiskArgsForCall = append(fake.totalDiskArgsForCall, struct {
+	}{})
 	fake.recordInvocation("TotalDisk", []interface{}{})
 	fake.totalDiskMutex.Unlock()
 	if fake.TotalDiskStub != nil {
@@ -89,7 +49,8 @@ func (fake *FakeSysInfoProvider) TotalDisk() (uint64, error) {
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.totalDiskReturns.result1, fake.totalDiskReturns.result2
+	fakeReturns := fake.totalDiskReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeSysInfoProvider) TotalDiskCallCount() int {
@@ -98,7 +59,15 @@ func (fake *FakeSysInfoProvider) TotalDiskCallCount() int {
 	return len(fake.totalDiskArgsForCall)
 }
 
+func (fake *FakeSysInfoProvider) TotalDiskCalls(stub func() (uint64, error)) {
+	fake.totalDiskMutex.Lock()
+	defer fake.totalDiskMutex.Unlock()
+	fake.TotalDiskStub = stub
+}
+
 func (fake *FakeSysInfoProvider) TotalDiskReturns(result1 uint64, result2 error) {
+	fake.totalDiskMutex.Lock()
+	defer fake.totalDiskMutex.Unlock()
 	fake.TotalDiskStub = nil
 	fake.totalDiskReturns = struct {
 		result1 uint64
@@ -107,6 +76,8 @@ func (fake *FakeSysInfoProvider) TotalDiskReturns(result1 uint64, result2 error)
 }
 
 func (fake *FakeSysInfoProvider) TotalDiskReturnsOnCall(i int, result1 uint64, result2 error) {
+	fake.totalDiskMutex.Lock()
+	defer fake.totalDiskMutex.Unlock()
 	fake.TotalDiskStub = nil
 	if fake.totalDiskReturnsOnCall == nil {
 		fake.totalDiskReturnsOnCall = make(map[int]struct {
@@ -120,13 +91,68 @@ func (fake *FakeSysInfoProvider) TotalDiskReturnsOnCall(i int, result1 uint64, r
 	}{result1, result2}
 }
 
+func (fake *FakeSysInfoProvider) TotalMemory() (uint64, error) {
+	fake.totalMemoryMutex.Lock()
+	ret, specificReturn := fake.totalMemoryReturnsOnCall[len(fake.totalMemoryArgsForCall)]
+	fake.totalMemoryArgsForCall = append(fake.totalMemoryArgsForCall, struct {
+	}{})
+	fake.recordInvocation("TotalMemory", []interface{}{})
+	fake.totalMemoryMutex.Unlock()
+	if fake.TotalMemoryStub != nil {
+		return fake.TotalMemoryStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.totalMemoryReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeSysInfoProvider) TotalMemoryCallCount() int {
+	fake.totalMemoryMutex.RLock()
+	defer fake.totalMemoryMutex.RUnlock()
+	return len(fake.totalMemoryArgsForCall)
+}
+
+func (fake *FakeSysInfoProvider) TotalMemoryCalls(stub func() (uint64, error)) {
+	fake.totalMemoryMutex.Lock()
+	defer fake.totalMemoryMutex.Unlock()
+	fake.TotalMemoryStub = stub
+}
+
+func (fake *FakeSysInfoProvider) TotalMemoryReturns(result1 uint64, result2 error) {
+	fake.totalMemoryMutex.Lock()
+	defer fake.totalMemoryMutex.Unlock()
+	fake.TotalMemoryStub = nil
+	fake.totalMemoryReturns = struct {
+		result1 uint64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeSysInfoProvider) TotalMemoryReturnsOnCall(i int, result1 uint64, result2 error) {
+	fake.totalMemoryMutex.Lock()
+	defer fake.totalMemoryMutex.Unlock()
+	fake.TotalMemoryStub = nil
+	if fake.totalMemoryReturnsOnCall == nil {
+		fake.totalMemoryReturnsOnCall = make(map[int]struct {
+			result1 uint64
+			result2 error
+		})
+	}
+	fake.totalMemoryReturnsOnCall[i] = struct {
+		result1 uint64
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeSysInfoProvider) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.totalMemoryMutex.RLock()
-	defer fake.totalMemoryMutex.RUnlock()
 	fake.totalDiskMutex.RLock()
 	defer fake.totalDiskMutex.RUnlock()
+	fake.totalMemoryMutex.RLock()
+	defer fake.totalMemoryMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

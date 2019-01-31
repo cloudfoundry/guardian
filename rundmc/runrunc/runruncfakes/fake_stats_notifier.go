@@ -9,28 +9,28 @@ import (
 )
 
 type FakeStatsNotifier struct {
-	OnStatStub        func(handle string, cpuStat garden.ContainerCPUStat, memoryStat garden.ContainerMemoryStat)
+	OnStatStub        func(string, garden.ContainerCPUStat, garden.ContainerMemoryStat)
 	onStatMutex       sync.RWMutex
 	onStatArgsForCall []struct {
-		handle     string
-		cpuStat    garden.ContainerCPUStat
-		memoryStat garden.ContainerMemoryStat
+		arg1 string
+		arg2 garden.ContainerCPUStat
+		arg3 garden.ContainerMemoryStat
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeStatsNotifier) OnStat(handle string, cpuStat garden.ContainerCPUStat, memoryStat garden.ContainerMemoryStat) {
+func (fake *FakeStatsNotifier) OnStat(arg1 string, arg2 garden.ContainerCPUStat, arg3 garden.ContainerMemoryStat) {
 	fake.onStatMutex.Lock()
 	fake.onStatArgsForCall = append(fake.onStatArgsForCall, struct {
-		handle     string
-		cpuStat    garden.ContainerCPUStat
-		memoryStat garden.ContainerMemoryStat
-	}{handle, cpuStat, memoryStat})
-	fake.recordInvocation("OnStat", []interface{}{handle, cpuStat, memoryStat})
+		arg1 string
+		arg2 garden.ContainerCPUStat
+		arg3 garden.ContainerMemoryStat
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("OnStat", []interface{}{arg1, arg2, arg3})
 	fake.onStatMutex.Unlock()
 	if fake.OnStatStub != nil {
-		fake.OnStatStub(handle, cpuStat, memoryStat)
+		fake.OnStatStub(arg1, arg2, arg3)
 	}
 }
 
@@ -40,10 +40,17 @@ func (fake *FakeStatsNotifier) OnStatCallCount() int {
 	return len(fake.onStatArgsForCall)
 }
 
+func (fake *FakeStatsNotifier) OnStatCalls(stub func(string, garden.ContainerCPUStat, garden.ContainerMemoryStat)) {
+	fake.onStatMutex.Lock()
+	defer fake.onStatMutex.Unlock()
+	fake.OnStatStub = stub
+}
+
 func (fake *FakeStatsNotifier) OnStatArgsForCall(i int) (string, garden.ContainerCPUStat, garden.ContainerMemoryStat) {
 	fake.onStatMutex.RLock()
 	defer fake.onStatMutex.RUnlock()
-	return fake.onStatArgsForCall[i].handle, fake.onStatArgsForCall[i].cpuStat, fake.onStatArgsForCall[i].memoryStat
+	argsForCall := fake.onStatArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeStatsNotifier) Invocations() map[string][][]interface{} {

@@ -9,12 +9,12 @@ import (
 )
 
 type FakeContainerConfigurer struct {
-	ApplyStub        func(logger lager.Logger, cfg kawasaki.NetworkConfig, pid int) error
+	ApplyStub        func(lager.Logger, kawasaki.NetworkConfig, int) error
 	applyMutex       sync.RWMutex
 	applyArgsForCall []struct {
-		logger lager.Logger
-		cfg    kawasaki.NetworkConfig
-		pid    int
+		arg1 lager.Logger
+		arg2 kawasaki.NetworkConfig
+		arg3 int
 	}
 	applyReturns struct {
 		result1 error
@@ -26,23 +26,24 @@ type FakeContainerConfigurer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeContainerConfigurer) Apply(logger lager.Logger, cfg kawasaki.NetworkConfig, pid int) error {
+func (fake *FakeContainerConfigurer) Apply(arg1 lager.Logger, arg2 kawasaki.NetworkConfig, arg3 int) error {
 	fake.applyMutex.Lock()
 	ret, specificReturn := fake.applyReturnsOnCall[len(fake.applyArgsForCall)]
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
-		logger lager.Logger
-		cfg    kawasaki.NetworkConfig
-		pid    int
-	}{logger, cfg, pid})
-	fake.recordInvocation("Apply", []interface{}{logger, cfg, pid})
+		arg1 lager.Logger
+		arg2 kawasaki.NetworkConfig
+		arg3 int
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("Apply", []interface{}{arg1, arg2, arg3})
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
-		return fake.ApplyStub(logger, cfg, pid)
+		return fake.ApplyStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.applyReturns.result1
+	fakeReturns := fake.applyReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeContainerConfigurer) ApplyCallCount() int {
@@ -51,13 +52,22 @@ func (fake *FakeContainerConfigurer) ApplyCallCount() int {
 	return len(fake.applyArgsForCall)
 }
 
+func (fake *FakeContainerConfigurer) ApplyCalls(stub func(lager.Logger, kawasaki.NetworkConfig, int) error) {
+	fake.applyMutex.Lock()
+	defer fake.applyMutex.Unlock()
+	fake.ApplyStub = stub
+}
+
 func (fake *FakeContainerConfigurer) ApplyArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig, int) {
 	fake.applyMutex.RLock()
 	defer fake.applyMutex.RUnlock()
-	return fake.applyArgsForCall[i].logger, fake.applyArgsForCall[i].cfg, fake.applyArgsForCall[i].pid
+	argsForCall := fake.applyArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeContainerConfigurer) ApplyReturns(result1 error) {
+	fake.applyMutex.Lock()
+	defer fake.applyMutex.Unlock()
 	fake.ApplyStub = nil
 	fake.applyReturns = struct {
 		result1 error
@@ -65,6 +75,8 @@ func (fake *FakeContainerConfigurer) ApplyReturns(result1 error) {
 }
 
 func (fake *FakeContainerConfigurer) ApplyReturnsOnCall(i int, result1 error) {
+	fake.applyMutex.Lock()
+	defer fake.applyMutex.Unlock()
 	fake.ApplyStub = nil
 	if fake.applyReturnsOnCall == nil {
 		fake.applyReturnsOnCall = make(map[int]struct {

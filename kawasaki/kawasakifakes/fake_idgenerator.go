@@ -10,8 +10,9 @@ import (
 type FakeIDGenerator struct {
 	GenerateStub        func() string
 	generateMutex       sync.RWMutex
-	generateArgsForCall []struct{}
-	generateReturns     struct {
+	generateArgsForCall []struct {
+	}
+	generateReturns struct {
 		result1 string
 	}
 	generateReturnsOnCall map[int]struct {
@@ -24,7 +25,8 @@ type FakeIDGenerator struct {
 func (fake *FakeIDGenerator) Generate() string {
 	fake.generateMutex.Lock()
 	ret, specificReturn := fake.generateReturnsOnCall[len(fake.generateArgsForCall)]
-	fake.generateArgsForCall = append(fake.generateArgsForCall, struct{}{})
+	fake.generateArgsForCall = append(fake.generateArgsForCall, struct {
+	}{})
 	fake.recordInvocation("Generate", []interface{}{})
 	fake.generateMutex.Unlock()
 	if fake.GenerateStub != nil {
@@ -33,7 +35,8 @@ func (fake *FakeIDGenerator) Generate() string {
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.generateReturns.result1
+	fakeReturns := fake.generateReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeIDGenerator) GenerateCallCount() int {
@@ -42,7 +45,15 @@ func (fake *FakeIDGenerator) GenerateCallCount() int {
 	return len(fake.generateArgsForCall)
 }
 
+func (fake *FakeIDGenerator) GenerateCalls(stub func() string) {
+	fake.generateMutex.Lock()
+	defer fake.generateMutex.Unlock()
+	fake.GenerateStub = stub
+}
+
 func (fake *FakeIDGenerator) GenerateReturns(result1 string) {
+	fake.generateMutex.Lock()
+	defer fake.generateMutex.Unlock()
 	fake.GenerateStub = nil
 	fake.generateReturns = struct {
 		result1 string
@@ -50,6 +61,8 @@ func (fake *FakeIDGenerator) GenerateReturns(result1 string) {
 }
 
 func (fake *FakeIDGenerator) GenerateReturnsOnCall(i int, result1 string) {
+	fake.generateMutex.Lock()
+	defer fake.generateMutex.Unlock()
 	fake.GenerateStub = nil
 	if fake.generateReturnsOnCall == nil {
 		fake.generateReturnsOnCall = make(map[int]struct {

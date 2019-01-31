@@ -8,10 +8,10 @@ import (
 )
 
 type FakeCgroupManager struct {
-	SetUseMemoryHierarchyStub        func(handle string) error
+	SetUseMemoryHierarchyStub        func(string) error
 	setUseMemoryHierarchyMutex       sync.RWMutex
 	setUseMemoryHierarchyArgsForCall []struct {
-		handle string
+		arg1 string
 	}
 	setUseMemoryHierarchyReturns struct {
 		result1 error
@@ -23,21 +23,22 @@ type FakeCgroupManager struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCgroupManager) SetUseMemoryHierarchy(handle string) error {
+func (fake *FakeCgroupManager) SetUseMemoryHierarchy(arg1 string) error {
 	fake.setUseMemoryHierarchyMutex.Lock()
 	ret, specificReturn := fake.setUseMemoryHierarchyReturnsOnCall[len(fake.setUseMemoryHierarchyArgsForCall)]
 	fake.setUseMemoryHierarchyArgsForCall = append(fake.setUseMemoryHierarchyArgsForCall, struct {
-		handle string
-	}{handle})
-	fake.recordInvocation("SetUseMemoryHierarchy", []interface{}{handle})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("SetUseMemoryHierarchy", []interface{}{arg1})
 	fake.setUseMemoryHierarchyMutex.Unlock()
 	if fake.SetUseMemoryHierarchyStub != nil {
-		return fake.SetUseMemoryHierarchyStub(handle)
+		return fake.SetUseMemoryHierarchyStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.setUseMemoryHierarchyReturns.result1
+	fakeReturns := fake.setUseMemoryHierarchyReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeCgroupManager) SetUseMemoryHierarchyCallCount() int {
@@ -46,13 +47,22 @@ func (fake *FakeCgroupManager) SetUseMemoryHierarchyCallCount() int {
 	return len(fake.setUseMemoryHierarchyArgsForCall)
 }
 
+func (fake *FakeCgroupManager) SetUseMemoryHierarchyCalls(stub func(string) error) {
+	fake.setUseMemoryHierarchyMutex.Lock()
+	defer fake.setUseMemoryHierarchyMutex.Unlock()
+	fake.SetUseMemoryHierarchyStub = stub
+}
+
 func (fake *FakeCgroupManager) SetUseMemoryHierarchyArgsForCall(i int) string {
 	fake.setUseMemoryHierarchyMutex.RLock()
 	defer fake.setUseMemoryHierarchyMutex.RUnlock()
-	return fake.setUseMemoryHierarchyArgsForCall[i].handle
+	argsForCall := fake.setUseMemoryHierarchyArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeCgroupManager) SetUseMemoryHierarchyReturns(result1 error) {
+	fake.setUseMemoryHierarchyMutex.Lock()
+	defer fake.setUseMemoryHierarchyMutex.Unlock()
 	fake.SetUseMemoryHierarchyStub = nil
 	fake.setUseMemoryHierarchyReturns = struct {
 		result1 error
@@ -60,6 +70,8 @@ func (fake *FakeCgroupManager) SetUseMemoryHierarchyReturns(result1 error) {
 }
 
 func (fake *FakeCgroupManager) SetUseMemoryHierarchyReturnsOnCall(i int, result1 error) {
+	fake.setUseMemoryHierarchyMutex.Lock()
+	defer fake.setUseMemoryHierarchyMutex.Unlock()
 	fake.SetUseMemoryHierarchyStub = nil
 	if fake.setUseMemoryHierarchyReturnsOnCall == nil {
 		fake.setUseMemoryHierarchyReturnsOnCall = make(map[int]struct {

@@ -9,11 +9,11 @@ import (
 )
 
 type FakeImageSpecCreator struct {
-	CreateImageSpecStub        func(rootFS *url.URL, handle string) (*url.URL, error)
+	CreateImageSpecStub        func(*url.URL, string) (*url.URL, error)
 	createImageSpecMutex       sync.RWMutex
 	createImageSpecArgsForCall []struct {
-		rootFS *url.URL
-		handle string
+		arg1 *url.URL
+		arg2 string
 	}
 	createImageSpecReturns struct {
 		result1 *url.URL
@@ -27,22 +27,23 @@ type FakeImageSpecCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeImageSpecCreator) CreateImageSpec(rootFS *url.URL, handle string) (*url.URL, error) {
+func (fake *FakeImageSpecCreator) CreateImageSpec(arg1 *url.URL, arg2 string) (*url.URL, error) {
 	fake.createImageSpecMutex.Lock()
 	ret, specificReturn := fake.createImageSpecReturnsOnCall[len(fake.createImageSpecArgsForCall)]
 	fake.createImageSpecArgsForCall = append(fake.createImageSpecArgsForCall, struct {
-		rootFS *url.URL
-		handle string
-	}{rootFS, handle})
-	fake.recordInvocation("CreateImageSpec", []interface{}{rootFS, handle})
+		arg1 *url.URL
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("CreateImageSpec", []interface{}{arg1, arg2})
 	fake.createImageSpecMutex.Unlock()
 	if fake.CreateImageSpecStub != nil {
-		return fake.CreateImageSpecStub(rootFS, handle)
+		return fake.CreateImageSpecStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.createImageSpecReturns.result1, fake.createImageSpecReturns.result2
+	fakeReturns := fake.createImageSpecReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeImageSpecCreator) CreateImageSpecCallCount() int {
@@ -51,13 +52,22 @@ func (fake *FakeImageSpecCreator) CreateImageSpecCallCount() int {
 	return len(fake.createImageSpecArgsForCall)
 }
 
+func (fake *FakeImageSpecCreator) CreateImageSpecCalls(stub func(*url.URL, string) (*url.URL, error)) {
+	fake.createImageSpecMutex.Lock()
+	defer fake.createImageSpecMutex.Unlock()
+	fake.CreateImageSpecStub = stub
+}
+
 func (fake *FakeImageSpecCreator) CreateImageSpecArgsForCall(i int) (*url.URL, string) {
 	fake.createImageSpecMutex.RLock()
 	defer fake.createImageSpecMutex.RUnlock()
-	return fake.createImageSpecArgsForCall[i].rootFS, fake.createImageSpecArgsForCall[i].handle
+	argsForCall := fake.createImageSpecArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeImageSpecCreator) CreateImageSpecReturns(result1 *url.URL, result2 error) {
+	fake.createImageSpecMutex.Lock()
+	defer fake.createImageSpecMutex.Unlock()
 	fake.CreateImageSpecStub = nil
 	fake.createImageSpecReturns = struct {
 		result1 *url.URL
@@ -66,6 +76,8 @@ func (fake *FakeImageSpecCreator) CreateImageSpecReturns(result1 *url.URL, resul
 }
 
 func (fake *FakeImageSpecCreator) CreateImageSpecReturnsOnCall(i int, result1 *url.URL, result2 error) {
+	fake.createImageSpecMutex.Lock()
+	defer fake.createImageSpecMutex.Unlock()
 	fake.CreateImageSpecStub = nil
 	if fake.createImageSpecReturnsOnCall == nil {
 		fake.createImageSpecReturnsOnCall = make(map[int]struct {

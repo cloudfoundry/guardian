@@ -10,15 +10,15 @@ import (
 )
 
 type FakeInstanceChainCreator struct {
-	CreateStub        func(logger lager.Logger, handle, instanceChain, bridgeName string, ip net.IP, network *net.IPNet) error
+	CreateStub        func(lager.Logger, string, string, string, net.IP, *net.IPNet) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
-		logger        lager.Logger
-		handle        string
-		instanceChain string
-		bridgeName    string
-		ip            net.IP
-		network       *net.IPNet
+		arg1 lager.Logger
+		arg2 string
+		arg3 string
+		arg4 string
+		arg5 net.IP
+		arg6 *net.IPNet
 	}
 	createReturns struct {
 		result1 error
@@ -26,11 +26,11 @@ type FakeInstanceChainCreator struct {
 	createReturnsOnCall map[int]struct {
 		result1 error
 	}
-	DestroyStub        func(logger lager.Logger, instanceChain string) error
+	DestroyStub        func(lager.Logger, string) error
 	destroyMutex       sync.RWMutex
 	destroyArgsForCall []struct {
-		logger        lager.Logger
-		instanceChain string
+		arg1 lager.Logger
+		arg2 string
 	}
 	destroyReturns struct {
 		result1 error
@@ -42,26 +42,27 @@ type FakeInstanceChainCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeInstanceChainCreator) Create(logger lager.Logger, handle string, instanceChain string, bridgeName string, ip net.IP, network *net.IPNet) error {
+func (fake *FakeInstanceChainCreator) Create(arg1 lager.Logger, arg2 string, arg3 string, arg4 string, arg5 net.IP, arg6 *net.IPNet) error {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		logger        lager.Logger
-		handle        string
-		instanceChain string
-		bridgeName    string
-		ip            net.IP
-		network       *net.IPNet
-	}{logger, handle, instanceChain, bridgeName, ip, network})
-	fake.recordInvocation("Create", []interface{}{logger, handle, instanceChain, bridgeName, ip, network})
+		arg1 lager.Logger
+		arg2 string
+		arg3 string
+		arg4 string
+		arg5 net.IP
+		arg6 *net.IPNet
+	}{arg1, arg2, arg3, arg4, arg5, arg6})
+	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(logger, handle, instanceChain, bridgeName, ip, network)
+		return fake.CreateStub(arg1, arg2, arg3, arg4, arg5, arg6)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.createReturns.result1
+	fakeReturns := fake.createReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeInstanceChainCreator) CreateCallCount() int {
@@ -70,13 +71,22 @@ func (fake *FakeInstanceChainCreator) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
+func (fake *FakeInstanceChainCreator) CreateCalls(stub func(lager.Logger, string, string, string, net.IP, *net.IPNet) error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
+	fake.CreateStub = stub
+}
+
 func (fake *FakeInstanceChainCreator) CreateArgsForCall(i int) (lager.Logger, string, string, string, net.IP, *net.IPNet) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].logger, fake.createArgsForCall[i].handle, fake.createArgsForCall[i].instanceChain, fake.createArgsForCall[i].bridgeName, fake.createArgsForCall[i].ip, fake.createArgsForCall[i].network
+	argsForCall := fake.createArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6
 }
 
 func (fake *FakeInstanceChainCreator) CreateReturns(result1 error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	fake.createReturns = struct {
 		result1 error
@@ -84,6 +94,8 @@ func (fake *FakeInstanceChainCreator) CreateReturns(result1 error) {
 }
 
 func (fake *FakeInstanceChainCreator) CreateReturnsOnCall(i int, result1 error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {
@@ -95,22 +107,23 @@ func (fake *FakeInstanceChainCreator) CreateReturnsOnCall(i int, result1 error) 
 	}{result1}
 }
 
-func (fake *FakeInstanceChainCreator) Destroy(logger lager.Logger, instanceChain string) error {
+func (fake *FakeInstanceChainCreator) Destroy(arg1 lager.Logger, arg2 string) error {
 	fake.destroyMutex.Lock()
 	ret, specificReturn := fake.destroyReturnsOnCall[len(fake.destroyArgsForCall)]
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
-		logger        lager.Logger
-		instanceChain string
-	}{logger, instanceChain})
-	fake.recordInvocation("Destroy", []interface{}{logger, instanceChain})
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Destroy", []interface{}{arg1, arg2})
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
-		return fake.DestroyStub(logger, instanceChain)
+		return fake.DestroyStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.destroyReturns.result1
+	fakeReturns := fake.destroyReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeInstanceChainCreator) DestroyCallCount() int {
@@ -119,13 +132,22 @@ func (fake *FakeInstanceChainCreator) DestroyCallCount() int {
 	return len(fake.destroyArgsForCall)
 }
 
+func (fake *FakeInstanceChainCreator) DestroyCalls(stub func(lager.Logger, string) error) {
+	fake.destroyMutex.Lock()
+	defer fake.destroyMutex.Unlock()
+	fake.DestroyStub = stub
+}
+
 func (fake *FakeInstanceChainCreator) DestroyArgsForCall(i int) (lager.Logger, string) {
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
-	return fake.destroyArgsForCall[i].logger, fake.destroyArgsForCall[i].instanceChain
+	argsForCall := fake.destroyArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeInstanceChainCreator) DestroyReturns(result1 error) {
+	fake.destroyMutex.Lock()
+	defer fake.destroyMutex.Unlock()
 	fake.DestroyStub = nil
 	fake.destroyReturns = struct {
 		result1 error
@@ -133,6 +155,8 @@ func (fake *FakeInstanceChainCreator) DestroyReturns(result1 error) {
 }
 
 func (fake *FakeInstanceChainCreator) DestroyReturnsOnCall(i int, result1 error) {
+	fake.destroyMutex.Lock()
+	defer fake.destroyMutex.Unlock()
 	fake.DestroyStub = nil
 	if fake.destroyReturnsOnCall == nil {
 		fake.destroyReturnsOnCall = make(map[int]struct {

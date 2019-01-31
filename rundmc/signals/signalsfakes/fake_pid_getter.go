@@ -8,10 +8,10 @@ import (
 )
 
 type FakePidGetter struct {
-	PidStub        func(pidFilePath string) (int, error)
+	PidStub        func(string) (int, error)
 	pidMutex       sync.RWMutex
 	pidArgsForCall []struct {
-		pidFilePath string
+		arg1 string
 	}
 	pidReturns struct {
 		result1 int
@@ -25,21 +25,22 @@ type FakePidGetter struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakePidGetter) Pid(pidFilePath string) (int, error) {
+func (fake *FakePidGetter) Pid(arg1 string) (int, error) {
 	fake.pidMutex.Lock()
 	ret, specificReturn := fake.pidReturnsOnCall[len(fake.pidArgsForCall)]
 	fake.pidArgsForCall = append(fake.pidArgsForCall, struct {
-		pidFilePath string
-	}{pidFilePath})
-	fake.recordInvocation("Pid", []interface{}{pidFilePath})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("Pid", []interface{}{arg1})
 	fake.pidMutex.Unlock()
 	if fake.PidStub != nil {
-		return fake.PidStub(pidFilePath)
+		return fake.PidStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.pidReturns.result1, fake.pidReturns.result2
+	fakeReturns := fake.pidReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakePidGetter) PidCallCount() int {
@@ -48,13 +49,22 @@ func (fake *FakePidGetter) PidCallCount() int {
 	return len(fake.pidArgsForCall)
 }
 
+func (fake *FakePidGetter) PidCalls(stub func(string) (int, error)) {
+	fake.pidMutex.Lock()
+	defer fake.pidMutex.Unlock()
+	fake.PidStub = stub
+}
+
 func (fake *FakePidGetter) PidArgsForCall(i int) string {
 	fake.pidMutex.RLock()
 	defer fake.pidMutex.RUnlock()
-	return fake.pidArgsForCall[i].pidFilePath
+	argsForCall := fake.pidArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakePidGetter) PidReturns(result1 int, result2 error) {
+	fake.pidMutex.Lock()
+	defer fake.pidMutex.Unlock()
 	fake.PidStub = nil
 	fake.pidReturns = struct {
 		result1 int
@@ -63,6 +73,8 @@ func (fake *FakePidGetter) PidReturns(result1 int, result2 error) {
 }
 
 func (fake *FakePidGetter) PidReturnsOnCall(i int, result1 int, result2 error) {
+	fake.pidMutex.Lock()
+	defer fake.pidMutex.Unlock()
 	fake.PidStub = nil
 	if fake.pidReturnsOnCall == nil {
 		fake.pidReturnsOnCall = make(map[int]struct {

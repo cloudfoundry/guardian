@@ -8,22 +8,10 @@ import (
 )
 
 type FakeEventStore struct {
-	OnEventStub        func(id string, event string) error
-	onEventMutex       sync.RWMutex
-	onEventArgsForCall []struct {
-		id    string
-		event string
-	}
-	onEventReturns struct {
-		result1 error
-	}
-	onEventReturnsOnCall map[int]struct {
-		result1 error
-	}
-	EventsStub        func(id string) []string
+	EventsStub        func(string) []string
 	eventsMutex       sync.RWMutex
 	eventsArgsForCall []struct {
-		id string
+		arg1 string
 	}
 	eventsReturns struct {
 		result1 []string
@@ -31,74 +19,38 @@ type FakeEventStore struct {
 	eventsReturnsOnCall map[int]struct {
 		result1 []string
 	}
+	OnEventStub        func(string, string) error
+	onEventMutex       sync.RWMutex
+	onEventArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	onEventReturns struct {
+		result1 error
+	}
+	onEventReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeEventStore) OnEvent(id string, event string) error {
-	fake.onEventMutex.Lock()
-	ret, specificReturn := fake.onEventReturnsOnCall[len(fake.onEventArgsForCall)]
-	fake.onEventArgsForCall = append(fake.onEventArgsForCall, struct {
-		id    string
-		event string
-	}{id, event})
-	fake.recordInvocation("OnEvent", []interface{}{id, event})
-	fake.onEventMutex.Unlock()
-	if fake.OnEventStub != nil {
-		return fake.OnEventStub(id, event)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.onEventReturns.result1
-}
-
-func (fake *FakeEventStore) OnEventCallCount() int {
-	fake.onEventMutex.RLock()
-	defer fake.onEventMutex.RUnlock()
-	return len(fake.onEventArgsForCall)
-}
-
-func (fake *FakeEventStore) OnEventArgsForCall(i int) (string, string) {
-	fake.onEventMutex.RLock()
-	defer fake.onEventMutex.RUnlock()
-	return fake.onEventArgsForCall[i].id, fake.onEventArgsForCall[i].event
-}
-
-func (fake *FakeEventStore) OnEventReturns(result1 error) {
-	fake.OnEventStub = nil
-	fake.onEventReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeEventStore) OnEventReturnsOnCall(i int, result1 error) {
-	fake.OnEventStub = nil
-	if fake.onEventReturnsOnCall == nil {
-		fake.onEventReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.onEventReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeEventStore) Events(id string) []string {
+func (fake *FakeEventStore) Events(arg1 string) []string {
 	fake.eventsMutex.Lock()
 	ret, specificReturn := fake.eventsReturnsOnCall[len(fake.eventsArgsForCall)]
 	fake.eventsArgsForCall = append(fake.eventsArgsForCall, struct {
-		id string
-	}{id})
-	fake.recordInvocation("Events", []interface{}{id})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("Events", []interface{}{arg1})
 	fake.eventsMutex.Unlock()
 	if fake.EventsStub != nil {
-		return fake.EventsStub(id)
+		return fake.EventsStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.eventsReturns.result1
+	fakeReturns := fake.eventsReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeEventStore) EventsCallCount() int {
@@ -107,13 +59,22 @@ func (fake *FakeEventStore) EventsCallCount() int {
 	return len(fake.eventsArgsForCall)
 }
 
+func (fake *FakeEventStore) EventsCalls(stub func(string) []string) {
+	fake.eventsMutex.Lock()
+	defer fake.eventsMutex.Unlock()
+	fake.EventsStub = stub
+}
+
 func (fake *FakeEventStore) EventsArgsForCall(i int) string {
 	fake.eventsMutex.RLock()
 	defer fake.eventsMutex.RUnlock()
-	return fake.eventsArgsForCall[i].id
+	argsForCall := fake.eventsArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeEventStore) EventsReturns(result1 []string) {
+	fake.eventsMutex.Lock()
+	defer fake.eventsMutex.Unlock()
 	fake.EventsStub = nil
 	fake.eventsReturns = struct {
 		result1 []string
@@ -121,6 +82,8 @@ func (fake *FakeEventStore) EventsReturns(result1 []string) {
 }
 
 func (fake *FakeEventStore) EventsReturnsOnCall(i int, result1 []string) {
+	fake.eventsMutex.Lock()
+	defer fake.eventsMutex.Unlock()
 	fake.EventsStub = nil
 	if fake.eventsReturnsOnCall == nil {
 		fake.eventsReturnsOnCall = make(map[int]struct {
@@ -132,13 +95,74 @@ func (fake *FakeEventStore) EventsReturnsOnCall(i int, result1 []string) {
 	}{result1}
 }
 
+func (fake *FakeEventStore) OnEvent(arg1 string, arg2 string) error {
+	fake.onEventMutex.Lock()
+	ret, specificReturn := fake.onEventReturnsOnCall[len(fake.onEventArgsForCall)]
+	fake.onEventArgsForCall = append(fake.onEventArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("OnEvent", []interface{}{arg1, arg2})
+	fake.onEventMutex.Unlock()
+	if fake.OnEventStub != nil {
+		return fake.OnEventStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.onEventReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeEventStore) OnEventCallCount() int {
+	fake.onEventMutex.RLock()
+	defer fake.onEventMutex.RUnlock()
+	return len(fake.onEventArgsForCall)
+}
+
+func (fake *FakeEventStore) OnEventCalls(stub func(string, string) error) {
+	fake.onEventMutex.Lock()
+	defer fake.onEventMutex.Unlock()
+	fake.OnEventStub = stub
+}
+
+func (fake *FakeEventStore) OnEventArgsForCall(i int) (string, string) {
+	fake.onEventMutex.RLock()
+	defer fake.onEventMutex.RUnlock()
+	argsForCall := fake.onEventArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeEventStore) OnEventReturns(result1 error) {
+	fake.onEventMutex.Lock()
+	defer fake.onEventMutex.Unlock()
+	fake.OnEventStub = nil
+	fake.onEventReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeEventStore) OnEventReturnsOnCall(i int, result1 error) {
+	fake.onEventMutex.Lock()
+	defer fake.onEventMutex.Unlock()
+	fake.OnEventStub = nil
+	if fake.onEventReturnsOnCall == nil {
+		fake.onEventReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.onEventReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeEventStore) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.onEventMutex.RLock()
-	defer fake.onEventMutex.RUnlock()
 	fake.eventsMutex.RLock()
 	defer fake.eventsMutex.RUnlock()
+	fake.onEventMutex.RLock()
+	defer fake.onEventMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

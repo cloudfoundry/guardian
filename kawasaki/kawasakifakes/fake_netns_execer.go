@@ -9,11 +9,11 @@ import (
 )
 
 type FakeNetnsExecer struct {
-	ExecStub        func(netnsFD *os.File, cb func() error) error
+	ExecStub        func(*os.File, func() error) error
 	execMutex       sync.RWMutex
 	execArgsForCall []struct {
-		netnsFD *os.File
-		cb      func() error
+		arg1 *os.File
+		arg2 func() error
 	}
 	execReturns struct {
 		result1 error
@@ -25,22 +25,23 @@ type FakeNetnsExecer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeNetnsExecer) Exec(netnsFD *os.File, cb func() error) error {
+func (fake *FakeNetnsExecer) Exec(arg1 *os.File, arg2 func() error) error {
 	fake.execMutex.Lock()
 	ret, specificReturn := fake.execReturnsOnCall[len(fake.execArgsForCall)]
 	fake.execArgsForCall = append(fake.execArgsForCall, struct {
-		netnsFD *os.File
-		cb      func() error
-	}{netnsFD, cb})
-	fake.recordInvocation("Exec", []interface{}{netnsFD, cb})
+		arg1 *os.File
+		arg2 func() error
+	}{arg1, arg2})
+	fake.recordInvocation("Exec", []interface{}{arg1, arg2})
 	fake.execMutex.Unlock()
 	if fake.ExecStub != nil {
-		return fake.ExecStub(netnsFD, cb)
+		return fake.ExecStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.execReturns.result1
+	fakeReturns := fake.execReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeNetnsExecer) ExecCallCount() int {
@@ -49,13 +50,22 @@ func (fake *FakeNetnsExecer) ExecCallCount() int {
 	return len(fake.execArgsForCall)
 }
 
+func (fake *FakeNetnsExecer) ExecCalls(stub func(*os.File, func() error) error) {
+	fake.execMutex.Lock()
+	defer fake.execMutex.Unlock()
+	fake.ExecStub = stub
+}
+
 func (fake *FakeNetnsExecer) ExecArgsForCall(i int) (*os.File, func() error) {
 	fake.execMutex.RLock()
 	defer fake.execMutex.RUnlock()
-	return fake.execArgsForCall[i].netnsFD, fake.execArgsForCall[i].cb
+	argsForCall := fake.execArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeNetnsExecer) ExecReturns(result1 error) {
+	fake.execMutex.Lock()
+	defer fake.execMutex.Unlock()
 	fake.ExecStub = nil
 	fake.execReturns = struct {
 		result1 error
@@ -63,6 +73,8 @@ func (fake *FakeNetnsExecer) ExecReturns(result1 error) {
 }
 
 func (fake *FakeNetnsExecer) ExecReturnsOnCall(i int, result1 error) {
+	fake.execMutex.Lock()
+	defer fake.execMutex.Unlock()
 	fake.ExecStub = nil
 	if fake.execReturnsOnCall == nil {
 		fake.execReturnsOnCall = make(map[int]struct {

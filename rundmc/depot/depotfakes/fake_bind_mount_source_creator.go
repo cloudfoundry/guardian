@@ -9,11 +9,11 @@ import (
 )
 
 type FakeBindMountSourceCreator struct {
-	CreateStub        func(containerDir string, privileged bool) ([]garden.BindMount, error)
+	CreateStub        func(string, bool) ([]garden.BindMount, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
-		containerDir string
-		privileged   bool
+		arg1 string
+		arg2 bool
 	}
 	createReturns struct {
 		result1 []garden.BindMount
@@ -27,22 +27,23 @@ type FakeBindMountSourceCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBindMountSourceCreator) Create(containerDir string, privileged bool) ([]garden.BindMount, error) {
+func (fake *FakeBindMountSourceCreator) Create(arg1 string, arg2 bool) ([]garden.BindMount, error) {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		containerDir string
-		privileged   bool
-	}{containerDir, privileged})
-	fake.recordInvocation("Create", []interface{}{containerDir, privileged})
+		arg1 string
+		arg2 bool
+	}{arg1, arg2})
+	fake.recordInvocation("Create", []interface{}{arg1, arg2})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(containerDir, privileged)
+		return fake.CreateStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.createReturns.result1, fake.createReturns.result2
+	fakeReturns := fake.createReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeBindMountSourceCreator) CreateCallCount() int {
@@ -51,13 +52,22 @@ func (fake *FakeBindMountSourceCreator) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
+func (fake *FakeBindMountSourceCreator) CreateCalls(stub func(string, bool) ([]garden.BindMount, error)) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
+	fake.CreateStub = stub
+}
+
 func (fake *FakeBindMountSourceCreator) CreateArgsForCall(i int) (string, bool) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].containerDir, fake.createArgsForCall[i].privileged
+	argsForCall := fake.createArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeBindMountSourceCreator) CreateReturns(result1 []garden.BindMount, result2 error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	fake.createReturns = struct {
 		result1 []garden.BindMount
@@ -66,6 +76,8 @@ func (fake *FakeBindMountSourceCreator) CreateReturns(result1 []garden.BindMount
 }
 
 func (fake *FakeBindMountSourceCreator) CreateReturnsOnCall(i int, result1 []garden.BindMount, result2 error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {

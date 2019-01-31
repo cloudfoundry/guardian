@@ -9,11 +9,11 @@ import (
 )
 
 type FakeSubnetSelector struct {
-	SelectSubnetStub        func(dynamic *net.IPNet, existing []*net.IPNet) (*net.IPNet, error)
+	SelectSubnetStub        func(*net.IPNet, []*net.IPNet) (*net.IPNet, error)
 	selectSubnetMutex       sync.RWMutex
 	selectSubnetArgsForCall []struct {
-		dynamic  *net.IPNet
-		existing []*net.IPNet
+		arg1 *net.IPNet
+		arg2 []*net.IPNet
 	}
 	selectSubnetReturns struct {
 		result1 *net.IPNet
@@ -27,27 +27,28 @@ type FakeSubnetSelector struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeSubnetSelector) SelectSubnet(dynamic *net.IPNet, existing []*net.IPNet) (*net.IPNet, error) {
-	var existingCopy []*net.IPNet
-	if existing != nil {
-		existingCopy = make([]*net.IPNet, len(existing))
-		copy(existingCopy, existing)
+func (fake *FakeSubnetSelector) SelectSubnet(arg1 *net.IPNet, arg2 []*net.IPNet) (*net.IPNet, error) {
+	var arg2Copy []*net.IPNet
+	if arg2 != nil {
+		arg2Copy = make([]*net.IPNet, len(arg2))
+		copy(arg2Copy, arg2)
 	}
 	fake.selectSubnetMutex.Lock()
 	ret, specificReturn := fake.selectSubnetReturnsOnCall[len(fake.selectSubnetArgsForCall)]
 	fake.selectSubnetArgsForCall = append(fake.selectSubnetArgsForCall, struct {
-		dynamic  *net.IPNet
-		existing []*net.IPNet
-	}{dynamic, existingCopy})
-	fake.recordInvocation("SelectSubnet", []interface{}{dynamic, existingCopy})
+		arg1 *net.IPNet
+		arg2 []*net.IPNet
+	}{arg1, arg2Copy})
+	fake.recordInvocation("SelectSubnet", []interface{}{arg1, arg2Copy})
 	fake.selectSubnetMutex.Unlock()
 	if fake.SelectSubnetStub != nil {
-		return fake.SelectSubnetStub(dynamic, existing)
+		return fake.SelectSubnetStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.selectSubnetReturns.result1, fake.selectSubnetReturns.result2
+	fakeReturns := fake.selectSubnetReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeSubnetSelector) SelectSubnetCallCount() int {
@@ -56,13 +57,22 @@ func (fake *FakeSubnetSelector) SelectSubnetCallCount() int {
 	return len(fake.selectSubnetArgsForCall)
 }
 
+func (fake *FakeSubnetSelector) SelectSubnetCalls(stub func(*net.IPNet, []*net.IPNet) (*net.IPNet, error)) {
+	fake.selectSubnetMutex.Lock()
+	defer fake.selectSubnetMutex.Unlock()
+	fake.SelectSubnetStub = stub
+}
+
 func (fake *FakeSubnetSelector) SelectSubnetArgsForCall(i int) (*net.IPNet, []*net.IPNet) {
 	fake.selectSubnetMutex.RLock()
 	defer fake.selectSubnetMutex.RUnlock()
-	return fake.selectSubnetArgsForCall[i].dynamic, fake.selectSubnetArgsForCall[i].existing
+	argsForCall := fake.selectSubnetArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeSubnetSelector) SelectSubnetReturns(result1 *net.IPNet, result2 error) {
+	fake.selectSubnetMutex.Lock()
+	defer fake.selectSubnetMutex.Unlock()
 	fake.SelectSubnetStub = nil
 	fake.selectSubnetReturns = struct {
 		result1 *net.IPNet
@@ -71,6 +81,8 @@ func (fake *FakeSubnetSelector) SelectSubnetReturns(result1 *net.IPNet, result2 
 }
 
 func (fake *FakeSubnetSelector) SelectSubnetReturnsOnCall(i int, result1 *net.IPNet, result2 error) {
+	fake.selectSubnetMutex.Lock()
+	defer fake.selectSubnetMutex.Unlock()
 	fake.SelectSubnetStub = nil
 	if fake.selectSubnetReturnsOnCall == nil {
 		fake.selectSubnetReturnsOnCall = make(map[int]struct {

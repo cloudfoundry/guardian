@@ -9,11 +9,11 @@ import (
 )
 
 type FakeEventsWatcher struct {
-	WatchEventsStub        func(log lager.Logger, handle string) error
+	WatchEventsStub        func(lager.Logger, string) error
 	watchEventsMutex       sync.RWMutex
 	watchEventsArgsForCall []struct {
-		log    lager.Logger
-		handle string
+		arg1 lager.Logger
+		arg2 string
 	}
 	watchEventsReturns struct {
 		result1 error
@@ -25,22 +25,23 @@ type FakeEventsWatcher struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeEventsWatcher) WatchEvents(log lager.Logger, handle string) error {
+func (fake *FakeEventsWatcher) WatchEvents(arg1 lager.Logger, arg2 string) error {
 	fake.watchEventsMutex.Lock()
 	ret, specificReturn := fake.watchEventsReturnsOnCall[len(fake.watchEventsArgsForCall)]
 	fake.watchEventsArgsForCall = append(fake.watchEventsArgsForCall, struct {
-		log    lager.Logger
-		handle string
-	}{log, handle})
-	fake.recordInvocation("WatchEvents", []interface{}{log, handle})
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("WatchEvents", []interface{}{arg1, arg2})
 	fake.watchEventsMutex.Unlock()
 	if fake.WatchEventsStub != nil {
-		return fake.WatchEventsStub(log, handle)
+		return fake.WatchEventsStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.watchEventsReturns.result1
+	fakeReturns := fake.watchEventsReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeEventsWatcher) WatchEventsCallCount() int {
@@ -49,13 +50,22 @@ func (fake *FakeEventsWatcher) WatchEventsCallCount() int {
 	return len(fake.watchEventsArgsForCall)
 }
 
+func (fake *FakeEventsWatcher) WatchEventsCalls(stub func(lager.Logger, string) error) {
+	fake.watchEventsMutex.Lock()
+	defer fake.watchEventsMutex.Unlock()
+	fake.WatchEventsStub = stub
+}
+
 func (fake *FakeEventsWatcher) WatchEventsArgsForCall(i int) (lager.Logger, string) {
 	fake.watchEventsMutex.RLock()
 	defer fake.watchEventsMutex.RUnlock()
-	return fake.watchEventsArgsForCall[i].log, fake.watchEventsArgsForCall[i].handle
+	argsForCall := fake.watchEventsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeEventsWatcher) WatchEventsReturns(result1 error) {
+	fake.watchEventsMutex.Lock()
+	defer fake.watchEventsMutex.Unlock()
 	fake.WatchEventsStub = nil
 	fake.watchEventsReturns = struct {
 		result1 error
@@ -63,6 +73,8 @@ func (fake *FakeEventsWatcher) WatchEventsReturns(result1 error) {
 }
 
 func (fake *FakeEventsWatcher) WatchEventsReturnsOnCall(i int, result1 error) {
+	fake.watchEventsMutex.Lock()
+	defer fake.watchEventsMutex.Unlock()
 	fake.WatchEventsStub = nil
 	if fake.watchEventsReturnsOnCall == nil {
 		fake.watchEventsReturnsOnCall = make(map[int]struct {

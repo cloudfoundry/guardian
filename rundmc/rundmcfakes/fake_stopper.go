@@ -9,13 +9,13 @@ import (
 )
 
 type FakeStopper struct {
-	StopAllStub        func(log lager.Logger, cgroupName string, save []int, kill bool) error
+	StopAllStub        func(lager.Logger, string, []int, bool) error
 	stopAllMutex       sync.RWMutex
 	stopAllArgsForCall []struct {
-		log        lager.Logger
-		cgroupName string
-		save       []int
-		kill       bool
+		arg1 lager.Logger
+		arg2 string
+		arg3 []int
+		arg4 bool
 	}
 	stopAllReturns struct {
 		result1 error
@@ -27,29 +27,30 @@ type FakeStopper struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeStopper) StopAll(log lager.Logger, cgroupName string, save []int, kill bool) error {
-	var saveCopy []int
-	if save != nil {
-		saveCopy = make([]int, len(save))
-		copy(saveCopy, save)
+func (fake *FakeStopper) StopAll(arg1 lager.Logger, arg2 string, arg3 []int, arg4 bool) error {
+	var arg3Copy []int
+	if arg3 != nil {
+		arg3Copy = make([]int, len(arg3))
+		copy(arg3Copy, arg3)
 	}
 	fake.stopAllMutex.Lock()
 	ret, specificReturn := fake.stopAllReturnsOnCall[len(fake.stopAllArgsForCall)]
 	fake.stopAllArgsForCall = append(fake.stopAllArgsForCall, struct {
-		log        lager.Logger
-		cgroupName string
-		save       []int
-		kill       bool
-	}{log, cgroupName, saveCopy, kill})
-	fake.recordInvocation("StopAll", []interface{}{log, cgroupName, saveCopy, kill})
+		arg1 lager.Logger
+		arg2 string
+		arg3 []int
+		arg4 bool
+	}{arg1, arg2, arg3Copy, arg4})
+	fake.recordInvocation("StopAll", []interface{}{arg1, arg2, arg3Copy, arg4})
 	fake.stopAllMutex.Unlock()
 	if fake.StopAllStub != nil {
-		return fake.StopAllStub(log, cgroupName, save, kill)
+		return fake.StopAllStub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.stopAllReturns.result1
+	fakeReturns := fake.stopAllReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeStopper) StopAllCallCount() int {
@@ -58,13 +59,22 @@ func (fake *FakeStopper) StopAllCallCount() int {
 	return len(fake.stopAllArgsForCall)
 }
 
+func (fake *FakeStopper) StopAllCalls(stub func(lager.Logger, string, []int, bool) error) {
+	fake.stopAllMutex.Lock()
+	defer fake.stopAllMutex.Unlock()
+	fake.StopAllStub = stub
+}
+
 func (fake *FakeStopper) StopAllArgsForCall(i int) (lager.Logger, string, []int, bool) {
 	fake.stopAllMutex.RLock()
 	defer fake.stopAllMutex.RUnlock()
-	return fake.stopAllArgsForCall[i].log, fake.stopAllArgsForCall[i].cgroupName, fake.stopAllArgsForCall[i].save, fake.stopAllArgsForCall[i].kill
+	argsForCall := fake.stopAllArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeStopper) StopAllReturns(result1 error) {
+	fake.stopAllMutex.Lock()
+	defer fake.stopAllMutex.Unlock()
 	fake.StopAllStub = nil
 	fake.stopAllReturns = struct {
 		result1 error
@@ -72,6 +82,8 @@ func (fake *FakeStopper) StopAllReturns(result1 error) {
 }
 
 func (fake *FakeStopper) StopAllReturnsOnCall(i int, result1 error) {
+	fake.stopAllMutex.Lock()
+	defer fake.stopAllMutex.Unlock()
 	fake.StopAllStub = nil
 	if fake.stopAllReturnsOnCall == nil {
 		fake.stopAllReturnsOnCall = make(map[int]struct {

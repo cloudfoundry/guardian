@@ -8,11 +8,11 @@ import (
 )
 
 type FakeRootfsFileCreator struct {
-	CreateFilesStub        func(rootFSPath string, pathsToCreate ...string) error
+	CreateFilesStub        func(string, ...string) error
 	createFilesMutex       sync.RWMutex
 	createFilesArgsForCall []struct {
-		rootFSPath    string
-		pathsToCreate []string
+		arg1 string
+		arg2 []string
 	}
 	createFilesReturns struct {
 		result1 error
@@ -24,22 +24,23 @@ type FakeRootfsFileCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRootfsFileCreator) CreateFiles(rootFSPath string, pathsToCreate ...string) error {
+func (fake *FakeRootfsFileCreator) CreateFiles(arg1 string, arg2 ...string) error {
 	fake.createFilesMutex.Lock()
 	ret, specificReturn := fake.createFilesReturnsOnCall[len(fake.createFilesArgsForCall)]
 	fake.createFilesArgsForCall = append(fake.createFilesArgsForCall, struct {
-		rootFSPath    string
-		pathsToCreate []string
-	}{rootFSPath, pathsToCreate})
-	fake.recordInvocation("CreateFiles", []interface{}{rootFSPath, pathsToCreate})
+		arg1 string
+		arg2 []string
+	}{arg1, arg2})
+	fake.recordInvocation("CreateFiles", []interface{}{arg1, arg2})
 	fake.createFilesMutex.Unlock()
 	if fake.CreateFilesStub != nil {
-		return fake.CreateFilesStub(rootFSPath, pathsToCreate...)
+		return fake.CreateFilesStub(arg1, arg2...)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.createFilesReturns.result1
+	fakeReturns := fake.createFilesReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeRootfsFileCreator) CreateFilesCallCount() int {
@@ -48,13 +49,22 @@ func (fake *FakeRootfsFileCreator) CreateFilesCallCount() int {
 	return len(fake.createFilesArgsForCall)
 }
 
+func (fake *FakeRootfsFileCreator) CreateFilesCalls(stub func(string, ...string) error) {
+	fake.createFilesMutex.Lock()
+	defer fake.createFilesMutex.Unlock()
+	fake.CreateFilesStub = stub
+}
+
 func (fake *FakeRootfsFileCreator) CreateFilesArgsForCall(i int) (string, []string) {
 	fake.createFilesMutex.RLock()
 	defer fake.createFilesMutex.RUnlock()
-	return fake.createFilesArgsForCall[i].rootFSPath, fake.createFilesArgsForCall[i].pathsToCreate
+	argsForCall := fake.createFilesArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeRootfsFileCreator) CreateFilesReturns(result1 error) {
+	fake.createFilesMutex.Lock()
+	defer fake.createFilesMutex.Unlock()
 	fake.CreateFilesStub = nil
 	fake.createFilesReturns = struct {
 		result1 error
@@ -62,6 +72,8 @@ func (fake *FakeRootfsFileCreator) CreateFilesReturns(result1 error) {
 }
 
 func (fake *FakeRootfsFileCreator) CreateFilesReturnsOnCall(i int, result1 error) {
+	fake.createFilesMutex.Lock()
+	defer fake.createFilesMutex.Unlock()
 	fake.CreateFilesStub = nil
 	if fake.createFilesReturnsOnCall == nil {
 		fake.createFilesReturnsOnCall = make(map[int]struct {

@@ -9,24 +9,24 @@ import (
 )
 
 type FakeRunner struct {
-	RunStub        func(log lager.Logger)
+	RunStub        func(lager.Logger)
 	runMutex       sync.RWMutex
 	runArgsForCall []struct {
-		log lager.Logger
+		arg1 lager.Logger
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRunner) Run(log lager.Logger) {
+func (fake *FakeRunner) Run(arg1 lager.Logger) {
 	fake.runMutex.Lock()
 	fake.runArgsForCall = append(fake.runArgsForCall, struct {
-		log lager.Logger
-	}{log})
-	fake.recordInvocation("Run", []interface{}{log})
+		arg1 lager.Logger
+	}{arg1})
+	fake.recordInvocation("Run", []interface{}{arg1})
 	fake.runMutex.Unlock()
 	if fake.RunStub != nil {
-		fake.RunStub(log)
+		fake.RunStub(arg1)
 	}
 }
 
@@ -36,10 +36,17 @@ func (fake *FakeRunner) RunCallCount() int {
 	return len(fake.runArgsForCall)
 }
 
+func (fake *FakeRunner) RunCalls(stub func(lager.Logger)) {
+	fake.runMutex.Lock()
+	defer fake.runMutex.Unlock()
+	fake.RunStub = stub
+}
+
 func (fake *FakeRunner) RunArgsForCall(i int) lager.Logger {
 	fake.runMutex.RLock()
 	defer fake.runMutex.RUnlock()
-	return fake.runArgsForCall[i].log
+	argsForCall := fake.runArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeRunner) Invocations() map[string][][]interface{} {

@@ -9,26 +9,26 @@ import (
 )
 
 type FakeKiller struct {
-	KillStub        func(signal syscall.Signal, pid ...int)
+	KillStub        func(syscall.Signal, ...int)
 	killMutex       sync.RWMutex
 	killArgsForCall []struct {
-		signal syscall.Signal
-		pid    []int
+		arg1 syscall.Signal
+		arg2 []int
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeKiller) Kill(signal syscall.Signal, pid ...int) {
+func (fake *FakeKiller) Kill(arg1 syscall.Signal, arg2 ...int) {
 	fake.killMutex.Lock()
 	fake.killArgsForCall = append(fake.killArgsForCall, struct {
-		signal syscall.Signal
-		pid    []int
-	}{signal, pid})
-	fake.recordInvocation("Kill", []interface{}{signal, pid})
+		arg1 syscall.Signal
+		arg2 []int
+	}{arg1, arg2})
+	fake.recordInvocation("Kill", []interface{}{arg1, arg2})
 	fake.killMutex.Unlock()
 	if fake.KillStub != nil {
-		fake.KillStub(signal, pid...)
+		fake.KillStub(arg1, arg2...)
 	}
 }
 
@@ -38,10 +38,17 @@ func (fake *FakeKiller) KillCallCount() int {
 	return len(fake.killArgsForCall)
 }
 
+func (fake *FakeKiller) KillCalls(stub func(syscall.Signal, ...int)) {
+	fake.killMutex.Lock()
+	defer fake.killMutex.Unlock()
+	fake.KillStub = stub
+}
+
 func (fake *FakeKiller) KillArgsForCall(i int) (syscall.Signal, []int) {
 	fake.killMutex.RLock()
 	defer fake.killMutex.RUnlock()
-	return fake.killArgsForCall[i].signal, fake.killArgsForCall[i].pid
+	argsForCall := fake.killArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeKiller) Invocations() map[string][][]interface{} {

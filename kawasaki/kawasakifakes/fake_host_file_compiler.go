@@ -10,13 +10,13 @@ import (
 )
 
 type FakeHostFileCompiler struct {
-	CompileStub        func(log lager.Logger, ip net.IP, handle string, additionalHostEntries []string) ([]byte, error)
+	CompileStub        func(lager.Logger, net.IP, string, []string) ([]byte, error)
 	compileMutex       sync.RWMutex
 	compileArgsForCall []struct {
-		log                   lager.Logger
-		ip                    net.IP
-		handle                string
-		additionalHostEntries []string
+		arg1 lager.Logger
+		arg2 net.IP
+		arg3 string
+		arg4 []string
 	}
 	compileReturns struct {
 		result1 []byte
@@ -30,29 +30,30 @@ type FakeHostFileCompiler struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeHostFileCompiler) Compile(log lager.Logger, ip net.IP, handle string, additionalHostEntries []string) ([]byte, error) {
-	var additionalHostEntriesCopy []string
-	if additionalHostEntries != nil {
-		additionalHostEntriesCopy = make([]string, len(additionalHostEntries))
-		copy(additionalHostEntriesCopy, additionalHostEntries)
+func (fake *FakeHostFileCompiler) Compile(arg1 lager.Logger, arg2 net.IP, arg3 string, arg4 []string) ([]byte, error) {
+	var arg4Copy []string
+	if arg4 != nil {
+		arg4Copy = make([]string, len(arg4))
+		copy(arg4Copy, arg4)
 	}
 	fake.compileMutex.Lock()
 	ret, specificReturn := fake.compileReturnsOnCall[len(fake.compileArgsForCall)]
 	fake.compileArgsForCall = append(fake.compileArgsForCall, struct {
-		log                   lager.Logger
-		ip                    net.IP
-		handle                string
-		additionalHostEntries []string
-	}{log, ip, handle, additionalHostEntriesCopy})
-	fake.recordInvocation("Compile", []interface{}{log, ip, handle, additionalHostEntriesCopy})
+		arg1 lager.Logger
+		arg2 net.IP
+		arg3 string
+		arg4 []string
+	}{arg1, arg2, arg3, arg4Copy})
+	fake.recordInvocation("Compile", []interface{}{arg1, arg2, arg3, arg4Copy})
 	fake.compileMutex.Unlock()
 	if fake.CompileStub != nil {
-		return fake.CompileStub(log, ip, handle, additionalHostEntries)
+		return fake.CompileStub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.compileReturns.result1, fake.compileReturns.result2
+	fakeReturns := fake.compileReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeHostFileCompiler) CompileCallCount() int {
@@ -61,13 +62,22 @@ func (fake *FakeHostFileCompiler) CompileCallCount() int {
 	return len(fake.compileArgsForCall)
 }
 
+func (fake *FakeHostFileCompiler) CompileCalls(stub func(lager.Logger, net.IP, string, []string) ([]byte, error)) {
+	fake.compileMutex.Lock()
+	defer fake.compileMutex.Unlock()
+	fake.CompileStub = stub
+}
+
 func (fake *FakeHostFileCompiler) CompileArgsForCall(i int) (lager.Logger, net.IP, string, []string) {
 	fake.compileMutex.RLock()
 	defer fake.compileMutex.RUnlock()
-	return fake.compileArgsForCall[i].log, fake.compileArgsForCall[i].ip, fake.compileArgsForCall[i].handle, fake.compileArgsForCall[i].additionalHostEntries
+	argsForCall := fake.compileArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeHostFileCompiler) CompileReturns(result1 []byte, result2 error) {
+	fake.compileMutex.Lock()
+	defer fake.compileMutex.Unlock()
 	fake.CompileStub = nil
 	fake.compileReturns = struct {
 		result1 []byte
@@ -76,6 +86,8 @@ func (fake *FakeHostFileCompiler) CompileReturns(result1 []byte, result2 error) 
 }
 
 func (fake *FakeHostFileCompiler) CompileReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.compileMutex.Lock()
+	defer fake.compileMutex.Unlock()
 	fake.CompileStub = nil
 	if fake.compileReturnsOnCall == nil {
 		fake.compileReturnsOnCall = make(map[int]struct {
