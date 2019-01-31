@@ -77,7 +77,7 @@ required = ["gopkg.in/fsnotify.v1"]
 
 [[constraint]]
   name = "github.com/containerd/containerd"
-  version = "1.2.0"
+  version = "1.2.2"
 
 # TODO: We are using the revision below because moby's latest tag is form last year
 # for some reason. The revision references the project state before they bumped to
