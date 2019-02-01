@@ -1252,8 +1252,8 @@ var _ = Describe("Driver", func() {
 				Expect(os.Remove(volumeMetaPath(storePath, volumeID))).To(Succeed())
 			})
 
-			It("fails", func() {
-				Expect(sizeErr).To(MatchError(HavePrefix("failed to open metadata file for %s", volumeID)))
+			It("returns NotExist error", func() {
+				Expect(os.IsNotExist(sizeErr)).To(BeTrue())
 			})
 		})
 	})

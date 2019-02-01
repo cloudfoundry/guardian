@@ -538,7 +538,7 @@ func (d *Driver) VolumeSize(logger lager.Logger, id string) (int64, error) {
 
 	metaFile, err := os.Open(d.volumeMetaFilePath(id))
 	if err != nil {
-		return 0, fmt.Errorf("failed to open metadata file for %s: %s", id, err.Error())
+		return 0, err
 	}
 
 	var metadata base_image_puller.VolumeMeta
