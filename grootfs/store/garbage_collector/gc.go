@@ -26,6 +26,7 @@ type VolumeDriver interface {
 	VolumePath(logger lager.Logger, id string) (string, error)
 	MoveVolume(logger lager.Logger, from, to string) error
 	DestroyVolume(logger lager.Logger, id string) error
+	MarkVolumeArtifacts(logger lager.Logger, id string) error
 	Volumes(logger lager.Logger) ([]string, error)
 }
 
@@ -52,16 +53,8 @@ func (g *GarbageCollector) MarkUnused(logger lager.Logger, unusedVolumes []strin
 	totalUnusedVolumes := len(unusedVolumes)
 
 	for _, volID := range unusedVolumes {
-		volumePath, err := g.volumeDriver.VolumePath(logger, volID)
-		if err != nil {
-			errorMessages = append(errorMessages, errorspkg.Wrap(err, "fetching-volume-path").Error())
-			continue
-		}
-
-		gcVolID := fmt.Sprintf("gc.%s", volID)
-		gcVolumePath := strings.Replace(volumePath, volID, gcVolID, 1)
-		if err := g.volumeDriver.MoveVolume(logger, volumePath, gcVolumePath); err != nil {
-			errorMessages = append(errorMessages, errorspkg.Wrap(err, "moving-volume").Error())
+		if err := g.volumeDriver.MarkVolumeArtifacts(logger, volID); err != nil {
+			errorMessages = append(errorMessages, errorspkg.Wrap(err, "mark-volume-unused").Error())
 		}
 	}
 

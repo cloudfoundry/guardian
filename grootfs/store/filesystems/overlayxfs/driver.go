@@ -306,9 +306,9 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 	}
 
 	oldLinkFile := filepath.Join(d.storePath, LinksDirName, filepath.Base(from))
-	shortId, err := ioutil.ReadFile(oldLinkFile)
+	shortID, err := ioutil.ReadFile(oldLinkFile)
 	if err != nil {
-		return errorspkg.Wrapf(err, "reading short id from %s", to)
+		return errorspkg.Wrapf(err, "reading link id for volume %s", to)
 	}
 
 	newLinkFile := filepath.Join(d.storePath, LinksDirName, filepath.Base(to))
@@ -317,7 +317,7 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 		return errorspkg.Wrap(err, "moving link file")
 	}
 
-	linkPath := filepath.Join(d.storePath, LinksDirName, string(shortId))
+	linkPath := filepath.Join(d.storePath, LinksDirName, string(shortID))
 	if err := os.Remove(linkPath); err != nil {
 		return errorspkg.Wrap(err, "removing symlink")
 	}
@@ -378,6 +378,29 @@ func (d *Driver) WriteVolumeMeta(logger lager.Logger, id string, metadata base_i
 	}
 
 	return nil
+}
+
+func (d *Driver) MarkVolumeArtifacts(logger lager.Logger, id string) error {
+	volumePath, err := d.VolumePath(logger, id)
+	if err != nil {
+		return errorspkg.Wrap(err, "fetching-volume-path")
+	}
+
+	gcVolID := fmt.Sprintf("gc.%s", id)
+	gcVolumePath := strings.Replace(volumePath, id, gcVolID, 1)
+	if err := d.MoveVolume(logger, volumePath, gcVolumePath); err != nil {
+		return err
+	}
+
+	if err := d.moveVolumeMeta(id, gcVolID); err != nil {
+		return errorspkg.Wrap(err, "renaming volume metadata")
+	}
+
+	return nil
+}
+
+func (d *Driver) moveVolumeMeta(volID, newVolID string) error {
+	return os.Rename(d.volumeMetaFilePath(volID), d.volumeMetaFilePath(newVolID))
 }
 
 func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath string) error {
@@ -465,12 +488,12 @@ func (d *Driver) getLowerDirs(logger lager.Logger, volumeIDs []string) ([]string
 		}
 		totalVolumeSize += volumeSize
 
-		shortId, err := ioutil.ReadFile(filepath.Join(d.storePath, LinksDirName, volumeIDs[i]))
+		shortID, err := ioutil.ReadFile(filepath.Join(d.storePath, LinksDirName, volumeIDs[i]))
 		if err != nil {
-			return nil, 0, errorspkg.Wrapf(err, "reading short id  %s", volumePath)
+			return nil, 0, errorspkg.Wrapf(err, "reading link id for %s", volumePath)
 		}
 
-		baseVolumePaths = append(baseVolumePaths, filepath.Join(LinksDirName, string(shortId)))
+		baseVolumePaths = append(baseVolumePaths, filepath.Join(LinksDirName, string(shortID)))
 	}
 
 	return baseVolumePaths, totalVolumeSize, nil
@@ -551,7 +574,6 @@ func (d *Driver) VolumeSize(logger lager.Logger, id string) (int64, error) {
 }
 
 func (d *Driver) volumeMetaFilePath(id string) string {
-	id = strings.Replace(id, "gc.", "", 1)
 	return filepath.Join(d.storePath, store.MetaDirName, fmt.Sprintf("volume-%s", id))
 }
 

@@ -29,6 +29,7 @@ type internalDriver interface {
 	VolumePath(logger lager.Logger, id string) (string, error)
 	Volumes(logger lager.Logger) ([]string, error)
 	WriteVolumeMeta(logger lager.Logger, id string, data base_image_puller.VolumeMeta) error
+	MarkVolumeArtifacts(logger lager.Logger, id string) error
 
 	CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (groot.MountInfo, error)
 	DestroyImage(logger lager.Logger, path string) error
@@ -267,8 +268,13 @@ func (d *Driver) DestroyImage(logger lager.Logger, path string) error {
 
 	return nil
 }
+
 func (d *Driver) FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error) {
 	return d.driver.FetchStats(logger, path)
+}
+
+func (d *Driver) MarkVolumeArtifacts(logger lager.Logger, id string) error {
+	return d.driver.MarkVolumeArtifacts(logger, id)
 }
 
 func specToDriver(spec spec.DriverSpec) (internalDriver, error) {

@@ -973,10 +973,77 @@ var _ = Describe("Driver", func() {
 
 		Context("when fails to list volumes", func() {
 			It("returns an error", func() {
-				driver := overlayxfs.NewDriver(storePath, tardisBinPath)
 				Expect(os.RemoveAll(filepath.Join(storePath, store.VolumesDirName))).To(Succeed())
 				_, err := driver.Volumes(logger)
 				Expect(err).To(MatchError(ContainSubstring("failed to list volumes")))
+			})
+		})
+	})
+
+	Describe("MarkVolumeArtifacts", func() {
+		var (
+			metaDirPath string
+			linkDirPath string
+			volumePath  string
+			volumeID    string
+		)
+
+		BeforeEach(func() {
+			metaDirPath = filepath.Join(storePath, store.MetaDirName)
+			linkDirPath = filepath.Join(storePath, overlayxfs.LinksDirName)
+
+			volumeID = randVolumeID()
+			var err error
+			volumePath, err = driver.CreateVolume(logger, "", volumeID)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(driver.WriteVolumeMeta(logger, volumeID, base_image_puller.VolumeMeta{Size: 1024})).To(Succeed())
+		})
+
+		It("Renames the volume directory", func() {
+			Expect(driver.MarkVolumeArtifacts(logger, volumeID)).To(Succeed())
+			Expect(filepath.Join(filepath.Dir(volumePath), fmt.Sprintf("gc.%s", volumeID))).To(BeADirectory())
+		})
+
+		It("Renames the volume's metadata", func() {
+			Expect(driver.MarkVolumeArtifacts(logger, volumeID)).To(Succeed())
+			Expect(filepath.Join(metaDirPath, fmt.Sprintf("volume-gc.%s", volumeID))).To(BeAnExistingFile())
+		})
+
+		It("Renames the volume's link dirs", func() {
+			Expect(driver.MarkVolumeArtifacts(logger, volumeID)).To(Succeed())
+
+			newVolumePath := filepath.Join(filepath.Dir(volumePath), fmt.Sprintf("gc.%s", volumeID))
+			Expect(filepath.Join(linkDirPath, filepath.Base(newVolumePath))).To(BeAnExistingFile())
+		})
+
+		Context("when it fails to get the volume path", func() {
+			BeforeEach(func() {
+				Expect(os.RemoveAll(volumePath)).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				Expect(driver.MarkVolumeArtifacts(logger, volumeID)).To(MatchError(ContainSubstring(fmt.Sprintf("volume does not exist `%s`", volumeID))))
+			})
+		})
+
+		Context("when it fails to move the volume", func() {
+			BeforeEach(func() {
+				Expect(os.RemoveAll(linkDirPath)).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				Expect(driver.MarkVolumeArtifacts(logger, volumeID)).To(MatchError(ContainSubstring(fmt.Sprintf("reading link id for volume %s/gc.%s", filepath.Dir(volumePath), volumeID))))
+			})
+		})
+
+		Context("when it fails to rename the volume metadata", func() {
+			BeforeEach(func() {
+				Expect(os.RemoveAll(metaDirPath)).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				Expect(driver.MarkVolumeArtifacts(logger, volumeID)).To(MatchError(ContainSubstring("renaming volume metadata")))
 			})
 		})
 	})
@@ -1028,23 +1095,18 @@ var _ = Describe("Driver", func() {
 
 			JustBeforeEach(func() {
 				metaFilePath = filepath.Join(storePath, store.MetaDirName, fmt.Sprintf("volume-%s", volumeID))
-				Expect(driver.MoveVolume(logger,
-					filepath.Join(storePath, store.VolumesDirName, volumeID),
-					filepath.Join(storePath, store.VolumesDirName, "gc."+volumeID),
-				)).To(Succeed())
+				Expect(ioutil.WriteFile(metaFilePath, []byte{}, 0644)).To(Succeed())
+				Expect(driver.MarkVolumeArtifacts(logger, volumeID)).To(Succeed())
+
 				volumeID = "gc." + volumeID
 			})
 
 			It("deletes the metadata file", func() {
-				Expect(ioutil.WriteFile(metaFilePath, []byte{}, 0644)).To(Succeed())
 				Expect(driver.DestroyVolume(logger, volumeID)).To(Succeed())
 				Expect(metaFilePath).ToNot(BeAnExistingFile())
 			})
 		})
 
-		// We release the lock before actually deleting image metadata files marked
-		// for GC. Therefore concurrent groot processes may try to delete the same
-		// metadata file.
 		Context("when removing the metadata file fails for a reason other than the file not existing", func() {
 			var metaFilePath string
 

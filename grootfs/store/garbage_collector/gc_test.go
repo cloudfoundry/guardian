@@ -113,81 +113,31 @@ var _ = Describe("Gc", func() {
 		)
 
 		BeforeEach(func() {
-			fakeVolumeDriver.VolumePathStub = func(_ lager.Logger, id string) (string, error) {
-				return filepath.Join("/store/volumes", id), nil
-			}
-
-			fakeVolumeDriver.VolumesReturns([]string{
-				"vol-a",
-				"vol-b",
-				"vol-c",
-				"vol-d",
-				"vol-e",
-				"gc.vol-f",
-			}, nil)
-
-			fakeDependencyManager.DependenciesStub = func(id string) ([]string, error) {
-				return map[string][]string{
-					"image:idA":                         []string{"vol-a", "vol-b"},
-					"image:idB":                         []string{"vol-a", "vol-c"},
-					"baseimage:docker:///ubuntu":        []string{"vol-d"},
-					"baseimage:docker://private/ubuntu": []string{"vol-e"},
-				}[id], nil
-			}
-
-			fakeImageCloner.ImageIDsReturns([]string{"idA", "idB"}, nil)
-
 			unusedVolumes = []string{"vol-d", "vol-e"}
 		})
 
-		It("moves unused volumes to the gc folder", func() {
+		It("marks unused volume artifacts", func() {
 			Expect(garbageCollector.MarkUnused(logger, unusedVolumes)).To(Succeed())
-			Expect(fakeVolumeDriver.MoveVolumeCallCount()).To(Equal(2))
-			_, from1, to1 := fakeVolumeDriver.MoveVolumeArgsForCall(0)
-			Expect(from1).To(MatchRegexp("/store/volumes/vol-[ed]"))
-			Expect(to1).To(MatchRegexp("/store/volumes/gc.vol-[ed]"))
+			Expect(fakeVolumeDriver.MarkVolumeArtifactsCallCount()).To(Equal(2))
+			_, volID := fakeVolumeDriver.MarkVolumeArtifactsArgsForCall(0)
+			Expect(volID).To(Equal("vol-d"))
 
-			_, from2, to2 := fakeVolumeDriver.MoveVolumeArgsForCall(1)
-			Expect(from2).To(MatchRegexp("/store/volumes/vol-[ed]"))
-			Expect(to2).To(MatchRegexp("/store/volumes/gc.vol-[ed]"))
-
-			Expect(from1).ToNot(Equal(from2))
-			Expect(to1).ToNot(Equal(to2))
+			_, volID2 := fakeVolumeDriver.MarkVolumeArtifactsArgsForCall(1)
+			Expect(volID2).To(Equal("vol-e"))
 		})
 
-		It("doesn't remark volumes for gc", func() {
+		It("doesn't remark volume artifacts for gc", func() {
 			Expect(garbageCollector.MarkUnused(logger, unusedVolumes)).To(Succeed())
 
-			for i := 0; i < fakeVolumeDriver.MoveVolumeCallCount(); i++ {
-				_, from, _ := fakeVolumeDriver.MoveVolumeArgsForCall(i)
-				Expect(from).NotTo(Equal("/store/volumes/gc.vol-f"))
+			for i := 0; i < fakeVolumeDriver.MarkVolumeArtifactsCallCount(); i++ {
+				_, volID := fakeVolumeDriver.MarkVolumeArtifactsArgsForCall(i)
+				Expect(volID).NotTo(Equal("gc.vol-f"))
 			}
 		})
 
-		Context("when checking the volume path fails", func() {
+		Context("when marking unused volume artifacts fails", func() {
 			BeforeEach(func() {
-				fakeVolumeDriver.VolumePathStub = func(_ lager.Logger, id string) (string, error) {
-					if id == "vol-d" {
-						return "", errors.New("volume path failed")
-					}
-
-					return filepath.Join("/store/volumes", id), nil
-				}
-			})
-
-			It("returns an error", func() {
-				Expect(garbageCollector.MarkUnused(logger, unusedVolumes)).To(MatchError(ContainSubstring("1/2 volumes failed to be marked as unused")))
-			})
-
-			It("still tries to move the other unused volumes", func() {
-				Expect(garbageCollector.MarkUnused(logger, unusedVolumes)).To(HaveOccurred())
-				Expect(fakeVolumeDriver.MoveVolumeCallCount()).To(Equal(1))
-			})
-		})
-
-		Context("when moving volumes fails", func() {
-			BeforeEach(func() {
-				fakeVolumeDriver.MoveVolumeReturns(errors.New("Failed to move"))
+				fakeVolumeDriver.MarkVolumeArtifactsReturns(errors.New("Failed to move"))
 			})
 
 			It("returns an error", func() {

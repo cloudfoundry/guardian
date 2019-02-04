@@ -39,7 +39,7 @@ unit:
 integration:
 	./script/test -i
 
-test: concourse-go-vet
+test:
 	./script/test -a
 
 ###### Go tools ###############################################################

@@ -104,6 +104,18 @@ type FakeInternalDriver struct {
 	writeVolumeMetaReturnsOnCall map[int]struct {
 		result1 error
 	}
+	MarkVolumeArtifactsStub        func(logger lager.Logger, id string) error
+	markVolumeArtifactsMutex       sync.RWMutex
+	markVolumeArtifactsArgsForCall []struct {
+		logger lager.Logger
+		id     string
+	}
+	markVolumeArtifactsReturns struct {
+		result1 error
+	}
+	markVolumeArtifactsReturnsOnCall map[int]struct {
+		result1 error
+	}
 	CreateImageStub        func(logger lager.Logger, spec image_cloner.ImageDriverSpec) (groot.MountInfo, error)
 	createImageMutex       sync.RWMutex
 	createImageArgsForCall []struct {
@@ -521,6 +533,55 @@ func (fake *FakeInternalDriver) WriteVolumeMetaReturnsOnCall(i int, result1 erro
 	}{result1}
 }
 
+func (fake *FakeInternalDriver) MarkVolumeArtifacts(logger lager.Logger, id string) error {
+	fake.markVolumeArtifactsMutex.Lock()
+	ret, specificReturn := fake.markVolumeArtifactsReturnsOnCall[len(fake.markVolumeArtifactsArgsForCall)]
+	fake.markVolumeArtifactsArgsForCall = append(fake.markVolumeArtifactsArgsForCall, struct {
+		logger lager.Logger
+		id     string
+	}{logger, id})
+	fake.recordInvocation("MarkVolumeArtifacts", []interface{}{logger, id})
+	fake.markVolumeArtifactsMutex.Unlock()
+	if fake.MarkVolumeArtifactsStub != nil {
+		return fake.MarkVolumeArtifactsStub(logger, id)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.markVolumeArtifactsReturns.result1
+}
+
+func (fake *FakeInternalDriver) MarkVolumeArtifactsCallCount() int {
+	fake.markVolumeArtifactsMutex.RLock()
+	defer fake.markVolumeArtifactsMutex.RUnlock()
+	return len(fake.markVolumeArtifactsArgsForCall)
+}
+
+func (fake *FakeInternalDriver) MarkVolumeArtifactsArgsForCall(i int) (lager.Logger, string) {
+	fake.markVolumeArtifactsMutex.RLock()
+	defer fake.markVolumeArtifactsMutex.RUnlock()
+	return fake.markVolumeArtifactsArgsForCall[i].logger, fake.markVolumeArtifactsArgsForCall[i].id
+}
+
+func (fake *FakeInternalDriver) MarkVolumeArtifactsReturns(result1 error) {
+	fake.MarkVolumeArtifactsStub = nil
+	fake.markVolumeArtifactsReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeInternalDriver) MarkVolumeArtifactsReturnsOnCall(i int, result1 error) {
+	fake.MarkVolumeArtifactsStub = nil
+	if fake.markVolumeArtifactsReturnsOnCall == nil {
+		fake.markVolumeArtifactsReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.markVolumeArtifactsReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeInternalDriver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (groot.MountInfo, error) {
 	fake.createImageMutex.Lock()
 	ret, specificReturn := fake.createImageReturnsOnCall[len(fake.createImageArgsForCall)]
@@ -742,6 +803,8 @@ func (fake *FakeInternalDriver) Invocations() map[string][][]interface{} {
 	defer fake.volumesMutex.RUnlock()
 	fake.writeVolumeMetaMutex.RLock()
 	defer fake.writeVolumeMetaMutex.RUnlock()
+	fake.markVolumeArtifactsMutex.RLock()
+	defer fake.markVolumeArtifactsMutex.RUnlock()
 	fake.createImageMutex.RLock()
 	defer fake.createImageMutex.RUnlock()
 	fake.destroyImageMutex.RLock()

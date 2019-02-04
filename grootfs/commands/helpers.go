@@ -35,6 +35,7 @@ type fileSystemDriver interface {
 	WriteVolumeMeta(logger lager.Logger, id string, data base_image_puller.VolumeMeta) error
 	HandleOpaqueWhiteouts(logger lager.Logger, id string, opaqueWhiteouts []string) error
 	Marshal(logger lager.Logger) ([]byte, error)
+	MarkVolumeArtifacts(logger lager.Logger, id string) error
 }
 
 func createImageDriver(cfg config.Config, fsDriver fileSystemDriver) (image_cloner.ImageDriver, error) {
