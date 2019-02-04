@@ -70,7 +70,6 @@ func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath s
 
 func (d *Driver) MountFilesystem(logger lager.Logger, filesystemPath, storePath string) error {
 	if err := d.mountFilesystem(filesystemPath, storePath, ""); err != nil {
-		logger.Error("mounting-filesystem-failed", err, lager.Data{"filesystemPath": filesystemPath, "storePath": storePath})
 		return errorspkg.Wrap(err, "Mounting filesystem")
 	}
 	return nil
