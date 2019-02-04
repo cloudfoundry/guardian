@@ -133,7 +133,7 @@ required = ["gopkg.in/fsnotify.v1"]
 
 [[constraint]]
   name = "github.com/opencontainers/runc"
-  revision = "58592df56734acf62e574865fe40b9e53e967910"
+  revision = "4e4c90719304d3ca4a189e70261f56f238b1acab"
 
 [[constraint]]
   name = "github.com/opencontainers/runtime-spec"
