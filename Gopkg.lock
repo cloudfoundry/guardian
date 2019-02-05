@@ -300,14 +300,14 @@
   version = "v2.7.0-rc.0"
 
 [[projects]]
-  digest = "1:9e29c24cd5150e641133d3f76e1e82aefb95a1098caa5f138642e410114de0dc"
+  digest = "1:dc5df971da7956ac1c562272d0f03565205841c016b073ed6076791adabd3bef"
   name = "github.com/docker/docker"
   packages = [
     "pkg/reexec",
     "pkg/stringid",
   ]
   pruneopts = "UT"
-  revision = "05346355dbd4300a21bfd64cda93ea6c5aef0cf0"
+  revision = "1603af96898b4fad0294f0691b3ce8482d1700d1"
 
 [[projects]]
   branch = "master"
