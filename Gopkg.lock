@@ -247,11 +247,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7db025a910839b33c21db0932d475b8103b6e3e4e6cd69c6f7f77abe98844f17"
+  digest = "1:81d05ae42440bf93292132440b0009dfc3d839e35710d45d7a95607934f32e6b"
   name = "github.com/containerd/continuity"
   packages = [
     "fs",
-    "pathdriver",
     "sysx",
   ]
   pruneopts = "UT"
@@ -301,20 +300,11 @@
   version = "v2.7.0-rc.0"
 
 [[projects]]
-  digest = "1:e45ba2bd3ba92abb961074e9341ad9e5c7010c175ab0cb815145688b80d5f9de"
+  digest = "1:9e29c24cd5150e641133d3f76e1e82aefb95a1098caa5f138642e410114de0dc"
   name = "github.com/docker/docker"
   packages = [
-    "pkg/archive",
-    "pkg/chrootarchive",
-    "pkg/fileutils",
-    "pkg/idtools",
-    "pkg/ioutils",
-    "pkg/longpath",
-    "pkg/mount",
-    "pkg/pools",
     "pkg/reexec",
     "pkg/stringid",
-    "pkg/system",
   ]
   pruneopts = "UT"
   revision = "05346355dbd4300a21bfd64cda93ea6c5aef0cf0"
@@ -820,7 +810,6 @@
     "github.com/containerd/containerd/oci",
     "github.com/containerd/containerd/runtime/v1/linux/proc",
     "github.com/containerd/typeurl",
-    "github.com/docker/docker/pkg/chrootarchive",
     "github.com/docker/docker/pkg/reexec",
     "github.com/eapache/go-resiliency/retrier",
     "github.com/hashicorp/go-multierror",
