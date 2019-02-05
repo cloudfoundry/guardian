@@ -8,9 +8,9 @@ GRR_ROOT=$HOME/workspace/garden-runc-release
 
 DIRS=$(for d in $ARGS; do [ -d "$d" ] && echo "$d"; done)
 
-TASK="$GRR_ROOT"/ci/unit-tests/guardian.yml
+TASK="$GRR_ROOT"/ci/tasks/guardian.yml
 if [ "$GOOS" == "windows" ]; then
-  TASK="$GRR_ROOT"/ci/unit-tests/guardian-windows.yml
+  TASK="$GRR_ROOT"/ci/tasks/guardian-windows.yml
 fi
 
 if egrep -q gqt <(echo "$ARGS"); then
