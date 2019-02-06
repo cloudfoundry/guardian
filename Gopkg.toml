@@ -113,11 +113,11 @@ required = ["gopkg.in/fsnotify.v1"]
 
 [[constraint]]
   name = "github.com/onsi/ginkgo"
-  revision = "v1.6.0"
+  revision = "v1.7.0"
 
 [[constraint]]
   name = "github.com/onsi/gomega"
-  revision = "v1.4.1"
+  revision = "v1.4.3"
 
 [[constraint]]
   name = "github.com/opencontainers/go-digest"
