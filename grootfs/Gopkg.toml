@@ -56,12 +56,8 @@
   branch = "master"
   name = "github.com/containers/storage"
 
-# TODO: We are using the revision below because moby's latest tag is form last year
-# for some reason. The revision references the project state before they bumped to
-# golang 1.10. This was causing build failures for guardian on golang 1.9.6.
-# Maybe revise after we bump to go 1.10
 [[constraint]]
-  revision = "05346355dbd4300a21bfd64cda93ea6c5aef0cf0"
+  revision = "1603af96898b4fad0294f0691b3ce8482d1700d1"
   name = "github.com/docker/docker"
 
 [[constraint]]
