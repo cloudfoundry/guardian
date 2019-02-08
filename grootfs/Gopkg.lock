@@ -268,6 +268,20 @@
   version = "v1.6.2"
 
 [[projects]]
+  digest = "1:a1038ef593beb4771c8f0f9c26e8b00410acd800af5c6864651d9bf160ea1813"
+  name = "github.com/hpcloud/tail"
+  packages = [
+    ".",
+    "ratelimiter",
+    "util",
+    "watch",
+    "winfile",
+  ]
+  pruneopts = "UT"
+  revision = "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:0a69a1c0db3591fcefb47f115b224592c8dfa4368b7ba9fae509d5e16cdc95c8"
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
@@ -305,7 +319,7 @@
   revision = "179d4d0c4d8d407a32af483c2354df1d2c91e6c3"
 
 [[projects]]
-  digest = "1:72f35d3e412bc67b121e15ea4c88a3b3da8bcbc2264339e7ffa4a1865799840c"
+  digest = "1:5f4b78246f0bcb105b1e3b2b9e22b52a57cd02f57a8078572fe27c62f4a75ff7"
   name = "github.com/onsi/ginkgo"
   packages = [
     ".",
@@ -328,8 +342,8 @@
     "types",
   ]
   pruneopts = "UT"
-  revision = "fa5fabab2a1bfbd924faf4c067d07ae414e2aedf"
-  version = "v1.5.0"
+  revision = "2e1be8f7d90e9d3e3e58b0ce470f2f14d075406f"
+  version = "v1.7.0"
 
 [[projects]]
   digest = "1:61a4ca56459a0d38b89c92f967cd2b07450c638404853b7fe0c8d59f9cf10f93"
@@ -537,6 +551,23 @@
   version = "v0.3.0"
 
 [[projects]]
+  digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
+  name = "gopkg.in/fsnotify.v1"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  source = "https://github.com/fsnotify/fsnotify.git"
+  version = "v1.4.7"
+
+[[projects]]
+  branch = "v1"
+  digest = "1:0caa92e17bc0b65a98c63e5bc76a9e844cd5e56493f8fdbb28fad101a16254d9"
+  name = "gopkg.in/tomb.v1"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "dd632973f1e7218eb1089048e0798ec9ae7dceb8"
+
+[[projects]]
   digest = "1:4d2e5a73dc1500038e504a8d78b986630e3626dc027bc030ba5c75da257cdb96"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
@@ -585,6 +616,7 @@
     "github.com/urfave/cli",
     "github.com/ventu-io/go-shortid",
     "golang.org/x/sys/unix",
+    "gopkg.in/fsnotify.v1",
     "gopkg.in/yaml.v2",
   ]
   solver-name = "gps-cdcl"

@@ -24,6 +24,9 @@
 #   go-tests = true
 #   unused-packages = true
 
+# we should be able to get rid of this line when https://github.com/golang/dep/issues/1799 gets fixed
+required = ["gopkg.in/fsnotify.v1"]
+
 [[constraint]]
   revision = "501fd662150bcea5a42a9b5c1c283209720788c3"
   name = "code.cloudfoundry.org/commandrunner"
@@ -123,6 +126,11 @@
 [[constraint]]
   name = "gopkg.in/yaml.v2"
   version = "2.2.2"
+
+# we should be able to get rid of this line when https://github.com/golang/dep/issues/1799 gets fixed
+[[constraint]]
+  name = "gopkg.in/fsnotify.v1"
+  source = "https://github.com/fsnotify/fsnotify.git"
 
 [prune]
   go-tests = true
