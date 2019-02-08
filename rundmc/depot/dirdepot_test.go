@@ -20,14 +20,11 @@ import (
 
 var _ = Describe("Depot", func() {
 	var (
-		depotDir               string
-		bundleSaver            *fakes.FakeBundleSaver
-		bundleGenerator        *fakes.FakeBundleGenerator
-		bindMountSourceCreator *fakes.FakeBindMountSourceCreator
-		dirdepot               *depot.DirectoryDepot
-		logger                 lager.Logger
-		bndle                  goci.Bndl
-		desiredContainerSpec   spec.DesiredContainerSpec
+		depotDir             string
+		dirdepot             *depot.DirectoryDepot
+		logger               lager.Logger
+		bndle                goci.Bndl
+		desiredContainerSpec spec.DesiredContainerSpec
 	)
 
 	BeforeEach(func() {
@@ -69,11 +66,10 @@ var _ = Describe("Depot", func() {
 			)
 
 		logger = lagertest.NewTestLogger("test")
+	})
 
-		bundleSaver = new(fakes.FakeBundleSaver)
-		bundleGenerator = new(fakes.FakeBundleGenerator)
-		bindMountSourceCreator = new(fakes.FakeBindMountSourceCreator)
-		dirdepot = depot.New(depotDir, bundleGenerator, bundleSaver, bindMountSourceCreator)
+	JustBeforeEach(func() {
+		dirdepot = depot.New(depotDir, nil, nil, nil)
 	})
 
 	AfterEach(func() {
@@ -90,6 +86,19 @@ var _ = Describe("Depot", func() {
 	})
 
 	Describe("create", func() {
+		var (
+			bundleSaver            *fakes.FakeBundleSaver
+			bundleGenerator        *fakes.FakeBundleGenerator
+			bindMountSourceCreator *fakes.FakeBindMountSourceCreator
+		)
+
+		JustBeforeEach(func() {
+			bundleSaver = new(fakes.FakeBundleSaver)
+			bundleGenerator = new(fakes.FakeBundleGenerator)
+			bindMountSourceCreator = new(fakes.FakeBindMountSourceCreator)
+			dirdepot = depot.New(depotDir, bundleGenerator, bundleSaver, bindMountSourceCreator)
+		})
+
 		It("should create a directory", func() {
 			Expect(dirdepot.Create(logger, "aardvaark", desiredContainerSpec)).To(Succeed())
 			Expect(filepath.Join(depotDir, "aardvaark")).To(BeADirectory())
@@ -158,15 +167,18 @@ var _ = Describe("Depot", func() {
 	})
 
 	Describe("destroy", func() {
-		It("should destroy the container directory", func() {
+		BeforeEach(func() {
 			Expect(os.MkdirAll(filepath.Join(depotDir, "potato"), 0755)).To(Succeed())
+		})
+
+		It("should destroy the container directory", func() {
 			Expect(dirdepot.Destroy(logger, "potato")).To(Succeed())
 			Expect(filepath.Join(depotDir, "potato")).NotTo(BeAnExistingFile())
 		})
 
 		Context("when the container directory does not exist", func() {
 			It("does not error (i.e. the method is idempotent)", func() {
-				Expect(dirdepot.Destroy(logger, "potato")).To(Succeed())
+				Expect(dirdepot.Destroy(logger, "banana")).To(Succeed())
 			})
 		})
 	})
@@ -174,8 +186,8 @@ var _ = Describe("Depot", func() {
 	Describe("handles", func() {
 		Context("when handles exist", func() {
 			BeforeEach(func() {
-				Expect(dirdepot.Create(logger, "banana", desiredContainerSpec)).To(Succeed())
-				Expect(dirdepot.Create(logger, "banana2", desiredContainerSpec)).To(Succeed())
+				Expect(os.MkdirAll(filepath.Join(depotDir, "banana"), 0755)).To(Succeed())
+				Expect(os.MkdirAll(filepath.Join(depotDir, "banana2"), 0755)).To(Succeed())
 			})
 
 			It("should return the handles", func() {
@@ -193,7 +205,7 @@ var _ = Describe("Depot", func() {
 			var invalidDepot *depot.DirectoryDepot
 
 			BeforeEach(func() {
-				invalidDepot = depot.New("rubbish", bundleGenerator, bundleSaver, bindMountSourceCreator)
+				invalidDepot = depot.New("rubbish", nil, nil, nil)
 			})
 
 			It("returns an error", func() {
@@ -204,9 +216,12 @@ var _ = Describe("Depot", func() {
 	})
 
 	Describe("GetDir", func() {
+		BeforeEach(func() {
+			depotDir = "/path/to/depot"
+		})
+
 		It("returns the depot dir", func() {
-			dirDepot := depot.New("/path/to/depot", nil, nil, nil)
-			Expect(dirDepot.GetDir()).To(Equal("/path/to/depot"))
+			Expect(dirdepot.GetDir()).To(Equal("/path/to/depot"))
 		})
 	})
 })
