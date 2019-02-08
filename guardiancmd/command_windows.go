@@ -24,11 +24,11 @@ import (
 )
 
 type WindowsFactory struct {
-	config        *ServerCommand
+	config        *CommonCommand
 	commandRunner commandrunner.CommandRunner
 }
 
-func (cmd *ServerCommand) NewGardenFactory() GardenFactory {
+func (cmd *CommonCommand) NewGardenFactory() GardenFactory {
 	return &WindowsFactory{config: cmd, commandRunner: windows_command_runner.New(false)}
 }
 
@@ -158,6 +158,6 @@ func containerdRuncRoot() string {
 	return ""
 }
 
-func (cmd *ServerCommand) computeRuncRoot() string {
+func (cmd *CommonCommand) computeRuncRoot() string {
 	return ""
 }

@@ -3,18 +3,12 @@ package guardiancmd
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"strconv"
 	"time"
 
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/commandrunner"
-	"code.cloudfoundry.org/garden/server"
-	"code.cloudfoundry.org/guardian/bindata"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	"code.cloudfoundry.org/guardian/kawasaki"
@@ -41,82 +35,14 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/pid"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/rundmc/users"
-	"code.cloudfoundry.org/guardian/sysinfo"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/localip"
-	"github.com/cloudfoundry/dropsonde"
-	"github.com/docker/docker/pkg/reexec"
 	"github.com/eapache/go-resiliency/retrier"
-	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/tedsuo/ifrit"
-	"github.com/tedsuo/ifrit/sigmon"
 )
 
 const containerdNamespace = "garden"
-
-// These are the maximum caps an unprivileged container process ever gets
-// (it may get less if the user is not root, see NonRootMaxCaps)
-var unprivilegedMaxCaps = []string{
-	"CAP_CHOWN",
-	"CAP_DAC_OVERRIDE",
-	"CAP_FSETID",
-	"CAP_FOWNER",
-	"CAP_MKNOD",
-	"CAP_NET_RAW",
-	"CAP_SETGID",
-	"CAP_SETUID",
-	"CAP_SETFCAP",
-	"CAP_SETPCAP",
-	"CAP_NET_BIND_SERVICE",
-	"CAP_SYS_CHROOT",
-	"CAP_KILL",
-	"CAP_AUDIT_WRITE",
-}
-
-// These are the maximum caps a privileged container process ever gets
-// (it may get less if the user is not root, see NonRootMaxCaps)
-var privilegedMaxCaps = []string{
-	"CAP_AUDIT_CONTROL",
-	"CAP_AUDIT_READ",
-	"CAP_AUDIT_WRITE",
-	"CAP_BLOCK_SUSPEND",
-	"CAP_CHOWN",
-	"CAP_DAC_OVERRIDE",
-	"CAP_DAC_READ_SEARCH",
-	"CAP_FOWNER",
-	"CAP_FSETID",
-	"CAP_IPC_LOCK",
-	"CAP_IPC_OWNER",
-	"CAP_KILL",
-	"CAP_LEASE",
-	"CAP_LINUX_IMMUTABLE",
-	"CAP_MAC_ADMIN",
-	"CAP_MAC_OVERRIDE",
-	"CAP_MKNOD",
-	"CAP_NET_ADMIN",
-	"CAP_NET_BIND_SERVICE",
-	"CAP_NET_BROADCAST",
-	"CAP_NET_RAW",
-	"CAP_SETGID",
-	"CAP_SETFCAP",
-	"CAP_SETPCAP",
-	"CAP_SETUID",
-	"CAP_SYS_ADMIN",
-	"CAP_SYS_BOOT",
-	"CAP_SYS_CHROOT",
-	"CAP_SYS_MODULE",
-	"CAP_SYS_NICE",
-	"CAP_SYS_PACCT",
-	"CAP_SYS_PTRACE",
-	"CAP_SYS_RAWIO",
-	"CAP_SYS_RESOURCE",
-	"CAP_SYS_TIME",
-	"CAP_SYS_TTY_CONFIG",
-	"CAP_SYSLOG",
-	"CAP_WAKE_ALARM",
-}
 
 type GardenFactory interface {
 	WireResolvConfigurer() kawasaki.DnsResolvConfigurer
@@ -129,44 +55,6 @@ type GardenFactory interface {
 	WireContainerd(*goci.BndlLoader, *processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, error)
 }
 
-// These are the maximum capabilities a non-root user gets whether privileged or unprivileged
-// In other words in a privileged container a non-root user still only gets the unprivileged set
-// plus CAP_SYS_ADMIN.
-var nonRootMaxCaps = append(unprivilegedMaxCaps, "CAP_SYS_ADMIN")
-
-var PrivilegedContainerNamespaces = []specs.LinuxNamespace{
-	goci.NetworkNamespace, goci.PIDNamespace, goci.UTSNamespace, goci.IPCNamespace, goci.MountNamespace,
-}
-
-var (
-	worldReadWrite = os.FileMode(0666)
-	fuseDevice     = specs.LinuxDevice{
-		Path:     "/dev/fuse",
-		Type:     "c",
-		Major:    10,
-		Minor:    229,
-		FileMode: &worldReadWrite,
-	}
-	allowedDevices = []specs.LinuxDeviceCgroup{
-		// runc allows these
-		{Access: "m", Type: "c", Major: deviceWildcard(), Minor: deviceWildcard(), Allow: true},
-		{Access: "m", Type: "b", Major: deviceWildcard(), Minor: deviceWildcard(), Allow: true},
-		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(3), Allow: true},          // /dev/null
-		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(8), Allow: true},          // /dev/random
-		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(7), Allow: true},          // /dev/full
-		{Access: "rwm", Type: "c", Major: intRef(5), Minor: intRef(0), Allow: true},          // /dev/tty
-		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(5), Allow: true},          // /dev/zero
-		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(9), Allow: true},          // /dev/urandom
-		{Access: "rwm", Type: "c", Major: intRef(5), Minor: intRef(1), Allow: true},          // /dev/console
-		{Access: "rwm", Type: "c", Major: intRef(136), Minor: deviceWildcard(), Allow: true}, // /dev/pts/*
-		{Access: "rwm", Type: "c", Major: intRef(5), Minor: intRef(2), Allow: true},          // /dev/ptmx
-		{Access: "rwm", Type: "c", Major: intRef(10), Minor: intRef(200), Allow: true},       // /dev/net/tun
-
-		// We allow these
-		{Access: "rwm", Type: fuseDevice.Type, Major: intRef(fuseDevice.Major), Minor: intRef(fuseDevice.Minor), Allow: true},
-	}
-)
-
 type GdnCommand struct {
 	SetupCommand  *SetupCommand  `command:"setup"`
 	ServerCommand *ServerCommand `command:"server"`
@@ -176,7 +64,7 @@ type GdnCommand struct {
 	ConfigFilePath string `long:"config" description:"Config file path."`
 }
 
-type ServerCommand struct {
+type CommonCommand struct {
 	Logger LagerFlag
 
 	Server struct {
@@ -284,167 +172,34 @@ type ServerCommand struct {
 	} `group:"Containerd"`
 }
 
-func init() {
-	if reexec.Init() {
-		os.Exit(0)
-	}
+type commandWiring struct {
+	Containerizer     *rundmc.Containerizer
+	PortPool          *ports.PortPool
+	Networker         gardener.Networker
+	Restorer          gardener.Restorer
+	Volumizer         gardener.Volumizer
+	Starter           gardener.BulkStarter
+	PeaCleaner        gardener.PeaCleaner
+	PropertiesManager *properties.Manager
 }
 
-func (cmd *ServerCommand) Execute([]string) error {
-	// gdn can be compiled for one of two possible run "modes"
-	// 1. all-in-one    - this is meant for standalone deployments
-	// 2. bosh-deployed - this is meant for deployment via BOSH
-	// when compiling an all-in-one gdn, the bindata package will contain a
-	// number of compiled assets (e.g. iptables, runc, etc.), thus we check to
-	// see if we have any compiled assets here and perform additional setup
-	// (e.g. updating bin paths to point to the compiled assets) if required
-	if len(bindata.AssetNames()) > 0 {
-		depotDir := cmd.Containers.Dir
-		err := os.MkdirAll(depotDir, 0755)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-
-		restoredAssetsDir, err := restoreUnversionedAssets(cmd.Bin.AssetsDir)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-
-		cmd.Runtime.Plugin = filepath.Join(restoredAssetsDir, "bin", "runc")
-		cmd.Bin.Dadoo = FileFlag(filepath.Join(restoredAssetsDir, "bin", "dadoo"))
-		cmd.Bin.Init = FileFlag(filepath.Join(restoredAssetsDir, "bin", "init"))
-		cmd.Bin.NSTar = FileFlag(filepath.Join(restoredAssetsDir, "bin", "nstar"))
-		cmd.Bin.Tar = FileFlag(filepath.Join(restoredAssetsDir, "bin", "tar"))
-		cmd.Bin.IPTables = FileFlag(filepath.Join(restoredAssetsDir, "sbin", "iptables"))
-		cmd.Bin.IPTablesRestore = FileFlag(filepath.Join(restoredAssetsDir, "sbin", "iptables-restore"))
-
-		if !cmd.Image.NoPlugin {
-			if cmd.Image.Plugin == "" {
-				cmd.Image.Plugin = FileFlag(filepath.Join(restoredAssetsDir, "bin", "grootfs"))
-				cmd.Image.PluginExtraArgs = append([]string{
-					"--store", "/var/lib/grootfs/store",
-					"--tardis-bin", FileFlag(filepath.Join(restoredAssetsDir, "bin", "tardis")).Path(),
-					"--log-level", cmd.Logger.LogLevel,
-				}, cmd.Image.PluginExtraArgs...)
-			}
-
-			if cmd.Image.PrivilegedPlugin == "" {
-				cmd.Image.PrivilegedPlugin = FileFlag(filepath.Join(restoredAssetsDir, "bin", "grootfs"))
-				cmd.Image.PrivilegedPluginExtraArgs = append([]string{
-					"--store", "/var/lib/grootfs/store-privileged",
-					"--tardis-bin", FileFlag(filepath.Join(restoredAssetsDir, "bin", "tardis")).Path(),
-					"--log-level", cmd.Logger.LogLevel,
-				}, cmd.Image.PrivilegedPluginExtraArgs...)
-			}
-
-			maxId := mustGetMaxValidUID()
-
-			initStoreCmd := newInitStoreCommand(cmd.Image.Plugin.Path(), cmd.Image.PluginExtraArgs)
-			initStoreCmd.Args = append(initStoreCmd.Args,
-				"--uid-mapping", fmt.Sprintf("0:%d:1", maxId),
-				"--uid-mapping", fmt.Sprintf("1:1:%d", maxId-1),
-				"--gid-mapping", fmt.Sprintf("0:%d:1", maxId),
-				"--gid-mapping", fmt.Sprintf("1:1:%d", maxId-1))
-			runCommand(initStoreCmd)
-
-			privInitStoreCmd := newInitStoreCommand(cmd.Image.PrivilegedPlugin.Path(), cmd.Image.PrivilegedPluginExtraArgs)
-			runCommand(privInitStoreCmd)
-		}
-	}
-
-	return <-ifrit.Invoke(sigmon.New(cmd)).Wait()
-}
-
-func newInitStoreCommand(pluginPath string, pluginGlobalArgs []string) *exec.Cmd {
-	return exec.Command(pluginPath, append(pluginGlobalArgs, "init-store", "--store-size-bytes", strconv.FormatInt(10*1024*1024*1024, 10))...)
-}
-
-func runCommand(cmd *exec.Cmd) {
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Err: %v Output: %s", err, string(output))
-		os.Exit(1)
-	}
-}
-
-func runningAsRoot() bool {
-	return os.Geteuid() == 0
-}
-
-func restoreUnversionedAssets(assetsDir string) (string, error) {
-	linuxAssetsDir := filepath.Join(assetsDir, "linux")
-
-	_, err := os.Stat(linuxAssetsDir)
-	if err == nil {
-		return linuxAssetsDir, nil
-	}
-
-	err = bindata.RestoreAssets(assetsDir, "linux")
-	if err != nil {
-		return "", err
-	}
-
-	return linuxAssetsDir, nil
-}
-
-func (cmd *ServerCommand) idMappings() (idmapper.MappingList, idmapper.MappingList) {
-	containerRootUID := mustGetMaxValidUID()
-	containerRootGID := mustGetMaxValidUID()
-	if !runningAsRoot() {
-		containerRootUID = os.Geteuid()
-		containerRootGID = os.Getegid()
-	}
-
-	cmd.calculateDefaultMappingLengths(containerRootUID, containerRootGID)
-
-	uidMappings := idmapper.MappingList{
-		{
-			ContainerID: 0,
-			HostID:      uint32(containerRootUID),
-			Size:        1,
-		},
-		{
-			ContainerID: 1,
-			HostID:      cmd.Containers.UIDMapStart,
-			Size:        cmd.Containers.UIDMapLength,
-		},
-	}
-	gidMappings := idmapper.MappingList{
-		{
-			ContainerID: 0,
-			HostID:      uint32(containerRootGID),
-			Size:        1,
-		},
-		{
-			ContainerID: 1,
-			HostID:      cmd.Containers.GIDMapStart,
-			Size:        cmd.Containers.GIDMapLength,
-		},
-	}
-	return uidMappings, gidMappings
-}
-
-func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
-	logger, reconfigurableSink := cmd.Logger.Logger("guardian")
-
+func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, error) {
 	factory := cmd.NewGardenFactory()
 
 	propManager, err := cmd.loadProperties(logger, cmd.Containers.PropertiesPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	portPool, err := cmd.wirePortPool(logger)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	networker, iptablesStarter, err := cmd.wireNetworker(logger, factory, propManager, portPool)
 	if err != nil {
 		logger.Error("failed-to-wire-networker", err)
-		return err
+		return nil, err
 	}
 
 	restorer := gardener.NewRestorer(networker)
@@ -468,95 +223,22 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	containerizer, err := cmd.wireContainerizer(logger, factory, propManager, volumizer, peaCleaner)
 	if err != nil {
 		logger.Error("failed-to-wire-containerizer", err)
-		return err
+		return nil, err
 	}
 
-	backend := &gardener.Gardener{
-		UidGenerator:    wireUIDGenerator(),
-		BulkStarter:     bulkStarter,
-		SysInfoProvider: sysinfo.NewResourcesProvider(cmd.Containers.Dir),
-		Networker:       networker,
-		Volumizer:       volumizer,
-		Containerizer:   containerizer,
-		PropertyManager: propManager,
-		MaxContainers:   cmd.Limits.MaxContainers,
-		Restorer:        restorer,
-		PeaCleaner:      peaCleaner,
-
-		// We want to be able to disable privileged containers independently of
-		// whether or not gdn is running as root.
-		AllowPrivilgedContainers: !cmd.Containers.DisablePrivilgedContainers,
-
-		Logger: logger,
-	}
-
-	var listenNetwork, listenAddr string
-	if cmd.Server.BindIP != nil {
-		listenNetwork = "tcp"
-		listenAddr = fmt.Sprintf("%s:%d", cmd.Server.BindIP.IP(), cmd.Server.BindPort)
-	} else {
-		listenNetwork = "unix"
-		listenAddr = cmd.Server.BindSocket
-	}
-
-	gardenServer := server.New(listenNetwork, listenAddr, cmd.Containers.DefaultGraceTime, backend, logger.Session("api"))
-
-	cmd.initializeDropsonde(logger)
-
-	metricsProvider := cmd.wireMetricsProvider(logger)
-
-	debugServerMetrics := map[string]func() int{
-		"numCPUS":       metricsProvider.NumCPU,
-		"numGoRoutines": metricsProvider.NumGoroutine,
-		"loopDevices":   metricsProvider.LoopDevices,
-		"backingStores": metricsProvider.BackingStores,
-		"depotDirs":     metricsProvider.DepotDirs,
-	}
-
-	periodicMetronMetrics := map[string]func() int{
-		"DepotDirs": metricsProvider.DepotDirs,
-	}
-
-	metronNotifier := cmd.wireMetronNotifier(logger, periodicMetronMetrics)
-	metronNotifier.Start()
-
-	if cmd.Server.DebugBindIP != nil {
-		addr := fmt.Sprintf("%s:%d", cmd.Server.DebugBindIP.IP(), cmd.Server.DebugBindPort)
-		metrics.StartDebugServer(addr, reconfigurableSink, debugServerMetrics)
-	}
-
-	if err := backend.Start(); err != nil {
-		logger.Error("starting-guardian-backend", err)
-		return err
-	}
-	if err := gardenServer.SetupBomberman(); err != nil {
-		logger.Error("setting-up-bomberman", err)
-		return err
-	}
-	if err := startServer(gardenServer, logger); err != nil {
-		return err
-	}
-
-	close(ready)
-
-	logger.Info("started", lager.Data{
-		"network": listenNetwork,
-		"addr":    listenAddr,
-	})
-
-	<-signals
-
-	gardenServer.Stop()
-
-	cmd.saveProperties(logger, cmd.Containers.PropertiesPath, propManager)
-
-	portPoolState := portPool.RefreshState()
-	ports.SaveState(cmd.Network.PortPoolPropertiesPath, portPoolState)
-
-	return nil
+	return &commandWiring{
+		Containerizer:     containerizer,
+		Networker:         networker,
+		PortPool:          portPool,
+		Restorer:          restorer,
+		Volumizer:         volumizer,
+		Starter:           bulkStarter,
+		PeaCleaner:        peaCleaner,
+		PropertiesManager: propManager,
+	}, nil
 }
 
-func (cmd *ServerCommand) wirePeaCleaner(factory GardenFactory, volumizer gardener.Volumizer) gardener.PeaCleaner {
+func (cmd *CommonCommand) wirePeaCleaner(factory GardenFactory, volumizer gardener.Volumizer) gardener.PeaCleaner {
 	cmdRunner := factory.CommandRunner()
 	runcLogRunner := runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile)
 	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin, Root: cmd.computeRuncRoot()}
@@ -566,57 +248,7 @@ func (cmd *ServerCommand) wirePeaCleaner(factory GardenFactory, volumizer garden
 	return peas.NewPeaCleaner(runcDeleter, volumizer, cmd.Containers.Dir)
 }
 
-func (cmd *ServerCommand) calculateDefaultMappingLengths(containerRootUID, containerRootGID int) {
-	if cmd.Containers.UIDMapLength == 0 {
-		cmd.Containers.UIDMapLength = uint32(containerRootUID) - cmd.Containers.UIDMapStart
-	}
-
-	if cmd.Containers.GIDMapLength == 0 {
-		cmd.Containers.GIDMapLength = uint32(containerRootGID) - cmd.Containers.GIDMapStart
-	}
-}
-
-func wireUIDGenerator() gardener.UidGeneratorFunc {
-	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
-}
-
-func startServer(gardenServer *server.GardenServer, logger lager.Logger) error {
-	socketFDStr := os.Getenv("SOCKET2ME_FD")
-	if socketFDStr == "" {
-		go func() {
-			if err := gardenServer.ListenAndServe(); err != nil {
-				logger.Fatal("failed-to-start-server", err)
-			}
-		}()
-		return nil
-	}
-
-	socketFD, err := strconv.Atoi(socketFDStr)
-	if err != nil {
-		return err
-	}
-
-	if err = ensureServerSocketDoesNotLeak(uintptr(socketFD)); err != nil {
-		logger.Error("failed-to-set-cloexec-on-server-socket", err)
-		return err
-	}
-
-	listener, err := net.FileListener(os.NewFile(uintptr(socketFD), fmt.Sprintf("/proc/self/fd/%d", socketFD)))
-	if err != nil {
-		logger.Error("failed-to-listen-on-socket-fd", err)
-		return err
-	}
-
-	go func() {
-		if err := gardenServer.Serve(listener); err != nil {
-			logger.Fatal("failed-to-start-server", err)
-		}
-	}()
-
-	return nil
-}
-
-func (cmd *ServerCommand) loadProperties(logger lager.Logger, propertiesPath string) (*properties.Manager, error) {
+func (cmd *CommonCommand) loadProperties(logger lager.Logger, propertiesPath string) (*properties.Manager, error) {
 	propManager, err := properties.Load(propertiesPath)
 	if err != nil {
 		logger.Error("failed-to-load-properties", err, lager.Data{"propertiesPath": propertiesPath})
@@ -626,16 +258,7 @@ func (cmd *ServerCommand) loadProperties(logger lager.Logger, propertiesPath str
 	return propManager, nil
 }
 
-func (cmd *ServerCommand) saveProperties(logger lager.Logger, propertiesPath string, propManager *properties.Manager) {
-	if propertiesPath != "" {
-		err := properties.Save(propertiesPath, propManager)
-		if err != nil {
-			logger.Error("failed-to-save-properties", err, lager.Data{"propertiesPath": propertiesPath})
-		}
-	}
-}
-
-func (cmd *ServerCommand) wirePortPool(logger lager.Logger) (*ports.PortPool, error) {
+func (cmd *CommonCommand) wirePortPool(logger lager.Logger) (*ports.PortPool, error) {
 	portPoolState, err := ports.LoadState(cmd.Network.PortPoolPropertiesPath)
 	if err != nil {
 		if _, ok := err.(ports.StateFileNotFoundError); ok {
@@ -656,7 +279,7 @@ func (cmd *ServerCommand) wirePortPool(logger lager.Logger) (*ports.PortPool, er
 	return portPool, nil
 }
 
-func (cmd *ServerCommand) wireDepot(bundleGenerator depot.BundleGenerator, bundleSaver depot.BundleSaver, bindMountSourceCreator depot.BindMountSourceCreator) *depot.DirectoryDepot {
+func (cmd *CommonCommand) wireDepot(bundleGenerator depot.BundleGenerator, bundleSaver depot.BundleSaver, bindMountSourceCreator depot.BindMountSourceCreator) *depot.DirectoryDepot {
 	return depot.New(cmd.Containers.Dir, bundleGenerator, bundleSaver, bindMountSourceCreator)
 }
 
@@ -668,7 +291,7 @@ func extractIPs(ipflags []IPFlag) []net.IP {
 	return ips
 }
 
-func (cmd *ServerCommand) wireNetworker(log lager.Logger, factory GardenFactory, propManager kawasaki.ConfigStore, portPool *ports.PortPool) (gardener.Networker, gardener.Starter, error) {
+func (cmd *CommonCommand) wireNetworker(log lager.Logger, factory GardenFactory, propManager kawasaki.ConfigStore, portPool *ports.PortPool) (gardener.Networker, gardener.Starter, error) {
 	externalIP, err := defaultExternalIP(cmd.Network.ExternalIP)
 	if err != nil {
 		return nil, nil, err
@@ -730,7 +353,7 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, factory GardenFactory,
 	return networker, ipTablesStarter, nil
 }
 
-func (cmd *ServerCommand) wireImagePlugin(commandRunner commandrunner.CommandRunner, uid, gid int) gardener.Volumizer {
+func (cmd *CommonCommand) wireImagePlugin(commandRunner commandrunner.CommandRunner, uid, gid int) gardener.Volumizer {
 	var unprivilegedCommandCreator imageplugin.CommandCreator = &imageplugin.NotImplementedCommandCreator{
 		Err: errors.New("no image_plugin provided"),
 	}
@@ -764,7 +387,7 @@ func (cmd *ServerCommand) wireImagePlugin(commandRunner commandrunner.CommandRun
 	return gardener.NewVolumeProvider(imagePlugin, imagePlugin, gardener.CommandFactory(preparerootfs.Command), commandRunner, uid, gid)
 }
 
-func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFactory,
+func (cmd *CommonCommand) wireContainerizer(log lager.Logger, factory GardenFactory,
 	properties gardener.PropertyManager, volumizer peas.Volumizer, peaCleaner gardener.PeaCleaner) (*rundmc.Containerizer, error) {
 
 	initMount, initPath := initBindMountAndPath(cmd.Bin.Init.Path())
@@ -933,7 +556,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	return rundmc.New(depot, runner, bndlLoader, nstar, stopper, eventStore, stateStore, factory.WireRootfsFileCreator(), peaCreator, peaUsernameResolver, cmd.Metrics.CPUEntitlementPerShare), nil
 }
 
-func (cmd *ServerCommand) useContainerd() bool {
+func (cmd *CommonCommand) useContainerd() bool {
 	return cmd.Containerd.Socket != ""
 }
 
@@ -945,14 +568,61 @@ func wirePidfileReader() *pid.FileReader {
 	}
 }
 
-func (cmd *ServerCommand) wireMetricsProvider(log lager.Logger) *metrics.MetricsProvider {
+func (cmd *CommonCommand) wireMetricsProvider(log lager.Logger) *metrics.MetricsProvider {
 	return metrics.NewMetricsProvider(log, cmd.Containers.Dir)
 }
 
-func (cmd *ServerCommand) wireMetronNotifier(log lager.Logger, metricsProvider metrics.Metrics) *metrics.PeriodicMetronNotifier {
+func (cmd *CommonCommand) wireMetronNotifier(log lager.Logger, metricsProvider metrics.Metrics) *metrics.PeriodicMetronNotifier {
 	return metrics.NewPeriodicMetronNotifier(
 		log, metricsProvider, cmd.Metrics.EmissionInterval, clock.NewClock(),
 	)
+}
+
+func (cmd *CommonCommand) idMappings() (idmapper.MappingList, idmapper.MappingList) {
+	containerRootUID := mustGetMaxValidUID()
+	containerRootGID := mustGetMaxValidUID()
+	if !runningAsRoot() {
+		containerRootUID = os.Geteuid()
+		containerRootGID = os.Getegid()
+	}
+
+	cmd.calculateDefaultMappingLengths(containerRootUID, containerRootGID)
+
+	uidMappings := idmapper.MappingList{
+		{
+			ContainerID: 0,
+			HostID:      uint32(containerRootUID),
+			Size:        1,
+		},
+		{
+			ContainerID: 1,
+			HostID:      cmd.Containers.UIDMapStart,
+			Size:        cmd.Containers.UIDMapLength,
+		},
+	}
+	gidMappings := idmapper.MappingList{
+		{
+			ContainerID: 0,
+			HostID:      uint32(containerRootGID),
+			Size:        1,
+		},
+		{
+			ContainerID: 1,
+			HostID:      cmd.Containers.GIDMapStart,
+			Size:        cmd.Containers.GIDMapLength,
+		},
+	}
+	return uidMappings, gidMappings
+}
+
+func (cmd *CommonCommand) calculateDefaultMappingLengths(containerRootUID, containerRootGID int) {
+	if cmd.Containers.UIDMapLength == 0 {
+		cmd.Containers.UIDMapLength = uint32(containerRootUID) - cmd.Containers.UIDMapStart
+	}
+
+	if cmd.Containers.GIDMapLength == 0 {
+		cmd.Containers.GIDMapLength = uint32(containerRootGID) - cmd.Containers.GIDMapStart
+	}
 }
 
 func wireBindMountSourceCreator(uidMappings, gidMappings idmapper.MappingList) depot.BindMountSourceCreator {
@@ -961,13 +631,6 @@ func wireBindMountSourceCreator(uidMappings, gidMappings idmapper.MappingList) d
 		Chowner:              &depot.OSChowner{},
 		ContainerRootHostUID: uidMappings.Map(0),
 		ContainerRootHostGID: gidMappings.Map(0),
-	}
-}
-
-func (cmd *ServerCommand) initializeDropsonde(log lager.Logger) {
-	err := dropsonde.Initialize(cmd.Metrics.DropsondeDestination, cmd.Metrics.DropsondeOrigin)
-	if err != nil {
-		log.Error("failed to initialize dropsonde", err)
 	}
 }
 
@@ -995,28 +658,4 @@ func defaultMaskedPaths() []string {
 		"/proc/keys",
 		"/sys/firmware",
 	}
-}
-
-func mustStringify(s interface{}, e error) string {
-	if e != nil {
-		panic(e)
-	}
-
-	return fmt.Sprintf("%s", s)
-}
-
-func mustOpen(path string) io.ReadCloser {
-	if r, err := os.Open(path); err != nil {
-		panic(err)
-	} else {
-		return r
-	}
-}
-
-func deviceWildcard() *int64 {
-	return intRef(-1)
-}
-
-func intRef(i int64) *int64 {
-	return &i
 }

@@ -34,14 +34,14 @@ import (
 )
 
 type LinuxFactory struct {
-	config           *ServerCommand
+	config           *CommonCommand
 	commandRunner    commandrunner.CommandRunner
 	signallerFactory *signals.SignallerFactory
 	uidMappings      idmapper.MappingList
 	gidMappings      idmapper.MappingList
 }
 
-func (cmd *ServerCommand) NewGardenFactory() GardenFactory {
+func (cmd *CommonCommand) NewGardenFactory() GardenFactory {
 	uidMappings, gidMappings := cmd.idMappings()
 	return &LinuxFactory{
 		config:           cmd,
@@ -230,7 +230,7 @@ func containerdRuncRoot() string {
 	return proc.RuncRoot
 }
 
-func (cmd *ServerCommand) computeRuncRoot() string {
+func (cmd *CommonCommand) computeRuncRoot() string {
 	if cmd.useContainerd() {
 		return filepath.Join(containerdRuncRoot(), containerdNamespace)
 	}
