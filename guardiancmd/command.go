@@ -35,10 +35,12 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/pid"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/rundmc/users"
+	"code.cloudfoundry.org/guardian/sysinfo"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/localip"
 	"github.com/eapache/go-resiliency/retrier"
+	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -56,8 +58,9 @@ type GardenFactory interface {
 }
 
 type GdnCommand struct {
-	SetupCommand  *SetupCommand  `command:"setup"`
-	ServerCommand *ServerCommand `command:"server"`
+	SetupCommand   *SetupCommand   `command:"setup"`
+	ServerCommand  *ServerCommand  `command:"server"`
+	CleanupCommand *CleanupCommand `command:"cleanup"`
 
 	// This must be present to stop go-flags complaining, but it's not actually
 	// used. We parse this flag outside of the go-flags framework.
@@ -181,6 +184,30 @@ type commandWiring struct {
 	Starter           gardener.BulkStarter
 	PeaCleaner        gardener.PeaCleaner
 	PropertiesManager *properties.Manager
+	UidGenerator      gardener.UidGeneratorFunc
+	SysInfoProvider   gardener.SysInfoProvider
+	Logger            lager.Logger
+}
+
+func (cmd *CommonCommand) createGardener(wiring *commandWiring) *gardener.Gardener {
+	return &gardener.Gardener{
+		UidGenerator:    wiring.UidGenerator,
+		BulkStarter:     wiring.Starter,
+		SysInfoProvider: wiring.SysInfoProvider,
+		Networker:       wiring.Networker,
+		Volumizer:       wiring.Volumizer,
+		Containerizer:   wiring.Containerizer,
+		PropertyManager: wiring.PropertiesManager,
+		MaxContainers:   cmd.Limits.MaxContainers,
+		Restorer:        wiring.Restorer,
+		PeaCleaner:      wiring.PeaCleaner,
+
+		// We want to be able to disable privileged containers independently of
+		// whether or not gdn is running as root.
+		AllowPrivilgedContainers: !cmd.Containers.DisablePrivilgedContainers,
+
+		Logger: wiring.Logger,
+	}
 }
 
 func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, error) {
@@ -235,6 +262,9 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 		Starter:           bulkStarter,
 		PeaCleaner:        peaCleaner,
 		PropertiesManager: propManager,
+		UidGenerator:      wireUIDGenerator(),
+		SysInfoProvider:   sysinfo.NewResourcesProvider(cmd.Containers.Dir),
+		Logger:            logger,
 	}, nil
 }
 
@@ -256,6 +286,15 @@ func (cmd *CommonCommand) loadProperties(logger lager.Logger, propertiesPath str
 	}
 
 	return propManager, nil
+}
+
+func (cmd *CommonCommand) saveProperties(logger lager.Logger, propertiesPath string, propManager *properties.Manager) {
+	if propertiesPath != "" {
+		err := properties.Save(propertiesPath, propManager)
+		if err != nil {
+			logger.Error("failed-to-save-properties", err, lager.Data{"propertiesPath": propertiesPath})
+		}
+	}
 }
 
 func (cmd *CommonCommand) wirePortPool(logger lager.Logger) (*ports.PortPool, error) {
@@ -623,6 +662,10 @@ func (cmd *CommonCommand) calculateDefaultMappingLengths(containerRootUID, conta
 	if cmd.Containers.GIDMapLength == 0 {
 		cmd.Containers.GIDMapLength = uint32(containerRootGID) - cmd.Containers.GIDMapStart
 	}
+}
+
+func wireUIDGenerator() gardener.UidGeneratorFunc {
+	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
 }
 
 func wireBindMountSourceCreator(uidMappings, gidMappings idmapper.MappingList) depot.BindMountSourceCreator {
