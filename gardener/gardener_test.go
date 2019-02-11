@@ -24,8 +24,8 @@ var _ = Describe("Gardener", func() {
 		volumizer       *fakes.FakeVolumizer
 		containerizer   *fakes.FakeContainerizer
 		uidGenerator    *fakes.FakeUidGenerator
-		fakeBulkStarter *fakes.FakeBulkStarter
-		fakePeaCleaner  *fakes.FakePeaCleaner
+		bulkStarter     *fakes.FakeBulkStarter
+		peaCleaner      *fakes.FakePeaCleaner
 		sysinfoProvider *fakes.FakeSysInfoProvider
 		propertyManager *fakes.FakePropertyManager
 		restorer        *fakes.FakeRestorer
@@ -39,8 +39,8 @@ var _ = Describe("Gardener", func() {
 		logger = lagertest.NewTestLogger("test")
 		containerizer = new(fakes.FakeContainerizer)
 		uidGenerator = new(fakes.FakeUidGenerator)
-		fakeBulkStarter = new(fakes.FakeBulkStarter)
-		fakePeaCleaner = new(fakes.FakePeaCleaner)
+		bulkStarter = new(fakes.FakeBulkStarter)
+		peaCleaner = new(fakes.FakePeaCleaner)
 		networker = new(fakes.FakeNetworker)
 		volumizer = new(fakes.FakeVolumizer)
 		sysinfoProvider = new(fakes.FakeSysInfoProvider)
@@ -55,13 +55,13 @@ var _ = Describe("Gardener", func() {
 			SysInfoProvider:          sysinfoProvider,
 			Containerizer:            containerizer,
 			UidGenerator:             uidGenerator,
-			BulkStarter:              fakeBulkStarter,
+			BulkStarter:              bulkStarter,
 			Networker:                networker,
 			Volumizer:                volumizer,
 			Logger:                   logger,
 			PropertyManager:          propertyManager,
 			Restorer:                 restorer,
-			PeaCleaner:               fakePeaCleaner,
+			PeaCleaner:               peaCleaner,
 			MaxContainers:            0,
 			AllowPrivilgedContainers: false,
 		}
@@ -682,12 +682,12 @@ var _ = Describe("Gardener", func() {
 		It("calls the bulk starter", func() {
 			Expect(gdnr.Start()).To(Succeed())
 
-			Expect(fakeBulkStarter.StartAllCallCount()).To(Equal(1))
+			Expect(bulkStarter.StartAllCallCount()).To(Equal(1))
 		})
 
 		Context("when the bulk starter fails", func() {
 			BeforeEach(func() {
-				fakeBulkStarter.StartAllReturns(errors.New("boom"))
+				bulkStarter.StartAllReturns(errors.New("boom"))
 			})
 
 			It("returns the error", func() {
@@ -722,12 +722,12 @@ var _ = Describe("Gardener", func() {
 
 		It("should cleanup peas", func() {
 			Expect(gdnr.Start()).To(Succeed())
-			Expect(fakePeaCleaner.CleanAllCallCount()).To(Equal(1))
+			Expect(peaCleaner.CleanAllCallCount()).To(Equal(1))
 		})
 
 		Context("when the bulk starter fails", func() {
 			BeforeEach(func() {
-				fakePeaCleaner.CleanAllReturns(errors.New("bam"))
+				peaCleaner.CleanAllReturns(errors.New("bam"))
 			})
 
 			It("returns the error", func() {
