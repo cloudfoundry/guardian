@@ -298,7 +298,7 @@ func (g *Gardener) Destroy(handle string) error {
 		return err
 	}
 
-	if !g.exists(handles, handle) {
+	if !exists(handles, handle) {
 		return garden.ContainerNotFoundError{Handle: handle}
 	}
 
@@ -434,14 +434,14 @@ func (g *Gardener) BulkMetrics(handles []string) (map[string]garden.ContainerMet
 }
 
 func (g *Gardener) checkDuplicateHandle(knownHandles []string, handle string) error {
-	if g.exists(knownHandles, handle) {
+	if exists(knownHandles, handle) {
 		return fmt.Errorf("Handle '%s' already in use", handle)
 	}
 
 	return nil
 }
 
-func (g *Gardener) exists(handles []string, handle string) bool {
+func exists(handles []string, handle string) bool {
 	for _, h := range handles {
 		if h == handle {
 			return true
