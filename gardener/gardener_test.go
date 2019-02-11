@@ -30,7 +30,7 @@ var _ = Describe("Gardener", func() {
 		propertyManager *fakes.FakePropertyManager
 		restorer        *fakes.FakeRestorer
 
-		logger lager.Logger
+		logger *lagertest.TestLogger
 
 		gdnr *gardener.Gardener
 	)
@@ -717,7 +717,7 @@ var _ = Describe("Gardener", func() {
 
 		It("should return the error when it failes to get a list of handles", func() {
 			containerizer.HandlesReturns([]string{}, errors.New("banana"))
-			Expect(gdnr.Start()).To(MatchError("banana"))
+			Expect(gdnr.Start()).To(MatchError("cleanup: banana"))
 		})
 
 		It("should cleanup peas", func() {
@@ -931,6 +931,172 @@ var _ = Describe("Gardener", func() {
 			It("returns the error", func() {
 				err := gdnr.Destroy("some-handle")
 				Expect(err).To(MatchError("bundle removal failed"))
+			})
+		})
+	})
+
+	Describe("Cleanup", func() {
+		var cleanupErr error
+
+		BeforeEach(func() {
+			restorer.RestoreReturns([]string{"unrestorable-handle-1", "unrestorable-handle-2"})
+		})
+
+		JustBeforeEach(func() {
+			cleanupErr = gdnr.Cleanup(logger)
+		})
+
+		It("succeeds", func() {
+			Expect(cleanupErr).NotTo(HaveOccurred())
+		})
+
+		It("cleans all peas", func() {
+			Expect(peaCleaner.CleanAllCallCount()).To(Equal(1))
+			actualLogger := peaCleaner.CleanAllArgsForCall(0)
+			Expect(actualLogger).To(Equal(logger))
+		})
+
+		It("tries to restore all handles", func() {
+			Expect(restorer.RestoreCallCount()).To(Equal(1))
+			actualLogger, actualRestoredHandles := restorer.RestoreArgsForCall(0)
+			Expect(actualLogger).To(Equal(logger))
+			Expect(actualRestoredHandles).To(Equal([]string{"some-handle"}))
+		})
+
+		It("destroys every handle that couldn't be restored", func() {
+			handles := []string{"unrestorable-handle-1", "unrestorable-handle-2"}
+
+			Expect(containerizer.DestroyCallCount()).To(Equal(len(handles)))
+			for i, handle := range handles {
+				_, actualHandle := containerizer.DestroyArgsForCall(i)
+				Expect(actualHandle).To(Equal(handle))
+			}
+
+			Expect(networker.DestroyCallCount()).To(Equal(len(handles)))
+			for i, handle := range handles {
+				_, actualHandle := networker.DestroyArgsForCall(i)
+				Expect(actualHandle).To(Equal(handle))
+			}
+
+			Expect(volumizer.DestroyCallCount()).To(Equal(len(handles)))
+			for i, handle := range handles {
+				_, actualhandle := volumizer.DestroyArgsForCall(i)
+				Expect(actualhandle).To(Equal(handle))
+			}
+
+			Expect(propertyManager.DestroyKeySpaceCallCount()).To(Equal(len(handles)))
+			for i, handle := range handles {
+				actualhandle := propertyManager.DestroyKeySpaceArgsForCall(i)
+				Expect(actualhandle).To(Equal(handle))
+			}
+
+			Expect(containerizer.RemoveBundleCallCount()).To(Equal(len(handles)))
+			for i, handle := range handles {
+				_, actualHandle := containerizer.RemoveBundleArgsForCall(i)
+				Expect(actualHandle).To(Equal(handle))
+			}
+		})
+
+		Context("when pea cleanup fails", func() {
+			BeforeEach(func() {
+				peaCleaner.CleanAllReturns(errors.New("pea-cleanup-failure"))
+			})
+
+			It("returns the error", func() {
+				Expect(cleanupErr).To(MatchError("clean peas: pea-cleanup-failure"))
+			})
+
+			It("exits", func() {
+				Expect(restorer.RestoreCallCount()).To(Equal(0))
+				Expect(containerizer.DestroyCallCount()).To(Equal(0))
+				Expect(networker.DestroyCallCount()).To(Equal(0))
+				Expect(volumizer.DestroyCallCount()).To(Equal(0))
+				Expect(propertyManager.DestroyKeySpaceCallCount()).To(Equal(0))
+				Expect(containerizer.RemoveBundleCallCount()).To(Equal(0))
+			})
+		})
+
+		Context("when retrieving the list of handles fails", func() {
+			BeforeEach(func() {
+				containerizer.HandlesReturns(nil, errors.New("handles-failure"))
+			})
+
+			It("returns the error", func() {
+				Expect(cleanupErr).To(MatchError("handles-failure"))
+			})
+
+			It("exits", func() {
+				Expect(restorer.RestoreCallCount()).To(Equal(0))
+				Expect(containerizer.DestroyCallCount()).To(Equal(0))
+				Expect(networker.DestroyCallCount()).To(Equal(0))
+				Expect(volumizer.DestroyCallCount()).To(Equal(0))
+				Expect(propertyManager.DestroyKeySpaceCallCount()).To(Equal(0))
+				Expect(containerizer.RemoveBundleCallCount()).To(Equal(0))
+			})
+		})
+
+		Context("when destroying one of the unrestorable containers fails", func() {
+			BeforeEach(func() {
+				containerizer.DestroyReturnsOnCall(0, errors.New("containerizer-failure"))
+				containerizer.DestroyReturnsOnCall(1, nil)
+			})
+
+			It("logs the failure and carries on", func() {
+				Expect(cleanupErr).NotTo(HaveOccurred())
+				Expect(containerizer.DestroyCallCount()).To(Equal(2))
+				Expect(logger.Errors[0]).To(MatchError("containerizer-failure"))
+			})
+		})
+
+		Context("when destroying one of the networks", func() {
+			BeforeEach(func() {
+				networker.DestroyReturnsOnCall(0, errors.New("networker-failure"))
+				networker.DestroyReturnsOnCall(1, nil)
+			})
+
+			It("logs the failure and carries on", func() {
+				Expect(cleanupErr).NotTo(HaveOccurred())
+				Expect(networker.DestroyCallCount()).To(Equal(2))
+				Expect(logger.Errors[0]).To(MatchError("networker-failure"))
+			})
+		})
+
+		Context("when destroying one of the volumes", func() {
+			BeforeEach(func() {
+				volumizer.DestroyReturnsOnCall(0, errors.New("volumizer-failure"))
+				volumizer.DestroyReturnsOnCall(1, nil)
+			})
+
+			It("logs the failure and carries on", func() {
+				Expect(cleanupErr).NotTo(HaveOccurred())
+				Expect(volumizer.DestroyCallCount()).To(Equal(2))
+				Expect(logger.Errors[0]).To(MatchError("volumizer-failure"))
+			})
+		})
+
+		Context("when destroying one of the property key spaces", func() {
+			BeforeEach(func() {
+				propertyManager.DestroyKeySpaceReturnsOnCall(0, errors.New("property-manager-failure"))
+				propertyManager.DestroyKeySpaceReturnsOnCall(1, nil)
+			})
+
+			It("logs the failure and carries on", func() {
+				Expect(cleanupErr).NotTo(HaveOccurred())
+				Expect(propertyManager.DestroyKeySpaceCallCount()).To(Equal(2))
+				Expect(logger.Errors[0]).To(MatchError("property-manager-failure"))
+			})
+		})
+
+		Context("when removing one of the bundles fails", func() {
+			BeforeEach(func() {
+				containerizer.RemoveBundleReturnsOnCall(0, errors.New("depot-failure"))
+				containerizer.RemoveBundleReturnsOnCall(1, nil)
+			})
+
+			It("logs the failure and carries on", func() {
+				Expect(cleanupErr).NotTo(HaveOccurred())
+				Expect(containerizer.RemoveBundleCallCount()).To(Equal(2))
+				Expect(logger.Errors[0]).To(MatchError("depot-failure"))
 			})
 		})
 	})

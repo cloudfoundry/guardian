@@ -477,6 +477,14 @@ func (g *Gardener) Start() error {
 		return fmt.Errorf("bulk starter: %s", err)
 	}
 
+	if err := g.Cleanup(log); err != nil {
+		return fmt.Errorf("cleanup: %s", err)
+	}
+
+	return nil
+}
+
+func (g *Gardener) Cleanup(log lager.Logger) error {
 	if err := g.PeaCleaner.CleanAll(log); err != nil {
 		return fmt.Errorf("clean peas: %s", err)
 	}
