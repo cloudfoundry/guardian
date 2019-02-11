@@ -543,7 +543,7 @@
     "libcontainer/utils",
   ]
   pruneopts = "UT"
-  revision = "4e4c90719304d3ca4a189e70261f56f238b1acab"
+  revision = "dd023c457d84de44fa61e6ff0e0cf6a0edd1005e"
 
 [[projects]]
   digest = "1:f0babbbbff9937ca3f623de4e73e0faadf58379479406fded2014b9e0d585150"
