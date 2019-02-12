@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
@@ -26,6 +25,7 @@ import (
 	errorspkg "github.com/pkg/errors"
 	"github.com/tscolari/lagregator"
 	shortid "github.com/ventu-io/go-shortid"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -84,7 +84,7 @@ func (d *Driver) DeInitFilesystem(logger lager.Logger, storePath string) error {
 		return nil
 	}
 
-	if err := syscall.Unmount(storePath, 0); err != nil {
+	if err := unix.Unmount(storePath, 0); err != nil {
 		logger.Error("unmounting-store-path-failed", err, lager.Data{"storePath": storePath})
 		return errorspkg.Wrapf(err, "unmounting store path")
 	}
@@ -462,7 +462,7 @@ func (d *Driver) mountImage(logger lager.Logger, rootfsDir, mountData string) er
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	if err := syscall.Mount("overlay", rootfsDir, "overlay", 0, mountData); err != nil {
+	if err := unix.Mount("overlay", rootfsDir, "overlay", 0, mountData); err != nil {
 		logger.Error("failed", err, lager.Data{"mountData": mountData, "rootfsDir": rootfsDir})
 		return errorspkg.Wrap(err, "mounting overlay")
 	}
@@ -617,7 +617,7 @@ func calculatePathSize(logger lager.Logger, path string) (int64, error) {
 func (d *Driver) createWhiteoutDevice(logger lager.Logger, storePath string, ownerUID, ownerGID int) error {
 	whiteoutDevicePath := filepath.Join(storePath, WhiteoutDevice)
 	if _, err := os.Stat(whiteoutDevicePath); os.IsNotExist(err) {
-		if err := syscall.Mknod(whiteoutDevicePath, syscall.S_IFCHR, 0); err != nil {
+		if err := unix.Mknod(whiteoutDevicePath, unix.S_IFCHR, 0); err != nil {
 			if err != nil && !os.IsExist(err) {
 				logger.Error("creating-whiteout-device-failed", err, lager.Data{"path": whiteoutDevicePath})
 				return errorspkg.Wrapf(err, "failed to create whiteout device %s", whiteoutDevicePath)
@@ -635,14 +635,13 @@ func (d *Driver) createWhiteoutDevice(logger lager.Logger, storePath string, own
 func (d *Driver) validateWhiteoutDevice(storePath string) error {
 	path := filepath.Join(storePath, WhiteoutDevice)
 
-	stat, err := os.Stat(path)
-	if err != nil && !os.IsExist(err) {
+	var stat unix.Stat_t
+	if err := unix.Stat(path, &stat); err != nil && !os.IsExist(err) {
 		return err
 	}
 
-	statT := stat.Sys().(*syscall.Stat_t)
-	if statT.Rdev != 0 || (stat.Mode()&os.ModeCharDevice) != os.ModeCharDevice {
-		return errorspkg.Errorf("the whiteout device file is not a valid device %s", path)
+	if stat.Rdev != 0 || (stat.Mode&unix.S_IFMT) != unix.S_IFCHR {
+		return errorspkg.Errorf("the whiteout device file is not a valid device: %s (device: %d)", path, stat.Mode&unix.S_IFMT)
 	}
 
 	return nil
@@ -764,22 +763,18 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 }
 
 func ensureImageDestroyed(logger lager.Logger, imagePath string) error {
-	if err := syscall.Unmount(filepath.Join(imagePath, RootfsDir), 0); err != nil {
+	if err := unix.Unmount(filepath.Join(imagePath, RootfsDir), 0); err != nil {
 		logger.Info("unmount image path failed", lager.Data{"path": imagePath, "error": err})
 	}
 	return removeall.RemoveAll(imagePath)
 }
 
 func getDeviceForFile(path string) (uint64, error) {
-	info, err := os.Stat(path)
-	if err != nil {
+	var stat unix.Stat_t
+	if err := unix.Stat(path, &stat); err != nil {
 		return 0, errorspkg.Wrap(err, "stat image path")
 	}
 
-	stat, ok := info.Sys().(*syscall.Stat_t)
-	if !ok {
-		return 0, fmt.Errorf("failed to stat %s", path)
-	}
 	return stat.Dev, nil
 }
 
