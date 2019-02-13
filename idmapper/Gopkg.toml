@@ -24,18 +24,25 @@
 #   go-tests = true
 #   unused-packages = true
 
+# we should be able to get rid of this line when https://github.com/golang/dep/issues/1799 gets fixed
+required = ["gopkg.in/fsnotify.v1"]
 
 [[constraint]]
   name = "github.com/onsi/ginkgo"
-  version = "1.3.1"
+  version = "1.7.0"
 
 [[constraint]]
   name = "github.com/onsi/gomega"
-  version = "1.1.0"
+  version = "1.4.3"
 
 [[constraint]]
   name = "github.com/opencontainers/runtime-spec"
   version = "1.0.1"
+
+# we should be able to get rid of this line when https://github.com/golang/dep/issues/1799 gets fixed
+[[constraint]]
+  name = "gopkg.in/fsnotify.v1"
+  source = "https://github.com/fsnotify/fsnotify.git"
 
 [prune]
   go-tests = true
