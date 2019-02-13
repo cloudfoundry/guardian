@@ -35,7 +35,7 @@
 
 [[constraint]]
   name = "github.com/opencontainers/runtime-spec"
-  version = "1.0.0-rc5"
+  version = "1.0.1"
 
 [prune]
   go-tests = true

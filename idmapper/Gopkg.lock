@@ -22,7 +22,7 @@
     "reporters/stenographer",
     "reporters/stenographer/support/go-colorable",
     "reporters/stenographer/support/go-isatty",
-    "types",
+    "types"
   ]
   pruneopts = "UT"
   revision = "77a8c1e5c40d6bb6c5eb4dd4bdce9763564f6298"
@@ -45,19 +45,19 @@
     "matchers/support/goraph/edge",
     "matchers/support/goraph/node",
     "matchers/support/goraph/util",
-    "types",
+    "types"
   ]
   pruneopts = "UT"
   revision = "334b8f472b3af5d541c5642701c1e29e2126f486"
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:7ac8d1611821c05e78c2692d0facb1b74c89884df26f32fb478c5697af2a9c1f"
+  digest = "1:57234a321bf1f8f98a8a9a5122a2404cc60d0800516f4ab7a7b2375e4b2d19ea"
   name = "github.com/opencontainers/runtime-spec"
   packages = ["specs-go"]
   pruneopts = "UT"
-  revision = "035da1dca3dfbb00d752eb58b0b158d6129f3776"
-  version = "v1.0.0-rc5"
+  revision = "4e3b9264a330d094b0386c3703c5f379119711e8"
+  version = "v1.0.1"
 
 [[projects]]
   digest = "1:62d32e3ab9655bb0124b5d7a87eed55c6606a5488290111bd2a06a5f01baba1d"
@@ -82,7 +82,7 @@
     "github.com/onsi/gomega",
     "github.com/onsi/gomega/gbytes",
     "github.com/onsi/gomega/gexec",
-    "github.com/opencontainers/runtime-spec/specs-go",
+    "github.com/opencontainers/runtime-spec/specs-go"
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
