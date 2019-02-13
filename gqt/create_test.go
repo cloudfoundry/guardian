@@ -394,7 +394,7 @@ var _ = Describe("Creating a Container", func() {
 			cpuset := strings.TrimSpace(readFileString(fmt.Sprintf("/proc/%d/cpuset", clientPid)))
 			cpuset = strings.TrimLeft(cpuset, "/")
 
-			cpuSharesPath := fmt.Sprintf("%s/cpu/%s/garden-%s/%s/cpu.shares",
+			cpuSharesPath := fmt.Sprintf("%s/cpu/system.slice/garden.service/%s/garden-%s/%s/cpu.shares",
 				client.CgroupsRootPath(), cpuset, config.Tag, container.Handle())
 
 			cpuShares := strings.TrimSpace(readFileString(cpuSharesPath))
