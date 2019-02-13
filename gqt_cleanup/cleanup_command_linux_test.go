@@ -72,3 +72,7 @@ var _ = Describe("gdn cleanup", func() {
 		Expect(manager.All(containerHandle)).To(BeEmpty())
 	})
 })
+
+func boolptr(b bool) *bool {
+	return &b
+}
