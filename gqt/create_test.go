@@ -390,21 +390,19 @@ var _ = Describe("Creating a Container", func() {
 			return container, err
 		}
 
-		checkCPUSharesInContainer := func(container garden.Container, clientPid int, expected int) {
-			cpuset := strings.TrimSpace(readFileString(fmt.Sprintf("/proc/%d/cpuset", clientPid)))
-			cpuset = strings.TrimLeft(cpuset, "/")
-
-			cpuSharesPath := fmt.Sprintf("%s/cpu/system.slice/garden.service/%s/garden-%s/%s/cpu.shares",
-				client.CgroupsRootPath(), cpuset, config.Tag, container.Handle())
-
+		getContainerCPUShares := func(container garden.Container) int {
+			cpuSharesPath := filepath.Join(client.CgroupSubsystemPath("cpu", container.Handle()), "cpu.shares")
 			cpuShares := strings.TrimSpace(readFileString(cpuSharesPath))
-			Expect(cpuShares).To(Equal(strconv.Itoa(expected)))
+			numShares, err := strconv.Atoi(cpuShares)
+			Expect(err).NotTo(HaveOccurred())
+			return numShares
 		}
 
 		It("can set the cpu weight", func() {
 			container, err := createContainerWithCpuConfig(2, 0)
 			Expect(err).NotTo(HaveOccurred())
-			checkCPUSharesInContainer(container, client.Pid, 2)
+
+			Expect(getContainerCPUShares(container)).To(Equal(2))
 		})
 
 		It("should return an error when the cpu shares is invalid", func() {
@@ -416,14 +414,14 @@ var _ = Describe("Creating a Container", func() {
 		It("should use the default weight value when neither the cpu share or weight are set", func() {
 			container, err := createContainerWithCpuConfig(0, 0)
 			Expect(err).NotTo(HaveOccurred())
-			checkCPUSharesInContainer(container, client.Pid, 1024)
+			Expect(getContainerCPUShares(container)).To(Equal(1024))
 		})
 
 		Context("when LimitInShares is set", func() {
 			It("creates a container with the shares", func() {
 				container, err := createContainerWithCpuConfig(0, 123)
 				Expect(err).NotTo(HaveOccurred())
-				checkCPUSharesInContainer(container, client.Pid, 123)
+				Expect(getContainerCPUShares(container)).To(Equal(123))
 			})
 		})
 
@@ -431,7 +429,7 @@ var _ = Describe("Creating a Container", func() {
 			It("Weight has precedence", func() {
 				container, err := createContainerWithCpuConfig(123, 456)
 				Expect(err).NotTo(HaveOccurred())
-				checkCPUSharesInContainer(container, client.Pid, 123)
+				Expect(getContainerCPUShares(container)).To(Equal(123))
 			})
 		})
 	})
@@ -441,21 +439,18 @@ var _ = Describe("Creating a Container", func() {
 			config.DefaultBlkioWeight = uint64ptr(400)
 		})
 
-		checkBlockIOWeightInContainer := func(container garden.Container, expected string) {
-			parentCgroupPath, err := cgrouper.GetCGroup("blkio")
+		getContainerBlockIOWeight := func(container garden.Container) int {
+			blkioWeightPath := filepath.Join(client.CgroupSubsystemPath("blkio", container.Handle()), "blkio.weight")
+			blkIOWeight := strings.TrimSpace(readFileString(blkioWeightPath))
+			numBlkioWeight, err := strconv.Atoi(blkIOWeight)
 			Expect(err).NotTo(HaveOccurred())
-			parentCgroupPath = strings.TrimLeft(parentCgroupPath, "/")
-			blkIOWeightPath := fmt.Sprintf("%s/blkio/%s/garden-%s/%s/blkio.weight",
-				client.CgroupsRootPath(), parentCgroupPath, config.Tag, container.Handle())
-
-			blkIOWeight := strings.TrimSpace(readFileString(blkIOWeightPath))
-			Expect(blkIOWeight).To(Equal(expected))
+			return numBlkioWeight
 		}
 
 		It("uses the specified block IO weight", func() {
 			container, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
-			checkBlockIOWeightInContainer(container, "400")
+			Expect(getContainerBlockIOWeight(container)).To(Equal(400))
 		})
 
 		Context("when specifying a block IO weight of 0", func() {
@@ -466,7 +461,7 @@ var _ = Describe("Creating a Container", func() {
 			It("uses the system default value of 500", func() {
 				container, err := client.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
-				checkBlockIOWeightInContainer(container, "500")
+				Expect(getContainerBlockIOWeight(container)).To(Equal(500))
 			})
 		})
 

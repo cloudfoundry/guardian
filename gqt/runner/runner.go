@@ -17,6 +17,7 @@ import (
 
 	"code.cloudfoundry.org/garden/client"
 	"code.cloudfoundry.org/garden/client/connection"
+	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	multierror "github.com/hashicorp/go-multierror"
@@ -342,6 +343,13 @@ func (r *RunningGarden) CgroupsRootPath() string {
 
 func CgroupsRootPath(tag string) string {
 	return filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", tag))
+}
+
+func (r *RunningGarden) CgroupSubsystemPath(subsystem, handle string) string {
+	gardenCgroupRelativePath, err := cgrouper.GetCGroup(subsystem)
+	Expect(err).NotTo(HaveOccurred())
+
+	return filepath.Join(CgroupsRootPath(r.Tag), subsystem, gardenCgroupRelativePath, "garden-"+r.Tag, handle)
 }
 
 func (r *RunningGarden) removeTempDirContentsPreservingGrootFSStores() error {
