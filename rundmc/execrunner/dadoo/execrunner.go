@@ -59,7 +59,7 @@ func (d *ExecRunner) Run(
 	log lager.Logger, processID, processPath, sandboxHandle, sandboxBundlePath string,
 	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 ) (proc garden.Process, theErr error) {
-	log = log.Session("execrunner")
+	log = log.Session("execrunner", lager.Data{"id": processID})
 
 	log.Info("start")
 	defer log.Info("done")

@@ -39,7 +39,7 @@ func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer
 
 // Exec a process in a bundle using 'runc exec'
 func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
-	log = log.Session("exec", lager.Data{"id": sandboxHandle, "path": spec.Path})
+	log = log.Session("exec", lager.Data{"path": spec.Path})
 
 	log.Info("start")
 	defer log.Info("finished")
