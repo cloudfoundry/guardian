@@ -169,14 +169,21 @@ var _ = Describe("Destroying a Container", func() {
 		})
 
 		Context("when destroy is called", func() {
+			var iptableInstance string
+
 			JustBeforeEach(func() {
+				var err error
+				iptableInstance, err = container.Property("kawasaki.iptable-inst")
+				Expect(err).NotTo(HaveOccurred())
+
 				Expect(client.Destroy(container.Handle())).To(Succeed())
 			})
 
 			It("should remove iptable entries", func() {
 				out, err := runIPTables("-S", "-t", "filter")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(string(out)).NotTo(MatchRegexp("w-%d-instance.* 177.100.%d.0/24", GinkgoParallelNode(), GinkgoParallelNode()))
+
+				Expect(string(out)).NotTo(ContainSubstring(fmt.Sprintf("w-%d-instance-%s", GinkgoParallelNode(), iptableInstance)))
 			})
 
 			It("should remove virtual ethernet cards", func() {
