@@ -22,6 +22,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/spec"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
+	"github.com/docker/docker/pkg/mount"
 	errorspkg "github.com/pkg/errors"
 	"github.com/tscolari/lagregator"
 	shortid "github.com/ventu-io/go-shortid"
@@ -76,10 +77,11 @@ func (d *Driver) MountFilesystem(logger lager.Logger, filesystemPath, storePath 
 }
 
 func (d *Driver) DeInitFilesystem(logger lager.Logger, storePath string) error {
-	isMntPnt, err := isMountpoint(storePath)
+	isMntPnt, err := mount.Mounted(storePath)
 	if err != nil {
 		return err
 	}
+
 	if !isMntPnt {
 		return nil
 	}
@@ -768,27 +770,4 @@ func ensureImageDestroyed(logger lager.Logger, imagePath string) error {
 		logger.Info("unmount image path failed", lager.Data{"path": imagePath, "error": err})
 	}
 	return removeall.RemoveAll(imagePath)
-}
-
-func getDeviceForFile(path string) (uint64, error) {
-	var stat unix.Stat_t
-	if err := unix.Stat(path, &stat); err != nil {
-		return 0, errorspkg.Wrap(err, "stat image path")
-	}
-
-	return stat.Dev, nil
-}
-
-func isMountpoint(path string) (bool, error) {
-	dev, err := getDeviceForFile(path)
-	if err != nil {
-		return false, err
-	}
-
-	parentDev, err := getDeviceForFile(filepath.Dir(path))
-	if err != nil {
-		return false, err
-	}
-
-	return dev != parentDev, nil
 }

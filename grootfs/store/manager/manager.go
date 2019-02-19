@@ -11,6 +11,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
+	"github.com/docker/docker/pkg/mount"
 	errorspkg "github.com/pkg/errors"
 )
 
@@ -121,11 +122,15 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) (err error) {
 }
 
 func (m *Manager) mountFileSystemIfBackingStoreExists(logger lager.Logger) error {
-	if m.backingStoreFileExists() {
-		logger.Debug("backing-file-found")
-		return m.storeDriver.MountFilesystem(logger, m.getBackingStoreFilePath(), m.storePath)
+	if !m.backingStoreFileExists() {
+		return nil
 	}
-	return nil
+
+	mounted, err := mount.Mounted(m.storePath)
+	if err != nil || mounted {
+		return err
+	}
+	return m.storeDriver.MountFilesystem(logger, m.getBackingStoreFilePath(), m.storePath)
 }
 
 func (m *Manager) IsStoreInitialized(logger lager.Logger) bool {

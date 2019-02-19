@@ -488,18 +488,22 @@ var _ = Describe("Manager", func() {
 				Expect(actualStorePath).To(Equal(fmt.Sprintf(storePath)))
 			})
 
-			When("the backing store is already mounted", func() {
+			When("the store path is already a mountpoint", func() {
 				BeforeEach(func() {
-					storeDriver.MountFilesystemReturns(errors.New("already-mounted"))
+					Expect(unix.Mount(storePath, storePath, "bind", unix.MS_BIND, "")).To(Succeed())
+				})
+
+				AfterEach(func() {
+					Expect(unix.Unmount(storePath, 0)).To(Succeed())
+
 				})
 
 				It("succeeds", func() {
 					Expect(manager.InitStore(logger, spec)).To(Succeed())
 				})
 
-				It("does not reinit the store", func() {
-					Expect(manager.InitStore(logger, spec)).To(Succeed())
-					Expect(storeDriver.InitFilesystemCallCount()).To(Equal(0))
+				It("does not remount it", func() {
+					Expect(storeDriver.MountFilesystemCallCount()).To(Equal(0))
 				})
 			})
 
