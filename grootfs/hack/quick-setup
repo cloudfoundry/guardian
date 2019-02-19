@@ -13,7 +13,7 @@ make_backing_store() {
 
 mount_store() {
   mkdir -p /var/lib/grootfs/xfs
-  mount -t xfs -o pquota,noatime,nobarrier /var/lib/grootfs.xfs.backing-store /var/lib/grootfs/xfs
+  mount -t xfs -o pquota,noatime /var/lib/grootfs.xfs.backing-store /var/lib/grootfs/xfs
   chmod 777 /var/lib/grootfs/xfs
 }
 

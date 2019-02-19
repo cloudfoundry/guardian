@@ -127,7 +127,7 @@ func (d *Driver) ValidateFileSystem(logger lager.Logger, path string) error {
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	if err := filesystems.CheckFSPath(path, "xfs", "noatime", "nobarrier", "prjquota"); err != nil {
+	if err := filesystems.CheckFSPath(path, "xfs", "noatime", "prjquota"); err != nil {
 		return errorspkg.Wrap(err, "overlay-xfs filesystem validation")
 	}
 
@@ -421,7 +421,8 @@ func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath string) er
 }
 
 func (d *Driver) mountFilesystem(source, destination, option string) error {
-	allOpts := strings.Trim(fmt.Sprintf("%s,loop,pquota,noatime,nobarrier", option), ",")
+	allOpts := strings.Trim(fmt.Sprintf("%s,loop,pquota,noatime", option), ",")
+
 	cmd := exec.Command("mount", "-o", allOpts, "-t", "xfs", source, destination)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return errorspkg.Errorf("%s: %s", err, string(output))

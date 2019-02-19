@@ -30,6 +30,13 @@ import (
 	. "github.com/st3v/glager"
 )
 
+const (
+	_        = iota
+	kb int64 = 1 << (10 * iota)
+	mb
+	gb
+)
+
 var _ = Describe("Driver", func() {
 	var (
 		storePath     string
@@ -82,7 +89,7 @@ var _ = Describe("Driver", func() {
 			tempFile, err := ioutil.TempFile("", "xfs-filesystem")
 			Expect(err).NotTo(HaveOccurred())
 			fsFile = tempFile.Name()
-			Expect(os.Truncate(fsFile, 1024*1024*1024)).To(Succeed())
+			Expect(os.Truncate(fsFile, gb)).To(Succeed())
 
 			storePath, err = ioutil.TempDir("", "store")
 			Expect(err).NotTo(HaveOccurred())
@@ -104,7 +111,7 @@ var _ = Describe("Driver", func() {
 			mountinfo, err := ioutil.ReadFile("/proc/self/mountinfo")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(string(mountinfo)).To(MatchRegexp(fmt.Sprintf("%s[^\n]*noatime[^\n]*nobarrier[^\n]*prjquota", storePath)))
+			Expect(string(mountinfo)).To(MatchRegexp(fmt.Sprintf("%s[^\n]*noatime[^\n]*prjquota", storePath)))
 		})
 
 		Context("when creating the filesystem fails", func() {
@@ -117,7 +124,7 @@ var _ = Describe("Driver", func() {
 		Context("when the filesystem is already formatted", func() {
 			BeforeEach(func() {
 				cmd := exec.Command("mkfs.xfs", "-f", fsFile)
-				Expect(os.Truncate(fsFile, 200*1024*1024)).To(Succeed())
+				Expect(os.Truncate(fsFile, 200*mb)).To(Succeed())
 				Expect(cmd.Run()).To(Succeed())
 			})
 
@@ -128,10 +135,10 @@ var _ = Describe("Driver", func() {
 
 		Context("when the store is already mounted", func() {
 			BeforeEach(func() {
-				Expect(os.Truncate(fsFile, 200*1024*1024)).To(Succeed())
+				Expect(os.Truncate(fsFile, 200*mb)).To(Succeed())
 				cmd := exec.Command("mkfs.xfs", "-f", fsFile)
 				Expect(cmd.Run()).To(Succeed())
-				cmd = exec.Command("mount", "-o", "loop,pquota,noatime,nobarrier", "-t", "xfs", fsFile, storePath)
+				cmd = exec.Command("mount", "-o", "loop,pquota,noatime", "-t", "xfs", fsFile, storePath)
 				Expect(cmd.Run()).To(Succeed())
 			})
 
@@ -155,7 +162,7 @@ var _ = Describe("Driver", func() {
 			tempFile, err := ioutil.TempFile("", "xfs-filesystem")
 			Expect(err).NotTo(HaveOccurred())
 			fsFile = tempFile.Name()
-			Expect(os.Truncate(fsFile, 1024*1024*1024)).To(Succeed())
+			Expect(os.Truncate(fsFile, gb)).To(Succeed())
 			cmd := exec.Command("mkfs.xfs", "-f", fsFile)
 			Expect(cmd.Run()).To(Succeed())
 
@@ -179,15 +186,15 @@ var _ = Describe("Driver", func() {
 			mountinfo, err := ioutil.ReadFile("/proc/self/mountinfo")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(string(mountinfo)).To(MatchRegexp(fmt.Sprintf("%s[^\n]*noatime[^\n]*nobarrier[^\n]*prjquota", storePath)))
+			Expect(string(mountinfo)).To(MatchRegexp(fmt.Sprintf("%s[^\n]*noatime[^\n]*prjquota", storePath)))
 		})
 
 		Context("when the store is already mounted", func() {
 			BeforeEach(func() {
-				Expect(os.Truncate(fsFile, 200*1024*1024)).To(Succeed())
+				Expect(os.Truncate(fsFile, 200*mb)).To(Succeed())
 				cmd := exec.Command("mkfs.xfs", "-f", fsFile)
 				Expect(cmd.Run()).To(Succeed())
-				cmd = exec.Command("mount", "-o", "loop,pquota,noatime,nobarrier", "-t", "xfs", fsFile, storePath)
+				cmd = exec.Command("mount", "-o", "loop,pquota,noatime", "-t", "xfs", fsFile, storePath)
 				Expect(cmd.Run()).To(Succeed())
 			})
 
@@ -211,7 +218,7 @@ var _ = Describe("Driver", func() {
 			tempFile, err := ioutil.TempFile("", "xfs-filesystem")
 			Expect(err).NotTo(HaveOccurred())
 			fsFile = tempFile.Name()
-			Expect(os.Truncate(fsFile, 1024*1024*1024)).To(Succeed())
+			Expect(os.Truncate(fsFile, gb)).To(Succeed())
 
 			deinitStorePath, err = ioutil.TempDir("", "store")
 			Expect(err).NotTo(HaveOccurred())
@@ -451,7 +458,7 @@ var _ = Describe("Driver", func() {
 
 		Context("when disk limit is > 0", func() {
 			BeforeEach(func() {
-				spec.DiskLimit = 1024 * 1024 * 10
+				spec.DiskLimit = 10 * mb
 				Expect(ioutil.WriteFile(filepath.Join(storePath, store.MetaDirName, fmt.Sprintf("volume-%s", layer1ID)), []byte(`{"Size": 3145728}`), 0644)).To(Succeed())
 			})
 
@@ -526,7 +533,7 @@ var _ = Describe("Driver", func() {
 					_, err := driver.CreateImage(logger, spec)
 					Expect(err).ToNot(HaveOccurred())
 
-					ensureQuotaMatches(filepath.Join(spec.ImagePath, "image_quota"), 1024*1024*10-3145728)
+					ensureQuotaMatches(filepath.Join(spec.ImagePath, "image_quota"), 10*mb-3145728)
 				})
 
 				Context("when the DiskLimit is smaller than VolumeSize", func() {
@@ -539,12 +546,12 @@ var _ = Describe("Driver", func() {
 
 				Context("when the DiskLimit is less than the minimum quota (1024*256 bytes) after accounting for the VolumeSize", func() {
 					BeforeEach(func() {
-						volumeSize := int64(1024 * 128)
+						volumeSize := int64(128 * kb)
 						layerID := randVolumeID()
 						_ = createVolume(storePath, driver, "parent-id", layerID, volumeSize)
 
 						spec.BaseVolumeIDs = []string{layerID}
-						spec.DiskLimit = volumeSize + (1024 * 128)
+						spec.DiskLimit = volumeSize + (128 * kb)
 					})
 
 					It("enforces the minimum required quota in the image", func() {
@@ -573,7 +580,7 @@ var _ = Describe("Driver", func() {
 
 				Context("when the DiskLimit is smaller than VolumeSize", func() {
 					It("succeeds", func() {
-						spec.DiskLimit = 1024 * 1024 * 3
+						spec.DiskLimit = 3 * mb
 						_, err := driver.CreateImage(logger, spec)
 						Expect(err).ToNot(HaveOccurred())
 					})
@@ -601,7 +608,7 @@ var _ = Describe("Driver", func() {
 					_, err := driver.CreateImage(logger, spec)
 					Expect(err).ToNot(HaveOccurred())
 
-					ensureQuotaMatches(filepath.Join(spec.ImagePath, "image_quota"), 1024*1024*10)
+					ensureQuotaMatches(filepath.Join(spec.ImagePath, "image_quota"), 10*mb)
 				})
 			})
 
@@ -755,7 +762,7 @@ var _ = Describe("Driver", func() {
 			createVolume(storePath, driver, "parent-id", volumeID, 3000000)
 
 			spec.BaseVolumeIDs = []string{volumeID}
-			spec.DiskLimit = 10 * 1024 * 1024
+			spec.DiskLimit = 10 * mb
 			_, err := driver.CreateImage(logger, spec)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -997,7 +1004,7 @@ var _ = Describe("Driver", func() {
 			volumePath, err = driver.CreateVolume(logger, "", volumeID)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(driver.WriteVolumeMeta(logger, volumeID, base_image_puller.VolumeMeta{Size: 1024})).To(Succeed())
+			Expect(driver.WriteVolumeMeta(logger, volumeID, base_image_puller.VolumeMeta{Size: kb})).To(Succeed())
 		})
 
 		It("Renames the volume directory", func() {
@@ -1274,7 +1281,7 @@ var _ = Describe("Driver", func() {
 
 	Describe("WriteVolumeMeta", func() {
 		It("creates the correct metadata file", func() {
-			err := driver.WriteVolumeMeta(logger, "1234", base_image_puller.VolumeMeta{Size: 1024})
+			err := driver.WriteVolumeMeta(logger, "1234", base_image_puller.VolumeMeta{Size: kb})
 			Expect(err).NotTo(HaveOccurred())
 
 			metaFilePath := filepath.Join(storePath, store.MetaDirName, "volume-1234")
@@ -1284,7 +1291,7 @@ var _ = Describe("Driver", func() {
 			var meta base_image_puller.VolumeMeta
 
 			Expect(json.NewDecoder(metaFile).Decode(&meta)).To(Succeed())
-			Expect(meta).To(Equal(base_image_puller.VolumeMeta{Size: 1024}))
+			Expect(meta).To(Equal(base_image_puller.VolumeMeta{Size: kb}))
 		})
 	})
 
@@ -1404,7 +1411,7 @@ func createVolume(storePath string, driver *overlayxfs.Driver, parentID, id stri
 	return path
 }
 
-func ensureQuotaMatches(fileName string, expectedQuota int) {
+func ensureQuotaMatches(fileName string, expectedQuota int64) {
 	Expect(fileName).To(BeAnExistingFile())
 
 	contents, err := ioutil.ReadFile(fileName)
