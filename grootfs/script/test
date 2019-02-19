@@ -64,7 +64,7 @@ run_integration_tests() {
   cmd=$cmd" "$(compile_ginkgo_args $test_path)
 
   local drivers users
-  users=${GROOTFS_TEST_UID:-0 1000}
+  users=${GROOTFS_TEST_UID:-0 5000}
 
   for user in $users; do
     GROOTFS_TEST_UID=$user GROOTFS_TEST_GID=$user eval $cmd
