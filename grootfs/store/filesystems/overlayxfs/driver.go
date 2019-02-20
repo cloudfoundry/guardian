@@ -58,15 +58,15 @@ func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath s
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	if err := d.mountFilesystem(filesystemPath, storePath, "remount"); err != nil {
-		if err := d.formatFilesystem(logger, filesystemPath); err != nil {
-			return err
-		}
-
-		return d.MountFilesystem(logger, filesystemPath, storePath)
+	if err := d.mountFilesystem(filesystemPath, storePath, "remount"); err == nil {
+		return nil
 	}
 
-	return nil
+	if err := d.formatFilesystem(logger, filesystemPath); err != nil {
+		return err
+	}
+
+	return d.MountFilesystem(logger, filesystemPath, storePath)
 }
 
 func (d *Driver) MountFilesystem(logger lager.Logger, filesystemPath, storePath string) error {
@@ -77,13 +77,9 @@ func (d *Driver) MountFilesystem(logger lager.Logger, filesystemPath, storePath 
 }
 
 func (d *Driver) DeInitFilesystem(logger lager.Logger, storePath string) error {
-	isMntPnt, err := mount.Mounted(storePath)
-	if err != nil {
+	mounted, err := mount.Mounted(storePath)
+	if err != nil || !mounted {
 		return err
-	}
-
-	if !isMntPnt {
-		return nil
 	}
 
 	if err := unix.Unmount(storePath, 0); err != nil {
@@ -202,20 +198,20 @@ func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 }
 
 func (d *Driver) removeVolumeLink(linkInfoPath string) error {
-	shortId, err := ioutil.ReadFile(linkInfoPath)
-	if err != nil && !os.IsNotExist(err) {
+	shortID, err := ioutil.ReadFile(linkInfoPath)
+	if os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
 		return errorspkg.Wrapf(err, "getting volume symlink location from (%s)", linkInfoPath)
 	}
 
-	if err == nil || !os.IsNotExist(err) {
-		linkPath := filepath.Join(d.storePath, LinksDirName, string(shortId))
-		if err := os.Remove(linkPath); err != nil && !os.IsNotExist(err) {
-			return errorspkg.Wrapf(err, "removing symlink %s", linkPath)
-		}
+	linkPath := filepath.Join(d.storePath, LinksDirName, string(shortID))
+	if err := os.Remove(linkPath); err != nil && !os.IsNotExist(err) {
+		return errorspkg.Wrapf(err, "removing symlink %s", linkPath)
+	}
 
-		if err := os.Remove(linkInfoPath); err != nil && !os.IsNotExist(err) {
-			return errorspkg.Wrapf(err, "removing symlink information file %s", linkInfoPath)
-		}
+	if err := os.Remove(linkInfoPath); err != nil && !os.IsNotExist(err) {
+		return errorspkg.Wrapf(err, "removing symlink information file %s", linkInfoPath)
 	}
 
 	return nil
@@ -409,8 +405,8 @@ func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath string) er
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	stdout := bytes.NewBuffer([]byte{})
-	stderr := bytes.NewBuffer([]byte{})
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
 	cmd := exec.Command("mkfs.xfs", "-f", filesystemPath)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
@@ -605,15 +601,15 @@ func (d *Driver) volumePath(logger lager.Logger, id string) (string, error) {
 
 func calculatePathSize(logger lager.Logger, path string) (int64, error) {
 	cmd := exec.Command("du", "-bs", path)
-	stdoutBuffer := bytes.NewBuffer([]byte{})
-	stderrBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stdout = stdoutBuffer
-	cmd.Stderr = stderrBuffer
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	if err := cmd.Run(); err != nil {
-		return 0, errorspkg.Wrapf(err, "du failed: %s", stderrBuffer.String())
+		return 0, errorspkg.Wrapf(err, "du failed: %s", stderr.String())
 	}
 
-	usageString := strings.Split(stdoutBuffer.String(), "\t")[0]
+	usageString := strings.Split(stdout.String(), "\t")[0]
 	return strconv.ParseInt(usageString, 10, 64)
 }
 
@@ -683,19 +679,19 @@ func (d *Driver) runTardis(logger lager.Logger, args ...string) (*bytes.Buffer, 
 	}
 
 	cmd := exec.Command(d.tardisBinPath, args...)
-	stdoutBuffer := bytes.NewBuffer([]byte{})
+	stdout := new(bytes.Buffer)
 	relogger := lagregator.NewRelogger(logger)
-	cmd.Stdout = io.MultiWriter(stdoutBuffer, relogger)
+	cmd.Stdout = io.MultiWriter(stdout, relogger)
 	cmd.Stderr = relogger
 
 	err := cmd.Run()
 
 	if err != nil {
 		logger.Error("tardis-failed", err)
-		return nil, errorspkg.Wrapf(err, " %s", strings.TrimSpace(stdoutBuffer.String()))
+		return nil, errorspkg.Wrapf(err, " %s", strings.TrimSpace(stdout.String()))
 	}
 
-	return stdoutBuffer, nil
+	return stdout, nil
 }
 
 func (d *Driver) tardisInPath() bool {
