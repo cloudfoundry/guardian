@@ -281,15 +281,14 @@
   revision = "f6943554a7e7e88b3c14aad190bf05932da84788"
 
 [[projects]]
-  digest = "1:4ddc17aeaa82cb18c5f0a25d7c253a10682f518f4b2558a82869506eec223d76"
+  digest = "1:4c7d169280debf9f36b84a0f682094889cccc5dc0db8657f9cffc93b21975a57"
   name = "github.com/docker/distribution"
   packages = [
     "digestset",
     "reference",
   ]
   pruneopts = "UT"
-  revision = "17b3ff188dfde7d5b59a94ab99e6a967b3a59563"
-  version = "v2.7.0-rc.0"
+  revision = "0d3efadf0154c2b8a4e7b6621fff9809655cc580"
 
 [[projects]]
   digest = "1:1aeb912e19b79064388a23a383f34d1ad946df0ebf7417ba746159c4a0f47229"
