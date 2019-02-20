@@ -187,7 +187,7 @@
   revision = "0650fd9eeb50bab4fc99dceb9f2e14cf58f36e7f"
 
 [[projects]]
-  digest = "1:b31817928f88077033b287edd7c4215123772670c7ac734c43d2d629412fad6c"
+  digest = "1:a8d44883e8e1f6bb4089d7c46680c3f549bef13a80acb99437a96e41c06f3644"
   name = "github.com/containerd/containerd"
   packages = [
     ".",
@@ -242,8 +242,8 @@
     "sys",
   ]
   pruneopts = "UT"
-  revision = "9754871865f7fe2f4e74d43e2fc7ccd237edcbce"
-  version = "v1.2.2"
+  revision = "e6b3f5632f50dbc4e9cb6288d911bf4f5e95b18e"
+  version = "v1.2.4"
 
 [[projects]]
   branch = "master"
@@ -255,14 +255,6 @@
   ]
   pruneopts = "UT"
   revision = "2d3749b4da569ac97ca63dccba5eee4f5ee2beab"
-
-[[projects]]
-  digest = "1:a72272dfefbb22c87cda3dbefbb256741d861d2fb727210a66e0df0df6084b30"
-  name = "github.com/containerd/cri"
-  packages = ["pkg/util"]
-  pruneopts = "UT"
-  revision = "f3687c59470b76ee57c90d4b3dd92888dec58c2b"
-  version = "v1.11.1"
 
 [[projects]]
   branch = "master"
@@ -300,12 +292,9 @@
   version = "v2.7.0-rc.0"
 
 [[projects]]
-  digest = "1:dc5df971da7956ac1c562272d0f03565205841c016b073ed6076791adabd3bef"
+  digest = "1:1aeb912e19b79064388a23a383f34d1ad946df0ebf7417ba746159c4a0f47229"
   name = "github.com/docker/docker"
-  packages = [
-    "pkg/reexec",
-    "pkg/stringid",
-  ]
+  packages = ["pkg/reexec"]
   pruneopts = "UT"
   revision = "1603af96898b4fad0294f0691b3ce8482d1700d1"
 

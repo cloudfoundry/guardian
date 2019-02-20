@@ -77,7 +77,7 @@ required = ["gopkg.in/fsnotify.v1"]
 
 [[constraint]]
   name = "github.com/containerd/containerd"
-  version = "1.2.2"
+  version = "1.2.4"
 
 [[constraint]]
   revision = "1603af96898b4fad0294f0691b3ce8482d1700d1"
