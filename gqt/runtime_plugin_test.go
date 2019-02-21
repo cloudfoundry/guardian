@@ -197,17 +197,17 @@ var _ = Describe("Runtime Plugin", func() {
 			stdoutContents        string
 			stderrContents        string
 
-			process      garden.Process
-			stdoutWriter *gbytes.Buffer
-			stderrWriter *gbytes.Buffer
-			runErr       error
+			process garden.Process
+			stdout  *gbytes.Buffer
+			stderr  *gbytes.Buffer
+			runErr  error
 		)
 
 		BeforeEach(func() {
 			runtimePluginExitCode = 0
 
-			stdoutWriter = gbytes.NewBuffer()
-			stderrWriter = gbytes.NewBuffer()
+			stdout = gbytes.NewBuffer()
+			stderr = gbytes.NewBuffer()
 		})
 
 		JustBeforeEach(func() {
@@ -220,8 +220,8 @@ var _ = Describe("Runtime Plugin", func() {
 				Path: "some-idiosyncratic-binary",
 				Args: []string{fmt.Sprintf("%d", runtimePluginExitCode), stdoutContents, stderrContents},
 			}, garden.ProcessIO{
-				Stdout: io.MultiWriter(GinkgoWriter, stdoutWriter),
-				Stderr: io.MultiWriter(GinkgoWriter, stderrWriter),
+				Stdout: io.MultiWriter(GinkgoWriter, stdout),
+				Stderr: io.MultiWriter(GinkgoWriter, stderr),
 			})
 		})
 
@@ -256,10 +256,10 @@ var _ = Describe("Runtime Plugin", func() {
 				}
 			}
 
-			Expect(readPluginArgs(argsFilepath)).To(ConsistOf(pluginArgs))
-
 			_, err := process.Wait() // ensure plugin has finished running before asserting on output(s)
 			Expect(err).NotTo(HaveOccurred())
+
+			Expect(readPluginArgs(argsFilepath)).To(ConsistOf(pluginArgs))
 		})
 
 		It("passes the spec serialised into a file", func() {
@@ -268,11 +268,7 @@ var _ = Describe("Runtime Plugin", func() {
 
 			var processSpec specs.Process
 			readProcessSpec := func() error {
-				processSpecContent, err := ioutil.ReadFile(processSpecFilePath)
-				if err != nil {
-					return err
-				}
-				return json.Unmarshal(processSpecContent, &processSpec)
+				return json.Unmarshal(readFile(processSpecFilePath), &processSpec)
 			}
 			Eventually(readProcessSpec).Should(Succeed())
 			Expect(processSpec.Args[0]).To(Equal("some-idiosyncratic-binary"))
@@ -285,11 +281,11 @@ var _ = Describe("Runtime Plugin", func() {
 			})
 
 			It("returns the runtime plugin's stdout", func() {
-				Eventually(stdoutWriter).Should(gbytes.Say(stdoutContents))
+				Eventually(stdout).Should(gbytes.Say(stdoutContents))
 			})
 
 			It("returns the runtime plugin's stderr", func() {
-				Eventually(stderrWriter).Should(gbytes.Say(stderrContents))
+				Eventually(stderr).Should(gbytes.Say(stderrContents))
 			})
 		})
 
