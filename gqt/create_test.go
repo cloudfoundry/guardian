@@ -37,6 +37,7 @@ var _ = Describe("Creating a Container", func() {
 
 	JustBeforeEach(func() {
 		client = runner.Start(config)
+		// time.Sleep(time.Hour)
 		initialSockets = numOpenSockets(client.Pid)
 		initialPipes = numPipes(client.Pid)
 	})

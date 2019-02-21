@@ -385,6 +385,14 @@
   revision = "b7773ae218740a7be65057fc60b366a49b538a44"
 
 [[projects]]
+  branch = "master"
+  digest = "1:93cde32e6a4f5911b86cdc7a0092f9a775fa228d6afce033b5cb575700cdca19"
+  name = "github.com/hashicorp/go-reap"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "bf58d8a43e7b6bf026d99d6295c4de703b67b374"
+
+[[projects]]
   digest = "1:a1038ef593beb4771c8f0f9c26e8b00410acd800af5c6864651d9bf160ea1813"
   name = "github.com/hpcloud/tail"
   packages = [
@@ -821,6 +829,7 @@
     "github.com/docker/docker/pkg/reexec",
     "github.com/eapache/go-resiliency/retrier",
     "github.com/hashicorp/go-multierror",
+    "github.com/hashicorp/go-reap",
     "github.com/jessevdk/go-flags",
     "github.com/kardianos/osext",
     "github.com/mitchellh/copystructure",

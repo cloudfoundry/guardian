@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -113,7 +114,7 @@ func (c GdnRunnerConfig) toServerFlags() []string {
 	if c.ConfigFilePath != "" {
 		gardenArgs = append(gardenArgs, "--config", c.ConfigFilePath)
 	}
-	gardenArgs = append(gardenArgs, "server")
+	gardenArgs = append(gardenArgs, "containerized-server")
 
 	vConf := reflect.ValueOf(c)
 	tConf := vConf.Type()
@@ -286,10 +287,31 @@ func Start(config GdnRunnerConfig) *RunningGarden {
 
 	gdn.process = ifrit.Invoke(runner)
 	gdn.Pid = runner.Command.Process.Pid
+
+	// output, err := exec.Command("pgrep", "-P", strconv.Itoa(runner.Command.Process.Pid)).CombinedOutput()
+	// Expect(err).NotTo(HaveOccurred(), string(output))
+	// gdn.Pid, err = strconv.Atoi(strings.TrimSpace(string(output)))
+	// Expect(err).NotTo(HaveOccurred())
+
 	gdn.Client = client.New(connection.New(runner.connectionInfo()))
 
 	if !config.StartupExpectedToFail {
 		Eventually(gdn.Ping, time.Second*10).Should(Succeed())
+
+		pgrep := func() error {
+			output, err := exec.Command("pgrep", "-P", strconv.Itoa(runner.Command.Process.Pid)).CombinedOutput()
+			if err != nil {
+				return err
+			}
+			if len(output) > 0 {
+				gdn.Pid, err = strconv.Atoi(strings.TrimSpace(string(output)))
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		Eventually(pgrep).Should(Succeed())
 	}
 
 	return gdn

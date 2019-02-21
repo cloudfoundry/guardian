@@ -58,9 +58,10 @@ type GardenFactory interface {
 }
 
 type GdnCommand struct {
-	SetupCommand   *SetupCommand   `command:"setup"`
-	ServerCommand  *ServerCommand  `command:"server"`
-	CleanupCommand *CleanupCommand `command:"cleanup"`
+	SetupCommand               *SetupCommand               `command:"setup"`
+	ServerCommand              *ServerCommand              `command:"server"`
+	ContainerizedServerCommand *ContainerizedServerCommand `command:"containerized-server"`
+	CleanupCommand             *CleanupCommand             `command:"cleanup"`
 
 	// This must be present to stop go-flags complaining, but it's not actually
 	// used. We parse this flag outside of the go-flags framework.

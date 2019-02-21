@@ -6,8 +6,10 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
+	"sync"
 
 	"code.cloudfoundry.org/garden/server"
 	"code.cloudfoundry.org/guardian/bindata"
@@ -17,9 +19,11 @@ import (
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/docker/docker/pkg/reexec"
+	reap "github.com/hashicorp/go-reap"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/sigmon"
+	"golang.org/x/sys/unix"
 )
 
 // These are the maximum caps an unprivileged container process ever gets
@@ -121,6 +125,65 @@ var (
 		{Access: "rwm", Type: fuseDevice.Type, Major: intRef(fuseDevice.Major), Minor: intRef(fuseDevice.Minor), Allow: true},
 	}
 )
+
+type ContainerizedServerCommand struct {
+	*CommonCommand
+
+	serverCmd *exec.Cmd
+	reapLock  sync.RWMutex
+}
+
+func (cmd *ContainerizedServerCommand) Execute([]string) error {
+	logger, _ := cmd.Logger.Logger("containerized-guardian")
+	newArgs := []string{}
+	for _, a := range os.Args[1:] {
+		if a == "containerized-server" {
+			newArgs = append(newArgs, "server")
+		} else {
+			newArgs = append(newArgs, a)
+		}
+	}
+	logger.Info("server-args", lager.Data{"oldArgs": os.Args[1:], "args": newArgs})
+	cmd.serverCmd = exec.Command("/proc/self/exe", newArgs...)
+	cmd.serverCmd.Stdin = os.Stdin
+	cmd.serverCmd.Stdout = os.Stdout
+	cmd.serverCmd.Stderr = os.Stderr
+
+	cmd.startReaping()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, unix.SIGTERM)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		sig := <-sigChan
+		cmd.reapLock.Lock()
+		defer wg.Done()
+		defer cmd.reapLock.Unlock()
+
+		if err := cmd.serverCmd.Process.Signal(sig); err != nil {
+			logger.Error("Failed to signal server", err)
+			return
+		}
+		if err := cmd.serverCmd.Wait(); err != nil {
+			logger.Error("Failed to wait on server", err)
+			return
+		}
+	}()
+
+	if err := cmd.serverCmd.Start(); err != nil {
+		logger.Error("Failed to start server", err)
+		return err
+	}
+
+	wg.Wait()
+	return nil
+}
+
+func (cmd *ContainerizedServerCommand) startReaping() {
+	go func() { reap.ReapChildren(nil, nil, nil, &cmd.reapLock) }()
+}
 
 type ServerCommand struct {
 	*CommonCommand
@@ -296,6 +359,8 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 
 	<-signals
 
+	logger.Info("stopping")
+	defer logger.Info("stopped")
 	gardenServer.Stop()
 
 	cmd.saveProperties(logger, cmd.Containers.PropertiesPath, wiring.PropertiesManager)
