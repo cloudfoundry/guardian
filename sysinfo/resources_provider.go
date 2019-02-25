@@ -34,6 +34,17 @@ func (provider ResourcesProvider) TotalDisk() (uint64, error) {
 	return fromKBytesToBytes(disk.Total), nil
 }
 
+func (provider ResourcesProvider) CPUCores() (int, error) {
+	cpuList := sigar.CpuList{}
+
+	err := cpuList.Get()
+	if err != nil {
+		return 0, err
+	}
+
+	return len(cpuList.List), nil
+}
+
 func fromKBytesToBytes(kbytes uint64) uint64 {
 	return kbytes * 1024
 }

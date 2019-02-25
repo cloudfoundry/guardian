@@ -10,11 +10,11 @@ import (
 var _ = Describe("", func() {
 	var provider sysinfo.ResourcesProvider
 
-	Describe("TotalMemory", func() {
-		BeforeEach(func() {
-			provider = sysinfo.NewResourcesProvider("/")
-		})
+	BeforeEach(func() {
+		provider = sysinfo.NewResourcesProvider("/")
+	})
 
+	Describe("TotalMemory", func() {
 		It("provides nonzero memory information", func() {
 			totalMemory, err := provider.TotalMemory()
 			Expect(err).ToNot(HaveOccurred())
@@ -24,15 +24,20 @@ var _ = Describe("", func() {
 	})
 
 	Describe("TotalDisk", func() {
-		BeforeEach(func() {
-			provider = sysinfo.NewResourcesProvider("/")
-		})
-
 		It("provides nonzero disk information", func() {
 			totalDisk, err := provider.TotalDisk()
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(totalDisk).To(BeNumerically(">", 0))
+		})
+	})
+
+	Describe("CPUCores", func() {
+		It("provides nonzero cpu cores information", func() {
+			cpuCores, err := provider.CPUCores()
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(cpuCores).To(BeNumerically(">", 0))
 		})
 	})
 })

@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/guardiancmd/cpuentitlement"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	"code.cloudfoundry.org/guardian/kawasaki"
 	kawasakifactory "code.cloudfoundry.org/guardian/kawasaki/factory"
@@ -246,8 +247,19 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 
 	var bulkStarter gardener.BulkStarter = gardener.NewBulkStarter(starters)
 	peaCleaner := cmd.wirePeaCleaner(factory, volumizer)
+	sysInfoProvider := sysinfo.NewResourcesProvider(cmd.Containers.Dir)
 
-	containerizer, err := cmd.wireContainerizer(logger, factory, propManager, volumizer, peaCleaner)
+	cpuEntitlementPerShare := cmd.Metrics.CPUEntitlementPerShare
+	if cpuEntitlementPerShare == 0 {
+		cpuEntitlementCalculator := cpuentitlement.Calculator{SysInfoProvider: sysInfoProvider}
+		cpuEntitlementPerShare, err = cpuEntitlementCalculator.CalculateDefaultEntitlementPerShare()
+		if err != nil {
+			logger.Error("failed-to-compute-default-cpu-entitlement-per-share", err)
+			return nil, err
+		}
+	}
+
+	containerizer, err := cmd.wireContainerizer(logger, factory, propManager, volumizer, peaCleaner, cpuEntitlementPerShare)
 	if err != nil {
 		logger.Error("failed-to-wire-containerizer", err)
 		return nil, err
@@ -263,7 +275,7 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 		PeaCleaner:        peaCleaner,
 		PropertiesManager: propManager,
 		UidGenerator:      wireUIDGenerator(),
-		SysInfoProvider:   sysinfo.NewResourcesProvider(cmd.Containers.Dir),
+		SysInfoProvider:   sysInfoProvider,
 		Logger:            logger,
 	}, nil
 }
@@ -427,7 +439,7 @@ func (cmd *CommonCommand) wireImagePlugin(commandRunner commandrunner.CommandRun
 }
 
 func (cmd *CommonCommand) wireContainerizer(log lager.Logger, factory GardenFactory,
-	properties gardener.PropertyManager, volumizer peas.Volumizer, peaCleaner gardener.PeaCleaner) (*rundmc.Containerizer, error) {
+	properties gardener.PropertyManager, volumizer peas.Volumizer, peaCleaner gardener.PeaCleaner, cpuEntitlementPerShare float64) (*rundmc.Containerizer, error) {
 
 	initMount, initPath := initBindMountAndPath(cmd.Bin.Init.Path())
 
@@ -592,7 +604,7 @@ func (cmd *CommonCommand) wireContainerizer(log lager.Logger, factory GardenFact
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
-	return rundmc.New(depot, runner, bndlLoader, nstar, stopper, eventStore, stateStore, factory.WireRootfsFileCreator(), peaCreator, peaUsernameResolver, cmd.Metrics.CPUEntitlementPerShare), nil
+	return rundmc.New(depot, runner, bndlLoader, nstar, stopper, eventStore, stateStore, factory.WireRootfsFileCreator(), peaCreator, peaUsernameResolver, cpuEntitlementPerShare), nil
 }
 
 func (cmd *CommonCommand) useContainerd() bool {

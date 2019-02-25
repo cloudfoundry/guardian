@@ -37,6 +37,7 @@ const VolumizerSession = "volumizer"
 type SysInfoProvider interface {
 	TotalMemory() (uint64, error)
 	TotalDisk() (uint64, error)
+	CPUCores() (int, error)
 }
 
 type Containerizer interface {
