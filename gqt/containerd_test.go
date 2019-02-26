@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -459,7 +460,7 @@ var _ = Describe("Containerd", func() {
 
 			_, err = process.Wait()
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(getEventsForContainer(container), "10s").Should(ContainElement("Out of memory"))
+			Eventually(getEventsForContainer(container), time.Minute).Should(ContainElement("Out of memory"))
 		})
 	})
 })
