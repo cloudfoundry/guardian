@@ -8,6 +8,18 @@ import (
 )
 
 type FakeSysInfoProvider struct {
+	CPUCoresStub        func() (int, error)
+	cPUCoresMutex       sync.RWMutex
+	cPUCoresArgsForCall []struct {
+	}
+	cPUCoresReturns struct {
+		result1 int
+		result2 error
+	}
+	cPUCoresReturnsOnCall map[int]struct {
+		result1 int
+		result2 error
+	}
 	TotalDiskStub        func() (uint64, error)
 	totalDiskMutex       sync.RWMutex
 	totalDiskArgsForCall []struct {
@@ -34,6 +46,61 @@ type FakeSysInfoProvider struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeSysInfoProvider) CPUCores() (int, error) {
+	fake.cPUCoresMutex.Lock()
+	ret, specificReturn := fake.cPUCoresReturnsOnCall[len(fake.cPUCoresArgsForCall)]
+	fake.cPUCoresArgsForCall = append(fake.cPUCoresArgsForCall, struct {
+	}{})
+	fake.recordInvocation("CPUCores", []interface{}{})
+	fake.cPUCoresMutex.Unlock()
+	if fake.CPUCoresStub != nil {
+		return fake.CPUCoresStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.cPUCoresReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeSysInfoProvider) CPUCoresCallCount() int {
+	fake.cPUCoresMutex.RLock()
+	defer fake.cPUCoresMutex.RUnlock()
+	return len(fake.cPUCoresArgsForCall)
+}
+
+func (fake *FakeSysInfoProvider) CPUCoresCalls(stub func() (int, error)) {
+	fake.cPUCoresMutex.Lock()
+	defer fake.cPUCoresMutex.Unlock()
+	fake.CPUCoresStub = stub
+}
+
+func (fake *FakeSysInfoProvider) CPUCoresReturns(result1 int, result2 error) {
+	fake.cPUCoresMutex.Lock()
+	defer fake.cPUCoresMutex.Unlock()
+	fake.CPUCoresStub = nil
+	fake.cPUCoresReturns = struct {
+		result1 int
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeSysInfoProvider) CPUCoresReturnsOnCall(i int, result1 int, result2 error) {
+	fake.cPUCoresMutex.Lock()
+	defer fake.cPUCoresMutex.Unlock()
+	fake.CPUCoresStub = nil
+	if fake.cPUCoresReturnsOnCall == nil {
+		fake.cPUCoresReturnsOnCall = make(map[int]struct {
+			result1 int
+			result2 error
+		})
+	}
+	fake.cPUCoresReturnsOnCall[i] = struct {
+		result1 int
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeSysInfoProvider) TotalDisk() (uint64, error) {
@@ -149,6 +216,8 @@ func (fake *FakeSysInfoProvider) TotalMemoryReturnsOnCall(i int, result1 uint64,
 func (fake *FakeSysInfoProvider) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.cPUCoresMutex.RLock()
+	defer fake.cPUCoresMutex.RUnlock()
 	fake.totalDiskMutex.RLock()
 	defer fake.totalDiskMutex.RUnlock()
 	fake.totalMemoryMutex.RLock()

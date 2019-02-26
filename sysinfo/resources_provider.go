@@ -1,6 +1,7 @@
 package sysinfo
 
 import "github.com/cloudfoundry/gosigar"
+import "runtime"
 
 type ResourcesProvider struct {
 	depotPath string
@@ -32,6 +33,10 @@ func (provider ResourcesProvider) TotalDisk() (uint64, error) {
 	}
 
 	return fromKBytesToBytes(disk.Total), nil
+}
+
+func (provider ResourcesProvider) CPUCores() (int, error) {
+	return runtime.NumCPU(), nil
 }
 
 func fromKBytesToBytes(kbytes uint64) uint64 {

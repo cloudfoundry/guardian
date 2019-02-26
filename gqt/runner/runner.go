@@ -92,6 +92,7 @@ type GdnRunnerConfig struct {
 	NetworkPool                    string   `flag:"network-pool"`
 	ContainerdSocket               string   `flag:"containerd-socket"`
 	UseContainerdForProcesses      *bool    `flag:"use-containerd-for-processes"`
+	CPUEntitlementPerShare         *float64 `flag:"cpu-entitlement-per-share"`
 
 	StartupExpectedToFail bool
 	StorePath             string
@@ -148,6 +149,8 @@ func (c GdnRunnerConfig) toServerFlags() []string {
 			for _, val := range v {
 				gardenArgs = append(gardenArgs, "--"+flagName, val)
 			}
+		case float64:
+			gardenArgs = append(gardenArgs, "--"+flagName, fmt.Sprintf("%f", v))
 		default:
 			Fail(fmt.Sprintf("unrecognised field type for field %s", flagName))
 		}
