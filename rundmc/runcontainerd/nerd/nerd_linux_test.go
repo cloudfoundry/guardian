@@ -401,7 +401,7 @@ var _ = Describe("Nerd", func() {
 
 			It("reports OOM", func() {
 				var event *apievents.TaskOOM
-				Eventually(events).Should(Receive(&event))
+				Eventually(events, "3s").Should(Receive(&event))
 				Expect(event.ContainerID).To(Equal(containerID))
 			})
 		})
