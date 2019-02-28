@@ -27,8 +27,8 @@ var _ = Describe("Containerd Process", func() {
 	})
 
 	Describe("ID", func() {
-		It("returns the container ID", func() {
-			Expect(process.ID()).To(Equal("container-id"))
+		It("returns the process ID", func() {
+			Expect(process.ID()).To(Equal("process-id"))
 		})
 	})
 

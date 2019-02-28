@@ -68,5 +68,5 @@ func toSyscallSignal(signal garden.Signal) (syscall.Signal, error) {
 	return -1, fmt.Errorf("Cannot convert garden signal %d to syscall.Signal", signal)
 }
 
-func (p *Process) ID() string                  { return p.containerID }
+func (p *Process) ID() string                  { return p.processID }
 func (p *Process) SetTTY(garden.TTYSpec) error { return nil }

@@ -164,8 +164,16 @@ var _ = Describe("Containerd", func() {
 					Stdout: io.MultiWriter(GinkgoWriter, stdout),
 				})
 				Expect(err).NotTo(HaveOccurred())
-
 				Eventually(stdout).Should(gbytes.Say("hello alice"))
+			})
+
+			It("returns the correct process ID", func() {
+				proc, err := container.Run(garden.ProcessSpec{
+					ID:   "some-process-id",
+					Path: "/bin/echo",
+				}, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(proc.ID()).To(Equal("some-process-id"))
 			})
 
 			Describe("Wait", func() {
