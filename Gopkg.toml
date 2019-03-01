@@ -30,8 +30,8 @@ required = ["gopkg.in/fsnotify.v1"]
   name = "code.cloudfoundry.org/idmapper"
 
 [[constraint]]
-  revision = "baf208c4c56b0a06ddec4a03c0348d072261d43a"
   name = "code.cloudfoundry.org/lager"
+  branch = "master"
 
 [[constraint]]
   revision = "b88ad0dea95cd41f302cf7eb6ed951efafaf47f2"
