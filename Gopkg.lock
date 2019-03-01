@@ -19,6 +19,7 @@
   revision = "02e53af36e6c978af692887ed449b74026d76fec"
 
 [[projects]]
+  branch = "master"
   digest = "1:a4ca6559cbf18820b73f716f5530266d31da26b08f27abba51300eb675a24984"
   name = "code.cloudfoundry.org/commandrunner"
   packages = [

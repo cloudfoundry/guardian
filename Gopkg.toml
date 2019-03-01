@@ -10,8 +10,8 @@ required = ["gopkg.in/fsnotify.v1"]
   name = "code.cloudfoundry.org/clock"
 
 [[constraint]]
-  revision = "501fd662150bcea5a42a9b5c1c283209720788c3"
   name = "code.cloudfoundry.org/commandrunner"
+  branch = "master"
 
 [[constraint]]
   revision = "70715da12ee9e99858f2ba1013334776c73b6922"
