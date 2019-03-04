@@ -32,6 +32,7 @@ var (
 	IPCNamespace     = specs.LinuxNamespace{Type: specs.IPCNamespace}
 	UTSNamespace     = specs.LinuxNamespace{Type: specs.UTSNamespace}
 	MountNamespace   = specs.LinuxNamespace{Type: specs.MountNamespace}
+	CgroupNamespace  = specs.LinuxNamespace{Type: specs.CgroupNamespace}
 )
 
 // WithProcess returns a bundle with the process replaced with the given Process. The original bundle is not modified.
