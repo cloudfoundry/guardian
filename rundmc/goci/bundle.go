@@ -82,7 +82,7 @@ func (b Bndl) WithRootFSPropagation(rootfsPropagation string) Bndl {
 	return b
 }
 
-// GetRootfsPath returns the path to the rootfs of this bundle. Nothing is modified
+// RootFS returns the path to the rootfs of this bundle. Nothing is modified
 func (b Bndl) RootFS() string {
 	return b.Spec.Root.Path
 }
