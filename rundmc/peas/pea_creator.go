@@ -192,6 +192,7 @@ func (p *PeaCreator) linuxNamespaces(log lager.Logger, sandboxHandle string, pri
 	linuxNamespaces["ipc"] = fmt.Sprintf("/proc/%d/ns/ipc", originalCtrInitPid)
 	linuxNamespaces["pid"] = fmt.Sprintf("/proc/%d/ns/pid", originalCtrInitPid)
 	linuxNamespaces["uts"] = fmt.Sprintf("/proc/%d/ns/uts", originalCtrInitPid)
+	linuxNamespaces["cgroup"] = fmt.Sprintf("/proc/%d/ns/cgroup", originalCtrInitPid)
 
 	if !privileged {
 		linuxNamespaces["user"] = fmt.Sprintf("/proc/%d/ns/user", originalCtrInitPid)
