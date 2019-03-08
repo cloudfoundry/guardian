@@ -91,11 +91,6 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		return errs("parse-user", err)
 	}
 
-	linuxNamespaces, err := p.linuxNamespaces(log, sandboxHandle, privileged)
-	if err != nil {
-		return errs("determining-namespaces", err)
-	}
-
 	runtimeSpec, err := p.Volumizer.Create(log, garden.ContainerSpec{
 		Handle:     processID,
 		Image:      processSpec.Image,
@@ -119,13 +114,20 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		cgroupPath = filepath.Join(sandboxHandle, processID)
 	}
 
+	needNewCgroupns := false
 	limits := garden.Limits{}
 	if processSpec.OverrideContainerLimits != nil {
+		needNewCgroupns = true
 		cgroupPath = processID
 		limits = garden.Limits{
 			CPU:    processSpec.OverrideContainerLimits.CPU,
 			Memory: processSpec.OverrideContainerLimits.Memory,
 		}
+	}
+
+	linuxNamespaces, err := p.linuxNamespaces(log, sandboxHandle, privileged, needNewCgroupns)
+	if err != nil {
+		return errs("determining-namespaces", err)
 	}
 
 	bndl, genErr := p.BundleGenerator.Generate(spec.DesiredContainerSpec{
@@ -180,22 +182,26 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	return proc, nil
 }
 
-func (p *PeaCreator) linuxNamespaces(log lager.Logger, sandboxHandle string, privileged bool) (map[string]string, error) {
+func (p *PeaCreator) linuxNamespaces(log lager.Logger, sandboxHandle string, privileged, needNewCgroupns bool) (map[string]string, error) {
 	originalCtrInitPid, err := p.PidGetter.GetPid(log, sandboxHandle)
 	if err != nil {
 		return nil, errorwrapper.Wrap(err, "reading-ctr-pid")
 	}
 
 	linuxNamespaces := map[string]string{}
+	linuxNamespaces["cgroup"] = ""
 	linuxNamespaces["mount"] = ""
 	linuxNamespaces["network"] = fmt.Sprintf("/proc/%d/ns/net", originalCtrInitPid)
 	linuxNamespaces["ipc"] = fmt.Sprintf("/proc/%d/ns/ipc", originalCtrInitPid)
 	linuxNamespaces["pid"] = fmt.Sprintf("/proc/%d/ns/pid", originalCtrInitPid)
 	linuxNamespaces["uts"] = fmt.Sprintf("/proc/%d/ns/uts", originalCtrInitPid)
-	linuxNamespaces["cgroup"] = fmt.Sprintf("/proc/%d/ns/cgroup", originalCtrInitPid)
 
 	if !privileged {
 		linuxNamespaces["user"] = fmt.Sprintf("/proc/%d/ns/user", originalCtrInitPid)
+	}
+
+	if !needNewCgroupns {
+		linuxNamespaces["cgroup"] = fmt.Sprintf("/proc/%d/ns/cgroup", originalCtrInitPid)
 	}
 
 	return linuxNamespaces, nil
