@@ -5,16 +5,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/lager"
 
-	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
-	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
@@ -68,16 +65,11 @@ var CleanCommand = cli.Command{
 			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)
 
-		storeNamespacer := groot.NewStoreNamespacer(storePath)
-		idMappings, err := storeNamespacer.Read()
+		nsFsDriver, err := createImageDriver(logger, cfg, fsDriver)
 		if err != nil {
-			logger.Error("reading-namespace-file", err)
+			logger.Error("failed-to-create-image-driver", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
-
-		runner := linux_command_runner.New()
-		idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
-		nsFsDriver := namespaced.New(fsDriver, idMappings, idMapper, runner)
 		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager)
 		sm := storepkg.NewStoreMeasurer(storePath, fsDriver, gc)
 

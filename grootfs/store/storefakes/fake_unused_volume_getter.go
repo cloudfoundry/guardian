@@ -40,7 +40,8 @@ func (fake *FakeUnusedVolumeGetter) UnusedVolumes(arg1 lager.Logger) ([]string, 
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.unusedVolumesReturns.result1, fake.unusedVolumesReturns.result2
+	fakeReturns := fake.unusedVolumesReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeUnusedVolumeGetter) UnusedVolumesCallCount() int {
@@ -49,13 +50,22 @@ func (fake *FakeUnusedVolumeGetter) UnusedVolumesCallCount() int {
 	return len(fake.unusedVolumesArgsForCall)
 }
 
+func (fake *FakeUnusedVolumeGetter) UnusedVolumesCalls(stub func(lager.Logger) ([]string, error)) {
+	fake.unusedVolumesMutex.Lock()
+	defer fake.unusedVolumesMutex.Unlock()
+	fake.UnusedVolumesStub = stub
+}
+
 func (fake *FakeUnusedVolumeGetter) UnusedVolumesArgsForCall(i int) lager.Logger {
 	fake.unusedVolumesMutex.RLock()
 	defer fake.unusedVolumesMutex.RUnlock()
-	return fake.unusedVolumesArgsForCall[i].arg1
+	argsForCall := fake.unusedVolumesArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeUnusedVolumeGetter) UnusedVolumesReturns(result1 []string, result2 error) {
+	fake.unusedVolumesMutex.Lock()
+	defer fake.unusedVolumesMutex.Unlock()
 	fake.UnusedVolumesStub = nil
 	fake.unusedVolumesReturns = struct {
 		result1 []string
@@ -64,6 +74,8 @@ func (fake *FakeUnusedVolumeGetter) UnusedVolumesReturns(result1 []string, resul
 }
 
 func (fake *FakeUnusedVolumeGetter) UnusedVolumesReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.unusedVolumesMutex.Lock()
+	defer fake.unusedVolumesMutex.Unlock()
 	fake.UnusedVolumesStub = nil
 	if fake.unusedVolumesReturnsOnCall == nil {
 		fake.unusedVolumesReturnsOnCall = make(map[int]struct {

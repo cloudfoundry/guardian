@@ -6,9 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
@@ -23,12 +21,11 @@ const MetricsDownloadTimeName = "DownloadTime"
 //go:generate counterfeiter . Unpacker
 //go:generate counterfeiter . DependencyRegisterer
 //go:generate counterfeiter . VolumeDriver
+//go:generate counterfeiter . BaseDirHandler
 
 type UnpackSpec struct {
 	Stream        io.ReadCloser `json:"-"`
 	TargetPath    string
-	UIDMappings   []groot.IDMappingSpec
-	GIDMappings   []groot.IDMappingSpec
 	BaseDirectory string
 }
 
@@ -65,21 +62,27 @@ type VolumeDriver interface {
 	HandleOpaqueWhiteouts(logger lager.Logger, id string, opaqueWhiteouts []string) error
 }
 
+type BaseDirHandler interface {
+	Handle(lager.Logger, UnpackSpec, string) error
+}
+
 type BaseImagePuller struct {
 	fetcher        Fetcher
 	unpacker       Unpacker
 	volumeDriver   VolumeDriver
+	baseDirHandler BaseDirHandler
 	metricsEmitter groot.MetricsEmitter
 	locksmith      groot.Locksmith
 }
 
-func NewBaseImagePuller(fetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver, metricsEmitter groot.MetricsEmitter, locksmith groot.Locksmith) *BaseImagePuller {
+func NewBaseImagePuller(fetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver, metricsEmitter groot.MetricsEmitter, locksmith groot.Locksmith, baseDirHandler BaseDirHandler) *BaseImagePuller {
 	return &BaseImagePuller{
 		fetcher:        fetcher,
 		unpacker:       unpacker,
 		volumeDriver:   volumeDriver,
 		metricsEmitter: metricsEmitter,
 		locksmith:      locksmith,
+		baseDirHandler: baseDirHandler,
 	}
 }
 
@@ -203,8 +206,6 @@ func (p *BaseImagePuller) unpackLayer(logger lager.Logger, layerInfo, parentLaye
 	unpackSpec := UnpackSpec{
 		TargetPath:    volumePath,
 		Stream:        stream,
-		UIDMappings:   spec.UIDMappings,
-		GIDMappings:   spec.GIDMappings,
 		BaseDirectory: layerInfo.BaseDirectory,
 	}
 
@@ -237,37 +238,6 @@ func (p *BaseImagePuller) createTemporaryVolumeDirectory(logger lager.Logger, la
 	return tempVolumeName, volumePath, nil
 }
 
-func (p *BaseImagePuller) unpackLayerToTemporaryDirectory(logger lager.Logger, unpackSpec UnpackSpec, layerInfo, parentLayerInfo groot.LayerInfo) (volSize int64, err error) {
-	defer p.metricsEmitter.TryEmitDurationFrom(logger, MetricsUnpackTimeName, time.Now())
-
-	if unpackSpec.BaseDirectory != "" {
-		parentPath, err := p.volumeDriver.VolumePath(logger, parentLayerInfo.ChainID)
-		if err != nil {
-			return 0, err
-		}
-
-		if err := ensureBaseDirectoryExists(unpackSpec.BaseDirectory, unpackSpec.TargetPath, parentPath); err != nil {
-			return 0, err
-		}
-	}
-
-	var unpackOutput UnpackOutput
-	if unpackOutput, err = p.unpacker.Unpack(logger, unpackSpec); err != nil {
-		if errD := p.volumeDriver.DestroyVolume(logger, layerInfo.ChainID); errD != nil {
-			logger.Error("volume-cleanup-failed", errD)
-		}
-		return 0, errorspkg.Wrapf(err, "unpacking layer `%s`", layerInfo.BlobID)
-	}
-
-	if err := p.volumeDriver.HandleOpaqueWhiteouts(logger, path.Base(unpackSpec.TargetPath), unpackOutput.OpaqueWhiteouts); err != nil {
-		logger.Error("handling-opaque-whiteouts", err)
-		return 0, errorspkg.Wrap(err, "handling opaque whiteouts")
-	}
-
-	logger.Debug("layer-unpacked")
-	return unpackOutput.BytesWritten, nil
-}
-
 func (p *BaseImagePuller) finalizeVolume(logger lager.Logger, tempVolumeName, volumePath, chainID string, volSize int64) error {
 	if err := p.volumeDriver.WriteVolumeMeta(logger, chainID, VolumeMeta{Size: volSize}); err != nil {
 		return errorspkg.Wrapf(err, "writing volume `%s` metadata", chainID)
@@ -289,36 +259,33 @@ func (p *BaseImagePuller) layersSize(layerInfos []groot.LayerInfo) int64 {
 	return totalSize
 }
 
-func ensureBaseDirectoryExists(baseDir, childPath, parentPath string) error {
-	if baseDir == string(filepath.Separator) {
-		return nil
+func (p *BaseImagePuller) unpackLayerToTemporaryDirectory(logger lager.Logger, unpackSpec UnpackSpec, layerInfo, parentLayerInfo groot.LayerInfo) (volSize int64, err error) {
+	defer p.metricsEmitter.TryEmitDurationFrom(logger, MetricsUnpackTimeName, time.Now())
+
+	if unpackSpec.BaseDirectory != "" {
+		parentPath, err := p.volumeDriver.VolumePath(logger, parentLayerInfo.ChainID)
+		if err != nil {
+			return 0, err
+		}
+
+		if err := p.baseDirHandler.Handle(logger, unpackSpec, parentPath); err != nil {
+			return 0, err
+		}
 	}
 
-	if err := ensureBaseDirectoryExists(filepath.Dir(baseDir), childPath, parentPath); err != nil {
-		return err
+	var unpackOutput UnpackOutput
+	if unpackOutput, err = p.unpacker.Unpack(logger, unpackSpec); err != nil {
+		if errD := p.volumeDriver.DestroyVolume(logger, layerInfo.ChainID); errD != nil {
+			logger.Error("volume-cleanup-failed", errD)
+		}
+		return 0, errorspkg.Wrapf(err, "unpacking layer `%s`", layerInfo.BlobID)
 	}
 
-	stat, err := os.Stat(filepath.Join(childPath, baseDir))
-	if err == nil {
-		return nil
-	} else if !os.IsNotExist(err) {
-		return errorspkg.Wrapf(err, "failed to stat base directory")
+	if err := p.volumeDriver.HandleOpaqueWhiteouts(logger, path.Base(unpackSpec.TargetPath), unpackOutput.OpaqueWhiteouts); err != nil {
+		logger.Error("handling-opaque-whiteouts", err)
+		return 0, errorspkg.Wrap(err, "handling opaque whiteouts")
 	}
 
-	stat, err = os.Stat(filepath.Join(parentPath, baseDir))
-	if err != nil {
-		return errorspkg.Wrapf(err, "base directory not found in parent layer")
-	}
-
-	fullChildBaseDir := filepath.Join(childPath, baseDir)
-	if err := os.Mkdir(fullChildBaseDir, stat.Mode()); err != nil {
-		return errorspkg.Wrapf(err, "could not create base directory in child layer")
-	}
-
-	stat_t := stat.Sys().(*syscall.Stat_t)
-	if err := os.Chown(fullChildBaseDir, int(stat_t.Uid), int(stat_t.Gid)); err != nil {
-		return errorspkg.Wrapf(err, "could not chown base directory")
-	}
-
-	return nil
+	logger.Debug("layer-unpacked")
+	return unpackOutput.BytesWritten, nil
 }

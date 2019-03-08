@@ -3,14 +3,16 @@ package commands
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/grootfs/base_image_puller"
-	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
+	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/sandbox"
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
@@ -38,16 +40,18 @@ type fileSystemDriver interface {
 	MarkVolumeArtifacts(logger lager.Logger, id string) error
 }
 
-func createImageDriver(cfg config.Config, fsDriver fileSystemDriver) (image_cloner.ImageDriver, error) {
+func createImageDriver(logger lager.Logger, cfg config.Config, fsDriver fileSystemDriver) (*namespaced.Driver, error) {
 	storeNamespacer := groot.NewStoreNamespacer(cfg.StorePath)
 	idMappings, err := storeNamespacer.Read()
 	if err != nil {
 		return nil, err
 	}
 
+	shouldCloneUserNs := hasIDMappings(idMappings) && os.Getuid() != 0
 	runner := linux_command_runner.New()
-	idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
-	return namespaced.New(fsDriver, idMappings, idMapper, runner), nil
+	idMapper := unpacker.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
+	reexecer := sandbox.NewReexecer(logger, runner, idMapper, idMappings)
+	return namespaced.New(fsDriver, reexecer, shouldCloneUserNs), nil
 }
 
 func parseIDMappings(args []string) ([]groot.IDMappingSpec, error) {
@@ -113,4 +117,8 @@ func readSubIDMapping(name string, id int, subidPath string) ([]groot.IDMappingS
 	}
 
 	return mappings, nil
+}
+
+func hasIDMappings(idMappings groot.IDMappings) bool {
+	return len(idMappings.UIDMappings) > 0 || len(idMappings.GIDMappings) > 0
 }

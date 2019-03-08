@@ -1,6 +1,7 @@
 package groot // import "code.cloudfoundry.org/grootfs/groot"
 
 import (
+	"io"
 	"os"
 	"time"
 
@@ -27,6 +28,7 @@ const (
 //go:generate counterfeiter . StoreMeasurer
 //go:generate counterfeiter . RootFSConfigurer
 //go:generate counterfeiter . MetricsEmitter
+//go:generate counterfeiter . SandboxReexecer
 
 type ImageInfo struct {
 	Rootfs string        `json:"rootfs"`
@@ -129,6 +131,18 @@ type Locksmith interface {
 type MetricsEmitter interface {
 	TryEmitUsage(logger lager.Logger, name string, usage int64, units string)
 	TryEmitDurationFrom(logger lager.Logger, name string, from time.Time)
+}
+
+type SandboxReexecer interface {
+	Reexec(commandName string, spec ReexecSpec) ([]byte, error)
+}
+
+type ReexecSpec struct {
+	Stdin       io.Reader
+	ChrootDir   string
+	ExtraFiles  []string
+	Args        []string
+	CloneUserns bool
 }
 
 type DiskUsage struct {

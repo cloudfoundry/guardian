@@ -2,25 +2,14 @@ package unpacker // import "code.cloudfoundry.org/grootfs/base_image_puller/unpa
 
 import (
 	"archive/tar"
-	"bytes"
-	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"syscall"
-	"unsafe"
 
 	"github.com/pkg/errors"
-	"github.com/tscolari/lagregator"
-
-	"github.com/containers/storage/pkg/reexec"
-	"github.com/urfave/cli"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
-	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -30,178 +19,30 @@ const (
 	defaultDirectoryGid      = 0
 )
 
-func init() {
-	var fail = func(logger lager.Logger, message string, err error) {
-		logger.Error(message, err)
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-
-	reexec.Register("chroot-unpack", func() {
-		cli.ErrWriter = os.Stdout
-		logger := lager.NewLogger("chroot")
-		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
-
-		unpackSpecJSON := os.Args[1]
-		unpackStrategyJSON := os.Args[2]
-
-		var unpackSpec base_image_puller.UnpackSpec
-		if err := json.Unmarshal([]byte(unpackSpecJSON), &unpackSpec); err != nil {
-			fail(logger, "unmarshal-unpack-spec-failed", err)
-		}
-
-		var unpackStrategy UnpackStrategy
-		if err := json.Unmarshal([]byte(unpackStrategyJSON), &unpackStrategy); err != nil {
-			fail(logger, "unmarshal-unpack-strategy-failed", err)
-		}
-
-		unpacker, err := NewTarUnpacker(unpackStrategy)
-		if err != nil {
-			fail(logger, "creating-tar-unpacker", err)
-		}
-
-		unpackSpec.Stream = os.Stdin
-
-		logger.Info("unpacking")
-		var unpackOutput base_image_puller.UnpackOutput
-		if unpackOutput, err = unpacker.unpack(logger, unpackSpec); err != nil {
-			fail(logger, "unpacking-failed", err)
-		}
-
-		_ = json.NewEncoder(os.Stdout).Encode(unpackOutput)
-	})
-}
-
-type UnpackStrategy struct {
-	WhiteoutDevicePath string
+//go:generate counterfeiter . WhiteoutHandler
+type WhiteoutHandler interface {
+	RemoveWhiteout(path string) error
 }
 
 type TarUnpacker struct {
-	whiteoutHandler whiteoutHandler
-	strategy        UnpackStrategy
+	whiteoutHandler WhiteoutHandler
+	idTranslator    IDTranslator
 }
 
-func NewTarUnpacker(unpackStrategy UnpackStrategy) (*TarUnpacker, error) {
-	var woHandler whiteoutHandler
-
-	parentDirectory := filepath.Dir(unpackStrategy.WhiteoutDevicePath)
-	whiteoutDevDir, err := os.Open(parentDirectory)
-	if err != nil {
-		return nil, err
-	}
-
-	woHandler = &overlayWhiteoutHandler{
-		whiteoutDevName: filepath.Base(unpackStrategy.WhiteoutDevicePath),
-		whiteoutDevDir:  whiteoutDevDir,
-	}
-
+func NewTarUnpacker(whiteoutHandler WhiteoutHandler, idTranslator IDTranslator) *TarUnpacker {
 	return &TarUnpacker{
-		whiteoutHandler: woHandler,
-		strategy:        unpackStrategy,
-	}, nil
-}
-
-type whiteoutHandler interface {
-	removeWhiteout(path string) error
-}
-
-type overlayWhiteoutHandler struct {
-	whiteoutDevName string
-	whiteoutDevDir  *os.File
-}
-
-func (h *overlayWhiteoutHandler) removeWhiteout(path string) error {
-	toBeDeletedPath := strings.Replace(path, ".wh.", "", 1)
-	if err := os.RemoveAll(toBeDeletedPath); err != nil {
-		return errors.Wrap(err, "deleting  file")
+		whiteoutHandler: whiteoutHandler,
+		idTranslator:    idTranslator,
 	}
-
-	targetPath, err := os.Open(filepath.Dir(toBeDeletedPath))
-	if err != nil {
-		return errors.Wrap(err, "opening target whiteout directory")
-	}
-
-	targetName, err := syscall.BytePtrFromString(filepath.Base(toBeDeletedPath))
-	if err != nil {
-		return errors.Wrap(err, "converting whiteout path to byte pointer")
-	}
-
-	whiteoutDevName, err := syscall.BytePtrFromString(h.whiteoutDevName)
-	if err != nil {
-		return errors.Wrap(err, "converting whiteout device name to byte pointer")
-	}
-
-	_, _, errno := syscall.Syscall6(syscall.SYS_LINKAT,
-		h.whiteoutDevDir.Fd(),
-		uintptr(unsafe.Pointer(whiteoutDevName)),
-		targetPath.Fd(),
-		uintptr(unsafe.Pointer(targetName)),
-		0,
-		0,
-	)
-
-	if errno != 0 {
-		return errors.Wrapf(errno, "failed to create whiteout node: %s", toBeDeletedPath)
-	}
-
-	return nil
-}
-
-type defaultWhiteoutHandler struct{}
-
-func (*defaultWhiteoutHandler) removeWhiteout(path string) error {
-	toBeDeletedPath := strings.Replace(path, ".wh.", "", 1)
-	if err := os.RemoveAll(toBeDeletedPath); err != nil {
-		return errors.Wrap(err, "deleting whiteout file")
-	}
-
-	return nil
 }
 
 func (u *TarUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) (base_image_puller.UnpackOutput, error) {
-	strategyJSON, err := json.Marshal(u.strategy)
-	if err != nil {
-		return base_image_puller.UnpackOutput{}, err
-	}
-
-	unpackSpecJSON, err := json.Marshal(spec)
-	if err != nil {
-		return base_image_puller.UnpackOutput{}, err
-	}
-
-	outputBuffer := bytes.NewBuffer([]byte{})
-	cmd := reexec.Command("chroot-unpack", string(unpackSpecJSON), string(strategyJSON))
-	cmd.Stderr = lagregator.NewRelogger(logger)
-	cmd.Stdin = spec.Stream
-	cmd.Stdout = outputBuffer
-
-	if err := cmd.Run(); err != nil {
-		logger.Error("chroot-unpack-failed", err, lager.Data{"output": outputBuffer.String()})
-		return base_image_puller.UnpackOutput{}, errors.New(strings.TrimSpace(outputBuffer.String()))
-	}
-
-	var unpackOutput base_image_puller.UnpackOutput
-	if err := json.NewDecoder(outputBuffer).Decode(&unpackOutput); err != nil {
-		logger.Error("unpack-invalid-output", err, lager.Data{"output": outputBuffer.String()})
-		return base_image_puller.UnpackOutput{}, errors.Wrap(err, "parsing unpack output")
-	}
-
-	return unpackOutput, nil
-}
-
-func (u *TarUnpacker) unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) (base_image_puller.UnpackOutput, error) {
 	logger = logger.Session("unpacking-with-tar", lager.Data{"spec": spec})
 	logger.Info("starting")
 	defer logger.Info("ending")
 
 	if err := safeMkdir(spec.TargetPath, 0755); err != nil {
 		return base_image_puller.UnpackOutput{}, err
-	}
-
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-	if err := chroot(spec.TargetPath); err != nil {
-		return base_image_puller.UnpackOutput{}, errors.Wrap(err, "failed to chroot")
 	}
 
 	tarReader := tar.NewReader(spec.Stream)
@@ -216,6 +57,7 @@ func (u *TarUnpacker) unpack(logger lager.Logger, spec base_image_puller.UnpackS
 		}
 
 		entryPath := filepath.Join(spec.BaseDirectory, tarHeader.Name)
+		entryTargetPath := filepath.Join(spec.TargetPath, entryPath)
 
 		if strings.Contains(tarHeader.Name, ".wh..wh..opq") {
 			opaqueWhiteouts = append(opaqueWhiteouts, entryPath)
@@ -223,13 +65,13 @@ func (u *TarUnpacker) unpack(logger lager.Logger, spec base_image_puller.UnpackS
 		}
 
 		if strings.Contains(tarHeader.Name, ".wh.") {
-			if err := u.whiteoutHandler.removeWhiteout(entryPath); err != nil {
+			if err := u.whiteoutHandler.RemoveWhiteout(entryTargetPath); err != nil {
 				return base_image_puller.UnpackOutput{}, err
 			}
 			continue
 		}
 
-		entrySize, err := u.handleEntry(entryPath, tarReader, tarHeader, spec)
+		entrySize, err := u.handleEntry(entryTargetPath, tarReader, tarHeader, spec)
 		if err != nil {
 			return base_image_puller.UnpackOutput{}, err
 		}
@@ -254,7 +96,7 @@ func (u *TarUnpacker) handleEntry(entryPath string, tarReader *tar.Reader, tarHe
 		return 0, nil
 
 	case tar.TypeLink:
-		if err = u.createLink(entryPath, tarHeader, spec.BaseDirectory); err != nil {
+		if err = u.createLink(entryPath, tarHeader, spec); err != nil {
 			return 0, err
 		}
 
@@ -291,12 +133,10 @@ func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header, spec b
 		}
 	}
 
-	if os.Getuid() == 0 {
-		uid := u.translateID(tarHeader.Uid, spec.UIDMappings)
-		gid := u.translateID(tarHeader.Gid, spec.GIDMappings)
-		if err := os.Chown(path, uid, gid); err != nil {
-			return errors.Wrapf(err, "chowning directory %d:%d `%s`", uid, gid, path)
-		}
+	uid := u.idTranslator.TranslateUID(tarHeader.Uid)
+	gid := u.idTranslator.TranslateGID(tarHeader.Gid)
+	if err := os.Chown(path, uid, gid); err != nil {
+		return errors.Wrapf(err, "chowning directory %d:%d `%s`", uid, gid, path)
 	}
 
 	// we need to explicitly apply perms because mkdir is subject to umask
@@ -326,20 +166,17 @@ func (u *TarUnpacker) createSymlink(path string, tarHeader *tar.Header, spec bas
 		return errors.Wrapf(err, "setting the modtime for the symlink `%s`", path)
 	}
 
-	if os.Getuid() == 0 {
-		uid := u.translateID(tarHeader.Uid, spec.UIDMappings)
-		gid := u.translateID(tarHeader.Gid, spec.GIDMappings)
-
-		if err := os.Lchown(path, uid, gid); err != nil {
-			return errors.Wrapf(err, "chowning link %d:%d `%s`", uid, gid, path)
-		}
+	uid := u.idTranslator.TranslateUID(tarHeader.Uid)
+	gid := u.idTranslator.TranslateGID(tarHeader.Gid)
+	if err := os.Lchown(path, uid, gid); err != nil {
+		return errors.Wrapf(err, "chowning link %d:%d `%s`", uid, gid, path)
 	}
 
 	return nil
 }
 
-func (u *TarUnpacker) createLink(path string, tarHeader *tar.Header, basedir string) error {
-	return os.Link(filepath.Join(basedir, tarHeader.Linkname), path)
+func (u *TarUnpacker) createLink(path string, tarHeader *tar.Header, spec base_image_puller.UnpackSpec) error {
+	return os.Link(filepath.Join(spec.TargetPath, spec.BaseDirectory, tarHeader.Linkname), path)
 }
 
 func ensureParentDir(childPath string) error {
@@ -383,12 +220,10 @@ func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarR
 		return 0, errors.Wrapf(err, "closing file `%s`", path)
 	}
 
-	if os.Getuid() == 0 {
-		uid := u.translateID(tarHeader.Uid, spec.UIDMappings)
-		gid := u.translateID(tarHeader.Gid, spec.GIDMappings)
-		if err := os.Chown(path, uid, gid); err != nil {
-			return 0, errors.Wrapf(err, "chowning file %d:%d `%s`", uid, gid, path)
-		}
+	uid := u.idTranslator.TranslateUID(tarHeader.Uid)
+	gid := u.idTranslator.TranslateGID(tarHeader.Gid)
+	if err := os.Chown(path, uid, gid); err != nil {
+		return 0, errors.Wrapf(err, "chowning file %d:%d `%s`", uid, gid, path)
 	}
 
 	// we need to explicitly apply perms because mkdir is subject to umask
@@ -401,46 +236,6 @@ func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarR
 	}
 
 	return fileSize, nil
-}
-
-func (u *TarUnpacker) translateID(id int, mappings []groot.IDMappingSpec) int {
-	if id == 0 {
-		return u.translateRootID(mappings)
-	}
-
-	for _, mapping := range mappings {
-		if mapping.Size == 1 {
-			continue
-		}
-
-		if id >= mapping.NamespaceID && id < mapping.NamespaceID+mapping.Size {
-			return mapping.HostID + id - 1
-		}
-	}
-
-	return id
-}
-
-func (u *TarUnpacker) translateRootID(mappings []groot.IDMappingSpec) int {
-	for _, mapping := range mappings {
-		if mapping.Size == 1 {
-			return mapping.HostID
-		}
-	}
-
-	return 0
-}
-
-func chroot(path string) error {
-	if err := syscall.Chroot(path); err != nil {
-		return err
-	}
-
-	if err := os.Chdir("/"); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func safeMkdir(path string, perm os.FileMode) error {

@@ -51,7 +51,7 @@ var DeleteCommand = cli.Command{
 
 		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin)
 
-		imageDriver, err := createImageDriver(cfg, fsDriver)
+		imageDriver, err := createImageDriver(logger, cfg, fsDriver)
 		if err != nil {
 			logger.Error("failed-to-initialise-image-driver", err)
 			return cli.NewExitError(err.Error(), 1)

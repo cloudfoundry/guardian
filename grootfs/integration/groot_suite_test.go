@@ -50,6 +50,8 @@ func TestGroot(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	SynchronizedBeforeSuite(func() []byte {
+		testhelpers.EnableRootIDMapRange()
+
 		grootFSBin, err := gexec.Build("code.cloudfoundry.org/grootfs")
 		Expect(err).NotTo(HaveOccurred())
 		grootFSBin = integration.MakeBinaryAccessibleToEveryone(grootFSBin)

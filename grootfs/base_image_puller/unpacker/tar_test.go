@@ -15,6 +15,7 @@ import (
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/containers/storage/pkg/reexec"
@@ -37,33 +38,47 @@ var _ = Describe("Tar unpacker", func() {
 		baseImagePath      string
 		stream             io.ReadWriteCloser
 		targetPath         string
+		storeDir           string
+		storeDirFile       *os.File
 		whiteoutDevicePath string
 		filepathToTar      string
 	)
 
 	BeforeEach(func() {
 		var err error
-		tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{})
+
+		storeDir, err = ioutil.TempDir("", "store-")
 		Expect(err).NotTo(HaveOccurred())
 
-		targetPath, err = ioutil.TempDir("", "")
+		targetPath, err = ioutil.TempDir("", "target-")
 		Expect(err).NotTo(HaveOccurred())
 
-		baseImagePath, err = ioutil.TempDir("", "")
+		baseImagePath, err = ioutil.TempDir("", "baseimage-")
 		Expect(err).NotTo(HaveOccurred())
 
 		logger = lagertest.NewTestLogger("test-store")
 
-		tmpDir, err := ioutil.TempDir("", "whiteout")
-		Expect(err).NotTo(HaveOccurred())
-		whiteoutDevicePath = filepath.Join(tmpDir, "whiteout_device")
-
+		whiteoutDevicePath = filepath.Join(storeDir, overlayxfs.WhiteoutDevice)
 		Expect(syscall.Mknod(whiteoutDevicePath, syscall.S_IFCHR, 0)).To(Succeed())
 
+		storeDirFile, err = os.Open(storeDir)
+		Expect(err).NotTo(HaveOccurred())
+
 		filepathToTar = "."
+
 	})
 
 	JustBeforeEach(func() {
+		mappings := []groot.IDMappingSpec{
+			groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
+			groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
+			groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
+		}
+		tarUnpacker = unpacker.NewTarUnpacker(
+			unpacker.NewOverlayWhiteoutHandler(storeDirFile),
+			unpacker.NewIDTranslator(mappings, mappings),
+		)
+
 		stream = gbytes.NewBuffer()
 		sess, err := gexec.Start(exec.Command("tar", "-c", "-C", baseImagePath, filepathToTar), stream, nil)
 		Expect(err).NotTo(HaveOccurred())
@@ -71,9 +86,10 @@ var _ = Describe("Tar unpacker", func() {
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(baseImagePath)).To(Succeed())
+		Expect(storeDirFile.Close()).To(Succeed())
 		Expect(os.RemoveAll(targetPath)).To(Succeed())
-		Expect(os.RemoveAll(whiteoutDevicePath)).To(Succeed())
+		Expect(os.RemoveAll(storeDir)).To(Succeed())
+		Expect(os.RemoveAll(baseImagePath)).To(Succeed())
 	})
 
 	Describe("regular files", func() {
@@ -160,7 +176,7 @@ var _ = Describe("Tar unpacker", func() {
 				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
 			})
 
-			Context("when id mappings are provided", func() {
+			Context("when there are files owned by multiple users", func() {
 				BeforeEach(func() {
 					Expect(ioutil.WriteFile(filepath.Join(baseImagePath, "200_file"), []byte{}, 0755)).To(Succeed())
 					Expect(os.Chown(filepath.Join(baseImagePath, "200_file"), 200, 200)).To(Succeed())
@@ -169,20 +185,10 @@ var _ = Describe("Tar unpacker", func() {
 					Expect(os.Chown(filepath.Join(baseImagePath, "1200_file"), 1200, 1200)).To(Succeed())
 				})
 
-				It("maps them", func() {
+				It("maps their ownership", func() {
 					_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 						Stream:     stream,
 						TargetPath: targetPath,
-						UIDMappings: []groot.IDMappingSpec{
-							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
-							groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
-							groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
-						},
-						GIDMappings: []groot.IDMappingSpec{
-							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
-							groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
-							groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
-						},
 					})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -314,7 +320,7 @@ var _ = Describe("Tar unpacker", func() {
 				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
 			})
 
-			Context("when id mappings are provided", func() {
+			Context("when there are direcotries owned by multiple users", func() {
 				BeforeEach(func() {
 					Expect(os.Mkdir(filepath.Join(baseImagePath, "200_dir"), 0755)).To(Succeed())
 					Expect(os.Chown(filepath.Join(baseImagePath, "200_dir"), 200, 200)).To(Succeed())
@@ -323,20 +329,10 @@ var _ = Describe("Tar unpacker", func() {
 					Expect(os.Chown(filepath.Join(baseImagePath, "1200_dir"), 1200, 1200)).To(Succeed())
 				})
 
-				It("maps them", func() {
+				It("maps their ownership", func() {
 					_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 						Stream:     stream,
 						TargetPath: targetPath,
-						UIDMappings: []groot.IDMappingSpec{
-							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
-							groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
-							groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
-						},
-						GIDMappings: []groot.IDMappingSpec{
-							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
-							groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
-							groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
-						},
 					})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -563,7 +559,7 @@ var _ = Describe("Tar unpacker", func() {
 					Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
 				})
 
-				Context("when id mappings are provided", func() {
+				Context("when there are links owned by multiple users", func() {
 					BeforeEach(func() {
 						Expect(os.Symlink("/", filepath.Join(baseImagePath, "200_link"))).To(Succeed())
 						Expect(os.Lchown(filepath.Join(baseImagePath, "200_link"), 200, 200)).To(Succeed())
@@ -572,20 +568,10 @@ var _ = Describe("Tar unpacker", func() {
 						Expect(os.Lchown(filepath.Join(baseImagePath, "1200_link"), 1200, 1200)).To(Succeed())
 					})
 
-					It("maps them", func() {
+					It("maps their ownership", func() {
 						_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 							Stream:     stream,
 							TargetPath: targetPath,
-							UIDMappings: []groot.IDMappingSpec{
-								groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
-								groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
-								groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
-							},
-							GIDMappings: []groot.IDMappingSpec{
-								groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
-								groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
-								groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
-							},
 						})
 						Expect(err).NotTo(HaveOccurred())
 
@@ -744,12 +730,6 @@ var _ = Describe("Tar unpacker", func() {
 			Expect(os.Mkdir(path.Join(baseImagePath, "a_dir"), 0755)).To(Succeed())
 			Expect(ioutil.WriteFile(path.Join(baseImagePath, "a_dir", ".wh.a_file"), []byte(""), 0600)).To(Succeed())
 			Expect(ioutil.WriteFile(path.Join(baseImagePath, ".wh.b_dir"), []byte(""), 0600)).To(Succeed())
-
-			var err error
-			tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{
-				WhiteoutDevicePath: whiteoutDevicePath,
-			})
-			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("does not leak the whiteout files", func() {
@@ -789,10 +769,11 @@ var _ = Describe("Tar unpacker", func() {
 		Context("when it fails to link the whiteout device", func() {
 			BeforeEach(func() {
 				var err error
-				tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{
-					WhiteoutDevicePath: "/tmp/not-here",
-				})
+				tempDir, err := ioutil.TempDir("", "")
 				Expect(err).NotTo(HaveOccurred())
+				storeDirFile, err = os.Open(tempDir)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.RemoveAll(tempDir)).To(Succeed())
 			})
 
 			It("returns an error", func() {
@@ -857,58 +838,6 @@ var _ = Describe("Tar unpacker", func() {
 				TargetPath: targetPath,
 			})
 			Expect(err).To(MatchError("unexpected EOF"))
-		})
-	})
-
-	Context("when the tar has files that point to a parent directory", func() {
-		JustBeforeEach(func() {
-			workDir, err := os.Getwd()
-			Expect(err).NotTo(HaveOccurred())
-			stream, err = os.Open(fmt.Sprintf("%s/../../integration/assets/hacked.tar", workDir))
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("doesn't create the file outside the target path", func() {
-			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-				Stream:     stream,
-				TargetPath: targetPath,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(filepath.Join(targetPath, "../", "file_outside_root")).ToNot(BeAnExistingFile())
-		})
-
-		It("creates the file in the root of the target path", func() {
-			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-				Stream:     stream,
-				TargetPath: targetPath,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(filepath.Join(targetPath, "file_outside_root")).To(BeAnExistingFile())
-		})
-	})
-
-	Context("when creating the target directory fails", func() {
-		It("returns an error", func() {
-			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-				Stream:     stream,
-				TargetPath: "/some-destination/images/1000",
-			})
-
-			Expect(err).To(MatchError(ContainSubstring("making destination directory")))
-		})
-	})
-
-	Context("when the target does not exist", func() {
-		It("still works", func() {
-			Expect(os.RemoveAll(targetPath)).To(Succeed())
-
-			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-				Stream:     stream,
-				TargetPath: targetPath,
-			})
-			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

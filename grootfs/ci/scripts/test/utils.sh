@@ -28,7 +28,7 @@ mount_storage() {
   for i in {1..5}
   do
     # Make XFS Volume
-    truncate -s 1G /xfs_volume_${i}
+    truncate -s 3G /xfs_volume_${i}
     mkfs.xfs -b size=4096 /xfs_volume_${i}
 
     # Mount XFS

@@ -2,58 +2,38 @@ package namespaced_test
 
 import (
 	"errors"
-	"os"
-	"os/exec"
 
-	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/grootfs/base_image_puller"
-	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker/unpackerfakes"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/groot/grootfakes"
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced/namespacedfakes"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 
-	"github.com/containers/storage/pkg/reexec"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-func init() {
-	if reexec.Init() {
-		os.Exit(0)
-	}
-}
-
 var _ = Describe("Driver", func() {
 	var (
 		internalDriver    *namespacedfakes.FakeInternalDriver
-		idMapper          *unpackerfakes.FakeIDMapper
 		driver            *namespaced.Driver
 		logger            lager.Logger
-		idMappings        groot.IDMappings
-		fakeCommandRunner *fake_command_runner.FakeCommandRunner
+		reexecer          *grootfakes.FakeSandboxReexecer
+		shouldCloneUserNs bool
 	)
 
 	BeforeEach(func() {
-		fakeCommandRunner = fake_command_runner.New()
-		idMappings = groot.IDMappings{
-			UIDMappings: []groot.IDMappingSpec{
-				{HostID: 100, NamespaceID: 1000, Size: 10},
-			},
-			GIDMappings: []groot.IDMappingSpec{
-				{HostID: 200, NamespaceID: 2000, Size: 20},
-			},
-		}
+		logger = lagertest.NewTestLogger("driver")
+		internalDriver = new(namespacedfakes.FakeInternalDriver)
+		reexecer = new(grootfakes.FakeSandboxReexecer)
+		shouldCloneUserNs = false
 	})
 
 	JustBeforeEach(func() {
-		internalDriver = new(namespacedfakes.FakeInternalDriver)
-		idMapper = new(unpackerfakes.FakeIDMapper)
-		driver = namespaced.New(internalDriver, idMappings, idMapper, fakeCommandRunner)
-		logger = lagertest.NewTestLogger("driver")
+		driver = namespaced.New(internalDriver, reexecer, shouldCloneUserNs)
 	})
 
 	Describe("VolumePath", func() {
@@ -90,122 +70,36 @@ var _ = Describe("Driver", func() {
 	})
 
 	Describe("DestroyVolume", func() {
-		var (
-			commandError error
-			reexecOutput string
-		)
-
-		BeforeEach(func() {
-			commandError = nil
-			reexecOutput = ""
-		})
-
 		JustBeforeEach(func() {
-			fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
-				Path: "/proc/self/exe",
-			}, func(cmd *exec.Cmd) error {
-				cmd.Process = &os.Process{
-					Pid: 12, // don't panic
-				}
-
-				return nil
-			})
-
-			fakeCommandRunner.WhenWaitingFor(fake_command_runner.CommandSpec{
-				Path: "/proc/self/exe",
-			}, func(cmd *exec.Cmd) error {
-				if reexecOutput != "" {
-					_, err := cmd.Stdout.Write([]byte(reexecOutput))
-					Expect(err).NotTo(HaveOccurred())
-				}
-
-				return commandError
-			})
-
 			internalDriver.MarshalReturns([]byte(`{"super-cool":"json"}`), nil)
+			internalDriver.DestroyVolumeReturns(errors.New("error"))
 		})
 
-		Context("when the running user is root", func() {
-			BeforeEach(func() {
-				integration.SkipIfNonRoot(os.Getuid())
-			})
-
-			JustBeforeEach(func() {
-				internalDriver.DestroyVolumeReturns(errors.New("error"))
-			})
-
-			It("doesn't call the IDMapper", func() {
-				_ = driver.DestroyVolume(logger, "123")
-				Expect(idMapper.MapGIDsCallCount()).To(BeZero())
-				Expect(idMapper.MapUIDsCallCount()).To(BeZero())
-			})
-
-			It("decorates the internal driver function", func() {
-				err := driver.DestroyVolume(logger, "123")
-				Expect(err).To(MatchError("error"))
-				Expect(internalDriver.DestroyVolumeCallCount()).To(Equal(1))
-				loggerArg, id := internalDriver.DestroyVolumeArgsForCall(0)
-				Expect(loggerArg).To(Equal(logger))
-				Expect(id).To(Equal("123"))
-			})
+		It("does not reexec", func() {
+			driver.DestroyVolume(logger, "123")
+			Expect(reexecer.ReexecCallCount()).To(BeZero())
 		})
 
-		Context("when the running user is not root", func() {
+		It("decorates the internal driver function", func() {
+			err := driver.DestroyVolume(logger, "123")
+			Expect(err).To(MatchError("error"))
+			Expect(internalDriver.DestroyVolumeCallCount()).To(Equal(1))
+			loggerArg, id := internalDriver.DestroyVolumeArgsForCall(0)
+			Expect(loggerArg).To(Equal(logger))
+			Expect(id).To(Equal("123"))
+		})
+
+		Context("when asked to clone user namespace", func() {
 			BeforeEach(func() {
-				integration.SkipIfRoot(os.Getuid())
+				shouldCloneUserNs = true
 			})
 
-			It("reexecs with the correct arguments", func() {
+			It("reexecs into new user ns", func() {
 				Expect(driver.DestroyVolume(logger, "123")).To(Succeed())
-
-				cmds := fakeCommandRunner.StartedCommands()
-				Expect(cmds).To(HaveLen(1))
-
-				Expect(cmds[0].Args).To(ConsistOf([]string{"with-caps-in-userns", "destroy-volume", `{"super-cool":"json"}`, "123"}))
-			})
-
-			It("uses idMapper to map the all the ids of the reexec process", func() {
-				Expect(driver.DestroyVolume(logger, "123")).To(Succeed())
-
-				Expect(idMapper.MapUIDsCallCount()).To(Equal(1))
-				_, pid, uidMappings := idMapper.MapUIDsArgsForCall(0)
-				Expect(pid).To(Equal(12))
-				Expect(uidMappings).To(Equal([]groot.IDMappingSpec{
-					{HostID: 100, NamespaceID: 1000, Size: 10},
-				}))
-
-				Expect(idMapper.MapGIDsCallCount()).To(Equal(1))
-				_, pid, gidMappings := idMapper.MapGIDsArgsForCall(0)
-				Expect(pid).To(Equal(12))
-				Expect(gidMappings).To(Equal([]groot.IDMappingSpec{
-					{HostID: 200, NamespaceID: 2000, Size: 20},
-				}))
-			})
-
-		})
-
-		Context("when the idmappings are empty", func() {
-			BeforeEach(func() {
-				idMappings = groot.IDMappings{}
-			})
-
-			JustBeforeEach(func() {
-				internalDriver.DestroyVolumeReturns(errors.New("error"))
-			})
-
-			It("doesn't call the IDMapper", func() {
-				_ = driver.DestroyVolume(logger, "123")
-				Expect(idMapper.MapGIDsCallCount()).To(BeZero())
-				Expect(idMapper.MapUIDsCallCount()).To(BeZero())
-			})
-
-			It("decorates the internal driver function", func() {
-				err := driver.DestroyVolume(logger, "123")
-				Expect(err).To(MatchError("error"))
-				Expect(internalDriver.DestroyVolumeCallCount()).To(Equal(1))
-				loggerArg, id := internalDriver.DestroyVolumeArgsForCall(0)
-				Expect(loggerArg).To(Equal(logger))
-				Expect(id).To(Equal("123"))
+				Expect(reexecer.ReexecCallCount()).To(Equal(1))
+				reexecCmd, reexecSpec := reexecer.ReexecArgsForCall(0)
+				Expect(reexecCmd).To(Equal("destroy-volume"))
+				Expect(reexecSpec.CloneUserns).To(BeTrue())
 			})
 		})
 	})
@@ -291,121 +185,36 @@ var _ = Describe("Driver", func() {
 	})
 
 	Describe("DestroyImage", func() {
-		var (
-			commandError error
-			reexecOutput string
-		)
-
-		BeforeEach(func() {
-			commandError = nil
-			reexecOutput = ""
-		})
-
 		JustBeforeEach(func() {
-			fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
-				Path: "/proc/self/exe",
-			}, func(cmd *exec.Cmd) error {
-				cmd.Process = &os.Process{
-					Pid: 12, // don't panic
-				}
-
-				return nil
-			})
-
-			fakeCommandRunner.WhenWaitingFor(fake_command_runner.CommandSpec{
-				Path: "/proc/self/exe",
-			}, func(cmd *exec.Cmd) error {
-				if reexecOutput != "" {
-					_, err := cmd.Stdout.Write([]byte(reexecOutput))
-					Expect(err).NotTo(HaveOccurred())
-				}
-
-				return commandError
-			})
-
 			internalDriver.MarshalReturns([]byte(`{"super-cool":"json"}`), nil)
+			internalDriver.DestroyImageReturns(errors.New("error"))
 		})
 
-		Context("when the running user is root", func() {
-			BeforeEach(func() {
-				integration.SkipIfNonRoot(os.Getuid())
-			})
-
-			JustBeforeEach(func() {
-				internalDriver.DestroyImageReturns(errors.New("error"))
-			})
-
-			It("doesn't call the IDMapper", func() {
-				_ = driver.DestroyImage(logger, "123")
-				Expect(idMapper.MapGIDsCallCount()).To(BeZero())
-				Expect(idMapper.MapUIDsCallCount()).To(BeZero())
-			})
-
-			It("decorates the internal driver function", func() {
-				err := driver.DestroyImage(logger, "123")
-				Expect(err).To(MatchError("error"))
-				Expect(internalDriver.DestroyImageCallCount()).To(Equal(1))
-				loggerArg, id := internalDriver.DestroyImageArgsForCall(0)
-				Expect(loggerArg).To(Equal(logger))
-				Expect(id).To(Equal("123"))
-			})
+		It("decorates the internal driver function", func() {
+			err := driver.DestroyImage(logger, "123")
+			Expect(err).To(MatchError("error"))
+			Expect(internalDriver.DestroyImageCallCount()).To(Equal(1))
+			loggerArg, id := internalDriver.DestroyImageArgsForCall(0)
+			Expect(loggerArg).To(Equal(logger))
+			Expect(id).To(Equal("123"))
 		})
 
-		Context("when the running user is not root", func() {
+		It("does not reexec", func() {
+			driver.DestroyImage(logger, "123")
+			Expect(reexecer.ReexecCallCount()).To(Equal(0))
+		})
+
+		Context("when asked to clone user namespace", func() {
 			BeforeEach(func() {
-				integration.SkipIfRoot(os.Getuid())
+				shouldCloneUserNs = true
 			})
 
-			It("reexecs with the correct arguments", func() {
-				Expect(driver.DestroyImage(logger, "id-1")).To(Succeed())
-
-				cmds := fakeCommandRunner.StartedCommands()
-				Expect(cmds).To(HaveLen(1))
-
-				Expect(cmds[0].Args).To(ConsistOf([]string{"with-caps-in-userns", "destroy-image", `{"super-cool":"json"}`, "id-1"}))
-			})
-
-			It("uses idMapper to map the all the ids of the reexec process", func() {
+			It("reexecs into new user ns", func() {
 				Expect(driver.DestroyImage(logger, "123")).To(Succeed())
-
-				Expect(idMapper.MapUIDsCallCount()).To(Equal(1))
-				_, pid, uidMappings := idMapper.MapUIDsArgsForCall(0)
-				Expect(pid).To(Equal(12))
-				Expect(uidMappings).To(Equal([]groot.IDMappingSpec{
-					{HostID: 100, NamespaceID: 1000, Size: 10},
-				}))
-
-				Expect(idMapper.MapGIDsCallCount()).To(Equal(1))
-				_, pid, gidMappings := idMapper.MapGIDsArgsForCall(0)
-				Expect(pid).To(Equal(12))
-				Expect(gidMappings).To(Equal([]groot.IDMappingSpec{
-					{HostID: 200, NamespaceID: 2000, Size: 20},
-				}))
-			})
-		})
-
-		Context("when the idmappings are empty", func() {
-			BeforeEach(func() {
-				idMappings = groot.IDMappings{}
-			})
-
-			JustBeforeEach(func() {
-				internalDriver.DestroyImageReturns(errors.New("error"))
-			})
-
-			It("doesn't call the IDMapper", func() {
-				_ = driver.DestroyImage(logger, "123")
-				Expect(idMapper.MapGIDsCallCount()).To(BeZero())
-				Expect(idMapper.MapUIDsCallCount()).To(BeZero())
-			})
-
-			It("decorates the internal driver function", func() {
-				err := driver.DestroyImage(logger, "123")
-				Expect(err).To(MatchError("error"))
-				Expect(internalDriver.DestroyImageCallCount()).To(Equal(1))
-				loggerArg, id := internalDriver.DestroyImageArgsForCall(0)
-				Expect(loggerArg).To(Equal(logger))
-				Expect(id).To(Equal("123"))
+				Expect(reexecer.ReexecCallCount()).To(Equal(1))
+				reexecCmd, reexecSpec := reexecer.ReexecArgsForCall(0)
+				Expect(reexecCmd).To(Equal("destroy-image"))
+				Expect(reexecSpec.CloneUserns).To(BeTrue())
 			})
 		})
 	})

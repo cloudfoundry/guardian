@@ -103,7 +103,6 @@ var _ = Describe("Create with OCI images", func() {
 	Context("when the image has cloudfoundry annotations", func() {
 		Describe("org.cloudfoundry.experimental.image.base-directory", func() {
 			BeforeEach(func() {
-				integration.SkipIfNonRoot(GrootfsTestUid)
 				baseImageURL = integration.String2URL(fmt.Sprintf("oci:///%s/assets/oci-test-image/cloudfoundry.experimental.image.base-directory:latest", workDir))
 			})
 
@@ -111,15 +110,17 @@ var _ = Describe("Create with OCI images", func() {
 				containerSpec, err := runner.Create(groot.CreateSpec{
 					BaseImageURL: baseImageURL,
 					ID:           randomImageID,
-					Mount:        true,
+					Mount:        mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
+				Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
 
-				Expect(path.Join(containerSpec.Root.Path, "home", "example")).To(BeARegularFile())
+				Expect(path.Join(containerSpec.Root.Path, "home", "vcap", "app", "dora")).To(BeARegularFile())
 			})
 
 			Context("and the annotated layer contains a hardlink", func() {
 				BeforeEach(func() {
+					integration.SkipIfNonRoot(GrootfsTestUid)
 					baseImageURL = integration.String2URL(fmt.Sprintf("oci:///%s/assets/oci-test-image/hardlink:latest", workDir))
 				})
 
@@ -314,9 +315,9 @@ var _ = Describe("Create with OCI images", func() {
 		Context("when the image is not accounted for in the quota", func() {
 			It("succeeds", func() {
 				_, err := runner.Create(groot.CreateSpec{
-					BaseImageURL: baseImageURL,
-					ID:           randomImageID,
-					Mount:        mountByDefault(),
+					BaseImageURL:              baseImageURL,
+					ID:                        randomImageID,
+					Mount:                     mountByDefault(),
 					ExcludeBaseImageFromQuota: true,
 					DiskLimit:                 diskLimit,
 				})

@@ -55,7 +55,8 @@ func (fake *FakeVolumeDriver) VolumeSize(arg1 lager.Logger, arg2 string) (int64,
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.volumeSizeReturns.result1, fake.volumeSizeReturns.result2
+	fakeReturns := fake.volumeSizeReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeVolumeDriver) VolumeSizeCallCount() int {
@@ -64,13 +65,22 @@ func (fake *FakeVolumeDriver) VolumeSizeCallCount() int {
 	return len(fake.volumeSizeArgsForCall)
 }
 
+func (fake *FakeVolumeDriver) VolumeSizeCalls(stub func(lager.Logger, string) (int64, error)) {
+	fake.volumeSizeMutex.Lock()
+	defer fake.volumeSizeMutex.Unlock()
+	fake.VolumeSizeStub = stub
+}
+
 func (fake *FakeVolumeDriver) VolumeSizeArgsForCall(i int) (lager.Logger, string) {
 	fake.volumeSizeMutex.RLock()
 	defer fake.volumeSizeMutex.RUnlock()
-	return fake.volumeSizeArgsForCall[i].arg1, fake.volumeSizeArgsForCall[i].arg2
+	argsForCall := fake.volumeSizeArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeVolumeDriver) VolumeSizeReturns(result1 int64, result2 error) {
+	fake.volumeSizeMutex.Lock()
+	defer fake.volumeSizeMutex.Unlock()
 	fake.VolumeSizeStub = nil
 	fake.volumeSizeReturns = struct {
 		result1 int64
@@ -79,6 +89,8 @@ func (fake *FakeVolumeDriver) VolumeSizeReturns(result1 int64, result2 error) {
 }
 
 func (fake *FakeVolumeDriver) VolumeSizeReturnsOnCall(i int, result1 int64, result2 error) {
+	fake.volumeSizeMutex.Lock()
+	defer fake.volumeSizeMutex.Unlock()
 	fake.VolumeSizeStub = nil
 	if fake.volumeSizeReturnsOnCall == nil {
 		fake.volumeSizeReturnsOnCall = make(map[int]struct {
@@ -106,7 +118,8 @@ func (fake *FakeVolumeDriver) Volumes(arg1 lager.Logger) ([]string, error) {
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.volumesReturns.result1, fake.volumesReturns.result2
+	fakeReturns := fake.volumesReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeVolumeDriver) VolumesCallCount() int {
@@ -115,13 +128,22 @@ func (fake *FakeVolumeDriver) VolumesCallCount() int {
 	return len(fake.volumesArgsForCall)
 }
 
+func (fake *FakeVolumeDriver) VolumesCalls(stub func(lager.Logger) ([]string, error)) {
+	fake.volumesMutex.Lock()
+	defer fake.volumesMutex.Unlock()
+	fake.VolumesStub = stub
+}
+
 func (fake *FakeVolumeDriver) VolumesArgsForCall(i int) lager.Logger {
 	fake.volumesMutex.RLock()
 	defer fake.volumesMutex.RUnlock()
-	return fake.volumesArgsForCall[i].arg1
+	argsForCall := fake.volumesArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeVolumeDriver) VolumesReturns(result1 []string, result2 error) {
+	fake.volumesMutex.Lock()
+	defer fake.volumesMutex.Unlock()
 	fake.VolumesStub = nil
 	fake.volumesReturns = struct {
 		result1 []string
@@ -130,6 +152,8 @@ func (fake *FakeVolumeDriver) VolumesReturns(result1 []string, result2 error) {
 }
 
 func (fake *FakeVolumeDriver) VolumesReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.volumesMutex.Lock()
+	defer fake.volumesMutex.Unlock()
 	fake.VolumesStub = nil
 	if fake.volumesReturnsOnCall == nil {
 		fake.volumesReturnsOnCall = make(map[int]struct {

@@ -3,9 +3,11 @@ package testhelpers
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 // ReseedRandomNumberGenerator reinitialises the global random number generator
@@ -18,4 +20,20 @@ func ReseedRandomNumberGenerator() {
 
 func NewRandomID() string {
 	return fmt.Sprintf("random-id-%d", rand.Int())
+}
+
+func EnableRootIDMapRange() {
+	Expect(enableRootIDMapRange("/etc/subuid")).To(Succeed())
+	Expect(enableRootIDMapRange("/etc/subgid")).To(Succeed())
+}
+
+func enableRootIDMapRange(mapFilePath string) error {
+	f, err := os.OpenFile(mapFilePath, os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.WriteString("root:0:1\n")
+	return err
 }

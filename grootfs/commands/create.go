@@ -19,6 +19,7 @@ import (
 	"code.cloudfoundry.org/grootfs/fetcher/tar_fetcher"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
+	"code.cloudfoundry.org/grootfs/sandbox"
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
@@ -153,28 +154,20 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		runner := linux_command_runner.New()
-		var unpacker base_image_puller.Unpacker
-		unpackerStrategy := unpackerpkg.UnpackStrategy{
-			WhiteoutDevicePath: filepath.Join(storePath, overlayxfs.WhiteoutDevice),
-		}
+		shouldCloneUserNs := hasIDMappings(idMappings) && os.Getuid() != 0
 
-		var idMapper unpackerpkg.IDMapper
-		if os.Getuid() == 0 {
-			unpacker, err = unpackerpkg.NewTarUnpacker(unpackerStrategy)
-			if err != nil {
-				return cli.NewExitError(err.Error(), 1)
-			}
-		} else {
-			idMapper = unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
-			unpacker = unpackerpkg.NewNSIdMapperUnpacker(runner, idMapper, unpackerStrategy)
-		}
+		runner := linux_command_runner.New()
+		idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
+		reexecer := sandbox.NewReexecer(logger, runner, idMapper, idMappings)
+		unpacker := unpackerpkg.NewNSIdMapperUnpacker(storePath, reexecer, shouldCloneUserNs, idMappings)
+
+		baseDirHandler := base_image_puller.NewBasedirHandler(reexecer, shouldCloneUserNs)
 
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)
 
-		nsFsDriver := namespaced.New(fsDriver, idMappings, idMapper, runner)
+		nsFsDriver := namespaced.New(fsDriver, reexecer, shouldCloneUserNs)
 
 		systemContext := createSystemContext(baseImageURL, cfg.Create, ctx.String("username"), ctx.String("password"))
 
@@ -192,6 +185,7 @@ var CreateCommand = cli.Command{
 			nsFsDriver,
 			metricsEmitter,
 			exclusiveLocksmith,
+			baseDirHandler,
 		)
 
 		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager)

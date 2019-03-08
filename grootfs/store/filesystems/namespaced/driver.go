@@ -1,23 +1,18 @@
 package namespaced
 
 import (
-	"bytes"
 	"encoding/json"
 	"os"
-	"syscall"
 
-	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/grootfs/base_image_puller"
-	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/sandbox"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/spec"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 	"github.com/containers/storage/pkg/reexec"
 	"github.com/pkg/errors"
-	"github.com/tscolari/lagregator"
-	"github.com/urfave/cli"
 )
 
 //go:generate counterfeiter . internalDriver
@@ -39,108 +34,69 @@ type internalDriver interface {
 }
 
 type Driver struct {
-	driver     internalDriver
-	idMappings groot.IDMappings
-	idMapper   unpacker.IDMapper
-	runner     commandrunner.CommandRunner
+	driver            internalDriver
+	reexecer          groot.SandboxReexecer
+	shouldCloneUserNs bool
 }
 
-func New(driver internalDriver, idMappings groot.IDMappings, idMapper unpacker.IDMapper, runner commandrunner.CommandRunner) *Driver {
+func New(driver internalDriver, reexecer groot.SandboxReexecer, shouldCloneUserNs bool) *Driver {
 	return &Driver{
-		driver:     driver,
-		idMappings: idMappings,
-		idMapper:   idMapper,
-		runner:     runner,
+		driver:            driver,
+		reexecer:          reexecer,
+		shouldCloneUserNs: shouldCloneUserNs,
 	}
 }
 
 func init() {
-	if reexec.Init() {
-		os.Exit(0)
-	}
-
-	reexec.Register("with-caps-in-userns", func() {
-		cli.ErrWriter = os.Stdout
-		logger := lager.NewLogger("with-caps-in-userns")
-		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
-
-		ctrlPipeR := os.NewFile(3, "/ctrl/pipe")
-		buffer := make([]byte, 1)
-		logger.Debug("waiting-for-control-pipe")
-		if _, err := ctrlPipeR.Read(buffer); err != nil {
-			logger.Error("reading-control-pipe", err)
-			os.Exit(1)
-		}
-		logger.Debug("got-back-from-control-pipe")
-
-		outputBuffer := bytes.NewBuffer([]byte{})
-		cmd := reexec.Command(os.Args[1], os.Args[2], os.Args[3])
-		cmd.Stderr = lagregator.NewRelogger(logger)
-		cmd.Stdout = outputBuffer
-
-		if err := cmd.Run(); err != nil {
-			logger.Error(os.Args[1], errors.Wrapf(err, "reexecing: %s", outputBuffer.String()))
-			os.Exit(1)
-		}
-	})
-
-	reexec.Register("destroy-volume", func() {
-		cli.ErrWriter = os.Stdout
-		logger := lager.NewLogger("destroy-volume")
-		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
-
+	sandbox.Register("destroy-volume", func(logger lager.Logger, extraFiles []*os.File, args ...string) error {
 		if len(os.Args) != 3 {
-			logger.Error("parsing-command", errors.New("drivers json or id not specified"))
-			os.Exit(1)
+			return errors.New("drivers json or id not specified")
 		}
 
 		var driverSpec spec.DriverSpec
 		if err := json.Unmarshal([]byte(os.Args[1]), &driverSpec); err != nil {
-			logger.Error("unmarshalling driver spec", err)
-			os.Exit(1)
+			return errors.Wrap(err, "unmarshaling driver spec")
 		}
 
 		driver, err := specToDriver(driverSpec)
 		if err != nil {
-			logger.Error("creating fsdriver", err)
-			os.Exit(1)
+			return errors.Wrap(err, "creating fsdriver")
 		}
 
 		volumeID := os.Args[2]
 		if err := driver.DestroyVolume(logger, volumeID); err != nil {
-			logger.Error("destroying volume", err)
-			os.Exit(1)
+			return errors.Wrap(err, "destroying volume")
 		}
+		return nil
 	})
 
-	reexec.Register("destroy-image", func() {
-		cli.ErrWriter = os.Stdout
-		logger := lager.NewLogger("destroy-image")
-		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
-
+	sandbox.Register("destroy-image", func(logger lager.Logger, extraFiles []*os.File, args ...string) error {
 		if len(os.Args) != 3 {
-			logger.Error("parsing-command", errors.New("drivers json or path not specified"))
-			os.Exit(1)
+			return errors.New("drivers json or path not specified")
 		}
 
 		var driverSpec spec.DriverSpec
 		if err := json.Unmarshal([]byte(os.Args[1]), &driverSpec); err != nil {
-			logger.Error("unmarshalling driver spec", err)
-			os.Exit(1)
+			return errors.Wrap(err, "unmashaling driver spec")
 		}
 
 		driver, err := specToDriver(driverSpec)
 		if err != nil {
-			logger.Error("creating fsdriver", err)
-			os.Exit(1)
+			return errors.Wrap(err, "creating fsdriver")
 		}
 
 		imagePath := os.Args[2]
 		if err := driver.DestroyImage(logger, imagePath); err != nil {
-			logger.Error("destroying image", err)
-			os.Exit(1)
+			return errors.Wrap(err, "destroying image")
 		}
+		return nil
 	})
+
+	if reexec.Init() {
+		// prevents infinite reexec loop
+		// Details: https://medium.com/@teddyking/namespaces-in-go-reexec-3d1295b91af8
+		os.Exit(0)
+	}
 }
 
 func (d *Driver) VolumePath(logger lager.Logger, id string) (string, error) {
@@ -152,7 +108,7 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (
 }
 
 func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
-	if len(d.idMappings.UIDMappings)+len(d.idMappings.GIDMappings) == 0 || os.Getuid() == 0 {
+	if !d.shouldCloneUserNs {
 		return d.driver.DestroyVolume(logger, id)
 	}
 
@@ -160,41 +116,16 @@ func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	driverJSON, _ := d.driver.Marshal(logger)
-
-	ctrlPipeR, ctrlPipeW, err := os.Pipe()
+	driverJSON, err := d.driver.Marshal(logger)
 	if err != nil {
-		return errors.Wrap(err, "creating control pipe")
+		return errors.Wrap(err, "marshaling driver json")
 	}
 
-	outputBuffer := bytes.NewBuffer([]byte{})
-	cmd := reexec.Command("with-caps-in-userns", "destroy-volume", string(driverJSON), id)
-	cmd.Stderr = lagregator.NewRelogger(logger)
-	cmd.Stdout = outputBuffer
-	cmd.ExtraFiles = []*os.File{ctrlPipeR}
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWUSER,
-	}
-
-	logger.Debug("starting-destroy-volume-reexec", lager.Data{"args": cmd.Args})
-	if err := d.runner.Start(cmd); err != nil {
-		return errors.Wrap(err, "reexecing destroy volume")
-	}
-
-	if err := d.idMapper.MapUIDs(logger, cmd.Process.Pid, d.idMappings.UIDMappings); err != nil {
-		return errors.Wrap(err, "mapping uids")
-	}
-
-	if err := d.idMapper.MapGIDs(logger, cmd.Process.Pid, d.idMappings.GIDMappings); err != nil {
-		return errors.Wrap(err, "mapping gids")
-	}
-
-	if _, err := ctrlPipeW.Write([]byte{0}); err != nil {
-		return errors.Wrap(err, "writing to control pipe")
-	}
-
-	if err := d.runner.Wait(cmd); err != nil {
-		return errors.Wrapf(err, "waiting for destroy volume rexec: %s", outputBuffer.String())
+	if out, err := d.reexecer.Reexec("destroy-volume", groot.ReexecSpec{
+		Args:        []string{string(driverJSON), id},
+		CloneUserns: true,
+	}); err != nil {
+		return errors.Wrapf(err, "reexecing destroy volume: %s", string(out))
 	}
 
 	return nil
@@ -221,7 +152,7 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 }
 
 func (d *Driver) DestroyImage(logger lager.Logger, path string) error {
-	if len(d.idMappings.UIDMappings)+len(d.idMappings.GIDMappings) == 0 || os.Getuid() == 0 {
+	if !d.shouldCloneUserNs {
 		return d.driver.DestroyImage(logger, path)
 	}
 
@@ -229,41 +160,16 @@ func (d *Driver) DestroyImage(logger lager.Logger, path string) error {
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	driverJSON, _ := d.driver.Marshal(logger)
-
-	ctrlPipeR, ctrlPipeW, err := os.Pipe()
+	driverJSON, err := d.driver.Marshal(logger)
 	if err != nil {
-		return errors.Wrap(err, "creating control pipe")
+		return errors.Wrapf(err, "marshaling driver json")
 	}
 
-	outputBuffer := bytes.NewBuffer([]byte{})
-	cmd := reexec.Command("with-caps-in-userns", "destroy-image", string(driverJSON), path)
-	cmd.Stderr = lagregator.NewRelogger(logger)
-	cmd.Stdout = outputBuffer
-	cmd.ExtraFiles = []*os.File{ctrlPipeR}
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWUSER,
-	}
-
-	logger.Debug("starting-destroy-image-reexec", lager.Data{"args": cmd.Args})
-	if err := d.runner.Start(cmd); err != nil {
-		return errors.Wrap(err, "reexecing destroy image")
-	}
-
-	if err := d.idMapper.MapUIDs(logger, cmd.Process.Pid, d.idMappings.UIDMappings); err != nil {
-		return errors.Wrap(err, "mapping uids")
-	}
-
-	if err := d.idMapper.MapGIDs(logger, cmd.Process.Pid, d.idMappings.GIDMappings); err != nil {
-		return errors.Wrap(err, "mapping gids")
-	}
-
-	if _, err := ctrlPipeW.Write([]byte{0}); err != nil {
-		return errors.Wrap(err, "writing to control pipe")
-	}
-
-	if err := d.runner.Wait(cmd); err != nil {
-		return errors.Wrapf(err, "waiting for destroy image rexec: %s", outputBuffer.String())
+	if out, err := d.reexecer.Reexec("destroy-image", groot.ReexecSpec{
+		Args:        []string{string(driverJSON), path},
+		CloneUserns: true,
+	}); err != nil {
+		return errors.Wrapf(err, "waiting for destroy image reexec: %s", string(out))
 	}
 
 	return nil

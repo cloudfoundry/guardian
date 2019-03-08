@@ -1,17 +1,1 @@
-{
-  "schemaVersion": 2,
-  "manifests": [
-    {
-      "mediaType": "application/vnd.oci.image.manifest.v1+json",
-      "digest": "sha256:fa7e8e791e9f2ae161ea22aa9df705a225bc40d48ebbfb15c07534f31972e7a0",
-      "size": 710,
-      "annotations": {
-        "org.opencontainers.image.ref.name": "latest"
-      },
-      "platform": {
-        "architecture": "amd64",
-        "os": "linux"
-      }
-    }
-  ]
-}
+{"schemaVersion":2,"manifests":[{"mediaType":"application/vnd.oci.image.manifest.v1+json","digest":"sha256:2eddd77f5684e87bd65dbd9ac30c9ca05224ed618c16c65586638190c86b913d","size":657,"annotations":{"org.opencontainers.image.ref.name":"latest"},"platform":{"architecture":"amd64","os":"darwin"}}]}

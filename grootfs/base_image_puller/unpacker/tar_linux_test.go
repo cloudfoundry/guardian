@@ -7,10 +7,12 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -20,7 +22,10 @@ import (
 
 var _ = Describe("Tar unpacker - Linux tests", func() {
 	var (
-		tarUnpacker   *unpacker.TarUnpacker
+		tarUnpacker *unpacker.TarUnpacker
+
+		storeDir      string
+		storeDirFile  *os.File
 		logger        lager.Logger
 		baseImagePath string
 		stream        *os.File
@@ -31,11 +36,22 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 
 	BeforeEach(func() {
 		var err error
-		tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{})
+		storeDir, err = ioutil.TempDir("", "store-")
 		Expect(err).NotTo(HaveOccurred())
 
-		targetPath, err = ioutil.TempDir("", "target-")
+		targetPath = "."
+
+		storeDirFile, err = os.Open(storeDir)
 		Expect(err).NotTo(HaveOccurred())
+
+		mappings := []groot.IDMappingSpec{
+			{HostID: 5000, NamespaceID: 0, Size: 1},
+			{HostID: 100000, NamespaceID: 1, Size: 65000},
+		}
+		tarUnpacker = unpacker.NewTarUnpacker(
+			unpacker.NewOverlayWhiteoutHandler(storeDirFile),
+			unpacker.NewIDTranslator(mappings, mappings),
+		)
 
 		baseImagePath, err = ioutil.TempDir("", "base-image-")
 		Expect(err).NotTo(HaveOccurred())
@@ -56,8 +72,9 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 
 	AfterEach(func() {
 		Expect(stream.Close()).To(Succeed())
+		Expect(storeDirFile.Close()).To(Succeed())
+		Expect(os.RemoveAll(storeDir)).To(Succeed())
 		Expect(os.RemoveAll(baseImagePath)).To(Succeed())
-		Expect(os.RemoveAll(targetPath)).To(Succeed())
 		Expect(os.RemoveAll(tarFilePath)).To(Succeed())
 	})
 
@@ -119,6 +136,27 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 
 			Expect(symlinkTargetFi.ModTime().Unix()).NotTo(Equal(symlinkFi.ModTime().Unix()))
 			Expect(symlinkFi.ModTime().Unix()).To(Equal(symlinkModTime.Unix()))
+		})
+	})
+
+	Describe("file ownership", func() {
+		BeforeEach(func() {
+			filepath := path.Join(baseImagePath, "myfile")
+			Expect(ioutil.WriteFile(filepath, []byte{}, 0755)).To(Succeed())
+		})
+
+		It("maps ownership", func() {
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				Stream:     stream,
+				TargetPath: targetPath,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			stat, err := os.Stat(filepath.Join(targetPath, "myfile"))
+			Expect(err).NotTo(HaveOccurred())
+			stat_t := stat.Sys().(*syscall.Stat_t)
+			Expect(stat_t.Uid).To(Equal(uint32(5000)))
+			Expect(stat_t.Gid).To(Equal(uint32(5000)))
 		})
 	})
 })
