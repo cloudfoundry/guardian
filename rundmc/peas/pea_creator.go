@@ -108,13 +108,14 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		NetworkSharedContainerName: sandboxHandle,
 	}
 
-	cgroupPath := sandboxHandle
+	needNewCgroupns := true
+	cgroupPath := filepath.Join(sandboxHandle, processID)
 
-	if p.NestedCgroups {
-		cgroupPath = filepath.Join(sandboxHandle, processID)
+	if !p.NestedCgroups {
+		cgroupPath = sandboxHandle
+		needNewCgroupns = false
 	}
 
-	needNewCgroupns := false
 	limits := garden.Limits{}
 	if processSpec.OverrideContainerLimits != nil {
 		needNewCgroupns = true
