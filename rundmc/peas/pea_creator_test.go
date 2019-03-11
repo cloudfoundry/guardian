@@ -220,6 +220,7 @@ var _ = Describe("PeaCreator", func() {
 					"ipc":     "/proc/123/ns/ipc",
 					"pid":     "/proc/123/ns/pid",
 					"uts":     "/proc/123/ns/uts",
+					"cgroup":  "/proc/123/ns/cgroup",
 				}))
 			})
 
@@ -237,6 +238,7 @@ var _ = Describe("PeaCreator", func() {
 						"ipc":     "/proc/123/ns/ipc",
 						"pid":     "/proc/123/ns/pid",
 						"uts":     "/proc/123/ns/uts",
+						"cgroup":  "/proc/123/ns/cgroup",
 					}))
 				})
 			})

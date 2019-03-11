@@ -91,6 +91,11 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		return errs("parse-user", err)
 	}
 
+	linuxNamespaces, err := p.linuxNamespaces(log, sandboxHandle, privileged)
+	if err != nil {
+		return errs("determining-namespaces", err)
+	}
+
 	runtimeSpec, err := p.Volumizer.Create(log, garden.ContainerSpec{
 		Handle:     processID,
 		Image:      processSpec.Image,
@@ -108,27 +113,19 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		NetworkSharedContainerName: sandboxHandle,
 	}
 
-	needNewCgroupns := true
-	cgroupPath := filepath.Join(sandboxHandle, processID)
+	cgroupPath := sandboxHandle
 
-	if !p.NestedCgroups {
-		cgroupPath = sandboxHandle
-		needNewCgroupns = false
+	if p.NestedCgroups {
+		cgroupPath = filepath.Join(sandboxHandle, processID)
 	}
 
 	limits := garden.Limits{}
 	if processSpec.OverrideContainerLimits != nil {
-		needNewCgroupns = true
 		cgroupPath = processID
 		limits = garden.Limits{
 			CPU:    processSpec.OverrideContainerLimits.CPU,
 			Memory: processSpec.OverrideContainerLimits.Memory,
 		}
-	}
-
-	linuxNamespaces, err := p.linuxNamespaces(log, sandboxHandle, privileged, needNewCgroupns)
-	if err != nil {
-		return errs("determining-namespaces", err)
 	}
 
 	bndl, genErr := p.BundleGenerator.Generate(spec.DesiredContainerSpec{
@@ -183,7 +180,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	return proc, nil
 }
 
-func (p *PeaCreator) linuxNamespaces(log lager.Logger, sandboxHandle string, privileged, needNewCgroupns bool) (map[string]string, error) {
+func (p *PeaCreator) linuxNamespaces(log lager.Logger, sandboxHandle string, privileged bool) (map[string]string, error) {
 	originalCtrInitPid, err := p.PidGetter.GetPid(log, sandboxHandle)
 	if err != nil {
 		return nil, errorwrapper.Wrap(err, "reading-ctr-pid")
@@ -201,7 +198,7 @@ func (p *PeaCreator) linuxNamespaces(log lager.Logger, sandboxHandle string, pri
 		linuxNamespaces["user"] = fmt.Sprintf("/proc/%d/ns/user", originalCtrInitPid)
 	}
 
-	if !needNewCgroupns {
+	if !p.NestedCgroups {
 		linuxNamespaces["cgroup"] = fmt.Sprintf("/proc/%d/ns/cgroup", originalCtrInitPid)
 	}
 
