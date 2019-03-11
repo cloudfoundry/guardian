@@ -223,7 +223,7 @@ github.com/opencontainers/go-digest
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
 github.com/opencontainers/image-spec/identity
-# github.com/opencontainers/runc v0.0.0-20190208075810-6635b4f0c6af
+# github.com/opencontainers/runc v1.0.0-rc2.0.20190307181833-2b18fe1d885e
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/utils
 github.com/opencontainers/runc/libcontainer/cgroups

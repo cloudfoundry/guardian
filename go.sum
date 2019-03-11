@@ -113,6 +113,8 @@ github.com/opencontainers/image-spec v1.0.1 h1:JMemWkRwHx4Zj+fVxWoMCFm/8sYGGrUVo
 github.com/opencontainers/image-spec v1.0.1/go.mod h1:BtxoFyWECRxE4U/7sNtV5W15zMzWCbyJoFRP3s7yZA0=
 github.com/opencontainers/runc v0.0.0-20190208075810-6635b4f0c6af h1:sVTTz3NeX1xjwCotXia2m2WnGo6N5WU82b7ksbraONE=
 github.com/opencontainers/runc v0.0.0-20190208075810-6635b4f0c6af/go.mod h1:qT5XzbpPznkRYVz/mWwUaVBUv2rmF59PVA73FjuZG0U=
+github.com/opencontainers/runc v1.0.0-rc2.0.20190307181833-2b18fe1d885e h1:YZJHf4Zc87HBDoVpW1ITgjCeaYeJijI1/lPzDJ0WoPU=
+github.com/opencontainers/runc v1.0.0-rc2.0.20190307181833-2b18fe1d885e/go.mod h1:qT5XzbpPznkRYVz/mWwUaVBUv2rmF59PVA73FjuZG0U=
 github.com/opencontainers/runtime-spec v0.0.0-20180909173843-eba862dc2470 h1:dQgS6CgSB2mBQur4Cz7kaEtXNSw56ZlRb7ZsBT70hTA=
 github.com/opencontainers/runtime-spec v0.0.0-20180909173843-eba862dc2470/go.mod h1:jwyrGlmzljRJv/Fgzds9SsS/C5hL+LL3ko9hs6T5lQ0=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
