@@ -91,7 +91,12 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		return errs("parse-user", err)
 	}
 
-	linuxNamespaces, err := p.linuxNamespaces(log, sandboxHandle, privileged)
+	linuxNamespaces, err := p.linuxNamespaces(
+		log,
+		sandboxHandle,
+		privileged,
+		p.shareSandboxContainerCgroup(processSpec),
+	)
 	if err != nil {
 		return errs("determining-namespaces", err)
 	}
@@ -113,26 +118,11 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		NetworkSharedContainerName: sandboxHandle,
 	}
 
-	cgroupPath := sandboxHandle
-
-	if p.NestedCgroups {
-		cgroupPath = filepath.Join(sandboxHandle, processID)
-	}
-
-	limits := garden.Limits{}
-	if processSpec.OverrideContainerLimits != nil {
-		cgroupPath = processID
-		limits = garden.Limits{
-			CPU:    processSpec.OverrideContainerLimits.CPU,
-			Memory: processSpec.OverrideContainerLimits.Memory,
-		}
-	}
-
 	bndl, genErr := p.BundleGenerator.Generate(spec.DesiredContainerSpec{
 		Handle:     processID,
 		BaseConfig: runtimeSpec,
-		CgroupPath: cgroupPath,
-		Limits:     limits,
+		CgroupPath: p.calculateCgroupPath(sandboxHandle, processID, processSpec),
+		Limits:     p.calculateProcessLimits(processSpec),
 		Namespaces: linuxNamespaces,
 		BindMounts: append(processSpec.BindMounts, defaultBindMounts...),
 		Privileged: privileged,
@@ -180,7 +170,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	return proc, nil
 }
 
-func (p *PeaCreator) linuxNamespaces(log lager.Logger, sandboxHandle string, privileged bool) (map[string]string, error) {
+func (p *PeaCreator) linuxNamespaces(log lager.Logger, sandboxHandle string, privileged, shareSandboxContainerCgroup bool) (map[string]string, error) {
 	originalCtrInitPid, err := p.PidGetter.GetPid(log, sandboxHandle)
 	if err != nil {
 		return nil, errorwrapper.Wrap(err, "reading-ctr-pid")
@@ -198,11 +188,39 @@ func (p *PeaCreator) linuxNamespaces(log lager.Logger, sandboxHandle string, pri
 		linuxNamespaces["user"] = fmt.Sprintf("/proc/%d/ns/user", originalCtrInitPid)
 	}
 
-	if !p.NestedCgroups {
+	// TODO: we only need to share cgroup namespaces in rundmc mode which is deprecated
+	// can we simplify the logic and always create a new cgroupns? only need to share cgroup namespaces in rundmc mode which is deprecated
+	// can we simplify the logic and always create a new cgroupns?
+	if shareSandboxContainerCgroup {
 		linuxNamespaces["cgroup"] = fmt.Sprintf("/proc/%d/ns/cgroup", originalCtrInitPid)
 	}
 
 	return linuxNamespaces, nil
+}
+
+func (p *PeaCreator) shareSandboxContainerCgroup(spec garden.ProcessSpec) bool {
+	return !p.NestedCgroups && spec.OverrideContainerLimits == nil
+}
+
+func (p *PeaCreator) calculateCgroupPath(sandboxHandle, processID string, spec garden.ProcessSpec) string {
+	if p.NestedCgroups {
+		return filepath.Join(sandboxHandle, processID)
+	}
+
+	if spec.OverrideContainerLimits != nil {
+		return processID
+	}
+	return sandboxHandle
+}
+
+func (p *PeaCreator) calculateProcessLimits(spec garden.ProcessSpec) garden.Limits {
+	if spec.OverrideContainerLimits != nil {
+		return garden.Limits{
+			CPU:    spec.OverrideContainerLimits.CPU,
+			Memory: spec.OverrideContainerLimits.Memory,
+		}
+	}
+	return garden.Limits{}
 }
 
 func parseUser(uidgid string) (int, int, error) {
