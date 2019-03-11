@@ -1,14 +1,14 @@
-#!/usr/bin/env bash
-set -eo pipefail
+#!/bin/bash
+set -e
 
-source "$( dirname "$BASH_SOURCE" )/test/utils.sh"
+source $(dirname $BASH_SOURCE)/test/utils.sh
 
 trap unmount_storage EXIT
 
 mount_storage
 
-make
-make prefix=/usr/bin install
+dest_path=$(move_to_gopath grootfs)
+cd $dest_path
 
 chmod +s /usr/bin/newuidmap
 chmod +s /usr/bin/newgidmap
@@ -19,4 +19,4 @@ umask 077
 
 args=$@
 [ "$args" == "" ] && args="-r integration"
-ginkgo -mod vendor -p -nodes 5 -race $args
+ginkgo -p -nodes 5 -race $args

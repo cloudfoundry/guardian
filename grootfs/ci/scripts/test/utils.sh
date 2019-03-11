@@ -57,6 +57,20 @@ sudo_unmount_storage() {
   sudo bash -c "$UNMOUNT_STORAGE_FUNC; unmount_storage"
 }
 
+move_to_gopath() {
+  thing_i_want_moved=$1
+  dest_path="$GOPATH/src/code.cloudfoundry.org/${thing_i_want_moved}"
+  mkdir -p $dest_path
+
+  # remove the original grootfs package path
+  [ -d $dest_path ] && rmdir $dest_path
+
+  # link the uploaded source (from build) to the GOPATH
+  ln -s $PWD/src/code.cloudfoundry.org/${thing_i_want_moved} $dest_path
+
+  echo $dest_path
+}
+
 install_dependencies() {
   if ! [ -d vendor ]; then
     glide install
