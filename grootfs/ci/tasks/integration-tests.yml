@@ -19,5 +19,6 @@ params:
   GROOTFS_USER: whoever
 
 run:
-  path: src/code.cloudfoundry.org/grootfs/ci/scripts/integration-tests.sh
+  dir: src/code.cloudfoundry.org/grootfs
+  path: ci/scripts/integration-tests.sh
   user: root

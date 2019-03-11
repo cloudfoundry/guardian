@@ -4,12 +4,21 @@
 	image push-image \
 	update-deps unit integration
 
-all:
-	GOOS=linux go build -o grootfs .
-	GOOS=linux go build -o tardis ./store/filesystems/overlayxfs/tardis
+prefix ?= ./
+
+all: grootfs tardis
+
+grootfs:
+	GOOS=linux go build -mod vendor -o build/grootfs .
+
+tardis:
+	GOOS=linux go build -mod vendor -o build/tardis ./store/filesystems/overlayxfs/tardis
 
 cf: all
-	GOOS=linux go build -tags cloudfoundry -o tardis ./store/filesystems/overlayxfs/tardis
+	GOOS=linux go build -mod vendor -tags cloudfoundry -o tardis ./store/filesystems/overlayxfs/tardis
+
+install:
+	cp build/* $(prefix)
 
 ###### Help ###################################################################
 

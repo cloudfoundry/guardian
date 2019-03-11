@@ -7,9 +7,6 @@ trap sudo_unmount_storage EXIT
 
 sudo_mount_storage
 
-dest_path=$(move_to_gopath grootfs)
-cd $dest_path
-
 echo "I AM groot" | grootsay
 
 # containers/image gets angry when the home is wrong because it's trying to
@@ -18,4 +15,4 @@ export HOME=/home/groot
 
 args=$@
 [ "$args" == "" ] && args="-r"
-ginkgo -p -nodes 5 -race -skipPackage integration $args
+ginkgo -mod vendor -p -nodes 5 -race -skipPackage integration $args
