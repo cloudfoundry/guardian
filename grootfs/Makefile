@@ -54,7 +54,7 @@ test:
 ###### Go tools ###############################################################
 
 go-vet:
-	GOOS=linux go vet `go list ./... | grep -v vendor`
+	GOOS=linux go vet -mod vendor `go list -mod vendor ./... | grep -v vendor`
 
 concourse-go-vet:
 	fly -t garden-ci e -c ci/tasks/go-vet.yml -i grootfs-git-repo=${PWD}
