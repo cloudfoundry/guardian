@@ -55,7 +55,7 @@ int mkdir_p_as(const char *dir, uid_t uid, gid_t gid) {
   len = strlen(tmp);
 
   /* strip trailing slash */
-  if(tmp[len - 1] == '/')
+  if(len != 1 && tmp[len - 1] == '/')
     tmp[len - 1] = 0;
 
   for(p = tmp + 1; *p; p++) {
