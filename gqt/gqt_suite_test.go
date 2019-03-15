@@ -42,6 +42,8 @@ var (
 	config            runner.GdnRunnerConfig
 	binaries          runner.Binaries
 	defaultTestRootFS string
+
+	buildNoGExecDir string
 )
 
 func goCompile(mainPackagePath string, buildArgs ...string) string {
@@ -138,12 +140,19 @@ func getGardenBinaries() runner.Binaries {
 		runCommandInDir(cmd, "../cmd/init")
 		gardenBinaries.Init = "../cmd/init/init"
 
-		gardenBinaries.Groot = goCompile("code.cloudfoundry.org/grootfs")
-		gardenBinaries.Tardis = goCompile("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis")
-		Expect(os.Chmod(gardenBinaries.Tardis, 04755)).To(Succeed())
+		gardenBinaries.Groot = findInGoPathBin("grootfs")
+		gardenBinaries.Tardis = findInGoPathBin("tardis")
 	}
 
 	return gardenBinaries
+}
+
+func findInGoPathBin(binary string) string {
+	gopath, ok := os.LookupEnv("GOPATH")
+	Expect(ok).To(BeTrue(), "GOPATH must be set")
+	binPath := filepath.Join(gopath, "bin", binary)
+	Expect(binPath).To(BeAnExistingFile(), fmt.Sprintf("%s does not exist", binPath))
+	return binPath
 }
 
 func CompileGdn(additionalCompileArgs ...string) string {
