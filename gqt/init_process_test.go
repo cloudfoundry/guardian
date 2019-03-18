@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"code.cloudfoundry.org/guardian/gqt/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -21,7 +22,7 @@ var _ = Describe("Init process", func() {
 		tmpDir = tempDir("", "")
 
 		cmd := exec.Command("gcc", "-static", "-o", "test_init", "test_init.c", "../../cmd/init/ignore_sigchild.c", "-I", "../../cmd/init")
-		runCommandInDir(cmd, "cmd")
+		helpers.RunCommandInDir(cmd, "cmd")
 	})
 
 	AfterEach(func() {

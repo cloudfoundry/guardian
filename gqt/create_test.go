@@ -45,7 +45,7 @@ var _ = Describe("Creating a Container", func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
-	It("has the expected device list allowed", func() {
+	FIt("has the expected device list allowed", func() {
 		var err error
 		container, err = client.Create(garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())

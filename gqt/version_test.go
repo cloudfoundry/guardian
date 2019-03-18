@@ -8,6 +8,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"os/exec"
+
+	"code.cloudfoundry.org/guardian/gqt/helpers"
 )
 
 var _ = Describe("gdn -v", func() {
@@ -24,7 +26,7 @@ var _ = Describe("gdn -v", func() {
 	JustBeforeEach(func() {
 		var err error
 
-		pathToGdn = CompileGdn(gdnCompileArgs...)
+		pathToGdn = helpers.CompileGdn(gdnCompileArgs...)
 
 		versionCmd := exec.Command(pathToGdn, "-v")
 		version, err = versionCmd.Output()

@@ -15,10 +15,10 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/containerdrunner"
+	"code.cloudfoundry.org/guardian/gqt/helpers"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 	"code.cloudfoundry.org/guardian/pkg/locksmith"
-	"github.com/burntsushi/toml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -67,7 +67,7 @@ func TestGqt(t *testing.T) {
 
 var _ = SynchronizedBeforeSuite(func() []byte {
 	binaries := runnerBinaries{
-		Garden: getGardenBinaries(),
+		Garden: helpers.GetGardenBinaries(),
 	}
 
 	// chmod all the artifacts
@@ -78,10 +78,10 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		return nil
 	})
 
-	return jsonMarshal(binaries)
+	return helpers.JsonMarshal(binaries)
 }, func(data []byte) {
 	bins := new(runnerBinaries)
-	jsonUnmarshal(data, bins)
+	helpers.JsonUnmarshal(data, bins)
 	binaries = bins.Garden
 	defaultTestRootFS = os.Getenv("GARDEN_TEST_ROOTFS")
 })
@@ -95,7 +95,7 @@ var _ = BeforeEach(func() {
 		Skip("No Garden RootFS")
 	}
 
-	config = defaultConfig()
+	config = helpers.DefaultConfig(defaultTestRootFS, binaries)
 	if isContainerd() {
 		containerdRunDir = tempDir("", "")
 		containerdSession = startContainerd(containerdRunDir)
@@ -115,78 +115,8 @@ var _ = AfterEach(func() {
 	}
 })
 
-func getGardenBinaries() runner.Binaries {
-	gardenBinaries := runner.Binaries{
-		Tar:           os.Getenv("GARDEN_TAR_PATH"),
-		Gdn:           CompileGdn(),
-		NetworkPlugin: goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_network_plugin"),
-		ImagePlugin:   goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_image_plugin"),
-		RuntimePlugin: goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_runtime_plugin"),
-		NoopPlugin:    goCompile("code.cloudfoundry.org/guardian/gqt/cmd/noop_plugin"),
-	}
-
-	gardenBinaries.PrivilegedImagePlugin = gardenBinaries.ImagePlugin + "-priv"
-	Expect(copyFile(gardenBinaries.ImagePlugin, gardenBinaries.PrivilegedImagePlugin)).To(Succeed())
-
-	if runtime.GOOS == "linux" {
-		gardenBinaries.ExecRunner = goCompile("code.cloudfoundry.org/guardian/cmd/dadoo")
-		gardenBinaries.Socket2me = goCompile("code.cloudfoundry.org/guardian/cmd/socket2me")
-
-		cmd := exec.Command("make")
-		runCommandInDir(cmd, "../rundmc/nstar")
-		gardenBinaries.NSTar = "../rundmc/nstar/nstar"
-
-		cmd = exec.Command("gcc", "-static", "-o", "init", "init.c", "ignore_sigchild.c")
-		runCommandInDir(cmd, "../cmd/init")
-		gardenBinaries.Init = "../cmd/init/init"
-
-		gardenBinaries.Groot = findInGoPathBin("grootfs")
-		gardenBinaries.Tardis = findInGoPathBin("tardis")
-	}
-
-	return gardenBinaries
-}
-
-func findInGoPathBin(binary string) string {
-	gopath, ok := os.LookupEnv("GOPATH")
-	Expect(ok).To(BeTrue(), "GOPATH must be set")
-	binPath := filepath.Join(gopath, "bin", binary)
-	Expect(binPath).To(BeAnExistingFile(), fmt.Sprintf("%s does not exist", binPath))
-	return binPath
-}
-
-func CompileGdn(additionalCompileArgs ...string) string {
-	defaultCompileArgs := []string{"-tags", "daemon"}
-	compileArgs := append(defaultCompileArgs, additionalCompileArgs...)
-
-	return goCompile("code.cloudfoundry.org/guardian/cmd/gdn", compileArgs...)
-}
-
-func runCommandInDir(cmd *exec.Cmd, workingDir string) string {
-	cmd.Dir = workingDir
-	cmdOutput, err := cmd.CombinedOutput()
-	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Running command %#v failed: %v: %s", cmd, err, string(cmdOutput)))
-	return string(cmdOutput)
-}
-
 func runCommand(cmd *exec.Cmd) string {
-	return runCommandInDir(cmd, "")
-}
-
-func defaultConfig() runner.GdnRunnerConfig {
-	cfg := runner.DefaultGdnRunnerConfig(binaries)
-	cfg.DefaultRootFS = defaultTestRootFS
-	cfg.GdnBin = binaries.Gdn
-	cfg.GrootBin = binaries.Groot
-	cfg.Socket2meBin = binaries.Socket2me
-	cfg.ExecRunnerBin = binaries.ExecRunner
-	cfg.InitBin = binaries.Init
-	cfg.TarBin = binaries.Tar
-	cfg.NSTarBin = binaries.NSTar
-	cfg.ImagePluginBin = binaries.Groot
-	cfg.PrivilegedImagePluginBin = binaries.Groot
-
-	return cfg
+	return helpers.RunCommandInDir(cmd, "")
 }
 
 func restartGarden(client *runner.RunningGarden, config runner.GdnRunnerConfig) *runner.RunningGarden {
@@ -214,15 +144,6 @@ func runIPTables(ipTablesArgs ...string) ([]byte, error) {
 	return outBuffer.Bytes(), err
 }
 
-// returns the n'th ASCII character starting from 'a' through 'z'
-// E.g. nodeToString(1) = a, nodeToString(2) = b, etc ...
-func nodeToString(ginkgoNode int) string {
-	r := 'a' + ginkgoNode - 1
-	Expect(r).To(BeNumerically(">=", 'a'))
-	Expect(r).To(BeNumerically("<=", 'z'))
-	return string(r)
-}
-
 func intptr(i int) *int {
 	return &i
 }
@@ -248,9 +169,7 @@ func idToStr(id uint32) string {
 }
 
 func readFile(path string) []byte {
-	content, err := ioutil.ReadFile(path)
-	Expect(err).NotTo(HaveOccurred())
-	return content
+	return helpers.ReadFile(path)
 }
 
 func readFileString(path string) string {
@@ -336,7 +255,7 @@ func createRootfs(modifyRootfs func(string), perm os.FileMode) string {
 func tarUpDir(path string) string {
 	tarPath := filepath.Join(filepath.Dir(path), filepath.Base(path)+".tar")
 	repackCmd := exec.Command("sh", "-c", fmt.Sprintf("tar cf %s *", tarPath))
-	runCommandInDir(repackCmd, path)
+	helpers.RunCommandInDir(repackCmd, path)
 
 	return tarPath
 }
@@ -354,16 +273,6 @@ func mustGetEnv(env string) string {
 		return value
 	}
 	panic(fmt.Sprintf("%s env must be non-empty", env))
-}
-
-func jsonMarshal(v interface{}) []byte {
-	buf := bytes.NewBuffer([]byte{})
-	Expect(toml.NewEncoder(buf).Encode(v)).To(Succeed())
-	return buf.Bytes()
-}
-
-func jsonUnmarshal(data []byte, v interface{}) {
-	Expect(toml.Unmarshal(data, v)).To(Succeed())
 }
 
 func isContainerd() bool {

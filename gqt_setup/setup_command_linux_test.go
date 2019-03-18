@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
+	"code.cloudfoundry.org/guardian/gqt/helpers"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -69,7 +70,7 @@ var _ = Describe("gdn setup", func() {
 			Expect(err).NotTo(HaveOccurred())
 			time.Sleep(time.Second * 20)
 
-			content := readFile(filepath.Join(cgroupPath, "devices.list"))
+			content := helpers.ReadFile(filepath.Join(cgroupPath, "devices.list"))
 			expectedAllowedDevices := []string{
 				"c 1:3 rwm",
 				"c 5:0 rwm",
@@ -85,7 +86,7 @@ var _ = Describe("gdn setup", func() {
 				"c 5:2 rwm",
 				"c 10:200 rwm",
 			}
-			contentLines := strings.Split(strings.TrimSpace(content), "\n")
+			contentLines := strings.Split(strings.TrimSpace(string(content)), "\n")
 			Expect(contentLines).To(HaveLen(len(expectedAllowedDevices)))
 			Expect(contentLines).To(ConsistOf(expectedAllowedDevices))
 		})

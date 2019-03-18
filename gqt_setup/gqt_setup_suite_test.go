@@ -1,17 +1,14 @@
 package gqt_setup_test
 
 import (
-	"bytes"
-	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
 
+	"code.cloudfoundry.org/guardian/gqt/helpers"
 	"code.cloudfoundry.org/guardian/gqt/runner"
-	"github.com/burntsushi/toml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -33,7 +30,7 @@ func TestSetupGqt(t *testing.T) {
 
 var _ = SynchronizedBeforeSuite(func() []byte {
 	binaries := runner.Binaries{
-		Gdn: compileGdn(),
+		Gdn: helpers.CompileGdn(),
 	}
 
 	// chmod all the artifacts
@@ -44,32 +41,16 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		return nil
 	})
 
-	return jsonMarshal(binaries)
+	return helpers.JsonMarshal(binaries)
 }, func(data []byte) {
 	bins := new(runner.Binaries)
-	jsonUnmarshal(data, bins)
+	helpers.JsonUnmarshal(data, bins)
 	binaries = *bins
 })
 
 var _ = SynchronizedAfterSuite(func() {}, func() {
 	gexec.CleanupBuildArtifacts()
 })
-
-func compileGdn(additionalCompileArgs ...string) string {
-	defaultCompileArgs := []string{"-tags", "daemon"}
-	compileArgs := append(defaultCompileArgs, additionalCompileArgs...)
-
-	return goCompile("code.cloudfoundry.org/guardian/cmd/gdn", compileArgs...)
-}
-
-func goCompile(mainPackagePath string, buildArgs ...string) string {
-	if os.Getenv("RACE_DETECTION") != "" {
-		buildArgs = append(buildArgs, "-race")
-	}
-	bin, err := gexec.Build(mainPackagePath, buildArgs...)
-	Expect(err).NotTo(HaveOccurred())
-	return bin
-}
 
 // E.g. nodeToString(1) = a, nodeToString(2) = b, etc ...
 func nodeToString(ginkgoNode int) string {
@@ -81,48 +62,4 @@ func nodeToString(ginkgoNode int) string {
 
 func idToStr(id uint32) string {
 	return strconv.FormatUint(uint64(id), 10)
-}
-
-func readFile(path string) string {
-	content, err := ioutil.ReadFile(path)
-	Expect(err).NotTo(HaveOccurred())
-	return string(content)
-}
-
-func copyFile(srcPath, dstPath string) error {
-	dirPath := filepath.Dir(dstPath)
-	if err := os.MkdirAll(dirPath, 0777); err != nil {
-		return err
-	}
-
-	reader, err := os.Open(srcPath)
-	if err != nil {
-		return err
-	}
-	writer, err := os.Create(dstPath)
-	if err != nil {
-		reader.Close()
-		return err
-	}
-
-	if _, err := io.Copy(writer, reader); err != nil {
-		writer.Close()
-		reader.Close()
-		return err
-	}
-
-	writer.Close()
-	reader.Close()
-
-	return os.Chmod(writer.Name(), 0777)
-}
-
-func jsonMarshal(v interface{}) []byte {
-	buf := bytes.NewBuffer([]byte{})
-	Expect(toml.NewEncoder(buf).Encode(v)).To(Succeed())
-	return buf.Bytes()
-}
-
-func jsonUnmarshal(data []byte, v interface{}) {
-	Expect(toml.Unmarshal(data, v)).To(Succeed())
 }
