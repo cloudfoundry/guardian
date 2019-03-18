@@ -17,6 +17,7 @@ func BuildRuncCommand(runtimePath, runMode, runcRoot, processPath, containerHand
 		runMode,
 		"--detach",
 		"--pid-file", filepath.Join(processPath, "pidfile"),
+		"--exec-log", filepath.Join(processPath, "exec.log"),
 	)
 	runtimeArgs = append(runtimeArgs, runmodeArgs(runMode, processPath)...)
 	runtimeArgs = append(runtimeArgs, ttyArgs(runMode, ttyConsoleSocket)...)
