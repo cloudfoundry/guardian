@@ -148,7 +148,7 @@ func (f *LinuxFactory) WireContainerd(bndlLoader *goci.BndlLoader, processBuilde
 	}
 	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
 	ctx = leases.WithLease(ctx, "lease-is-off")
-	nerd := nerd.New(containerdClient, ctx, f.config.Containers.CleanupProcessDirsOnWait)
+	nerd := nerd.New(containerdClient, ctx, f.config.Containers.CleanupProcessDirsOnWait, filepath.Join(containerdRuncRoot(), "fifo"))
 	pidGetter := &runcontainerd.PidGetter{Nerd: nerd}
 
 	cgroupManager := runcontainerd.NewCgroupManager(containerdRuncRoot(), containerdNamespace)
@@ -227,6 +227,10 @@ func wireMounts() bundlerules.Mounts {
 }
 
 func containerdRuncRoot() string {
+	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
+	if os.Geteuid() != 0 && runtimeDir != "" {
+		return runtimeDir
+	}
 	return proc.RuncRoot
 }
 

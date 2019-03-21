@@ -17,6 +17,7 @@ import (
 	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/errdefs"
 	ctrdevents "github.com/containerd/containerd/events"
+	"github.com/containerd/containerd/runtime/linux/runctypes"
 	"github.com/containerd/typeurl"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -25,13 +26,15 @@ type Nerd struct {
 	client                   *containerd.Client
 	context                  context.Context
 	cleanupProcessDirsOnWait bool
+	ioFifoDir                string
 }
 
-func New(client *containerd.Client, context context.Context, cleanupProcessDirsOnWait bool) *Nerd {
+func New(client *containerd.Client, context context.Context, cleanupProcessDirsOnWait bool, ioFifoDir string) *Nerd {
 	return &Nerd{
 		client:                   client,
 		context:                  context,
 		cleanupProcessDirsOnWait: cleanupProcessDirsOnWait,
+		ioFifoDir:                ioFifoDir,
 	}
 }
 
@@ -43,7 +46,7 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, pi
 	}
 
 	log.Debug("creating-task", lager.Data{"containerID": containerID})
-	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(pio)), containerd.WithNoNewKeyring)
+	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(pio, n.ioFifoDir)), containerd.WithNoNewKeyring, WithCurrentUIDAndGID)
 	if err != nil {
 		return err
 	}
@@ -135,7 +138,7 @@ func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs
 	}
 
 	log.Debug("execing-task", lager.Data{"containerID": containerID, "processID": processID})
-	process, err := task.Exec(n.context, processID, spec, cio.NewCreator(withProcessIO(processIO)))
+	process, err := task.Exec(n.context, processID, spec, cio.NewCreator(withProcessIO(processIO, n.ioFifoDir)))
 	if err != nil {
 		return err
 	}
@@ -149,10 +152,11 @@ func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs
 	return process.CloseIO(n.context, containerd.WithStdinCloser)
 }
 
-func withProcessIO(processIO func() (io.Reader, io.Writer, io.Writer)) cio.Opt {
+func withProcessIO(processIO func() (io.Reader, io.Writer, io.Writer), ioFifoDir string) cio.Opt {
 	return func(opt *cio.Streams) {
 		stdin, stdout, stderr := processIO()
 		cio.WithStreams(orEmpty(stdin), orDiscard(stdout), orDiscard(stderr))(opt)
+		cio.WithFIFODir(ioFifoDir)(opt)
 	}
 }
 
@@ -298,4 +302,25 @@ func coerceEvent(event *ctrdevents.Envelope) (*apievents.TaskOOM, error) {
 	}
 
 	return oom, nil
+}
+
+func WithCurrentUIDAndGID(ctx context.Context, c *containerd.Client, ti *containerd.TaskInfo) error {
+	return updateTaskInfoCreateOptions(ti, func(opts *runctypes.CreateOptions) error {
+		opts.IoUid = uint32(syscall.Geteuid())
+		opts.IoGid = uint32(syscall.Getegid())
+		return nil
+	})
+}
+
+func updateTaskInfoCreateOptions(taskInfo *containerd.TaskInfo, updateCreateOptions func(createOptions *runctypes.CreateOptions) error) error {
+	if taskInfo.Options == nil {
+		taskInfo.Options = &runctypes.CreateOptions{}
+	}
+	opts, ok := taskInfo.Options.(*runctypes.CreateOptions)
+
+	if !ok {
+		return errors.New("could not cast TaskInfo Options to CreateOptions")
+	}
+
+	return updateCreateOptions(opts)
 }
