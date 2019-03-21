@@ -37,6 +37,7 @@ var _ = Describe("Nerd", func() {
 		cleanupProcessDirsOnWait bool
 		containerID              string
 		processID                string
+		fifoDir                  string
 		processIO                func() (io.Reader, io.Writer, io.Writer)
 		stdin                    io.Reader
 		stdout                   io.Writer
@@ -55,9 +56,17 @@ var _ = Describe("Nerd", func() {
 		cleanupProcessDirsOnWait = false
 		testLogger = lagertest.NewTestLogger("nerd-test")
 
+		var err error
+		fifoDir, err = ioutil.TempDir("", "nerd-fifo")
+		Expect(err).NotTo(HaveOccurred())
 	})
+
 	JustBeforeEach(func() {
-		cnerd = nerd.New(containerdClient, containerdContext, cleanupProcessDirsOnWait)
+		cnerd = nerd.New(containerdClient, containerdContext, cleanupProcessDirsOnWait, fifoDir)
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(fifoDir)).To(Succeed())
 	})
 
 	Describe("Create", func() {
