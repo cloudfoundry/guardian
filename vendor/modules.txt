@@ -76,6 +76,7 @@ github.com/containerd/containerd/api/events
 github.com/containerd/containerd/cio
 github.com/containerd/containerd/errdefs
 github.com/containerd/containerd/events
+github.com/containerd/containerd/runtime/linux/runctypes
 github.com/containerd/containerd/api/services/containers/v1
 github.com/containerd/containerd/api/services/content/v1
 github.com/containerd/containerd/api/services/diff/v1
@@ -107,7 +108,6 @@ github.com/containerd/containerd/remotes
 github.com/containerd/containerd/remotes/docker
 github.com/containerd/containerd/remotes/docker/schema1
 github.com/containerd/containerd/rootfs
-github.com/containerd/containerd/runtime/linux/runctypes
 github.com/containerd/containerd/snapshots
 github.com/containerd/containerd/snapshots/proxy
 github.com/containerd/containerd/log
@@ -233,7 +233,7 @@ github.com/opencontainers/runc/libcontainer/configs
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
-# github.com/sirupsen/logrus v1.3.0
+# github.com/sirupsen/logrus v1.4.0
 github.com/sirupsen/logrus
 # github.com/st3v/glager v0.3.0
 github.com/st3v/glager

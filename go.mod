@@ -57,7 +57,7 @@ require (
 	github.com/opencontainers/runtime-spec v0.0.0-20180909173843-eba862dc2470
 	github.com/pkg/errors v0.8.1
 	github.com/poy/eachers v0.0.0-20181020210610-23942921fe77 // indirect
-	github.com/sirupsen/logrus v1.3.0
+	github.com/sirupsen/logrus v1.4.0
 	github.com/st3v/glager v0.3.0
 	github.com/syndtr/gocapability v0.0.0-20180223013746-33e07d32887e // indirect
 	github.com/tedsuo/ifrit v0.0.0-20180410193936-e89a512c3162
