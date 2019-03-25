@@ -152,16 +152,16 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (
 		return "", errorspkg.Wrap(err, "creating volume")
 	}
 
-	shortId, err := d.generateShortishID()
+	shortID, err := d.generateShortishID()
 	if err != nil {
 		logger.Error("generating-short-id-failed", err)
 		return "", errorspkg.Wrap(err, "generating short id")
 	}
-	if err := os.Symlink(volumePath, filepath.Join(d.storePath, LinksDirName, shortId)); err != nil {
+	if err := os.Symlink(volumePath, filepath.Join(d.storePath, LinksDirName, shortID)); err != nil {
 		logger.Error("creating-volume-symlink-failed", err)
 		return "", errorspkg.Wrap(err, "creating volume symlink")
 	}
-	if err := ioutil.WriteFile(filepath.Join(d.storePath, LinksDirName, id), []byte(shortId), 0644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(d.storePath, LinksDirName, id), []byte(shortID), 0644); err != nil {
 		logger.Error("creating-link-file-failed", err)
 		return "", errorspkg.Wrap(err, "creating link file")
 	}
