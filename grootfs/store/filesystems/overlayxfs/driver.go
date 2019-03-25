@@ -15,7 +15,6 @@ import (
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/removeall"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/filesystems"
 	quotapkg "code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/quota"
@@ -765,5 +764,5 @@ func ensureImageDestroyed(logger lager.Logger, imagePath string) error {
 	if err := unix.Unmount(filepath.Join(imagePath, RootfsDir), 0); err != nil {
 		logger.Info("unmount image path failed", lager.Data{"path": imagePath, "error": err})
 	}
-	return removeall.RemoveAll(imagePath)
+	return os.RemoveAll(imagePath)
 }
