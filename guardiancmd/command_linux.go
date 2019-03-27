@@ -227,9 +227,8 @@ func wireMounts() bundlerules.Mounts {
 }
 
 func containerdRuncRoot() string {
-	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
-	if os.Geteuid() != 0 && runtimeDir != "" {
-		return runtimeDir
+	if root := getRuntimeDir(); root != "" {
+		return root
 	}
 	return proc.RuncRoot
 }
@@ -239,10 +238,17 @@ func (cmd *CommonCommand) computeRuncRoot() string {
 		return filepath.Join(containerdRuncRoot(), containerdNamespace)
 	}
 
+	if root := getRuntimeDir(); root != "" {
+		return root
+	}
+
+	return filepath.Join("/", "run", "runc")
+}
+
+func getRuntimeDir() string {
 	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
 	if os.Geteuid() != 0 && runtimeDir != "" {
 		return filepath.Join(runtimeDir, "runc")
 	}
-
-	return filepath.Join("/", "run", "runc")
+	return ""
 }
