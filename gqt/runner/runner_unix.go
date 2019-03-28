@@ -76,14 +76,8 @@ func (r *RunningGarden) Cleanup() error {
 func clearGrootStore(grootBin, storePath string) error {
 	deleteStoreArgs := []string{"--store", storePath, "delete-store"}
 
-	// Ignore lsof errors as lsof would return exit code 1 in case it failed, OR did not find any opened files
-	lsofOutput, _ := exec.Command("lsof", "-V", "-x", "+D", storePath).CombinedOutput()
-
 	deleteStore := exec.Command(grootBin, deleteStoreArgs...)
 	deleteStore.Stdout = GinkgoWriter
 	deleteStore.Stderr = GinkgoWriter
-	if err := deleteStore.Run(); err != nil {
-		return fmt.Errorf("Delete store failed with %s, lsof(%s) output was %s", err.Error(), storePath, string(lsofOutput))
-	}
-	return nil
+	return deleteStore.Run()
 }
