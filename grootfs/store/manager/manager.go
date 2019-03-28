@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
@@ -13,6 +14,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	"github.com/docker/docker/pkg/mount"
 	errorspkg "github.com/pkg/errors"
+	"golang.org/x/sys/unix"
 )
 
 const MinStoreSizeBytes = 1024 * 1024 * 200
@@ -218,12 +220,29 @@ func (m *Manager) DeleteStore(logger lager.Logger) error {
 		return errorspkg.Wrap(err, "deinitialising store")
 	}
 
-	if err := os.RemoveAll(m.storePath); err != nil {
+	if err := tryRemoveAll(m.storePath); err != nil {
 		logger.Error("deleting-store-path-failed", err, lager.Data{"storePath": m.storePath})
 		return errorspkg.Wrapf(err, "deleting store path")
 	}
 
 	return nil
+}
+
+func tryRemoveAll(path string) error {
+	var err error
+
+	for attempt := 0; attempt < 5; attempt++ {
+		switch err = os.RemoveAll(path); err {
+		case nil:
+			return nil
+		case unix.EBUSY:
+			time.Sleep(time.Millisecond * 100)
+		default:
+			return err
+		}
+	}
+
+	return err
 }
 
 func (m *Manager) createAndMountFilesystem(logger lager.Logger, storeSizeBytes int64) error {
