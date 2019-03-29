@@ -183,7 +183,7 @@ github.com/sirupsen/logrus
 github.com/st3v/glager
 # github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861
 github.com/tscolari/lagregator
-# github.com/urfave/cli v0.0.0-20161006035353-55f715e28c46
+# github.com/urfave/cli v1.20.0
 github.com/urfave/cli
 # github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c
 github.com/ventu-io/go-shortid
