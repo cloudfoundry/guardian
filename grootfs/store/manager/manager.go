@@ -220,7 +220,7 @@ func (m *Manager) DeleteStore(logger lager.Logger) error {
 		return errorspkg.Wrap(err, "deinitialising store")
 	}
 
-	if err := tryRemoveAll(m.storePath); err != nil {
+	if err := tryRemoveAll(logger, m.storePath); err != nil {
 		logger.Error("deleting-store-path-failed", err, lager.Data{"storePath": m.storePath})
 		return errorspkg.Wrapf(err, "deleting store path")
 	}
@@ -228,16 +228,36 @@ func (m *Manager) DeleteStore(logger lager.Logger) error {
 	return nil
 }
 
-func tryRemoveAll(path string) error {
+func tryRemoveAll(logger lager.Logger, path string) error {
 	var err error
 
 	for attempt := 0; attempt < 5; attempt++ {
-		switch err = os.RemoveAll(path); err {
+		logger.Debug("trying-to-delete-folder", lager.Data{
+			"path":    path,
+			"attempt": attempt + 1,
+		})
+
+		err = os.RemoveAll(path)
+
+		pathErr, isPathErr := err.(*os.PathError)
+		if !isPathErr {
+			return err
+		}
+
+		switch pathErr.Err {
 		case nil:
 			return nil
 		case unix.EBUSY:
+			logger.Debug("folder-was-busy", lager.Data{
+				"path-error": fmt.Sprintf("%#v", pathErr),
+				"attempt":    attempt + 1,
+			})
 			time.Sleep(time.Millisecond * 100)
 		default:
+			logger.Debug("failed-to-delete-folder", lager.Data{
+				"path-error": fmt.Sprintf("%#v", pathErr),
+				"attempt":    attempt + 1,
+			})
 			return err
 		}
 	}
