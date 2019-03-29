@@ -12,12 +12,11 @@ require (
 	code.cloudfoundry.org/idmapper v0.0.0-20170928154045-bd44efed5494
 	code.cloudfoundry.org/lager v0.0.0-20190115020142-54c4f2530dde
 	code.cloudfoundry.org/localip v0.0.0-20170223024724-b88ad0dea95c
-	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/BurntSushi/toml v0.3.1
 	github.com/Microsoft/go-winio v0.4.7 // indirect
 	github.com/Microsoft/hcsshim v0.6.11 // indirect
 	github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77 // indirect
 	github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40 // indirect
-	github.com/burntsushi/toml v0.3.1
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.1.0
 	github.com/cloudfoundry/gosteno v0.0.0-20150423193413-0c8581caea35 // indirect

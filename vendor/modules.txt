@@ -34,14 +34,14 @@ code.cloudfoundry.org/lager/internal/truncate
 code.cloudfoundry.org/lager/lagerctx
 # code.cloudfoundry.org/localip v0.0.0-20170223024724-b88ad0dea95c
 code.cloudfoundry.org/localip
+# github.com/BurntSushi/toml v0.3.1
+github.com/BurntSushi/toml
 # github.com/Microsoft/go-winio v0.4.7
 github.com/Microsoft/go-winio
 # github.com/Microsoft/hcsshim v0.6.11
 github.com/Microsoft/hcsshim
 # github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40
 github.com/bmizerany/pat
-# github.com/burntsushi/toml v0.3.1
-github.com/burntsushi/toml
 # github.com/cloudfoundry/dropsonde v1.0.0
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde
