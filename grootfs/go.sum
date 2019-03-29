@@ -32,8 +32,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/docker/distribution v0.0.0-20180522175653-f0cc92778478 h1:yCzgNaIN+6iGPBy5h8LVw9ULFerVIiCdPMKiH2A6I/g=
 github.com/docker/distribution v0.0.0-20180522175653-f0cc92778478/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
-github.com/docker/docker v0.0.0-20190205134743-1603af96898b h1:mvqoZmw9dJ7y/pqJLdrngJhQi+tYlzmzxq2v9Yq/uWA=
-github.com/docker/docker v0.0.0-20190205134743-1603af96898b/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+github.com/docker/docker v0.7.3-0.20190329052634-3f08ab936f08 h1:gIY7bYxAOpC6lYG7XaN0/eWQ8MBJ1TzK9UkvufsOQVg=
+github.com/docker/docker v0.7.3-0.20190329052634-3f08ab936f08/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/docker-credential-helpers v0.6.0 h1:5bhDRLn1roGiNjz8IezRngHxMfoeaXGyr0BeMHq4rD8=
 github.com/docker/docker-credential-helpers v0.6.0/go.mod h1:WRaJzqw3CTB9bk10avuGsjVBZsD05qeibJ1/TYlvc0Y=
 github.com/docker/go-connections v0.3.0 h1:3lOnM9cSzgGwx8VfK/NGOW5fLQ0GjIlCkaktF+n1M6o=

@@ -19,7 +19,7 @@ require (
 	github.com/containers/image v0.0.0-20181129122009-63a1cbdc5e65
 	github.com/containers/storage v0.0.0-20181026151120-09abf3a26b8a
 	github.com/docker/distribution v0.0.0-20180522175653-f0cc92778478
-	github.com/docker/docker v0.0.0-20190205134743-1603af96898b
+	github.com/docker/docker v0.7.3-0.20190329052634-3f08ab936f08
 	github.com/docker/docker-credential-helpers v0.6.0 // indirect
 	github.com/docker/go-connections v0.3.0 // indirect
 	github.com/docker/go-metrics v0.0.0-20180209012529-399ea8c73916 // indirect
