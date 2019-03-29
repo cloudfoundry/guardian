@@ -32,8 +32,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/docker/distribution v0.0.0-20180522175653-f0cc92778478 h1:yCzgNaIN+6iGPBy5h8LVw9ULFerVIiCdPMKiH2A6I/g=
 github.com/docker/distribution v0.0.0-20180522175653-f0cc92778478/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
-github.com/docker/docker v0.7.3-0.20190329052634-3f08ab936f08 h1:gIY7bYxAOpC6lYG7XaN0/eWQ8MBJ1TzK9UkvufsOQVg=
-github.com/docker/docker v0.7.3-0.20190329052634-3f08ab936f08/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+github.com/docker/docker v0.0.0-20190205134743-1603af96898b h1:mvqoZmw9dJ7y/pqJLdrngJhQi+tYlzmzxq2v9Yq/uWA=
+github.com/docker/docker v0.0.0-20190205134743-1603af96898b/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/docker-credential-helpers v0.6.0 h1:5bhDRLn1roGiNjz8IezRngHxMfoeaXGyr0BeMHq4rD8=
 github.com/docker/docker-credential-helpers v0.6.0/go.mod h1:WRaJzqw3CTB9bk10avuGsjVBZsD05qeibJ1/TYlvc0Y=
 github.com/docker/go-connections v0.3.0 h1:3lOnM9cSzgGwx8VfK/NGOW5fLQ0GjIlCkaktF+n1M6o=
@@ -104,8 +104,8 @@ github.com/stretchr/testify v1.2.2 h1:bSDNvY7ZPG5RlJ8otE/7V6gMiyenm9RtJ7IUVIAoJ1
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861 h1:lB2XrnIvTdJdfhLJ7+3hCmzaS9n3oJ3uy40C6ETkEjY=
 github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861/go.mod h1:Bk476IH9wMKENKHSERaFD+30wigZMc4b03Km8A/xsPc=
-github.com/urfave/cli v1.20.0 h1:fDqGv3UG/4jbVl/QkFwEdddtEDjh/5Ov6X+0B/3bPaw=
-github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
+github.com/urfave/cli v0.0.0-20161006035353-55f715e28c46 h1:EztUvugq7AA7F3lYLmtFQyvKdcY5pisPt10DqPjRCL8=
+github.com/urfave/cli v0.0.0-20161006035353-55f715e28c46/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
 github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c h1:5v/4YnGPv0eHaqzlkPwEN+Ch0BV1RcnIHjy19xKqSYA=
 github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c/go.mod h1:6rZqAOk/eYX5FJyjQJ6Z3RBSN389IXX2ijwW4FcggaM=
 golang.org/x/crypto v0.0.0-20180904163835-0709b304e793 h1:u+LnwYTOOW7Ukr/fppxEb1Nwz0AtPflrblfvUudpo+I=
@@ -117,8 +117,6 @@ golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f/go.mod h1:RxMgew5VJxzue5/jJ
 golang.org/x/sys v0.0.0-20180905080454-ebe1bf3edb33/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e h1:o3PsSEY8E4eXWkXrIP9YJALUkVZqzHJT5DOasTyn8Vs=
 golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
-golang.org/x/sys v0.0.0-20190329044733-9eb1bfa1ce65 h1:hOY+O8MxdkPV10pNf7/XEHaySCiPKxixMKUshfHsGn0=
-golang.org/x/sys v0.0.0-20190329044733-9eb1bfa1ce65/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/text v0.3.0 h1:g61tztE5qeGQ89tm6NTjjM9VPIm088od1l6aSorWRWg=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=

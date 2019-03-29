@@ -34,10 +34,6 @@ func (m MultiError) Error() string {
 	return strings.Join(errs, "\n")
 }
 
-type ErrorFormatter interface {
-	Format(s fmt.State, verb rune)
-}
-
 // ExitCoder is the interface checked by `App` and `Command` for a custom exit
 // code
 type ExitCoder interface {
@@ -48,11 +44,11 @@ type ExitCoder interface {
 // ExitError fulfills both the builtin `error` interface and `ExitCoder`
 type ExitError struct {
 	exitCode int
-	message  interface{}
+	message  string
 }
 
 // NewExitError makes a new *ExitError
-func NewExitError(message interface{}, exitCode int) *ExitError {
+func NewExitError(message string, exitCode int) *ExitError {
 	return &ExitError{
 		exitCode: exitCode,
 		message:  message,
@@ -62,7 +58,7 @@ func NewExitError(message interface{}, exitCode int) *ExitError {
 // Error returns the string message, fulfilling the interface required by
 // `error`
 func (ee *ExitError) Error() string {
-	return fmt.Sprintf("%v", ee.message)
+	return ee.message
 }
 
 // ExitCode returns the exit code, fulfilling the interface required by
@@ -74,7 +70,7 @@ func (ee *ExitError) ExitCode() int {
 // HandleExitCoder checks if the error fulfills the ExitCoder interface, and if
 // so prints the error to stderr (if it is non-empty) and calls OsExiter with the
 // given exit code.  If the given error is a MultiError, then this func is
-// called on all members of the Errors slice and calls OsExiter with the last exit code.
+// called on all members of the Errors slice.
 func HandleExitCoder(err error) {
 	if err == nil {
 		return
@@ -82,34 +78,21 @@ func HandleExitCoder(err error) {
 
 	if exitErr, ok := err.(ExitCoder); ok {
 		if err.Error() != "" {
-			if _, ok := exitErr.(ErrorFormatter); ok {
-				fmt.Fprintf(ErrWriter, "%+v\n", err)
-			} else {
-				fmt.Fprintln(ErrWriter, err)
-			}
+			fmt.Fprintln(ErrWriter, err)
 		}
 		OsExiter(exitErr.ExitCode())
 		return
 	}
 
 	if multiErr, ok := err.(MultiError); ok {
-		code := handleMultiError(multiErr)
-		OsExiter(code)
+		for _, merr := range multiErr.Errors {
+			HandleExitCoder(merr)
+		}
 		return
 	}
-}
 
-func handleMultiError(multiErr MultiError) int {
-	code := 1
-	for _, merr := range multiErr.Errors {
-		if multiErr2, ok := merr.(MultiError); ok {
-			code = handleMultiError(multiErr2)
-		} else {
-			fmt.Fprintln(ErrWriter, merr)
-			if exitErr, ok := merr.(ExitCoder); ok {
-				code = exitErr.ExitCode()
-			}
-		}
+	if err.Error() != "" {
+		fmt.Fprintln(ErrWriter, err)
 	}
-	return code
+	OsExiter(1)
 }
