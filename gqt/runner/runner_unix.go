@@ -4,6 +4,7 @@ package runner
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os/exec"
 	"syscall"
 
@@ -79,5 +80,12 @@ func clearGrootStore(grootBin, storePath string) error {
 	deleteStore := exec.Command(grootBin, deleteStoreArgs...)
 	deleteStore.Stdout = GinkgoWriter
 	deleteStore.Stderr = GinkgoWriter
-	return deleteStore.Run()
+
+	err := deleteStore.Run()
+	if err != nil {
+		mountinfo, _ := ioutil.ReadFile("/proc/self/mountinfo")
+		return fmt.Errorf("delete-store failed: %s, store path: %s, /proc/self/mountinfo: %s", err.Error(), storePath, string(mountinfo))
+	}
+
+	return nil
 }
