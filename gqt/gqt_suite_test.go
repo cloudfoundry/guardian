@@ -21,6 +21,7 @@ import (
 	"github.com/BurntSushi/toml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -417,4 +418,32 @@ func pollNumGoRoutines(client *runner.RunningGarden) func() int {
 	return func() int {
 		return numGoRoutines(client)
 	}
+}
+
+func runInContainerWithIO(container garden.Container, processIO garden.ProcessIO, path string, args []string) {
+	proc, err := container.Run(
+		garden.ProcessSpec{
+			Path: path,
+			Args: args,
+		},
+		processIO)
+	Expect(err).NotTo(HaveOccurred())
+
+	exitCode, err := proc.Wait()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(exitCode).To(Equal(0))
+}
+
+func runInContainer(container garden.Container, path string, args []string) {
+	runInContainerWithIO(container, ginkgoIO, path, args)
+}
+
+func runInContainerCombinedOutput(container garden.Container, path string, args []string) string {
+	output := gbytes.NewBuffer()
+	pio := garden.ProcessIO{
+		Stdout: output,
+		Stderr: output,
+	}
+	runInContainerWithIO(container, pio, path, args)
+	return string(output.Contents())
 }

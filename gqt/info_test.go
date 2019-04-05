@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"fmt"
 	"path"
 	"time"
 
@@ -85,6 +86,8 @@ var _ = Describe("Info", func() {
 		})
 
 		It("adds an out of memory event", func() {
+			cgroups := runInContainerCombinedOutput(container, "cat", []string{"/proc/self/cgroup"})
+
 			process, err := container.Run(garden.ProcessSpec{
 				Path: "dd",
 				Args: []string{"if=/dev/urandom", "of=/dev/shm/foo", "bs=1M", "count=32"},
@@ -93,7 +96,10 @@ var _ = Describe("Info", func() {
 
 			_, err = process.Wait()
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(getEventsForContainer(container), time.Minute).Should(ContainElement("Out of memory"))
+			Eventually(getEventsForContainer(container), time.Minute).Should(
+				ContainElement("Out of memory"),
+				fmt.Sprintf("Container processes run in the following cgroups: \n%s\n", cgroups),
+			)
 		})
 	})
 })

@@ -642,20 +642,6 @@ func initProcessPID(handle string) int {
 	return state.Pid
 }
 
-func runInContainer(container garden.Container, path string, args []string) {
-	proc, err := container.Run(
-		garden.ProcessSpec{
-			Path: path,
-			Args: args,
-		},
-		ginkgoIO)
-	Expect(err).NotTo(HaveOccurred())
-
-	exitCode, err := proc.Wait()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(exitCode).To(Equal(0))
-}
-
 func numOpenSockets(pid int) (num int) {
 	stdout := runCommand(exec.Command("sh", "-c", fmt.Sprintf("lsof -p %d | grep sock", pid)))
 	return strings.Count(stdout, "\n")
