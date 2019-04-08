@@ -468,7 +468,15 @@ var _ = Describe("Containerd", func() {
 
 			_, err = process.Wait()
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(getEventsForContainer(container), time.Minute).Should(ContainElement("Out of memory"))
+			expectedMemoryCgroupPath := client.CgroupSubsystemPath("memory", container.Handle())
+			Eventually(getEventsForContainer(container), time.Minute).Should(
+				ContainElement("Out of memory"),
+				fmt.Sprintf("Container PID: %s\nExpected memory cgroup path: %s\nPids in the container memory cgroup: %s",
+					getContainerPid(container.Handle()),
+					expectedMemoryCgroupPath,
+					listPidsInCgroup(expectedMemoryCgroupPath),
+				),
+			)
 		})
 	})
 })

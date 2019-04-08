@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -446,4 +447,49 @@ func runInContainerCombinedOutput(container garden.Container, path string, args 
 	}
 	runInContainerWithIO(container, pio, path, args)
 	return string(output.Contents())
+}
+
+func listCgroups(pid string) string {
+	cgroups, err := ioutil.ReadFile(filepath.Join("/proc", pid, "cgroup"))
+	Expect(err).NotTo(HaveOccurred())
+	return string(cgroups)
+}
+
+func getRuncContainerPID(handle string) string {
+	pidBytes, err := ioutil.ReadFile(filepath.Join(config.DepotDir, handle, "pidfile"))
+	Expect(err).NotTo(HaveOccurred())
+	return string(pidBytes)
+}
+
+func getContainerdContainerPID(handle string) string {
+	processes := listProcesses("ctr", config.ContainerdSocket, handle)
+	return pidFromProcessesOutput(processes, handle)
+}
+
+func getContainerPid(handle string) string {
+	if isContainerd() {
+		return getContainerdContainerPID(handle)
+	}
+	return getRuncContainerPID(handle)
+}
+
+func listPidsInCgroup(cgroupPath string) string {
+	procsBytes, err := ioutil.ReadFile(filepath.Join(cgroupPath, "cgroup.procs"))
+	Expect(err).NotTo(HaveOccurred())
+	procs := strings.Split(string(procsBytes), " ")
+
+	result := string(procsBytes) + "\n"
+
+	for _, p := range procs {
+		p = strings.TrimSpace(p)
+		result = result + fmt.Sprintf("cmdline for %s: %s", p, getCmdLine(p)) + "\n"
+	}
+
+	return result
+}
+
+func getCmdLine(pid string) string {
+	cmdBytes, err := ioutil.ReadFile(filepath.Join("/proc", pid, "cmdline"))
+	Expect(err).NotTo(HaveOccurred())
+	return string(cmdBytes)
 }
