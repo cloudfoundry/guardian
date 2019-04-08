@@ -75,7 +75,7 @@ func (r *RunningGarden) Cleanup() error {
 }
 
 func clearGrootStore(grootBin, storePath string) error {
-	deleteStoreArgs := []string{"--store", storePath, "delete-store"}
+	deleteStoreArgs := []string{"--store", storePath, "--log-level", "debug", "delete-store"}
 
 	deleteStore := exec.Command(grootBin, deleteStoreArgs...)
 	deleteStore.Stdout = GinkgoWriter
