@@ -238,15 +238,21 @@ func tryRemoveAll(logger lager.Logger, path string) error {
 		})
 
 		err = os.RemoveAll(path)
+		if err == nil {
+			return nil
+		}
 
 		pathErr, isPathErr := err.(*os.PathError)
 		if !isPathErr {
+			logger.Debug("unexpected-error-type", lager.Data{
+				"path":    path,
+				"error":   fmt.Sprintf("%#v", err),
+				"attempt": attempt + 1,
+			})
 			return err
 		}
 
 		switch pathErr.Err {
-		case nil:
-			return nil
 		case unix.EBUSY:
 			logger.Debug("folder-was-busy", lager.Data{
 				"path-error": fmt.Sprintf("%#v", pathErr),
