@@ -86,7 +86,11 @@ var _ = Describe("Dadoo", func() {
 	AfterEach(func() {
 		cmd := exec.Command("runc", "delete", "-f", filepath.Base(bundlePath))
 		Expect(cmd.Run()).To(Succeed())
-		Expect(os.RemoveAll(bundlePath)).To(Succeed())
+		Expect(os.RemoveAll(bundlePath)).To(Succeed(),
+			fmt.Sprintf("Contents of %s:\n%s\n\nMount table:\n%s\n",
+				bundlePath, listDir(bundlePath), listMounts(),
+			),
+		)
 	})
 
 	Describe("running dadoo", func() {
@@ -928,6 +932,21 @@ var _ = Describe("Dadoo", func() {
 		})
 	})
 })
+
+func listDir(dir string) string {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return dir + " does not exist"
+	}
+	out, err := exec.Command("ls", "-alR", dir).CombinedOutput()
+	Expect(err).NotTo(HaveOccurred())
+	return string(out)
+}
+
+func listMounts() string {
+	mounts, err := ioutil.ReadFile("/proc/self/mountinfo")
+	Expect(err).NotTo(HaveOccurred())
+	return string(mounts)
+}
 
 func mustOpen(path string) *os.File {
 	r, err := os.Open(path)
