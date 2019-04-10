@@ -40,7 +40,7 @@ help:
 ###### Testing ################################################################
 
 compile-tests:
-	ginkgo build -r .; find . -name '*.test' | xargs rm
+	ginkgo build -mod vendor -r .; find . -name '*.test' | xargs rm
 
 unit:
 	./script/test -u
