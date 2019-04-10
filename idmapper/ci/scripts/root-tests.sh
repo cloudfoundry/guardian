@@ -24,5 +24,5 @@ cd $dest_path
 
 echo "I AM ROOT" | grootsay
 
-ginkgo -p -race -r $@
+ginkgo -mod vendor -p -race -r "$@"
 

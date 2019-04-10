@@ -71,7 +71,7 @@ run_unit_tests() {
   fi
 
   # run locally
-  cmd="ginkgo -p --race"
+  cmd="ginkgo -mod vendor -p --race"
   cmd=$cmd" "$(compile_ginkgo_args $test_path)
   eval $cmd
 }
