@@ -233,7 +233,7 @@ github.com/opencontainers/runc/libcontainer/configs
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
-# github.com/sirupsen/logrus v1.4.0
+# github.com/sirupsen/logrus v1.4.1
 github.com/sirupsen/logrus
 # github.com/st3v/glager v0.3.0
 github.com/st3v/glager
@@ -253,8 +253,6 @@ github.com/vishvananda/netlink
 github.com/vishvananda/netlink/nl
 # github.com/vishvananda/netns v0.0.0-20171111001504-be1fbeda1936
 github.com/vishvananda/netns
-# golang.org/x/crypto v0.0.0-20180904163835-0709b304e793
-golang.org/x/crypto/ssh/terminal
 # golang.org/x/net v0.0.0-20180906233101-161cd47e91fd
 golang.org/x/net/html/charset
 golang.org/x/net/context
