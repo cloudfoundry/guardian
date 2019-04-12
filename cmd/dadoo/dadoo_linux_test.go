@@ -76,7 +76,7 @@ var _ = Describe("Dadoo", func() {
 			WithUIDMappings(specs.LinuxIDMapping{HostID: 1, ContainerID: 0, Size: 100}).
 			WithGIDMappings(specs.LinuxIDMapping{HostID: 1, ContainerID: 0, Size: 100})
 
-		SetDefaultEventuallyTimeout(time.Minute)
+		SetDefaultEventuallyTimeout(2 * time.Minute)
 	})
 
 	JustBeforeEach(func() {
@@ -220,7 +220,7 @@ var _ = Describe("Dadoo", func() {
 				})
 
 				It("should open the exit pipe and close it when it exits", func() {
-					runDadoo(specs.Process{
+					sess := runDadoo(specs.Process{
 						Args:        []string{"/bin/sh", "-c", "cat <&0"},
 						Cwd:         "/",
 						ConsoleSize: &specs.Box{},
@@ -247,6 +247,7 @@ var _ = Describe("Dadoo", func() {
 					Consistently(exitFifoCh).ShouldNot(BeClosed())
 					Expect(stdin.Close()).To(Succeed())
 					Eventually(exitFifoCh).Should(BeClosed())
+					Eventually(sess).Should(gexec.Exit())
 				})
 
 				It("should not destroy the container when the exec process exits", func() {
@@ -266,7 +267,7 @@ var _ = Describe("Dadoo", func() {
 				})
 
 				It("should write the container's output to the named pipes inside the process dir", func() {
-					runDadoo(specs.Process{
+					sess := runDadoo(specs.Process{
 						Args:        []string{"/bin/sh", "-c", "cat <&0"},
 						Cwd:         "/",
 						ConsoleSize: &specs.Box{},
@@ -288,6 +289,8 @@ var _ = Describe("Dadoo", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(string(stdout)).To(Equal("hello"))
+
+					Eventually(sess).Should(gexec.Exit())
 				})
 
 				It("ensures the user process is allowed to write to stdout", func() {
@@ -315,6 +318,9 @@ var _ = Describe("Dadoo", func() {
 					stdoutP.Close()
 
 					Consistently(process.ExitCode, time.Second, time.Millisecond*100).Should(Equal(-1), "expected process to stay alive")
+
+					process.Kill()
+					Eventually(process).Should(gexec.Exit())
 				})
 			})
 
@@ -381,7 +387,7 @@ var _ = Describe("Dadoo", func() {
 				})
 
 				It("executes the process with a raw tty with onlcr set", func() {
-					runDadoo(specs.Process{
+					sess := runDadoo(specs.Process{
 						Args: []string{
 							"/bin/sh",
 							"-c",
@@ -411,11 +417,14 @@ var _ = Describe("Dadoo", func() {
 
 					Eventually(buffer, "20s").Should(gbytes.Say(" onlcr"), fmt.Sprintf("DEBUG: Buffer: \n%s\n", string(buffer.Contents())))
 					Consistently(buffer, "3s").ShouldNot(gbytes.Say("-onlcr"))
-				}, 5.0)
+
+					sess.Kill()
+					Eventually(sess).Should(gexec.Exit())
+				})
 
 				Context("when defining the window size", func() {
 					It("should set initial window size", func() {
-						runDadoo(specs.Process{
+						sess := runDadoo(specs.Process{
 							Args: []string{
 								"/bin/sh",
 								"-c",
@@ -450,10 +459,11 @@ var _ = Describe("Dadoo", func() {
 						data, err := ioutil.ReadAll(stdout)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(string(data)).To(ContainSubstring("rows 17; columns 13;"))
-					}, 5.0)
+						Eventually(sess).Should(gexec.Exit())
+					})
 
 					It("should update window size", func() {
-						runDadoo(specs.Process{
+						sess := runDadoo(specs.Process{
 							Args: []string{
 								"/bin/sh",
 								"-c",
@@ -497,6 +507,7 @@ var _ = Describe("Dadoo", func() {
 						data, err := ioutil.ReadAll(stdout)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(string(data)).To(ContainSubstring("rows 53; columns 60;"))
+						Eventually(sess).Should(gexec.Exit())
 					})
 				})
 
