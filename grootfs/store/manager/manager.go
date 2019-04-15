@@ -242,33 +242,39 @@ func tryRemoveAll(logger lager.Logger, path string) error {
 			return nil
 		}
 
-		pathErr, isPathErr := err.(*os.PathError)
-		if !isPathErr {
-			logger.Debug("unexpected-error-type", lager.Data{
-				"path":    path,
-				"error":   fmt.Sprintf("%#v", err),
+		if !isEBUSY(err) {
+			logger.Debug("failed-to-delete-folder", lager.Data{
+				"error":   fmt.Sprintf("%T: %#v", err, err),
 				"attempt": attempt + 1,
 			})
 			return err
 		}
 
-		switch pathErr.Err {
-		case unix.EBUSY:
-			logger.Debug("folder-was-busy", lager.Data{
-				"path-error": fmt.Sprintf("%#v", pathErr),
-				"attempt":    attempt + 1,
-			})
-			time.Sleep(time.Millisecond * 100)
-		default:
-			logger.Debug("failed-to-delete-folder", lager.Data{
-				"path-error": fmt.Sprintf("%#v", pathErr),
-				"attempt":    attempt + 1,
-			})
-			return err
-		}
+		logger.Debug("folder-was-busy", lager.Data{
+			"error":   fmt.Sprintf("%#v", err),
+			"attempt": attempt + 1,
+		})
+		time.Sleep(time.Millisecond * 100)
 	}
 
 	return err
+}
+
+func isEBUSY(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if err == unix.EBUSY {
+		return true
+	}
+
+	pathErr, ok := err.(*os.PathError)
+	if !ok {
+		return false
+	}
+
+	return pathErr.Err == unix.EBUSY
 }
 
 func (m *Manager) createAndMountFilesystem(logger lager.Logger, storeSizeBytes int64) error {
