@@ -2,7 +2,7 @@
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20170928154045-bd44efed5494
+# code.cloudfoundry.org/idmapper v0.0.0-20190410122444-276ec50ea425
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager v0.0.0-20181119165122-baf208c4c56b
 code.cloudfoundry.org/lager
@@ -186,7 +186,7 @@ github.com/tscolari/lagregator
 github.com/urfave/cli
 # github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c
 github.com/ventu-io/go-shortid
-# golang.org/x/net v0.0.0-20180906233101-161cd47e91fd
+# golang.org/x/net v0.0.0-20190213061140-3a22650c66bd
 golang.org/x/net/html/charset
 golang.org/x/net/proxy
 golang.org/x/net/html

@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b
-	code.cloudfoundry.org/idmapper v0.0.0-20170928154045-bd44efed5494
+	code.cloudfoundry.org/idmapper v0.0.0-20190410122444-276ec50ea425
 	code.cloudfoundry.org/lager v0.0.0-20181119165122-baf208c4c56b
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/Microsoft/go-winio v0.4.7 // indirect
