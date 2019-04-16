@@ -21,6 +21,7 @@ import (
 	"github.com/containers/image/image"
 	manifestpkg "github.com/containers/image/manifest"
 	_ "github.com/containers/image/oci/layout"
+	"github.com/containers/image/pkg/blobinfocache/none"
 	"github.com/containers/image/transports"
 	"github.com/containers/image/types"
 	digestpkg "github.com/opencontainers/go-digest"
@@ -193,7 +194,7 @@ func (s *LayerSource) getBlobWithRetries(logger lager.Logger, imgSrc types.Image
 	var err error
 	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
 		logger.Debug(fmt.Sprintf("attempt-get-blob-%d", i+1))
-		blob, size, e := imgSrc.GetBlob(context.TODO(), blobInfo)
+		blob, size, e := imgSrc.GetBlob(context.TODO(), blobInfo, none.NoCache)
 		if e == nil {
 			logger.Debug("attempt-get-blob-success")
 			return blob, size, nil

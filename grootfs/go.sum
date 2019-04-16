@@ -24,8 +24,8 @@ github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4 h1:cWfya7mo/
 github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4/go.mod h1:GS0pCHd7onIsewbw8Ue9qa9pZPv2V88cUZDttK6KzgI=
 github.com/containerd/continuity v0.0.0-20180524210603-d3c23511c1bf h1:hcu2Ifo+lC4OwDt3yDYjrzRA+r9vafUvc9jhJF2K0CM=
 github.com/containerd/continuity v0.0.0-20180524210603-d3c23511c1bf/go.mod h1:GL3xCUCBDV3CZiTSEKksMWbLE66hEyuu9qyDOOqM47Y=
-github.com/containers/image v0.0.0-20181129122009-63a1cbdc5e65 h1:TDK8klqsMt64MvOaDbAbyjTD2hFeGVxQhxqyIyzOTfI=
-github.com/containers/image v0.0.0-20181129122009-63a1cbdc5e65/go.mod h1:8Vtij257IWSanUQKe1tAeNOm2sRVkSqQTVQ1IlwI3+M=
+github.com/containers/image v1.5.1 h1:ssEuj1c24uJvdMkUa2IrawuEFZBP12p6WzrjNBTQxE0=
+github.com/containers/image v1.5.1/go.mod h1:8Vtij257IWSanUQKe1tAeNOm2sRVkSqQTVQ1IlwI3+M=
 github.com/containers/storage v0.0.0-20181026151120-09abf3a26b8a h1:IHlMlch67dyaTrtOWrnyMBj1LPhaTsFPAEVHHMIzmEg=
 github.com/containers/storage v0.0.0-20181026151120-09abf3a26b8a/go.mod h1:+RirK6VQAqskQlaTBrOG6ulDvn4si2QjFE1NZCn06MM=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=

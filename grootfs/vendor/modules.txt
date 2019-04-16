@@ -41,13 +41,14 @@ github.com/cloudfoundry/gosteno/syslog
 github.com/cloudfoundry/sonde-go/events
 # github.com/containerd/continuity v0.0.0-20180524210603-d3c23511c1bf
 github.com/containerd/continuity/pathdriver
-# github.com/containers/image v0.0.0-20181129122009-63a1cbdc5e65
+# github.com/containers/image v1.5.1
 github.com/containers/image/types
 github.com/containers/image/docker/reference
 github.com/containers/image/docker
 github.com/containers/image/image
 github.com/containers/image/manifest
 github.com/containers/image/oci/layout
+github.com/containers/image/pkg/blobinfocache/none
 github.com/containers/image/transports
 github.com/containers/image/docker/policyconfiguration
 github.com/containers/image/pkg/docker/config
