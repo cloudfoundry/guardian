@@ -9,10 +9,10 @@ import (
 )
 
 type FakeImageCloner struct {
-	ImageIDsStub        func(logger lager.Logger) ([]string, error)
+	ImageIDsStub        func(lager.Logger) ([]string, error)
 	imageIDsMutex       sync.RWMutex
 	imageIDsArgsForCall []struct {
-		logger lager.Logger
+		arg1 lager.Logger
 	}
 	imageIDsReturns struct {
 		result1 []string
@@ -26,21 +26,22 @@ type FakeImageCloner struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeImageCloner) ImageIDs(logger lager.Logger) ([]string, error) {
+func (fake *FakeImageCloner) ImageIDs(arg1 lager.Logger) ([]string, error) {
 	fake.imageIDsMutex.Lock()
 	ret, specificReturn := fake.imageIDsReturnsOnCall[len(fake.imageIDsArgsForCall)]
 	fake.imageIDsArgsForCall = append(fake.imageIDsArgsForCall, struct {
-		logger lager.Logger
-	}{logger})
-	fake.recordInvocation("ImageIDs", []interface{}{logger})
+		arg1 lager.Logger
+	}{arg1})
+	fake.recordInvocation("ImageIDs", []interface{}{arg1})
 	fake.imageIDsMutex.Unlock()
 	if fake.ImageIDsStub != nil {
-		return fake.ImageIDsStub(logger)
+		return fake.ImageIDsStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.imageIDsReturns.result1, fake.imageIDsReturns.result2
+	fakeReturns := fake.imageIDsReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeImageCloner) ImageIDsCallCount() int {
@@ -49,13 +50,22 @@ func (fake *FakeImageCloner) ImageIDsCallCount() int {
 	return len(fake.imageIDsArgsForCall)
 }
 
+func (fake *FakeImageCloner) ImageIDsCalls(stub func(lager.Logger) ([]string, error)) {
+	fake.imageIDsMutex.Lock()
+	defer fake.imageIDsMutex.Unlock()
+	fake.ImageIDsStub = stub
+}
+
 func (fake *FakeImageCloner) ImageIDsArgsForCall(i int) lager.Logger {
 	fake.imageIDsMutex.RLock()
 	defer fake.imageIDsMutex.RUnlock()
-	return fake.imageIDsArgsForCall[i].logger
+	argsForCall := fake.imageIDsArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeImageCloner) ImageIDsReturns(result1 []string, result2 error) {
+	fake.imageIDsMutex.Lock()
+	defer fake.imageIDsMutex.Unlock()
 	fake.ImageIDsStub = nil
 	fake.imageIDsReturns = struct {
 		result1 []string
@@ -64,6 +74,8 @@ func (fake *FakeImageCloner) ImageIDsReturns(result1 []string, result2 error) {
 }
 
 func (fake *FakeImageCloner) ImageIDsReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.imageIDsMutex.Lock()
+	defer fake.imageIDsMutex.Unlock()
 	fake.ImageIDsStub = nil
 	if fake.imageIDsReturnsOnCall == nil {
 		fake.imageIDsReturnsOnCall = make(map[int]struct {

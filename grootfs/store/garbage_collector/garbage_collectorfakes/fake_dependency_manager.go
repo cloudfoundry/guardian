@@ -8,10 +8,10 @@ import (
 )
 
 type FakeDependencyManager struct {
-	DependenciesStub        func(id string) ([]string, error)
+	DependenciesStub        func(string) ([]string, error)
 	dependenciesMutex       sync.RWMutex
 	dependenciesArgsForCall []struct {
-		id string
+		arg1 string
 	}
 	dependenciesReturns struct {
 		result1 []string
@@ -25,21 +25,22 @@ type FakeDependencyManager struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeDependencyManager) Dependencies(id string) ([]string, error) {
+func (fake *FakeDependencyManager) Dependencies(arg1 string) ([]string, error) {
 	fake.dependenciesMutex.Lock()
 	ret, specificReturn := fake.dependenciesReturnsOnCall[len(fake.dependenciesArgsForCall)]
 	fake.dependenciesArgsForCall = append(fake.dependenciesArgsForCall, struct {
-		id string
-	}{id})
-	fake.recordInvocation("Dependencies", []interface{}{id})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("Dependencies", []interface{}{arg1})
 	fake.dependenciesMutex.Unlock()
 	if fake.DependenciesStub != nil {
-		return fake.DependenciesStub(id)
+		return fake.DependenciesStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.dependenciesReturns.result1, fake.dependenciesReturns.result2
+	fakeReturns := fake.dependenciesReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeDependencyManager) DependenciesCallCount() int {
@@ -48,13 +49,22 @@ func (fake *FakeDependencyManager) DependenciesCallCount() int {
 	return len(fake.dependenciesArgsForCall)
 }
 
+func (fake *FakeDependencyManager) DependenciesCalls(stub func(string) ([]string, error)) {
+	fake.dependenciesMutex.Lock()
+	defer fake.dependenciesMutex.Unlock()
+	fake.DependenciesStub = stub
+}
+
 func (fake *FakeDependencyManager) DependenciesArgsForCall(i int) string {
 	fake.dependenciesMutex.RLock()
 	defer fake.dependenciesMutex.RUnlock()
-	return fake.dependenciesArgsForCall[i].id
+	argsForCall := fake.dependenciesArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeDependencyManager) DependenciesReturns(result1 []string, result2 error) {
+	fake.dependenciesMutex.Lock()
+	defer fake.dependenciesMutex.Unlock()
 	fake.DependenciesStub = nil
 	fake.dependenciesReturns = struct {
 		result1 []string
@@ -63,6 +73,8 @@ func (fake *FakeDependencyManager) DependenciesReturns(result1 []string, result2
 }
 
 func (fake *FakeDependencyManager) DependenciesReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.dependenciesMutex.Lock()
+	defer fake.dependenciesMutex.Unlock()
 	fake.DependenciesStub = nil
 	if fake.dependenciesReturnsOnCall == nil {
 		fake.dependenciesReturnsOnCall = make(map[int]struct {

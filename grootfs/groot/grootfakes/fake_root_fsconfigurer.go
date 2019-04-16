@@ -5,15 +5,15 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type FakeRootFSConfigurer struct {
-	ConfigureStub        func(rootFSPath string, baseImage *specsv1.Image) error
+	ConfigureStub        func(string, *v1.Image) error
 	configureMutex       sync.RWMutex
 	configureArgsForCall []struct {
-		rootFSPath string
-		baseImage  *specsv1.Image
+		arg1 string
+		arg2 *v1.Image
 	}
 	configureReturns struct {
 		result1 error
@@ -25,22 +25,23 @@ type FakeRootFSConfigurer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRootFSConfigurer) Configure(rootFSPath string, baseImage *specsv1.Image) error {
+func (fake *FakeRootFSConfigurer) Configure(arg1 string, arg2 *v1.Image) error {
 	fake.configureMutex.Lock()
 	ret, specificReturn := fake.configureReturnsOnCall[len(fake.configureArgsForCall)]
 	fake.configureArgsForCall = append(fake.configureArgsForCall, struct {
-		rootFSPath string
-		baseImage  *specsv1.Image
-	}{rootFSPath, baseImage})
-	fake.recordInvocation("Configure", []interface{}{rootFSPath, baseImage})
+		arg1 string
+		arg2 *v1.Image
+	}{arg1, arg2})
+	fake.recordInvocation("Configure", []interface{}{arg1, arg2})
 	fake.configureMutex.Unlock()
 	if fake.ConfigureStub != nil {
-		return fake.ConfigureStub(rootFSPath, baseImage)
+		return fake.ConfigureStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.configureReturns.result1
+	fakeReturns := fake.configureReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeRootFSConfigurer) ConfigureCallCount() int {
@@ -49,13 +50,22 @@ func (fake *FakeRootFSConfigurer) ConfigureCallCount() int {
 	return len(fake.configureArgsForCall)
 }
 
-func (fake *FakeRootFSConfigurer) ConfigureArgsForCall(i int) (string, *specsv1.Image) {
+func (fake *FakeRootFSConfigurer) ConfigureCalls(stub func(string, *v1.Image) error) {
+	fake.configureMutex.Lock()
+	defer fake.configureMutex.Unlock()
+	fake.ConfigureStub = stub
+}
+
+func (fake *FakeRootFSConfigurer) ConfigureArgsForCall(i int) (string, *v1.Image) {
 	fake.configureMutex.RLock()
 	defer fake.configureMutex.RUnlock()
-	return fake.configureArgsForCall[i].rootFSPath, fake.configureArgsForCall[i].baseImage
+	argsForCall := fake.configureArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeRootFSConfigurer) ConfigureReturns(result1 error) {
+	fake.configureMutex.Lock()
+	defer fake.configureMutex.Unlock()
 	fake.ConfigureStub = nil
 	fake.configureReturns = struct {
 		result1 error
@@ -63,6 +73,8 @@ func (fake *FakeRootFSConfigurer) ConfigureReturns(result1 error) {
 }
 
 func (fake *FakeRootFSConfigurer) ConfigureReturnsOnCall(i int, result1 error) {
+	fake.configureMutex.Lock()
+	defer fake.configureMutex.Unlock()
 	fake.ConfigureStub = nil
 	if fake.configureReturnsOnCall == nil {
 		fake.configureReturnsOnCall = make(map[int]struct {

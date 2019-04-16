@@ -8,11 +8,11 @@ import (
 )
 
 type FakeSandboxReexecer struct {
-	ReexecStub        func(commandName string, spec groot.ReexecSpec) ([]byte, error)
+	ReexecStub        func(string, groot.ReexecSpec) ([]byte, error)
 	reexecMutex       sync.RWMutex
 	reexecArgsForCall []struct {
-		commandName string
-		spec        groot.ReexecSpec
+		arg1 string
+		arg2 groot.ReexecSpec
 	}
 	reexecReturns struct {
 		result1 []byte
@@ -26,22 +26,23 @@ type FakeSandboxReexecer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeSandboxReexecer) Reexec(commandName string, spec groot.ReexecSpec) ([]byte, error) {
+func (fake *FakeSandboxReexecer) Reexec(arg1 string, arg2 groot.ReexecSpec) ([]byte, error) {
 	fake.reexecMutex.Lock()
 	ret, specificReturn := fake.reexecReturnsOnCall[len(fake.reexecArgsForCall)]
 	fake.reexecArgsForCall = append(fake.reexecArgsForCall, struct {
-		commandName string
-		spec        groot.ReexecSpec
-	}{commandName, spec})
-	fake.recordInvocation("Reexec", []interface{}{commandName, spec})
+		arg1 string
+		arg2 groot.ReexecSpec
+	}{arg1, arg2})
+	fake.recordInvocation("Reexec", []interface{}{arg1, arg2})
 	fake.reexecMutex.Unlock()
 	if fake.ReexecStub != nil {
-		return fake.ReexecStub(commandName, spec)
+		return fake.ReexecStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.reexecReturns.result1, fake.reexecReturns.result2
+	fakeReturns := fake.reexecReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeSandboxReexecer) ReexecCallCount() int {
@@ -50,13 +51,22 @@ func (fake *FakeSandboxReexecer) ReexecCallCount() int {
 	return len(fake.reexecArgsForCall)
 }
 
+func (fake *FakeSandboxReexecer) ReexecCalls(stub func(string, groot.ReexecSpec) ([]byte, error)) {
+	fake.reexecMutex.Lock()
+	defer fake.reexecMutex.Unlock()
+	fake.ReexecStub = stub
+}
+
 func (fake *FakeSandboxReexecer) ReexecArgsForCall(i int) (string, groot.ReexecSpec) {
 	fake.reexecMutex.RLock()
 	defer fake.reexecMutex.RUnlock()
-	return fake.reexecArgsForCall[i].commandName, fake.reexecArgsForCall[i].spec
+	argsForCall := fake.reexecArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeSandboxReexecer) ReexecReturns(result1 []byte, result2 error) {
+	fake.reexecMutex.Lock()
+	defer fake.reexecMutex.Unlock()
 	fake.ReexecStub = nil
 	fake.reexecReturns = struct {
 		result1 []byte
@@ -65,6 +75,8 @@ func (fake *FakeSandboxReexecer) ReexecReturns(result1 []byte, result2 error) {
 }
 
 func (fake *FakeSandboxReexecer) ReexecReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.reexecMutex.Lock()
+	defer fake.reexecMutex.Unlock()
 	fake.ReexecStub = nil
 	if fake.reexecReturnsOnCall == nil {
 		fake.reexecReturnsOnCall = make(map[int]struct {

@@ -8,10 +8,10 @@ import (
 )
 
 type FakeWhiteoutHandler struct {
-	RemoveWhiteoutStub        func(path string) error
+	RemoveWhiteoutStub        func(string) error
 	removeWhiteoutMutex       sync.RWMutex
 	removeWhiteoutArgsForCall []struct {
-		path string
+		arg1 string
 	}
 	removeWhiteoutReturns struct {
 		result1 error
@@ -23,21 +23,22 @@ type FakeWhiteoutHandler struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeWhiteoutHandler) RemoveWhiteout(path string) error {
+func (fake *FakeWhiteoutHandler) RemoveWhiteout(arg1 string) error {
 	fake.removeWhiteoutMutex.Lock()
 	ret, specificReturn := fake.removeWhiteoutReturnsOnCall[len(fake.removeWhiteoutArgsForCall)]
 	fake.removeWhiteoutArgsForCall = append(fake.removeWhiteoutArgsForCall, struct {
-		path string
-	}{path})
-	fake.recordInvocation("RemoveWhiteout", []interface{}{path})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("RemoveWhiteout", []interface{}{arg1})
 	fake.removeWhiteoutMutex.Unlock()
 	if fake.RemoveWhiteoutStub != nil {
-		return fake.RemoveWhiteoutStub(path)
+		return fake.RemoveWhiteoutStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.removeWhiteoutReturns.result1
+	fakeReturns := fake.removeWhiteoutReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeWhiteoutHandler) RemoveWhiteoutCallCount() int {
@@ -46,13 +47,22 @@ func (fake *FakeWhiteoutHandler) RemoveWhiteoutCallCount() int {
 	return len(fake.removeWhiteoutArgsForCall)
 }
 
+func (fake *FakeWhiteoutHandler) RemoveWhiteoutCalls(stub func(string) error) {
+	fake.removeWhiteoutMutex.Lock()
+	defer fake.removeWhiteoutMutex.Unlock()
+	fake.RemoveWhiteoutStub = stub
+}
+
 func (fake *FakeWhiteoutHandler) RemoveWhiteoutArgsForCall(i int) string {
 	fake.removeWhiteoutMutex.RLock()
 	defer fake.removeWhiteoutMutex.RUnlock()
-	return fake.removeWhiteoutArgsForCall[i].path
+	argsForCall := fake.removeWhiteoutArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeWhiteoutHandler) RemoveWhiteoutReturns(result1 error) {
+	fake.removeWhiteoutMutex.Lock()
+	defer fake.removeWhiteoutMutex.Unlock()
 	fake.RemoveWhiteoutStub = nil
 	fake.removeWhiteoutReturns = struct {
 		result1 error
@@ -60,6 +70,8 @@ func (fake *FakeWhiteoutHandler) RemoveWhiteoutReturns(result1 error) {
 }
 
 func (fake *FakeWhiteoutHandler) RemoveWhiteoutReturnsOnCall(i int, result1 error) {
+	fake.removeWhiteoutMutex.Lock()
+	defer fake.removeWhiteoutMutex.Unlock()
 	fake.RemoveWhiteoutStub = nil
 	if fake.removeWhiteoutReturnsOnCall == nil {
 		fake.removeWhiteoutReturnsOnCall = make(map[int]struct {

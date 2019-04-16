@@ -9,11 +9,11 @@ import (
 )
 
 type FakeUnpacker struct {
-	UnpackStub        func(logger lager.Logger, spec base_image_puller.UnpackSpec) (base_image_puller.UnpackOutput, error)
+	UnpackStub        func(lager.Logger, base_image_puller.UnpackSpec) (base_image_puller.UnpackOutput, error)
 	unpackMutex       sync.RWMutex
 	unpackArgsForCall []struct {
-		logger lager.Logger
-		spec   base_image_puller.UnpackSpec
+		arg1 lager.Logger
+		arg2 base_image_puller.UnpackSpec
 	}
 	unpackReturns struct {
 		result1 base_image_puller.UnpackOutput
@@ -27,22 +27,23 @@ type FakeUnpacker struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) (base_image_puller.UnpackOutput, error) {
+func (fake *FakeUnpacker) Unpack(arg1 lager.Logger, arg2 base_image_puller.UnpackSpec) (base_image_puller.UnpackOutput, error) {
 	fake.unpackMutex.Lock()
 	ret, specificReturn := fake.unpackReturnsOnCall[len(fake.unpackArgsForCall)]
 	fake.unpackArgsForCall = append(fake.unpackArgsForCall, struct {
-		logger lager.Logger
-		spec   base_image_puller.UnpackSpec
-	}{logger, spec})
-	fake.recordInvocation("Unpack", []interface{}{logger, spec})
+		arg1 lager.Logger
+		arg2 base_image_puller.UnpackSpec
+	}{arg1, arg2})
+	fake.recordInvocation("Unpack", []interface{}{arg1, arg2})
 	fake.unpackMutex.Unlock()
 	if fake.UnpackStub != nil {
-		return fake.UnpackStub(logger, spec)
+		return fake.UnpackStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.unpackReturns.result1, fake.unpackReturns.result2
+	fakeReturns := fake.unpackReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeUnpacker) UnpackCallCount() int {
@@ -51,13 +52,22 @@ func (fake *FakeUnpacker) UnpackCallCount() int {
 	return len(fake.unpackArgsForCall)
 }
 
+func (fake *FakeUnpacker) UnpackCalls(stub func(lager.Logger, base_image_puller.UnpackSpec) (base_image_puller.UnpackOutput, error)) {
+	fake.unpackMutex.Lock()
+	defer fake.unpackMutex.Unlock()
+	fake.UnpackStub = stub
+}
+
 func (fake *FakeUnpacker) UnpackArgsForCall(i int) (lager.Logger, base_image_puller.UnpackSpec) {
 	fake.unpackMutex.RLock()
 	defer fake.unpackMutex.RUnlock()
-	return fake.unpackArgsForCall[i].logger, fake.unpackArgsForCall[i].spec
+	argsForCall := fake.unpackArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeUnpacker) UnpackReturns(result1 base_image_puller.UnpackOutput, result2 error) {
+	fake.unpackMutex.Lock()
+	defer fake.unpackMutex.Unlock()
 	fake.UnpackStub = nil
 	fake.unpackReturns = struct {
 		result1 base_image_puller.UnpackOutput
@@ -66,6 +76,8 @@ func (fake *FakeUnpacker) UnpackReturns(result1 base_image_puller.UnpackOutput, 
 }
 
 func (fake *FakeUnpacker) UnpackReturnsOnCall(i int, result1 base_image_puller.UnpackOutput, result2 error) {
+	fake.unpackMutex.Lock()
+	defer fake.unpackMutex.Unlock()
 	fake.UnpackStub = nil
 	if fake.unpackReturnsOnCall == nil {
 		fake.unpackReturnsOnCall = make(map[int]struct {

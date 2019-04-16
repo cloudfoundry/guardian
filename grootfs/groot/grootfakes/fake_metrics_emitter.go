@@ -10,63 +10,36 @@ import (
 )
 
 type FakeMetricsEmitter struct {
-	TryEmitUsageStub        func(logger lager.Logger, name string, usage int64, units string)
-	tryEmitUsageMutex       sync.RWMutex
-	tryEmitUsageArgsForCall []struct {
-		logger lager.Logger
-		name   string
-		usage  int64
-		units  string
-	}
-	TryEmitDurationFromStub        func(logger lager.Logger, name string, from time.Time)
+	TryEmitDurationFromStub        func(lager.Logger, string, time.Time)
 	tryEmitDurationFromMutex       sync.RWMutex
 	tryEmitDurationFromArgsForCall []struct {
-		logger lager.Logger
-		name   string
-		from   time.Time
+		arg1 lager.Logger
+		arg2 string
+		arg3 time.Time
+	}
+	TryEmitUsageStub        func(lager.Logger, string, int64, string)
+	tryEmitUsageMutex       sync.RWMutex
+	tryEmitUsageArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+		arg3 int64
+		arg4 string
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeMetricsEmitter) TryEmitUsage(logger lager.Logger, name string, usage int64, units string) {
-	fake.tryEmitUsageMutex.Lock()
-	fake.tryEmitUsageArgsForCall = append(fake.tryEmitUsageArgsForCall, struct {
-		logger lager.Logger
-		name   string
-		usage  int64
-		units  string
-	}{logger, name, usage, units})
-	fake.recordInvocation("TryEmitUsage", []interface{}{logger, name, usage, units})
-	fake.tryEmitUsageMutex.Unlock()
-	if fake.TryEmitUsageStub != nil {
-		fake.TryEmitUsageStub(logger, name, usage, units)
-	}
-}
-
-func (fake *FakeMetricsEmitter) TryEmitUsageCallCount() int {
-	fake.tryEmitUsageMutex.RLock()
-	defer fake.tryEmitUsageMutex.RUnlock()
-	return len(fake.tryEmitUsageArgsForCall)
-}
-
-func (fake *FakeMetricsEmitter) TryEmitUsageArgsForCall(i int) (lager.Logger, string, int64, string) {
-	fake.tryEmitUsageMutex.RLock()
-	defer fake.tryEmitUsageMutex.RUnlock()
-	return fake.tryEmitUsageArgsForCall[i].logger, fake.tryEmitUsageArgsForCall[i].name, fake.tryEmitUsageArgsForCall[i].usage, fake.tryEmitUsageArgsForCall[i].units
-}
-
-func (fake *FakeMetricsEmitter) TryEmitDurationFrom(logger lager.Logger, name string, from time.Time) {
+func (fake *FakeMetricsEmitter) TryEmitDurationFrom(arg1 lager.Logger, arg2 string, arg3 time.Time) {
 	fake.tryEmitDurationFromMutex.Lock()
 	fake.tryEmitDurationFromArgsForCall = append(fake.tryEmitDurationFromArgsForCall, struct {
-		logger lager.Logger
-		name   string
-		from   time.Time
-	}{logger, name, from})
-	fake.recordInvocation("TryEmitDurationFrom", []interface{}{logger, name, from})
+		arg1 lager.Logger
+		arg2 string
+		arg3 time.Time
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("TryEmitDurationFrom", []interface{}{arg1, arg2, arg3})
 	fake.tryEmitDurationFromMutex.Unlock()
 	if fake.TryEmitDurationFromStub != nil {
-		fake.TryEmitDurationFromStub(logger, name, from)
+		fake.TryEmitDurationFromStub(arg1, arg2, arg3)
 	}
 }
 
@@ -76,19 +49,60 @@ func (fake *FakeMetricsEmitter) TryEmitDurationFromCallCount() int {
 	return len(fake.tryEmitDurationFromArgsForCall)
 }
 
+func (fake *FakeMetricsEmitter) TryEmitDurationFromCalls(stub func(lager.Logger, string, time.Time)) {
+	fake.tryEmitDurationFromMutex.Lock()
+	defer fake.tryEmitDurationFromMutex.Unlock()
+	fake.TryEmitDurationFromStub = stub
+}
+
 func (fake *FakeMetricsEmitter) TryEmitDurationFromArgsForCall(i int) (lager.Logger, string, time.Time) {
 	fake.tryEmitDurationFromMutex.RLock()
 	defer fake.tryEmitDurationFromMutex.RUnlock()
-	return fake.tryEmitDurationFromArgsForCall[i].logger, fake.tryEmitDurationFromArgsForCall[i].name, fake.tryEmitDurationFromArgsForCall[i].from
+	argsForCall := fake.tryEmitDurationFromArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeMetricsEmitter) TryEmitUsage(arg1 lager.Logger, arg2 string, arg3 int64, arg4 string) {
+	fake.tryEmitUsageMutex.Lock()
+	fake.tryEmitUsageArgsForCall = append(fake.tryEmitUsageArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+		arg3 int64
+		arg4 string
+	}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("TryEmitUsage", []interface{}{arg1, arg2, arg3, arg4})
+	fake.tryEmitUsageMutex.Unlock()
+	if fake.TryEmitUsageStub != nil {
+		fake.TryEmitUsageStub(arg1, arg2, arg3, arg4)
+	}
+}
+
+func (fake *FakeMetricsEmitter) TryEmitUsageCallCount() int {
+	fake.tryEmitUsageMutex.RLock()
+	defer fake.tryEmitUsageMutex.RUnlock()
+	return len(fake.tryEmitUsageArgsForCall)
+}
+
+func (fake *FakeMetricsEmitter) TryEmitUsageCalls(stub func(lager.Logger, string, int64, string)) {
+	fake.tryEmitUsageMutex.Lock()
+	defer fake.tryEmitUsageMutex.Unlock()
+	fake.TryEmitUsageStub = stub
+}
+
+func (fake *FakeMetricsEmitter) TryEmitUsageArgsForCall(i int) (lager.Logger, string, int64, string) {
+	fake.tryEmitUsageMutex.RLock()
+	defer fake.tryEmitUsageMutex.RUnlock()
+	argsForCall := fake.tryEmitUsageArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeMetricsEmitter) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.tryEmitUsageMutex.RLock()
-	defer fake.tryEmitUsageMutex.RUnlock()
 	fake.tryEmitDurationFromMutex.RLock()
 	defer fake.tryEmitDurationFromMutex.RUnlock()
+	fake.tryEmitUsageMutex.RLock()
+	defer fake.tryEmitUsageMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

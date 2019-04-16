@@ -9,10 +9,10 @@ import (
 )
 
 type FakeBaseImagePuller struct {
-	FetchBaseImageInfoStub        func(logger lager.Logger) (groot.BaseImageInfo, error)
+	FetchBaseImageInfoStub        func(lager.Logger) (groot.BaseImageInfo, error)
 	fetchBaseImageInfoMutex       sync.RWMutex
 	fetchBaseImageInfoArgsForCall []struct {
-		logger lager.Logger
+		arg1 lager.Logger
 	}
 	fetchBaseImageInfoReturns struct {
 		result1 groot.BaseImageInfo
@@ -22,12 +22,12 @@ type FakeBaseImagePuller struct {
 		result1 groot.BaseImageInfo
 		result2 error
 	}
-	PullStub        func(logger lager.Logger, imageInfo groot.BaseImageInfo, spec groot.BaseImageSpec) error
+	PullStub        func(lager.Logger, groot.BaseImageInfo, groot.BaseImageSpec) error
 	pullMutex       sync.RWMutex
 	pullArgsForCall []struct {
-		logger    lager.Logger
-		imageInfo groot.BaseImageInfo
-		spec      groot.BaseImageSpec
+		arg1 lager.Logger
+		arg2 groot.BaseImageInfo
+		arg3 groot.BaseImageSpec
 	}
 	pullReturns struct {
 		result1 error
@@ -39,21 +39,22 @@ type FakeBaseImagePuller struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBaseImagePuller) FetchBaseImageInfo(logger lager.Logger) (groot.BaseImageInfo, error) {
+func (fake *FakeBaseImagePuller) FetchBaseImageInfo(arg1 lager.Logger) (groot.BaseImageInfo, error) {
 	fake.fetchBaseImageInfoMutex.Lock()
 	ret, specificReturn := fake.fetchBaseImageInfoReturnsOnCall[len(fake.fetchBaseImageInfoArgsForCall)]
 	fake.fetchBaseImageInfoArgsForCall = append(fake.fetchBaseImageInfoArgsForCall, struct {
-		logger lager.Logger
-	}{logger})
-	fake.recordInvocation("FetchBaseImageInfo", []interface{}{logger})
+		arg1 lager.Logger
+	}{arg1})
+	fake.recordInvocation("FetchBaseImageInfo", []interface{}{arg1})
 	fake.fetchBaseImageInfoMutex.Unlock()
 	if fake.FetchBaseImageInfoStub != nil {
-		return fake.FetchBaseImageInfoStub(logger)
+		return fake.FetchBaseImageInfoStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.fetchBaseImageInfoReturns.result1, fake.fetchBaseImageInfoReturns.result2
+	fakeReturns := fake.fetchBaseImageInfoReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeBaseImagePuller) FetchBaseImageInfoCallCount() int {
@@ -62,13 +63,22 @@ func (fake *FakeBaseImagePuller) FetchBaseImageInfoCallCount() int {
 	return len(fake.fetchBaseImageInfoArgsForCall)
 }
 
+func (fake *FakeBaseImagePuller) FetchBaseImageInfoCalls(stub func(lager.Logger) (groot.BaseImageInfo, error)) {
+	fake.fetchBaseImageInfoMutex.Lock()
+	defer fake.fetchBaseImageInfoMutex.Unlock()
+	fake.FetchBaseImageInfoStub = stub
+}
+
 func (fake *FakeBaseImagePuller) FetchBaseImageInfoArgsForCall(i int) lager.Logger {
 	fake.fetchBaseImageInfoMutex.RLock()
 	defer fake.fetchBaseImageInfoMutex.RUnlock()
-	return fake.fetchBaseImageInfoArgsForCall[i].logger
+	argsForCall := fake.fetchBaseImageInfoArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeBaseImagePuller) FetchBaseImageInfoReturns(result1 groot.BaseImageInfo, result2 error) {
+	fake.fetchBaseImageInfoMutex.Lock()
+	defer fake.fetchBaseImageInfoMutex.Unlock()
 	fake.FetchBaseImageInfoStub = nil
 	fake.fetchBaseImageInfoReturns = struct {
 		result1 groot.BaseImageInfo
@@ -77,6 +87,8 @@ func (fake *FakeBaseImagePuller) FetchBaseImageInfoReturns(result1 groot.BaseIma
 }
 
 func (fake *FakeBaseImagePuller) FetchBaseImageInfoReturnsOnCall(i int, result1 groot.BaseImageInfo, result2 error) {
+	fake.fetchBaseImageInfoMutex.Lock()
+	defer fake.fetchBaseImageInfoMutex.Unlock()
 	fake.FetchBaseImageInfoStub = nil
 	if fake.fetchBaseImageInfoReturnsOnCall == nil {
 		fake.fetchBaseImageInfoReturnsOnCall = make(map[int]struct {
@@ -90,23 +102,24 @@ func (fake *FakeBaseImagePuller) FetchBaseImageInfoReturnsOnCall(i int, result1 
 	}{result1, result2}
 }
 
-func (fake *FakeBaseImagePuller) Pull(logger lager.Logger, imageInfo groot.BaseImageInfo, spec groot.BaseImageSpec) error {
+func (fake *FakeBaseImagePuller) Pull(arg1 lager.Logger, arg2 groot.BaseImageInfo, arg3 groot.BaseImageSpec) error {
 	fake.pullMutex.Lock()
 	ret, specificReturn := fake.pullReturnsOnCall[len(fake.pullArgsForCall)]
 	fake.pullArgsForCall = append(fake.pullArgsForCall, struct {
-		logger    lager.Logger
-		imageInfo groot.BaseImageInfo
-		spec      groot.BaseImageSpec
-	}{logger, imageInfo, spec})
-	fake.recordInvocation("Pull", []interface{}{logger, imageInfo, spec})
+		arg1 lager.Logger
+		arg2 groot.BaseImageInfo
+		arg3 groot.BaseImageSpec
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("Pull", []interface{}{arg1, arg2, arg3})
 	fake.pullMutex.Unlock()
 	if fake.PullStub != nil {
-		return fake.PullStub(logger, imageInfo, spec)
+		return fake.PullStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.pullReturns.result1
+	fakeReturns := fake.pullReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeBaseImagePuller) PullCallCount() int {
@@ -115,13 +128,22 @@ func (fake *FakeBaseImagePuller) PullCallCount() int {
 	return len(fake.pullArgsForCall)
 }
 
+func (fake *FakeBaseImagePuller) PullCalls(stub func(lager.Logger, groot.BaseImageInfo, groot.BaseImageSpec) error) {
+	fake.pullMutex.Lock()
+	defer fake.pullMutex.Unlock()
+	fake.PullStub = stub
+}
+
 func (fake *FakeBaseImagePuller) PullArgsForCall(i int) (lager.Logger, groot.BaseImageInfo, groot.BaseImageSpec) {
 	fake.pullMutex.RLock()
 	defer fake.pullMutex.RUnlock()
-	return fake.pullArgsForCall[i].logger, fake.pullArgsForCall[i].imageInfo, fake.pullArgsForCall[i].spec
+	argsForCall := fake.pullArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeBaseImagePuller) PullReturns(result1 error) {
+	fake.pullMutex.Lock()
+	defer fake.pullMutex.Unlock()
 	fake.PullStub = nil
 	fake.pullReturns = struct {
 		result1 error
@@ -129,6 +151,8 @@ func (fake *FakeBaseImagePuller) PullReturns(result1 error) {
 }
 
 func (fake *FakeBaseImagePuller) PullReturnsOnCall(i int, result1 error) {
+	fake.pullMutex.Lock()
+	defer fake.pullMutex.Unlock()
 	fake.PullStub = nil
 	if fake.pullReturnsOnCall == nil {
 		fake.pullReturnsOnCall = make(map[int]struct {

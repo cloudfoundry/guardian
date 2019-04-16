@@ -11,10 +11,10 @@ import (
 )
 
 type FakeFetcher struct {
-	BaseImageInfoStub        func(logger lager.Logger) (groot.BaseImageInfo, error)
+	BaseImageInfoStub        func(lager.Logger) (groot.BaseImageInfo, error)
 	baseImageInfoMutex       sync.RWMutex
 	baseImageInfoArgsForCall []struct {
-		logger lager.Logger
+		arg1 lager.Logger
 	}
 	baseImageInfoReturns struct {
 		result1 groot.BaseImageInfo
@@ -24,11 +24,21 @@ type FakeFetcher struct {
 		result1 groot.BaseImageInfo
 		result2 error
 	}
-	StreamBlobStub        func(logger lager.Logger, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error)
+	CloseStub        func() error
+	closeMutex       sync.RWMutex
+	closeArgsForCall []struct {
+	}
+	closeReturns struct {
+		result1 error
+	}
+	closeReturnsOnCall map[int]struct {
+		result1 error
+	}
+	StreamBlobStub        func(lager.Logger, groot.LayerInfo) (io.ReadCloser, int64, error)
 	streamBlobMutex       sync.RWMutex
 	streamBlobArgsForCall []struct {
-		logger    lager.Logger
-		layerInfo groot.LayerInfo
+		arg1 lager.Logger
+		arg2 groot.LayerInfo
 	}
 	streamBlobReturns struct {
 		result1 io.ReadCloser
@@ -40,34 +50,26 @@ type FakeFetcher struct {
 		result2 int64
 		result3 error
 	}
-	CloseStub        func() error
-	closeMutex       sync.RWMutex
-	closeArgsForCall []struct{}
-	closeReturns     struct {
-		result1 error
-	}
-	closeReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeFetcher) BaseImageInfo(logger lager.Logger) (groot.BaseImageInfo, error) {
+func (fake *FakeFetcher) BaseImageInfo(arg1 lager.Logger) (groot.BaseImageInfo, error) {
 	fake.baseImageInfoMutex.Lock()
 	ret, specificReturn := fake.baseImageInfoReturnsOnCall[len(fake.baseImageInfoArgsForCall)]
 	fake.baseImageInfoArgsForCall = append(fake.baseImageInfoArgsForCall, struct {
-		logger lager.Logger
-	}{logger})
-	fake.recordInvocation("BaseImageInfo", []interface{}{logger})
+		arg1 lager.Logger
+	}{arg1})
+	fake.recordInvocation("BaseImageInfo", []interface{}{arg1})
 	fake.baseImageInfoMutex.Unlock()
 	if fake.BaseImageInfoStub != nil {
-		return fake.BaseImageInfoStub(logger)
+		return fake.BaseImageInfoStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.baseImageInfoReturns.result1, fake.baseImageInfoReturns.result2
+	fakeReturns := fake.baseImageInfoReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeFetcher) BaseImageInfoCallCount() int {
@@ -76,13 +78,22 @@ func (fake *FakeFetcher) BaseImageInfoCallCount() int {
 	return len(fake.baseImageInfoArgsForCall)
 }
 
+func (fake *FakeFetcher) BaseImageInfoCalls(stub func(lager.Logger) (groot.BaseImageInfo, error)) {
+	fake.baseImageInfoMutex.Lock()
+	defer fake.baseImageInfoMutex.Unlock()
+	fake.BaseImageInfoStub = stub
+}
+
 func (fake *FakeFetcher) BaseImageInfoArgsForCall(i int) lager.Logger {
 	fake.baseImageInfoMutex.RLock()
 	defer fake.baseImageInfoMutex.RUnlock()
-	return fake.baseImageInfoArgsForCall[i].logger
+	argsForCall := fake.baseImageInfoArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeFetcher) BaseImageInfoReturns(result1 groot.BaseImageInfo, result2 error) {
+	fake.baseImageInfoMutex.Lock()
+	defer fake.baseImageInfoMutex.Unlock()
 	fake.BaseImageInfoStub = nil
 	fake.baseImageInfoReturns = struct {
 		result1 groot.BaseImageInfo
@@ -91,6 +102,8 @@ func (fake *FakeFetcher) BaseImageInfoReturns(result1 groot.BaseImageInfo, resul
 }
 
 func (fake *FakeFetcher) BaseImageInfoReturnsOnCall(i int, result1 groot.BaseImageInfo, result2 error) {
+	fake.baseImageInfoMutex.Lock()
+	defer fake.baseImageInfoMutex.Unlock()
 	fake.BaseImageInfoStub = nil
 	if fake.baseImageInfoReturnsOnCall == nil {
 		fake.baseImageInfoReturnsOnCall = make(map[int]struct {
@@ -104,22 +117,75 @@ func (fake *FakeFetcher) BaseImageInfoReturnsOnCall(i int, result1 groot.BaseIma
 	}{result1, result2}
 }
 
-func (fake *FakeFetcher) StreamBlob(logger lager.Logger, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error) {
+func (fake *FakeFetcher) Close() error {
+	fake.closeMutex.Lock()
+	ret, specificReturn := fake.closeReturnsOnCall[len(fake.closeArgsForCall)]
+	fake.closeArgsForCall = append(fake.closeArgsForCall, struct {
+	}{})
+	fake.recordInvocation("Close", []interface{}{})
+	fake.closeMutex.Unlock()
+	if fake.CloseStub != nil {
+		return fake.CloseStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.closeReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeFetcher) CloseCallCount() int {
+	fake.closeMutex.RLock()
+	defer fake.closeMutex.RUnlock()
+	return len(fake.closeArgsForCall)
+}
+
+func (fake *FakeFetcher) CloseCalls(stub func() error) {
+	fake.closeMutex.Lock()
+	defer fake.closeMutex.Unlock()
+	fake.CloseStub = stub
+}
+
+func (fake *FakeFetcher) CloseReturns(result1 error) {
+	fake.closeMutex.Lock()
+	defer fake.closeMutex.Unlock()
+	fake.CloseStub = nil
+	fake.closeReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeFetcher) CloseReturnsOnCall(i int, result1 error) {
+	fake.closeMutex.Lock()
+	defer fake.closeMutex.Unlock()
+	fake.CloseStub = nil
+	if fake.closeReturnsOnCall == nil {
+		fake.closeReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.closeReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeFetcher) StreamBlob(arg1 lager.Logger, arg2 groot.LayerInfo) (io.ReadCloser, int64, error) {
 	fake.streamBlobMutex.Lock()
 	ret, specificReturn := fake.streamBlobReturnsOnCall[len(fake.streamBlobArgsForCall)]
 	fake.streamBlobArgsForCall = append(fake.streamBlobArgsForCall, struct {
-		logger    lager.Logger
-		layerInfo groot.LayerInfo
-	}{logger, layerInfo})
-	fake.recordInvocation("StreamBlob", []interface{}{logger, layerInfo})
+		arg1 lager.Logger
+		arg2 groot.LayerInfo
+	}{arg1, arg2})
+	fake.recordInvocation("StreamBlob", []interface{}{arg1, arg2})
 	fake.streamBlobMutex.Unlock()
 	if fake.StreamBlobStub != nil {
-		return fake.StreamBlobStub(logger, layerInfo)
+		return fake.StreamBlobStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
 	}
-	return fake.streamBlobReturns.result1, fake.streamBlobReturns.result2, fake.streamBlobReturns.result3
+	fakeReturns := fake.streamBlobReturns
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
 func (fake *FakeFetcher) StreamBlobCallCount() int {
@@ -128,13 +194,22 @@ func (fake *FakeFetcher) StreamBlobCallCount() int {
 	return len(fake.streamBlobArgsForCall)
 }
 
+func (fake *FakeFetcher) StreamBlobCalls(stub func(lager.Logger, groot.LayerInfo) (io.ReadCloser, int64, error)) {
+	fake.streamBlobMutex.Lock()
+	defer fake.streamBlobMutex.Unlock()
+	fake.StreamBlobStub = stub
+}
+
 func (fake *FakeFetcher) StreamBlobArgsForCall(i int) (lager.Logger, groot.LayerInfo) {
 	fake.streamBlobMutex.RLock()
 	defer fake.streamBlobMutex.RUnlock()
-	return fake.streamBlobArgsForCall[i].logger, fake.streamBlobArgsForCall[i].layerInfo
+	argsForCall := fake.streamBlobArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeFetcher) StreamBlobReturns(result1 io.ReadCloser, result2 int64, result3 error) {
+	fake.streamBlobMutex.Lock()
+	defer fake.streamBlobMutex.Unlock()
 	fake.StreamBlobStub = nil
 	fake.streamBlobReturns = struct {
 		result1 io.ReadCloser
@@ -144,6 +219,8 @@ func (fake *FakeFetcher) StreamBlobReturns(result1 io.ReadCloser, result2 int64,
 }
 
 func (fake *FakeFetcher) StreamBlobReturnsOnCall(i int, result1 io.ReadCloser, result2 int64, result3 error) {
+	fake.streamBlobMutex.Lock()
+	defer fake.streamBlobMutex.Unlock()
 	fake.StreamBlobStub = nil
 	if fake.streamBlobReturnsOnCall == nil {
 		fake.streamBlobReturnsOnCall = make(map[int]struct {
@@ -159,55 +236,15 @@ func (fake *FakeFetcher) StreamBlobReturnsOnCall(i int, result1 io.ReadCloser, r
 	}{result1, result2, result3}
 }
 
-func (fake *FakeFetcher) Close() error {
-	fake.closeMutex.Lock()
-	ret, specificReturn := fake.closeReturnsOnCall[len(fake.closeArgsForCall)]
-	fake.closeArgsForCall = append(fake.closeArgsForCall, struct{}{})
-	fake.recordInvocation("Close", []interface{}{})
-	fake.closeMutex.Unlock()
-	if fake.CloseStub != nil {
-		return fake.CloseStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.closeReturns.result1
-}
-
-func (fake *FakeFetcher) CloseCallCount() int {
-	fake.closeMutex.RLock()
-	defer fake.closeMutex.RUnlock()
-	return len(fake.closeArgsForCall)
-}
-
-func (fake *FakeFetcher) CloseReturns(result1 error) {
-	fake.CloseStub = nil
-	fake.closeReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeFetcher) CloseReturnsOnCall(i int, result1 error) {
-	fake.CloseStub = nil
-	if fake.closeReturnsOnCall == nil {
-		fake.closeReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.closeReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *FakeFetcher) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.baseImageInfoMutex.RLock()
 	defer fake.baseImageInfoMutex.RUnlock()
-	fake.streamBlobMutex.RLock()
-	defer fake.streamBlobMutex.RUnlock()
 	fake.closeMutex.RLock()
 	defer fake.closeMutex.RUnlock()
+	fake.streamBlobMutex.RLock()
+	defer fake.streamBlobMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

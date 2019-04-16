@@ -8,11 +8,11 @@ import (
 )
 
 type FakeDependencyRegisterer struct {
-	RegisterStub        func(id string, chainIDs []string) error
+	RegisterStub        func(string, []string) error
 	registerMutex       sync.RWMutex
 	registerArgsForCall []struct {
-		id       string
-		chainIDs []string
+		arg1 string
+		arg2 []string
 	}
 	registerReturns struct {
 		result1 error
@@ -24,27 +24,28 @@ type FakeDependencyRegisterer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeDependencyRegisterer) Register(id string, chainIDs []string) error {
-	var chainIDsCopy []string
-	if chainIDs != nil {
-		chainIDsCopy = make([]string, len(chainIDs))
-		copy(chainIDsCopy, chainIDs)
+func (fake *FakeDependencyRegisterer) Register(arg1 string, arg2 []string) error {
+	var arg2Copy []string
+	if arg2 != nil {
+		arg2Copy = make([]string, len(arg2))
+		copy(arg2Copy, arg2)
 	}
 	fake.registerMutex.Lock()
 	ret, specificReturn := fake.registerReturnsOnCall[len(fake.registerArgsForCall)]
 	fake.registerArgsForCall = append(fake.registerArgsForCall, struct {
-		id       string
-		chainIDs []string
-	}{id, chainIDsCopy})
-	fake.recordInvocation("Register", []interface{}{id, chainIDsCopy})
+		arg1 string
+		arg2 []string
+	}{arg1, arg2Copy})
+	fake.recordInvocation("Register", []interface{}{arg1, arg2Copy})
 	fake.registerMutex.Unlock()
 	if fake.RegisterStub != nil {
-		return fake.RegisterStub(id, chainIDs)
+		return fake.RegisterStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.registerReturns.result1
+	fakeReturns := fake.registerReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeDependencyRegisterer) RegisterCallCount() int {
@@ -53,13 +54,22 @@ func (fake *FakeDependencyRegisterer) RegisterCallCount() int {
 	return len(fake.registerArgsForCall)
 }
 
+func (fake *FakeDependencyRegisterer) RegisterCalls(stub func(string, []string) error) {
+	fake.registerMutex.Lock()
+	defer fake.registerMutex.Unlock()
+	fake.RegisterStub = stub
+}
+
 func (fake *FakeDependencyRegisterer) RegisterArgsForCall(i int) (string, []string) {
 	fake.registerMutex.RLock()
 	defer fake.registerMutex.RUnlock()
-	return fake.registerArgsForCall[i].id, fake.registerArgsForCall[i].chainIDs
+	argsForCall := fake.registerArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeDependencyRegisterer) RegisterReturns(result1 error) {
+	fake.registerMutex.Lock()
+	defer fake.registerMutex.Unlock()
 	fake.RegisterStub = nil
 	fake.registerReturns = struct {
 		result1 error
@@ -67,6 +77,8 @@ func (fake *FakeDependencyRegisterer) RegisterReturns(result1 error) {
 }
 
 func (fake *FakeDependencyRegisterer) RegisterReturnsOnCall(i int, result1 error) {
+	fake.registerMutex.Lock()
+	defer fake.registerMutex.Unlock()
 	fake.RegisterStub = nil
 	if fake.registerReturnsOnCall == nil {
 		fake.registerReturnsOnCall = make(map[int]struct {

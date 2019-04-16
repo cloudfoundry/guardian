@@ -9,24 +9,11 @@ import (
 )
 
 type FakeImageCloner struct {
-	ExistsStub        func(id string) (bool, error)
-	existsMutex       sync.RWMutex
-	existsArgsForCall []struct {
-		id string
-	}
-	existsReturns struct {
-		result1 bool
-		result2 error
-	}
-	existsReturnsOnCall map[int]struct {
-		result1 bool
-		result2 error
-	}
-	CreateStub        func(logger lager.Logger, spec groot.ImageSpec) (groot.ImageInfo, error)
+	CreateStub        func(lager.Logger, groot.ImageSpec) (groot.ImageInfo, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
-		logger lager.Logger
-		spec   groot.ImageSpec
+		arg1 lager.Logger
+		arg2 groot.ImageSpec
 	}
 	createReturns struct {
 		result1 groot.ImageInfo
@@ -36,11 +23,11 @@ type FakeImageCloner struct {
 		result1 groot.ImageInfo
 		result2 error
 	}
-	DestroyStub        func(logger lager.Logger, id string) error
+	DestroyStub        func(lager.Logger, string) error
 	destroyMutex       sync.RWMutex
 	destroyArgsForCall []struct {
-		logger lager.Logger
-		id     string
+		arg1 lager.Logger
+		arg2 string
 	}
 	destroyReturns struct {
 		result1 error
@@ -48,11 +35,24 @@ type FakeImageCloner struct {
 	destroyReturnsOnCall map[int]struct {
 		result1 error
 	}
-	StatsStub        func(logger lager.Logger, id string) (groot.VolumeStats, error)
+	ExistsStub        func(string) (bool, error)
+	existsMutex       sync.RWMutex
+	existsArgsForCall []struct {
+		arg1 string
+	}
+	existsReturns struct {
+		result1 bool
+		result2 error
+	}
+	existsReturnsOnCall map[int]struct {
+		result1 bool
+		result2 error
+	}
+	StatsStub        func(lager.Logger, string) (groot.VolumeStats, error)
 	statsMutex       sync.RWMutex
 	statsArgsForCall []struct {
-		logger lager.Logger
-		id     string
+		arg1 lager.Logger
+		arg2 string
 	}
 	statsReturns struct {
 		result1 groot.VolumeStats
@@ -66,73 +66,23 @@ type FakeImageCloner struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeImageCloner) Exists(id string) (bool, error) {
-	fake.existsMutex.Lock()
-	ret, specificReturn := fake.existsReturnsOnCall[len(fake.existsArgsForCall)]
-	fake.existsArgsForCall = append(fake.existsArgsForCall, struct {
-		id string
-	}{id})
-	fake.recordInvocation("Exists", []interface{}{id})
-	fake.existsMutex.Unlock()
-	if fake.ExistsStub != nil {
-		return fake.ExistsStub(id)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.existsReturns.result1, fake.existsReturns.result2
-}
-
-func (fake *FakeImageCloner) ExistsCallCount() int {
-	fake.existsMutex.RLock()
-	defer fake.existsMutex.RUnlock()
-	return len(fake.existsArgsForCall)
-}
-
-func (fake *FakeImageCloner) ExistsArgsForCall(i int) string {
-	fake.existsMutex.RLock()
-	defer fake.existsMutex.RUnlock()
-	return fake.existsArgsForCall[i].id
-}
-
-func (fake *FakeImageCloner) ExistsReturns(result1 bool, result2 error) {
-	fake.ExistsStub = nil
-	fake.existsReturns = struct {
-		result1 bool
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeImageCloner) ExistsReturnsOnCall(i int, result1 bool, result2 error) {
-	fake.ExistsStub = nil
-	if fake.existsReturnsOnCall == nil {
-		fake.existsReturnsOnCall = make(map[int]struct {
-			result1 bool
-			result2 error
-		})
-	}
-	fake.existsReturnsOnCall[i] = struct {
-		result1 bool
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.ImageInfo, error) {
+func (fake *FakeImageCloner) Create(arg1 lager.Logger, arg2 groot.ImageSpec) (groot.ImageInfo, error) {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		logger lager.Logger
-		spec   groot.ImageSpec
-	}{logger, spec})
-	fake.recordInvocation("Create", []interface{}{logger, spec})
+		arg1 lager.Logger
+		arg2 groot.ImageSpec
+	}{arg1, arg2})
+	fake.recordInvocation("Create", []interface{}{arg1, arg2})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(logger, spec)
+		return fake.CreateStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.createReturns.result1, fake.createReturns.result2
+	fakeReturns := fake.createReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeImageCloner) CreateCallCount() int {
@@ -141,13 +91,22 @@ func (fake *FakeImageCloner) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
+func (fake *FakeImageCloner) CreateCalls(stub func(lager.Logger, groot.ImageSpec) (groot.ImageInfo, error)) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
+	fake.CreateStub = stub
+}
+
 func (fake *FakeImageCloner) CreateArgsForCall(i int) (lager.Logger, groot.ImageSpec) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].logger, fake.createArgsForCall[i].spec
+	argsForCall := fake.createArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeImageCloner) CreateReturns(result1 groot.ImageInfo, result2 error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	fake.createReturns = struct {
 		result1 groot.ImageInfo
@@ -156,6 +115,8 @@ func (fake *FakeImageCloner) CreateReturns(result1 groot.ImageInfo, result2 erro
 }
 
 func (fake *FakeImageCloner) CreateReturnsOnCall(i int, result1 groot.ImageInfo, result2 error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {
@@ -169,22 +130,23 @@ func (fake *FakeImageCloner) CreateReturnsOnCall(i int, result1 groot.ImageInfo,
 	}{result1, result2}
 }
 
-func (fake *FakeImageCloner) Destroy(logger lager.Logger, id string) error {
+func (fake *FakeImageCloner) Destroy(arg1 lager.Logger, arg2 string) error {
 	fake.destroyMutex.Lock()
 	ret, specificReturn := fake.destroyReturnsOnCall[len(fake.destroyArgsForCall)]
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
-		logger lager.Logger
-		id     string
-	}{logger, id})
-	fake.recordInvocation("Destroy", []interface{}{logger, id})
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Destroy", []interface{}{arg1, arg2})
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
-		return fake.DestroyStub(logger, id)
+		return fake.DestroyStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.destroyReturns.result1
+	fakeReturns := fake.destroyReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeImageCloner) DestroyCallCount() int {
@@ -193,13 +155,22 @@ func (fake *FakeImageCloner) DestroyCallCount() int {
 	return len(fake.destroyArgsForCall)
 }
 
+func (fake *FakeImageCloner) DestroyCalls(stub func(lager.Logger, string) error) {
+	fake.destroyMutex.Lock()
+	defer fake.destroyMutex.Unlock()
+	fake.DestroyStub = stub
+}
+
 func (fake *FakeImageCloner) DestroyArgsForCall(i int) (lager.Logger, string) {
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
-	return fake.destroyArgsForCall[i].logger, fake.destroyArgsForCall[i].id
+	argsForCall := fake.destroyArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeImageCloner) DestroyReturns(result1 error) {
+	fake.destroyMutex.Lock()
+	defer fake.destroyMutex.Unlock()
 	fake.DestroyStub = nil
 	fake.destroyReturns = struct {
 		result1 error
@@ -207,6 +178,8 @@ func (fake *FakeImageCloner) DestroyReturns(result1 error) {
 }
 
 func (fake *FakeImageCloner) DestroyReturnsOnCall(i int, result1 error) {
+	fake.destroyMutex.Lock()
+	defer fake.destroyMutex.Unlock()
 	fake.DestroyStub = nil
 	if fake.destroyReturnsOnCall == nil {
 		fake.destroyReturnsOnCall = make(map[int]struct {
@@ -218,22 +191,86 @@ func (fake *FakeImageCloner) DestroyReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeImageCloner) Stats(logger lager.Logger, id string) (groot.VolumeStats, error) {
-	fake.statsMutex.Lock()
-	ret, specificReturn := fake.statsReturnsOnCall[len(fake.statsArgsForCall)]
-	fake.statsArgsForCall = append(fake.statsArgsForCall, struct {
-		logger lager.Logger
-		id     string
-	}{logger, id})
-	fake.recordInvocation("Stats", []interface{}{logger, id})
-	fake.statsMutex.Unlock()
-	if fake.StatsStub != nil {
-		return fake.StatsStub(logger, id)
+func (fake *FakeImageCloner) Exists(arg1 string) (bool, error) {
+	fake.existsMutex.Lock()
+	ret, specificReturn := fake.existsReturnsOnCall[len(fake.existsArgsForCall)]
+	fake.existsArgsForCall = append(fake.existsArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("Exists", []interface{}{arg1})
+	fake.existsMutex.Unlock()
+	if fake.ExistsStub != nil {
+		return fake.ExistsStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.statsReturns.result1, fake.statsReturns.result2
+	fakeReturns := fake.existsReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeImageCloner) ExistsCallCount() int {
+	fake.existsMutex.RLock()
+	defer fake.existsMutex.RUnlock()
+	return len(fake.existsArgsForCall)
+}
+
+func (fake *FakeImageCloner) ExistsCalls(stub func(string) (bool, error)) {
+	fake.existsMutex.Lock()
+	defer fake.existsMutex.Unlock()
+	fake.ExistsStub = stub
+}
+
+func (fake *FakeImageCloner) ExistsArgsForCall(i int) string {
+	fake.existsMutex.RLock()
+	defer fake.existsMutex.RUnlock()
+	argsForCall := fake.existsArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeImageCloner) ExistsReturns(result1 bool, result2 error) {
+	fake.existsMutex.Lock()
+	defer fake.existsMutex.Unlock()
+	fake.ExistsStub = nil
+	fake.existsReturns = struct {
+		result1 bool
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeImageCloner) ExistsReturnsOnCall(i int, result1 bool, result2 error) {
+	fake.existsMutex.Lock()
+	defer fake.existsMutex.Unlock()
+	fake.ExistsStub = nil
+	if fake.existsReturnsOnCall == nil {
+		fake.existsReturnsOnCall = make(map[int]struct {
+			result1 bool
+			result2 error
+		})
+	}
+	fake.existsReturnsOnCall[i] = struct {
+		result1 bool
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeImageCloner) Stats(arg1 lager.Logger, arg2 string) (groot.VolumeStats, error) {
+	fake.statsMutex.Lock()
+	ret, specificReturn := fake.statsReturnsOnCall[len(fake.statsArgsForCall)]
+	fake.statsArgsForCall = append(fake.statsArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Stats", []interface{}{arg1, arg2})
+	fake.statsMutex.Unlock()
+	if fake.StatsStub != nil {
+		return fake.StatsStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.statsReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeImageCloner) StatsCallCount() int {
@@ -242,13 +279,22 @@ func (fake *FakeImageCloner) StatsCallCount() int {
 	return len(fake.statsArgsForCall)
 }
 
+func (fake *FakeImageCloner) StatsCalls(stub func(lager.Logger, string) (groot.VolumeStats, error)) {
+	fake.statsMutex.Lock()
+	defer fake.statsMutex.Unlock()
+	fake.StatsStub = stub
+}
+
 func (fake *FakeImageCloner) StatsArgsForCall(i int) (lager.Logger, string) {
 	fake.statsMutex.RLock()
 	defer fake.statsMutex.RUnlock()
-	return fake.statsArgsForCall[i].logger, fake.statsArgsForCall[i].id
+	argsForCall := fake.statsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeImageCloner) StatsReturns(result1 groot.VolumeStats, result2 error) {
+	fake.statsMutex.Lock()
+	defer fake.statsMutex.Unlock()
 	fake.StatsStub = nil
 	fake.statsReturns = struct {
 		result1 groot.VolumeStats
@@ -257,6 +303,8 @@ func (fake *FakeImageCloner) StatsReturns(result1 groot.VolumeStats, result2 err
 }
 
 func (fake *FakeImageCloner) StatsReturnsOnCall(i int, result1 groot.VolumeStats, result2 error) {
+	fake.statsMutex.Lock()
+	defer fake.statsMutex.Unlock()
 	fake.StatsStub = nil
 	if fake.statsReturnsOnCall == nil {
 		fake.statsReturnsOnCall = make(map[int]struct {
@@ -273,12 +321,12 @@ func (fake *FakeImageCloner) StatsReturnsOnCall(i int, result1 groot.VolumeStats
 func (fake *FakeImageCloner) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.existsMutex.RLock()
-	defer fake.existsMutex.RUnlock()
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
+	fake.existsMutex.RLock()
+	defer fake.existsMutex.RUnlock()
 	fake.statsMutex.RLock()
 	defer fake.statsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

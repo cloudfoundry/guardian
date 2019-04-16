@@ -11,24 +11,11 @@ import (
 )
 
 type FakeSource struct {
-	ManifestStub        func(logger lager.Logger) (types.Image, error)
-	manifestMutex       sync.RWMutex
-	manifestArgsForCall []struct {
-		logger lager.Logger
-	}
-	manifestReturns struct {
-		result1 types.Image
-		result2 error
-	}
-	manifestReturnsOnCall map[int]struct {
-		result1 types.Image
-		result2 error
-	}
-	BlobStub        func(logger lager.Logger, layerInfo groot.LayerInfo) (string, int64, error)
+	BlobStub        func(lager.Logger, groot.LayerInfo) (string, int64, error)
 	blobMutex       sync.RWMutex
 	blobArgsForCall []struct {
-		logger    lager.Logger
-		layerInfo groot.LayerInfo
+		arg1 lager.Logger
+		arg2 groot.LayerInfo
 	}
 	blobReturns struct {
 		result1 string
@@ -42,84 +29,48 @@ type FakeSource struct {
 	}
 	CloseStub        func() error
 	closeMutex       sync.RWMutex
-	closeArgsForCall []struct{}
-	closeReturns     struct {
+	closeArgsForCall []struct {
+	}
+	closeReturns struct {
 		result1 error
 	}
 	closeReturnsOnCall map[int]struct {
 		result1 error
 	}
+	ManifestStub        func(lager.Logger) (types.Image, error)
+	manifestMutex       sync.RWMutex
+	manifestArgsForCall []struct {
+		arg1 lager.Logger
+	}
+	manifestReturns struct {
+		result1 types.Image
+		result2 error
+	}
+	manifestReturnsOnCall map[int]struct {
+		result1 types.Image
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeSource) Manifest(logger lager.Logger) (types.Image, error) {
-	fake.manifestMutex.Lock()
-	ret, specificReturn := fake.manifestReturnsOnCall[len(fake.manifestArgsForCall)]
-	fake.manifestArgsForCall = append(fake.manifestArgsForCall, struct {
-		logger lager.Logger
-	}{logger})
-	fake.recordInvocation("Manifest", []interface{}{logger})
-	fake.manifestMutex.Unlock()
-	if fake.ManifestStub != nil {
-		return fake.ManifestStub(logger)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.manifestReturns.result1, fake.manifestReturns.result2
-}
-
-func (fake *FakeSource) ManifestCallCount() int {
-	fake.manifestMutex.RLock()
-	defer fake.manifestMutex.RUnlock()
-	return len(fake.manifestArgsForCall)
-}
-
-func (fake *FakeSource) ManifestArgsForCall(i int) lager.Logger {
-	fake.manifestMutex.RLock()
-	defer fake.manifestMutex.RUnlock()
-	return fake.manifestArgsForCall[i].logger
-}
-
-func (fake *FakeSource) ManifestReturns(result1 types.Image, result2 error) {
-	fake.ManifestStub = nil
-	fake.manifestReturns = struct {
-		result1 types.Image
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeSource) ManifestReturnsOnCall(i int, result1 types.Image, result2 error) {
-	fake.ManifestStub = nil
-	if fake.manifestReturnsOnCall == nil {
-		fake.manifestReturnsOnCall = make(map[int]struct {
-			result1 types.Image
-			result2 error
-		})
-	}
-	fake.manifestReturnsOnCall[i] = struct {
-		result1 types.Image
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (string, int64, error) {
+func (fake *FakeSource) Blob(arg1 lager.Logger, arg2 groot.LayerInfo) (string, int64, error) {
 	fake.blobMutex.Lock()
 	ret, specificReturn := fake.blobReturnsOnCall[len(fake.blobArgsForCall)]
 	fake.blobArgsForCall = append(fake.blobArgsForCall, struct {
-		logger    lager.Logger
-		layerInfo groot.LayerInfo
-	}{logger, layerInfo})
-	fake.recordInvocation("Blob", []interface{}{logger, layerInfo})
+		arg1 lager.Logger
+		arg2 groot.LayerInfo
+	}{arg1, arg2})
+	fake.recordInvocation("Blob", []interface{}{arg1, arg2})
 	fake.blobMutex.Unlock()
 	if fake.BlobStub != nil {
-		return fake.BlobStub(logger, layerInfo)
+		return fake.BlobStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
 	}
-	return fake.blobReturns.result1, fake.blobReturns.result2, fake.blobReturns.result3
+	fakeReturns := fake.blobReturns
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
 func (fake *FakeSource) BlobCallCount() int {
@@ -128,13 +79,22 @@ func (fake *FakeSource) BlobCallCount() int {
 	return len(fake.blobArgsForCall)
 }
 
+func (fake *FakeSource) BlobCalls(stub func(lager.Logger, groot.LayerInfo) (string, int64, error)) {
+	fake.blobMutex.Lock()
+	defer fake.blobMutex.Unlock()
+	fake.BlobStub = stub
+}
+
 func (fake *FakeSource) BlobArgsForCall(i int) (lager.Logger, groot.LayerInfo) {
 	fake.blobMutex.RLock()
 	defer fake.blobMutex.RUnlock()
-	return fake.blobArgsForCall[i].logger, fake.blobArgsForCall[i].layerInfo
+	argsForCall := fake.blobArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeSource) BlobReturns(result1 string, result2 int64, result3 error) {
+	fake.blobMutex.Lock()
+	defer fake.blobMutex.Unlock()
 	fake.BlobStub = nil
 	fake.blobReturns = struct {
 		result1 string
@@ -144,6 +104,8 @@ func (fake *FakeSource) BlobReturns(result1 string, result2 int64, result3 error
 }
 
 func (fake *FakeSource) BlobReturnsOnCall(i int, result1 string, result2 int64, result3 error) {
+	fake.blobMutex.Lock()
+	defer fake.blobMutex.Unlock()
 	fake.BlobStub = nil
 	if fake.blobReturnsOnCall == nil {
 		fake.blobReturnsOnCall = make(map[int]struct {
@@ -162,7 +124,8 @@ func (fake *FakeSource) BlobReturnsOnCall(i int, result1 string, result2 int64, 
 func (fake *FakeSource) Close() error {
 	fake.closeMutex.Lock()
 	ret, specificReturn := fake.closeReturnsOnCall[len(fake.closeArgsForCall)]
-	fake.closeArgsForCall = append(fake.closeArgsForCall, struct{}{})
+	fake.closeArgsForCall = append(fake.closeArgsForCall, struct {
+	}{})
 	fake.recordInvocation("Close", []interface{}{})
 	fake.closeMutex.Unlock()
 	if fake.CloseStub != nil {
@@ -171,7 +134,8 @@ func (fake *FakeSource) Close() error {
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.closeReturns.result1
+	fakeReturns := fake.closeReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeSource) CloseCallCount() int {
@@ -180,7 +144,15 @@ func (fake *FakeSource) CloseCallCount() int {
 	return len(fake.closeArgsForCall)
 }
 
+func (fake *FakeSource) CloseCalls(stub func() error) {
+	fake.closeMutex.Lock()
+	defer fake.closeMutex.Unlock()
+	fake.CloseStub = stub
+}
+
 func (fake *FakeSource) CloseReturns(result1 error) {
+	fake.closeMutex.Lock()
+	defer fake.closeMutex.Unlock()
 	fake.CloseStub = nil
 	fake.closeReturns = struct {
 		result1 error
@@ -188,6 +160,8 @@ func (fake *FakeSource) CloseReturns(result1 error) {
 }
 
 func (fake *FakeSource) CloseReturnsOnCall(i int, result1 error) {
+	fake.closeMutex.Lock()
+	defer fake.closeMutex.Unlock()
 	fake.CloseStub = nil
 	if fake.closeReturnsOnCall == nil {
 		fake.closeReturnsOnCall = make(map[int]struct {
@@ -199,15 +173,78 @@ func (fake *FakeSource) CloseReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakeSource) Manifest(arg1 lager.Logger) (types.Image, error) {
+	fake.manifestMutex.Lock()
+	ret, specificReturn := fake.manifestReturnsOnCall[len(fake.manifestArgsForCall)]
+	fake.manifestArgsForCall = append(fake.manifestArgsForCall, struct {
+		arg1 lager.Logger
+	}{arg1})
+	fake.recordInvocation("Manifest", []interface{}{arg1})
+	fake.manifestMutex.Unlock()
+	if fake.ManifestStub != nil {
+		return fake.ManifestStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.manifestReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeSource) ManifestCallCount() int {
+	fake.manifestMutex.RLock()
+	defer fake.manifestMutex.RUnlock()
+	return len(fake.manifestArgsForCall)
+}
+
+func (fake *FakeSource) ManifestCalls(stub func(lager.Logger) (types.Image, error)) {
+	fake.manifestMutex.Lock()
+	defer fake.manifestMutex.Unlock()
+	fake.ManifestStub = stub
+}
+
+func (fake *FakeSource) ManifestArgsForCall(i int) lager.Logger {
+	fake.manifestMutex.RLock()
+	defer fake.manifestMutex.RUnlock()
+	argsForCall := fake.manifestArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeSource) ManifestReturns(result1 types.Image, result2 error) {
+	fake.manifestMutex.Lock()
+	defer fake.manifestMutex.Unlock()
+	fake.ManifestStub = nil
+	fake.manifestReturns = struct {
+		result1 types.Image
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeSource) ManifestReturnsOnCall(i int, result1 types.Image, result2 error) {
+	fake.manifestMutex.Lock()
+	defer fake.manifestMutex.Unlock()
+	fake.ManifestStub = nil
+	if fake.manifestReturnsOnCall == nil {
+		fake.manifestReturnsOnCall = make(map[int]struct {
+			result1 types.Image
+			result2 error
+		})
+	}
+	fake.manifestReturnsOnCall[i] = struct {
+		result1 types.Image
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeSource) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.manifestMutex.RLock()
-	defer fake.manifestMutex.RUnlock()
 	fake.blobMutex.RLock()
 	defer fake.blobMutex.RUnlock()
 	fake.closeMutex.RLock()
 	defer fake.closeMutex.RUnlock()
+	fake.manifestMutex.RLock()
+	defer fake.manifestMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

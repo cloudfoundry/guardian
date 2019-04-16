@@ -9,10 +9,33 @@ import (
 )
 
 type FakeGarbageCollector struct {
-	UnusedVolumesStub        func(logger lager.Logger) ([]string, error)
+	CollectStub        func(lager.Logger) error
+	collectMutex       sync.RWMutex
+	collectArgsForCall []struct {
+		arg1 lager.Logger
+	}
+	collectReturns struct {
+		result1 error
+	}
+	collectReturnsOnCall map[int]struct {
+		result1 error
+	}
+	MarkUnusedStub        func(lager.Logger, []string) error
+	markUnusedMutex       sync.RWMutex
+	markUnusedArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 []string
+	}
+	markUnusedReturns struct {
+		result1 error
+	}
+	markUnusedReturnsOnCall map[int]struct {
+		result1 error
+	}
+	UnusedVolumesStub        func(lager.Logger) ([]string, error)
 	unusedVolumesMutex       sync.RWMutex
 	unusedVolumesArgsForCall []struct {
-		logger lager.Logger
+		arg1 lager.Logger
 	}
 	unusedVolumesReturns struct {
 		result1 []string
@@ -22,48 +45,152 @@ type FakeGarbageCollector struct {
 		result1 []string
 		result2 error
 	}
-	MarkUnusedStub        func(logger lager.Logger, unusedVolumes []string) error
-	markUnusedMutex       sync.RWMutex
-	markUnusedArgsForCall []struct {
-		logger        lager.Logger
-		unusedVolumes []string
-	}
-	markUnusedReturns struct {
-		result1 error
-	}
-	markUnusedReturnsOnCall map[int]struct {
-		result1 error
-	}
-	CollectStub        func(logger lager.Logger) error
-	collectMutex       sync.RWMutex
-	collectArgsForCall []struct {
-		logger lager.Logger
-	}
-	collectReturns struct {
-		result1 error
-	}
-	collectReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, error) {
+func (fake *FakeGarbageCollector) Collect(arg1 lager.Logger) error {
+	fake.collectMutex.Lock()
+	ret, specificReturn := fake.collectReturnsOnCall[len(fake.collectArgsForCall)]
+	fake.collectArgsForCall = append(fake.collectArgsForCall, struct {
+		arg1 lager.Logger
+	}{arg1})
+	fake.recordInvocation("Collect", []interface{}{arg1})
+	fake.collectMutex.Unlock()
+	if fake.CollectStub != nil {
+		return fake.CollectStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.collectReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeGarbageCollector) CollectCallCount() int {
+	fake.collectMutex.RLock()
+	defer fake.collectMutex.RUnlock()
+	return len(fake.collectArgsForCall)
+}
+
+func (fake *FakeGarbageCollector) CollectCalls(stub func(lager.Logger) error) {
+	fake.collectMutex.Lock()
+	defer fake.collectMutex.Unlock()
+	fake.CollectStub = stub
+}
+
+func (fake *FakeGarbageCollector) CollectArgsForCall(i int) lager.Logger {
+	fake.collectMutex.RLock()
+	defer fake.collectMutex.RUnlock()
+	argsForCall := fake.collectArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeGarbageCollector) CollectReturns(result1 error) {
+	fake.collectMutex.Lock()
+	defer fake.collectMutex.Unlock()
+	fake.CollectStub = nil
+	fake.collectReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGarbageCollector) CollectReturnsOnCall(i int, result1 error) {
+	fake.collectMutex.Lock()
+	defer fake.collectMutex.Unlock()
+	fake.CollectStub = nil
+	if fake.collectReturnsOnCall == nil {
+		fake.collectReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.collectReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGarbageCollector) MarkUnused(arg1 lager.Logger, arg2 []string) error {
+	var arg2Copy []string
+	if arg2 != nil {
+		arg2Copy = make([]string, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.markUnusedMutex.Lock()
+	ret, specificReturn := fake.markUnusedReturnsOnCall[len(fake.markUnusedArgsForCall)]
+	fake.markUnusedArgsForCall = append(fake.markUnusedArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 []string
+	}{arg1, arg2Copy})
+	fake.recordInvocation("MarkUnused", []interface{}{arg1, arg2Copy})
+	fake.markUnusedMutex.Unlock()
+	if fake.MarkUnusedStub != nil {
+		return fake.MarkUnusedStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.markUnusedReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeGarbageCollector) MarkUnusedCallCount() int {
+	fake.markUnusedMutex.RLock()
+	defer fake.markUnusedMutex.RUnlock()
+	return len(fake.markUnusedArgsForCall)
+}
+
+func (fake *FakeGarbageCollector) MarkUnusedCalls(stub func(lager.Logger, []string) error) {
+	fake.markUnusedMutex.Lock()
+	defer fake.markUnusedMutex.Unlock()
+	fake.MarkUnusedStub = stub
+}
+
+func (fake *FakeGarbageCollector) MarkUnusedArgsForCall(i int) (lager.Logger, []string) {
+	fake.markUnusedMutex.RLock()
+	defer fake.markUnusedMutex.RUnlock()
+	argsForCall := fake.markUnusedArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeGarbageCollector) MarkUnusedReturns(result1 error) {
+	fake.markUnusedMutex.Lock()
+	defer fake.markUnusedMutex.Unlock()
+	fake.MarkUnusedStub = nil
+	fake.markUnusedReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGarbageCollector) MarkUnusedReturnsOnCall(i int, result1 error) {
+	fake.markUnusedMutex.Lock()
+	defer fake.markUnusedMutex.Unlock()
+	fake.MarkUnusedStub = nil
+	if fake.markUnusedReturnsOnCall == nil {
+		fake.markUnusedReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.markUnusedReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGarbageCollector) UnusedVolumes(arg1 lager.Logger) ([]string, error) {
 	fake.unusedVolumesMutex.Lock()
 	ret, specificReturn := fake.unusedVolumesReturnsOnCall[len(fake.unusedVolumesArgsForCall)]
 	fake.unusedVolumesArgsForCall = append(fake.unusedVolumesArgsForCall, struct {
-		logger lager.Logger
-	}{logger})
-	fake.recordInvocation("UnusedVolumes", []interface{}{logger})
+		arg1 lager.Logger
+	}{arg1})
+	fake.recordInvocation("UnusedVolumes", []interface{}{arg1})
 	fake.unusedVolumesMutex.Unlock()
 	if fake.UnusedVolumesStub != nil {
-		return fake.UnusedVolumesStub(logger)
+		return fake.UnusedVolumesStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.unusedVolumesReturns.result1, fake.unusedVolumesReturns.result2
+	fakeReturns := fake.unusedVolumesReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeGarbageCollector) UnusedVolumesCallCount() int {
@@ -72,13 +199,22 @@ func (fake *FakeGarbageCollector) UnusedVolumesCallCount() int {
 	return len(fake.unusedVolumesArgsForCall)
 }
 
+func (fake *FakeGarbageCollector) UnusedVolumesCalls(stub func(lager.Logger) ([]string, error)) {
+	fake.unusedVolumesMutex.Lock()
+	defer fake.unusedVolumesMutex.Unlock()
+	fake.UnusedVolumesStub = stub
+}
+
 func (fake *FakeGarbageCollector) UnusedVolumesArgsForCall(i int) lager.Logger {
 	fake.unusedVolumesMutex.RLock()
 	defer fake.unusedVolumesMutex.RUnlock()
-	return fake.unusedVolumesArgsForCall[i].logger
+	argsForCall := fake.unusedVolumesArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeGarbageCollector) UnusedVolumesReturns(result1 []string, result2 error) {
+	fake.unusedVolumesMutex.Lock()
+	defer fake.unusedVolumesMutex.Unlock()
 	fake.UnusedVolumesStub = nil
 	fake.unusedVolumesReturns = struct {
 		result1 []string
@@ -87,6 +223,8 @@ func (fake *FakeGarbageCollector) UnusedVolumesReturns(result1 []string, result2
 }
 
 func (fake *FakeGarbageCollector) UnusedVolumesReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.unusedVolumesMutex.Lock()
+	defer fake.unusedVolumesMutex.Unlock()
 	fake.UnusedVolumesStub = nil
 	if fake.unusedVolumesReturnsOnCall == nil {
 		fake.unusedVolumesReturnsOnCall = make(map[int]struct {
@@ -100,117 +238,15 @@ func (fake *FakeGarbageCollector) UnusedVolumesReturnsOnCall(i int, result1 []st
 	}{result1, result2}
 }
 
-func (fake *FakeGarbageCollector) MarkUnused(logger lager.Logger, unusedVolumes []string) error {
-	var unusedVolumesCopy []string
-	if unusedVolumes != nil {
-		unusedVolumesCopy = make([]string, len(unusedVolumes))
-		copy(unusedVolumesCopy, unusedVolumes)
-	}
-	fake.markUnusedMutex.Lock()
-	ret, specificReturn := fake.markUnusedReturnsOnCall[len(fake.markUnusedArgsForCall)]
-	fake.markUnusedArgsForCall = append(fake.markUnusedArgsForCall, struct {
-		logger        lager.Logger
-		unusedVolumes []string
-	}{logger, unusedVolumesCopy})
-	fake.recordInvocation("MarkUnused", []interface{}{logger, unusedVolumesCopy})
-	fake.markUnusedMutex.Unlock()
-	if fake.MarkUnusedStub != nil {
-		return fake.MarkUnusedStub(logger, unusedVolumes)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.markUnusedReturns.result1
-}
-
-func (fake *FakeGarbageCollector) MarkUnusedCallCount() int {
-	fake.markUnusedMutex.RLock()
-	defer fake.markUnusedMutex.RUnlock()
-	return len(fake.markUnusedArgsForCall)
-}
-
-func (fake *FakeGarbageCollector) MarkUnusedArgsForCall(i int) (lager.Logger, []string) {
-	fake.markUnusedMutex.RLock()
-	defer fake.markUnusedMutex.RUnlock()
-	return fake.markUnusedArgsForCall[i].logger, fake.markUnusedArgsForCall[i].unusedVolumes
-}
-
-func (fake *FakeGarbageCollector) MarkUnusedReturns(result1 error) {
-	fake.MarkUnusedStub = nil
-	fake.markUnusedReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeGarbageCollector) MarkUnusedReturnsOnCall(i int, result1 error) {
-	fake.MarkUnusedStub = nil
-	if fake.markUnusedReturnsOnCall == nil {
-		fake.markUnusedReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.markUnusedReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeGarbageCollector) Collect(logger lager.Logger) error {
-	fake.collectMutex.Lock()
-	ret, specificReturn := fake.collectReturnsOnCall[len(fake.collectArgsForCall)]
-	fake.collectArgsForCall = append(fake.collectArgsForCall, struct {
-		logger lager.Logger
-	}{logger})
-	fake.recordInvocation("Collect", []interface{}{logger})
-	fake.collectMutex.Unlock()
-	if fake.CollectStub != nil {
-		return fake.CollectStub(logger)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.collectReturns.result1
-}
-
-func (fake *FakeGarbageCollector) CollectCallCount() int {
-	fake.collectMutex.RLock()
-	defer fake.collectMutex.RUnlock()
-	return len(fake.collectArgsForCall)
-}
-
-func (fake *FakeGarbageCollector) CollectArgsForCall(i int) lager.Logger {
-	fake.collectMutex.RLock()
-	defer fake.collectMutex.RUnlock()
-	return fake.collectArgsForCall[i].logger
-}
-
-func (fake *FakeGarbageCollector) CollectReturns(result1 error) {
-	fake.CollectStub = nil
-	fake.collectReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeGarbageCollector) CollectReturnsOnCall(i int, result1 error) {
-	fake.CollectStub = nil
-	if fake.collectReturnsOnCall == nil {
-		fake.collectReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.collectReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *FakeGarbageCollector) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.unusedVolumesMutex.RLock()
-	defer fake.unusedVolumesMutex.RUnlock()
-	fake.markUnusedMutex.RLock()
-	defer fake.markUnusedMutex.RUnlock()
 	fake.collectMutex.RLock()
 	defer fake.collectMutex.RUnlock()
+	fake.markUnusedMutex.RLock()
+	defer fake.markUnusedMutex.RUnlock()
+	fake.unusedVolumesMutex.RLock()
+	defer fake.unusedVolumesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

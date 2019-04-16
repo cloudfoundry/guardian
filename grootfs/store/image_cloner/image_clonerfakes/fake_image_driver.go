@@ -10,11 +10,11 @@ import (
 )
 
 type FakeImageDriver struct {
-	CreateImageStub        func(logger lager.Logger, spec image_cloner.ImageDriverSpec) (groot.MountInfo, error)
+	CreateImageStub        func(lager.Logger, image_cloner.ImageDriverSpec) (groot.MountInfo, error)
 	createImageMutex       sync.RWMutex
 	createImageArgsForCall []struct {
-		logger lager.Logger
-		spec   image_cloner.ImageDriverSpec
+		arg1 lager.Logger
+		arg2 image_cloner.ImageDriverSpec
 	}
 	createImageReturns struct {
 		result1 groot.MountInfo
@@ -24,11 +24,11 @@ type FakeImageDriver struct {
 		result1 groot.MountInfo
 		result2 error
 	}
-	DestroyImageStub        func(logger lager.Logger, path string) error
+	DestroyImageStub        func(lager.Logger, string) error
 	destroyImageMutex       sync.RWMutex
 	destroyImageArgsForCall []struct {
-		logger lager.Logger
-		path   string
+		arg1 lager.Logger
+		arg2 string
 	}
 	destroyImageReturns struct {
 		result1 error
@@ -36,11 +36,11 @@ type FakeImageDriver struct {
 	destroyImageReturnsOnCall map[int]struct {
 		result1 error
 	}
-	FetchStatsStub        func(logger lager.Logger, path string) (groot.VolumeStats, error)
+	FetchStatsStub        func(lager.Logger, string) (groot.VolumeStats, error)
 	fetchStatsMutex       sync.RWMutex
 	fetchStatsArgsForCall []struct {
-		logger lager.Logger
-		path   string
+		arg1 lager.Logger
+		arg2 string
 	}
 	fetchStatsReturns struct {
 		result1 groot.VolumeStats
@@ -54,22 +54,23 @@ type FakeImageDriver struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeImageDriver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (groot.MountInfo, error) {
+func (fake *FakeImageDriver) CreateImage(arg1 lager.Logger, arg2 image_cloner.ImageDriverSpec) (groot.MountInfo, error) {
 	fake.createImageMutex.Lock()
 	ret, specificReturn := fake.createImageReturnsOnCall[len(fake.createImageArgsForCall)]
 	fake.createImageArgsForCall = append(fake.createImageArgsForCall, struct {
-		logger lager.Logger
-		spec   image_cloner.ImageDriverSpec
-	}{logger, spec})
-	fake.recordInvocation("CreateImage", []interface{}{logger, spec})
+		arg1 lager.Logger
+		arg2 image_cloner.ImageDriverSpec
+	}{arg1, arg2})
+	fake.recordInvocation("CreateImage", []interface{}{arg1, arg2})
 	fake.createImageMutex.Unlock()
 	if fake.CreateImageStub != nil {
-		return fake.CreateImageStub(logger, spec)
+		return fake.CreateImageStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.createImageReturns.result1, fake.createImageReturns.result2
+	fakeReturns := fake.createImageReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeImageDriver) CreateImageCallCount() int {
@@ -78,13 +79,22 @@ func (fake *FakeImageDriver) CreateImageCallCount() int {
 	return len(fake.createImageArgsForCall)
 }
 
+func (fake *FakeImageDriver) CreateImageCalls(stub func(lager.Logger, image_cloner.ImageDriverSpec) (groot.MountInfo, error)) {
+	fake.createImageMutex.Lock()
+	defer fake.createImageMutex.Unlock()
+	fake.CreateImageStub = stub
+}
+
 func (fake *FakeImageDriver) CreateImageArgsForCall(i int) (lager.Logger, image_cloner.ImageDriverSpec) {
 	fake.createImageMutex.RLock()
 	defer fake.createImageMutex.RUnlock()
-	return fake.createImageArgsForCall[i].logger, fake.createImageArgsForCall[i].spec
+	argsForCall := fake.createImageArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeImageDriver) CreateImageReturns(result1 groot.MountInfo, result2 error) {
+	fake.createImageMutex.Lock()
+	defer fake.createImageMutex.Unlock()
 	fake.CreateImageStub = nil
 	fake.createImageReturns = struct {
 		result1 groot.MountInfo
@@ -93,6 +103,8 @@ func (fake *FakeImageDriver) CreateImageReturns(result1 groot.MountInfo, result2
 }
 
 func (fake *FakeImageDriver) CreateImageReturnsOnCall(i int, result1 groot.MountInfo, result2 error) {
+	fake.createImageMutex.Lock()
+	defer fake.createImageMutex.Unlock()
 	fake.CreateImageStub = nil
 	if fake.createImageReturnsOnCall == nil {
 		fake.createImageReturnsOnCall = make(map[int]struct {
@@ -106,22 +118,23 @@ func (fake *FakeImageDriver) CreateImageReturnsOnCall(i int, result1 groot.Mount
 	}{result1, result2}
 }
 
-func (fake *FakeImageDriver) DestroyImage(logger lager.Logger, path string) error {
+func (fake *FakeImageDriver) DestroyImage(arg1 lager.Logger, arg2 string) error {
 	fake.destroyImageMutex.Lock()
 	ret, specificReturn := fake.destroyImageReturnsOnCall[len(fake.destroyImageArgsForCall)]
 	fake.destroyImageArgsForCall = append(fake.destroyImageArgsForCall, struct {
-		logger lager.Logger
-		path   string
-	}{logger, path})
-	fake.recordInvocation("DestroyImage", []interface{}{logger, path})
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("DestroyImage", []interface{}{arg1, arg2})
 	fake.destroyImageMutex.Unlock()
 	if fake.DestroyImageStub != nil {
-		return fake.DestroyImageStub(logger, path)
+		return fake.DestroyImageStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.destroyImageReturns.result1
+	fakeReturns := fake.destroyImageReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeImageDriver) DestroyImageCallCount() int {
@@ -130,13 +143,22 @@ func (fake *FakeImageDriver) DestroyImageCallCount() int {
 	return len(fake.destroyImageArgsForCall)
 }
 
+func (fake *FakeImageDriver) DestroyImageCalls(stub func(lager.Logger, string) error) {
+	fake.destroyImageMutex.Lock()
+	defer fake.destroyImageMutex.Unlock()
+	fake.DestroyImageStub = stub
+}
+
 func (fake *FakeImageDriver) DestroyImageArgsForCall(i int) (lager.Logger, string) {
 	fake.destroyImageMutex.RLock()
 	defer fake.destroyImageMutex.RUnlock()
-	return fake.destroyImageArgsForCall[i].logger, fake.destroyImageArgsForCall[i].path
+	argsForCall := fake.destroyImageArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeImageDriver) DestroyImageReturns(result1 error) {
+	fake.destroyImageMutex.Lock()
+	defer fake.destroyImageMutex.Unlock()
 	fake.DestroyImageStub = nil
 	fake.destroyImageReturns = struct {
 		result1 error
@@ -144,6 +166,8 @@ func (fake *FakeImageDriver) DestroyImageReturns(result1 error) {
 }
 
 func (fake *FakeImageDriver) DestroyImageReturnsOnCall(i int, result1 error) {
+	fake.destroyImageMutex.Lock()
+	defer fake.destroyImageMutex.Unlock()
 	fake.DestroyImageStub = nil
 	if fake.destroyImageReturnsOnCall == nil {
 		fake.destroyImageReturnsOnCall = make(map[int]struct {
@@ -155,22 +179,23 @@ func (fake *FakeImageDriver) DestroyImageReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeImageDriver) FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error) {
+func (fake *FakeImageDriver) FetchStats(arg1 lager.Logger, arg2 string) (groot.VolumeStats, error) {
 	fake.fetchStatsMutex.Lock()
 	ret, specificReturn := fake.fetchStatsReturnsOnCall[len(fake.fetchStatsArgsForCall)]
 	fake.fetchStatsArgsForCall = append(fake.fetchStatsArgsForCall, struct {
-		logger lager.Logger
-		path   string
-	}{logger, path})
-	fake.recordInvocation("FetchStats", []interface{}{logger, path})
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("FetchStats", []interface{}{arg1, arg2})
 	fake.fetchStatsMutex.Unlock()
 	if fake.FetchStatsStub != nil {
-		return fake.FetchStatsStub(logger, path)
+		return fake.FetchStatsStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.fetchStatsReturns.result1, fake.fetchStatsReturns.result2
+	fakeReturns := fake.fetchStatsReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeImageDriver) FetchStatsCallCount() int {
@@ -179,13 +204,22 @@ func (fake *FakeImageDriver) FetchStatsCallCount() int {
 	return len(fake.fetchStatsArgsForCall)
 }
 
+func (fake *FakeImageDriver) FetchStatsCalls(stub func(lager.Logger, string) (groot.VolumeStats, error)) {
+	fake.fetchStatsMutex.Lock()
+	defer fake.fetchStatsMutex.Unlock()
+	fake.FetchStatsStub = stub
+}
+
 func (fake *FakeImageDriver) FetchStatsArgsForCall(i int) (lager.Logger, string) {
 	fake.fetchStatsMutex.RLock()
 	defer fake.fetchStatsMutex.RUnlock()
-	return fake.fetchStatsArgsForCall[i].logger, fake.fetchStatsArgsForCall[i].path
+	argsForCall := fake.fetchStatsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeImageDriver) FetchStatsReturns(result1 groot.VolumeStats, result2 error) {
+	fake.fetchStatsMutex.Lock()
+	defer fake.fetchStatsMutex.Unlock()
 	fake.FetchStatsStub = nil
 	fake.fetchStatsReturns = struct {
 		result1 groot.VolumeStats
@@ -194,6 +228,8 @@ func (fake *FakeImageDriver) FetchStatsReturns(result1 groot.VolumeStats, result
 }
 
 func (fake *FakeImageDriver) FetchStatsReturnsOnCall(i int, result1 groot.VolumeStats, result2 error) {
+	fake.fetchStatsMutex.Lock()
+	defer fake.fetchStatsMutex.Unlock()
 	fake.FetchStatsStub = nil
 	if fake.fetchStatsReturnsOnCall == nil {
 		fake.fetchStatsReturnsOnCall = make(map[int]struct {

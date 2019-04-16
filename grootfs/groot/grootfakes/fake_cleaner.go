@@ -9,11 +9,11 @@ import (
 )
 
 type FakeCleaner struct {
-	CleanStub        func(logger lager.Logger, cacheSize int64) (bool, error)
+	CleanStub        func(lager.Logger, int64) (bool, error)
 	cleanMutex       sync.RWMutex
 	cleanArgsForCall []struct {
-		logger    lager.Logger
-		cacheSize int64
+		arg1 lager.Logger
+		arg2 int64
 	}
 	cleanReturns struct {
 		result1 bool
@@ -27,22 +27,23 @@ type FakeCleaner struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCleaner) Clean(logger lager.Logger, cacheSize int64) (bool, error) {
+func (fake *FakeCleaner) Clean(arg1 lager.Logger, arg2 int64) (bool, error) {
 	fake.cleanMutex.Lock()
 	ret, specificReturn := fake.cleanReturnsOnCall[len(fake.cleanArgsForCall)]
 	fake.cleanArgsForCall = append(fake.cleanArgsForCall, struct {
-		logger    lager.Logger
-		cacheSize int64
-	}{logger, cacheSize})
-	fake.recordInvocation("Clean", []interface{}{logger, cacheSize})
+		arg1 lager.Logger
+		arg2 int64
+	}{arg1, arg2})
+	fake.recordInvocation("Clean", []interface{}{arg1, arg2})
 	fake.cleanMutex.Unlock()
 	if fake.CleanStub != nil {
-		return fake.CleanStub(logger, cacheSize)
+		return fake.CleanStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.cleanReturns.result1, fake.cleanReturns.result2
+	fakeReturns := fake.cleanReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeCleaner) CleanCallCount() int {
@@ -51,13 +52,22 @@ func (fake *FakeCleaner) CleanCallCount() int {
 	return len(fake.cleanArgsForCall)
 }
 
+func (fake *FakeCleaner) CleanCalls(stub func(lager.Logger, int64) (bool, error)) {
+	fake.cleanMutex.Lock()
+	defer fake.cleanMutex.Unlock()
+	fake.CleanStub = stub
+}
+
 func (fake *FakeCleaner) CleanArgsForCall(i int) (lager.Logger, int64) {
 	fake.cleanMutex.RLock()
 	defer fake.cleanMutex.RUnlock()
-	return fake.cleanArgsForCall[i].logger, fake.cleanArgsForCall[i].cacheSize
+	argsForCall := fake.cleanArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeCleaner) CleanReturns(result1 bool, result2 error) {
+	fake.cleanMutex.Lock()
+	defer fake.cleanMutex.Unlock()
 	fake.CleanStub = nil
 	fake.cleanReturns = struct {
 		result1 bool
@@ -66,6 +76,8 @@ func (fake *FakeCleaner) CleanReturns(result1 bool, result2 error) {
 }
 
 func (fake *FakeCleaner) CleanReturnsOnCall(i int, result1 bool, result2 error) {
+	fake.cleanMutex.Lock()
+	defer fake.cleanMutex.Unlock()
 	fake.CleanStub = nil
 	if fake.cleanReturnsOnCall == nil {
 		fake.cleanReturnsOnCall = make(map[int]struct {

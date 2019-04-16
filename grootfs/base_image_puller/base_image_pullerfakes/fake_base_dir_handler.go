@@ -42,7 +42,8 @@ func (fake *FakeBaseDirHandler) Handle(arg1 lager.Logger, arg2 base_image_puller
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.handleReturns.result1
+	fakeReturns := fake.handleReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeBaseDirHandler) HandleCallCount() int {
@@ -51,13 +52,22 @@ func (fake *FakeBaseDirHandler) HandleCallCount() int {
 	return len(fake.handleArgsForCall)
 }
 
+func (fake *FakeBaseDirHandler) HandleCalls(stub func(lager.Logger, base_image_puller.UnpackSpec, string) error) {
+	fake.handleMutex.Lock()
+	defer fake.handleMutex.Unlock()
+	fake.HandleStub = stub
+}
+
 func (fake *FakeBaseDirHandler) HandleArgsForCall(i int) (lager.Logger, base_image_puller.UnpackSpec, string) {
 	fake.handleMutex.RLock()
 	defer fake.handleMutex.RUnlock()
-	return fake.handleArgsForCall[i].arg1, fake.handleArgsForCall[i].arg2, fake.handleArgsForCall[i].arg3
+	argsForCall := fake.handleArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeBaseDirHandler) HandleReturns(result1 error) {
+	fake.handleMutex.Lock()
+	defer fake.handleMutex.Unlock()
 	fake.HandleStub = nil
 	fake.handleReturns = struct {
 		result1 error
@@ -65,6 +75,8 @@ func (fake *FakeBaseDirHandler) HandleReturns(result1 error) {
 }
 
 func (fake *FakeBaseDirHandler) HandleReturnsOnCall(i int, result1 error) {
+	fake.handleMutex.Lock()
+	defer fake.handleMutex.Unlock()
 	fake.HandleStub = nil
 	if fake.handleReturnsOnCall == nil {
 		fake.handleReturnsOnCall = make(map[int]struct {

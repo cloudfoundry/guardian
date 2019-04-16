@@ -9,11 +9,11 @@ import (
 )
 
 type FakeStoreNamespacer struct {
-	ApplyMappingsStub        func(uidMappings, gidMappings []groot.IDMappingSpec) error
+	ApplyMappingsStub        func([]groot.IDMappingSpec, []groot.IDMappingSpec) error
 	applyMappingsMutex       sync.RWMutex
 	applyMappingsArgsForCall []struct {
-		uidMappings []groot.IDMappingSpec
-		gidMappings []groot.IDMappingSpec
+		arg1 []groot.IDMappingSpec
+		arg2 []groot.IDMappingSpec
 	}
 	applyMappingsReturns struct {
 		result1 error
@@ -25,32 +25,33 @@ type FakeStoreNamespacer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeStoreNamespacer) ApplyMappings(uidMappings []groot.IDMappingSpec, gidMappings []groot.IDMappingSpec) error {
-	var uidMappingsCopy []groot.IDMappingSpec
-	if uidMappings != nil {
-		uidMappingsCopy = make([]groot.IDMappingSpec, len(uidMappings))
-		copy(uidMappingsCopy, uidMappings)
+func (fake *FakeStoreNamespacer) ApplyMappings(arg1 []groot.IDMappingSpec, arg2 []groot.IDMappingSpec) error {
+	var arg1Copy []groot.IDMappingSpec
+	if arg1 != nil {
+		arg1Copy = make([]groot.IDMappingSpec, len(arg1))
+		copy(arg1Copy, arg1)
 	}
-	var gidMappingsCopy []groot.IDMappingSpec
-	if gidMappings != nil {
-		gidMappingsCopy = make([]groot.IDMappingSpec, len(gidMappings))
-		copy(gidMappingsCopy, gidMappings)
+	var arg2Copy []groot.IDMappingSpec
+	if arg2 != nil {
+		arg2Copy = make([]groot.IDMappingSpec, len(arg2))
+		copy(arg2Copy, arg2)
 	}
 	fake.applyMappingsMutex.Lock()
 	ret, specificReturn := fake.applyMappingsReturnsOnCall[len(fake.applyMappingsArgsForCall)]
 	fake.applyMappingsArgsForCall = append(fake.applyMappingsArgsForCall, struct {
-		uidMappings []groot.IDMappingSpec
-		gidMappings []groot.IDMappingSpec
-	}{uidMappingsCopy, gidMappingsCopy})
-	fake.recordInvocation("ApplyMappings", []interface{}{uidMappingsCopy, gidMappingsCopy})
+		arg1 []groot.IDMappingSpec
+		arg2 []groot.IDMappingSpec
+	}{arg1Copy, arg2Copy})
+	fake.recordInvocation("ApplyMappings", []interface{}{arg1Copy, arg2Copy})
 	fake.applyMappingsMutex.Unlock()
 	if fake.ApplyMappingsStub != nil {
-		return fake.ApplyMappingsStub(uidMappings, gidMappings)
+		return fake.ApplyMappingsStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.applyMappingsReturns.result1
+	fakeReturns := fake.applyMappingsReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeStoreNamespacer) ApplyMappingsCallCount() int {
@@ -59,13 +60,22 @@ func (fake *FakeStoreNamespacer) ApplyMappingsCallCount() int {
 	return len(fake.applyMappingsArgsForCall)
 }
 
+func (fake *FakeStoreNamespacer) ApplyMappingsCalls(stub func([]groot.IDMappingSpec, []groot.IDMappingSpec) error) {
+	fake.applyMappingsMutex.Lock()
+	defer fake.applyMappingsMutex.Unlock()
+	fake.ApplyMappingsStub = stub
+}
+
 func (fake *FakeStoreNamespacer) ApplyMappingsArgsForCall(i int) ([]groot.IDMappingSpec, []groot.IDMappingSpec) {
 	fake.applyMappingsMutex.RLock()
 	defer fake.applyMappingsMutex.RUnlock()
-	return fake.applyMappingsArgsForCall[i].uidMappings, fake.applyMappingsArgsForCall[i].gidMappings
+	argsForCall := fake.applyMappingsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeStoreNamespacer) ApplyMappingsReturns(result1 error) {
+	fake.applyMappingsMutex.Lock()
+	defer fake.applyMappingsMutex.Unlock()
 	fake.ApplyMappingsStub = nil
 	fake.applyMappingsReturns = struct {
 		result1 error
@@ -73,6 +83,8 @@ func (fake *FakeStoreNamespacer) ApplyMappingsReturns(result1 error) {
 }
 
 func (fake *FakeStoreNamespacer) ApplyMappingsReturnsOnCall(i int, result1 error) {
+	fake.applyMappingsMutex.Lock()
+	defer fake.applyMappingsMutex.Unlock()
 	fake.ApplyMappingsStub = nil
 	if fake.applyMappingsReturnsOnCall == nil {
 		fake.applyMappingsReturnsOnCall = make(map[int]struct {
