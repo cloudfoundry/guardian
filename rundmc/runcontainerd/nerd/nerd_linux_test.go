@@ -461,7 +461,7 @@ func runCtr(ctr, socket string, args []string) string {
 
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
-	Eventually(session).Should(gexec.Exit(0))
+	Eventually(session, "10s").Should(gexec.Exit(0))
 
 	return string(session.Out.Contents())
 }
