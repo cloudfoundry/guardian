@@ -8,7 +8,6 @@ require (
 	code.cloudfoundry.org/lager v0.0.0-20181119165122-baf208c4c56b
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/Microsoft/go-winio v0.4.7 // indirect
-	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77 // indirect
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
 	github.com/cloudfoundry/dropsonde v1.0.0
@@ -23,7 +22,7 @@ require (
 	github.com/docker/docker-credential-helpers v0.6.0 // indirect
 	github.com/docker/go-connections v0.3.0 // indirect
 	github.com/docker/go-metrics v0.0.0-20180209012529-399ea8c73916 // indirect
-	github.com/docker/go-units v0.3.3 // indirect
+	github.com/docker/go-units v0.3.3
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gogo/protobuf v1.0.0 // indirect

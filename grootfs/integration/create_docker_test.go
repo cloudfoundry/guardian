@@ -26,7 +26,7 @@ import (
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
 
-	"github.com/alecthomas/units"
+	units "github.com/docker/go-units"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -142,7 +142,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 						virtualMemoryHighWaterMark := strings.Replace(strings.ToUpper(statsMap["VmHWM"]), " ", "", -1)
 						if virtualMemoryHighWaterMark != "" {
-							n, err := units.ParseBase2Bytes(virtualMemoryHighWaterMark)
+							n, err := units.FromHumanSize(virtualMemoryHighWaterMark)
 							Expect(err).NotTo(HaveOccurred())
 							// Biggest ubuntu:trusty layer is 65694192 bytes
 							Expect(n).To(BeNumerically("<", 50*1024*1024))
@@ -407,9 +407,9 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			Context("when the image is not accounted for in the quota", func() {
 				It("succeeds", func() {
 					containerSpec, err := runner.Create(groot.CreateSpec{
-						BaseImageURL:              baseImageURL,
-						ID:                        randomImageID,
-						Mount:                     mountByDefault(),
+						BaseImageURL: baseImageURL,
+						ID:           randomImageID,
+						Mount:        mountByDefault(),
 						ExcludeBaseImageFromQuota: true,
 						DiskLimit:                 10,
 					})
@@ -451,9 +451,9 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			Context("when the image is not accounted for in the quota", func() {
 				It("succeeds", func() {
 					containerSpec, err := runner.Create(groot.CreateSpec{
-						BaseImageURL:              baseImageURL,
-						ID:                        randomImageID,
-						Mount:                     mountByDefault(),
+						BaseImageURL: baseImageURL,
+						ID:           randomImageID,
+						Mount:        mountByDefault(),
 						ExcludeBaseImageFromQuota: true,
 						DiskLimit:                 diskLimit,
 					})
