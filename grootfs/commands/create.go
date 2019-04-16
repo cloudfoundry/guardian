@@ -158,7 +158,7 @@ var CreateCommand = cli.Command{
 
 		runner := linux_command_runner.New()
 		idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
-		reexecer := sandbox.NewReexecer(logger, runner, idMapper, idMappings)
+		reexecer := sandbox.NewReexecer(logger, idMapper, idMappings)
 		unpacker := unpackerpkg.NewNSIdMapperUnpacker(storePath, reexecer, shouldCloneUserNs, idMappings)
 
 		baseDirHandler := base_image_puller.NewBasedirHandler(reexecer, shouldCloneUserNs)

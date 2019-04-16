@@ -50,7 +50,7 @@ func createImageDriver(logger lager.Logger, cfg config.Config, fsDriver fileSyst
 	shouldCloneUserNs := hasIDMappings(idMappings) && os.Getuid() != 0
 	runner := linux_command_runner.New()
 	idMapper := unpacker.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
-	reexecer := sandbox.NewReexecer(logger, runner, idMapper, idMappings)
+	reexecer := sandbox.NewReexecer(logger, idMapper, idMappings)
 	return namespaced.New(fsDriver, reexecer, shouldCloneUserNs), nil
 }
 

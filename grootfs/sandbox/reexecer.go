@@ -1,7 +1,6 @@
 package sandbox // import "code.cloudfoundry.org/grootfs/sandbox"
 
 import (
-	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 )
@@ -13,17 +12,15 @@ type IDMapper interface {
 }
 
 type reexecer struct {
-	logger        lager.Logger
-	commandRunner commandrunner.CommandRunner
-	idMapper      IDMapper
-	idMappings    groot.IDMappings
+	logger     lager.Logger
+	idMapper   IDMapper
+	idMappings groot.IDMappings
 }
 
-func NewReexecer(logger lager.Logger, commandRunner commandrunner.CommandRunner, idMapper IDMapper, idMappings groot.IDMappings) groot.SandboxReexecer {
+func NewReexecer(logger lager.Logger, idMapper IDMapper, idMappings groot.IDMappings) groot.SandboxReexecer {
 	return &reexecer{
-		logger:        logger,
-		commandRunner: commandRunner,
-		idMapper:      idMapper,
-		idMappings:    idMappings,
+		logger:     logger,
+		idMapper:   idMapper,
+		idMappings: idMappings,
 	}
 }

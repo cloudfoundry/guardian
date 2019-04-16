@@ -90,7 +90,7 @@ var _ = Describe("Sandbox Rexecer", func() {
 	})
 
 	JustBeforeEach(func() {
-		reexecer = sandbox.NewReexecer(logger, commandRunner, idMapper, idMappings)
+		reexecer = sandbox.NewReexecer(logger, idMapper, idMappings)
 	})
 
 	It("executes the action", func() {

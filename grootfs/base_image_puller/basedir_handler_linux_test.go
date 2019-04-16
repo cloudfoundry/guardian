@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
@@ -32,10 +31,9 @@ var _ = Describe("BasedirHandler", func() {
 
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("test")
-		runner := linux_command_runner.New()
 		idMapper := new(sandboxfakes.FakeIDMapper)
 		cloneUsernsOnHandle = false
-		reexecer = sandbox.NewReexecer(logger, runner, idMapper, groot.IDMappings{})
+		reexecer = sandbox.NewReexecer(logger, idMapper, groot.IDMappings{})
 
 		var err error
 		volumeDir, err = ioutil.TempDir("", "volume-")

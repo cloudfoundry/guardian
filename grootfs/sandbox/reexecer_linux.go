@@ -143,7 +143,7 @@ func (r *reexecer) Reexec(commandName string, spec groot.ReexecSpec) ([]byte, er
 		"path": reexecCmd.Path,
 		"spec": spec,
 	})
-	if err := r.commandRunner.Start(reexecCmd); err != nil {
+	if err := reexecCmd.Start(); err != nil {
 		return nil, errorspkg.Wrap(err, "starting reexec command")
 	}
 	r.logger.Debug("reexec-command-is-started")
@@ -161,7 +161,7 @@ func (r *reexecer) Reexec(commandName string, spec groot.ReexecSpec) ([]byte, er
 	}
 
 	r.logger.Debug("waiting-for-reexec-command")
-	if err := r.commandRunner.Wait(reexecCmd); err != nil {
+	if err := reexecCmd.Wait(); err != nil {
 		return nil, errorspkg.Errorf("waiting for the reexec command failed: %s: %s", outBuffer.String(), err)
 	}
 	r.logger.Debug("reexec-command-done")
