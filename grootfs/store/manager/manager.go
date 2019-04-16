@@ -231,7 +231,7 @@ func (m *Manager) DeleteStore(logger lager.Logger) error {
 func tryRemoveAll(logger lager.Logger, path string) error {
 	var err error
 
-	for attempt := 0; attempt < 5; attempt++ {
+	for attempt := 0; attempt < 50; attempt++ {
 		logger.Debug("trying-to-delete-folder", lager.Data{
 			"path":    path,
 			"attempt": attempt + 1,
@@ -254,7 +254,7 @@ func tryRemoveAll(logger lager.Logger, path string) error {
 			"error":   fmt.Sprintf("%#v", err),
 			"attempt": attempt + 1,
 		})
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	return err
