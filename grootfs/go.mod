@@ -17,7 +17,7 @@ require (
 	github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4
 	github.com/containerd/continuity v0.0.0-20180524210603-d3c23511c1bf // indirect
 	github.com/containers/image v1.5.1
-	github.com/containers/storage v1.12.2
+	github.com/containers/storage v0.0.0-20181026151120-09abf3a26b8a
 	github.com/docker/distribution v0.0.0-20180522175653-f0cc92778478
 	github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
 	github.com/docker/docker-credential-helpers v0.6.0 // indirect

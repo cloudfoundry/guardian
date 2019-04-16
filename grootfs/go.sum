@@ -26,8 +26,8 @@ github.com/containerd/continuity v0.0.0-20180524210603-d3c23511c1bf h1:hcu2Ifo+l
 github.com/containerd/continuity v0.0.0-20180524210603-d3c23511c1bf/go.mod h1:GL3xCUCBDV3CZiTSEKksMWbLE66hEyuu9qyDOOqM47Y=
 github.com/containers/image v1.5.1 h1:ssEuj1c24uJvdMkUa2IrawuEFZBP12p6WzrjNBTQxE0=
 github.com/containers/image v1.5.1/go.mod h1:8Vtij257IWSanUQKe1tAeNOm2sRVkSqQTVQ1IlwI3+M=
-github.com/containers/storage v1.12.2 h1:YyUY3upjzzTlCcAHsMfAZxFbMKBtNBF4YulMneni17A=
-github.com/containers/storage v1.12.2/go.mod h1:+RirK6VQAqskQlaTBrOG6ulDvn4si2QjFE1NZCn06MM=
+github.com/containers/storage v0.0.0-20181026151120-09abf3a26b8a h1:IHlMlch67dyaTrtOWrnyMBj1LPhaTsFPAEVHHMIzmEg=
+github.com/containers/storage v0.0.0-20181026151120-09abf3a26b8a/go.mod h1:+RirK6VQAqskQlaTBrOG6ulDvn4si2QjFE1NZCn06MM=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/docker/distribution v0.0.0-20180522175653-f0cc92778478 h1:yCzgNaIN+6iGPBy5h8LVw9ULFerVIiCdPMKiH2A6I/g=

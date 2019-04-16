@@ -57,7 +57,7 @@ github.com/containers/image/pkg/tlsclientconfig
 github.com/containers/image/pkg/strslice
 github.com/containers/image/directory/explicitfilepath
 github.com/containers/image/oci/internal
-# github.com/containers/storage v1.12.2
+# github.com/containers/storage v0.0.0-20181026151120-09abf3a26b8a
 github.com/containers/storage/pkg/reexec
 # github.com/docker/distribution v0.0.0-20180522175653-f0cc92778478
 github.com/docker/distribution/registry/api/errcode
