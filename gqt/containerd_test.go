@@ -6,6 +6,7 @@ import (
 	"io"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -476,6 +477,13 @@ var _ = Describe("Containerd", func() {
 					expectedMemoryCgroupPath,
 					listPidsInCgroup(expectedMemoryCgroupPath),
 				),
+				fmt.Sprintf("%#v", map[string]string{
+					"Container PID":                        getContainerPid(container.Handle()),
+					"Expected memory cgroup path":          expectedMemoryCgroupPath,
+					"Pids in the container memory cgroup":  listPidsInCgroup(expectedMemoryCgroupPath),
+					"Memory limit as listed in the cgroup": readFileString(filepath.Join(expectedMemoryCgroupPath, "memory.limit_in_bytes")),
+					"Expected limit":                       strconv.FormatUint(30*mb, 10),
+				}),
 			)
 		})
 	})

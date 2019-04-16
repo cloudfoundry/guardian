@@ -474,11 +474,9 @@ func getContainerPid(handle string) string {
 }
 
 func listPidsInCgroup(cgroupPath string) string {
-	procsBytes, err := ioutil.ReadFile(filepath.Join(cgroupPath, "cgroup.procs"))
-	Expect(err).NotTo(HaveOccurred())
-	procs := strings.Split(string(procsBytes), " ")
-
-	result := string(procsBytes) + "\n"
+	content := readFileString(filepath.Join(cgroupPath, "cgroup.procs"))
+	procs := strings.Split(content, " ")
+	result := content + "\n"
 
 	for _, p := range procs {
 		p = strings.TrimSpace(p)

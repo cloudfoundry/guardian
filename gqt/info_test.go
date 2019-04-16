@@ -3,6 +3,8 @@ package gqt_test
 import (
 	"fmt"
 	"path"
+	"path/filepath"
+	"strconv"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -97,11 +99,13 @@ var _ = Describe("Info", func() {
 			expectedMemoryCgroupPath := client.CgroupSubsystemPath("memory", container.Handle())
 			Eventually(getEventsForContainer(container), time.Minute).Should(
 				ContainElement("Out of memory"),
-				fmt.Sprintf("Container PID: %s\nExpected memory cgroup path: %s\nPids in the container memory cgroup: %s",
-					getContainerPid(container.Handle()),
-					expectedMemoryCgroupPath,
-					listPidsInCgroup(expectedMemoryCgroupPath),
-				),
+				fmt.Sprintf("%#v", map[string]string{
+					"Container PID":                        getContainerPid(container.Handle()),
+					"Expected memory cgroup path":          expectedMemoryCgroupPath,
+					"Pids in the container memory cgroup":  listPidsInCgroup(expectedMemoryCgroupPath),
+					"Memory limit as listed in the cgroup": readFileString(filepath.Join(expectedMemoryCgroupPath, "memory.limit_in_bytes")),
+					"Expected limit":                       strconv.FormatUint(containerLimits.Memory.LimitInBytes, 10),
+				}),
 			)
 		})
 	})
