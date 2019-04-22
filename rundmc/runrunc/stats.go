@@ -73,7 +73,9 @@ func (r *Statser) Stats(log lager.Logger, id string) (gardener.StatsContainerMet
 			Current: containerStats.Data.PidStats.Current,
 			Max:     containerStats.Data.PidStats.Max,
 		},
-		Age: time.Since(containerState.Created),
+	}
+	if !containerState.Created.IsZero() {
+		stats.Age = time.Since(containerState.Created)
 	}
 
 	stats.Memory.TotalUsageTowardLimit = stats.Memory.TotalRss + (stats.Memory.TotalCache - stats.Memory.TotalInactiveFile)

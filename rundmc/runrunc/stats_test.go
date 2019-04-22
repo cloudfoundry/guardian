@@ -205,6 +205,30 @@ var _ = Describe("Stats", func() {
 		})
 	})
 
+	Context("when runC state does not report a created time", func() {
+		BeforeEach(func() {
+			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+				Path: "funC-stats",
+			}, func(cmd *exec.Cmd) error {
+				cmd.Stdout.Write([]byte(`{}`))
+				return nil
+			})
+			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+				Path: "funC-state",
+			}, func(cmd *exec.Cmd) error {
+				cmd.Stdout.Write([]byte(`{}`))
+				return nil
+			})
+		})
+
+		It("does not report the container's age", func() {
+			stats, err := statser.Stats(logger, "some-handle")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(stats.Age).To(Equal(time.Duration(0)))
+		})
+	})
+
 	Context("when runC stats reports invalid JSON", func() {
 		BeforeEach(func() {
 			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
