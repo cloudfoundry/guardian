@@ -194,7 +194,7 @@ var _ = Describe("Stats", func() {
 		Context("when the last parameter is a image id", func() {
 			It("returns an error", func() {
 				_, err := Runner.Stats("invalid-id")
-				Expect(err).To(MatchError(ContainSubstring("Image `invalid-id` not found. Skipping delete.")))
+				Expect(err).To(MatchError(ContainSubstring("Image `invalid-id` not found.")))
 			})
 		})
 
@@ -202,7 +202,7 @@ var _ = Describe("Stats", func() {
 			It("returns an error", func() {
 				invalidImagePath := filepath.Join(StorePath, store.ImageDirName, "not-here")
 				_, err := Runner.Stats(invalidImagePath)
-				Expect(err).To(MatchError(ContainSubstring("Image `not-here` not found. Skipping delete.")))
+				Expect(err).To(MatchError(ContainSubstring("Image `not-here` not found.")))
 			})
 
 			Context("when the path provided doesn't belong to the `--store` provided", func() {

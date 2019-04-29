@@ -45,7 +45,7 @@ var DeleteCommand = cli.Command{
 		id, err := idfinder.FindID(storePath, idOrPath)
 		if err != nil {
 			logger.Debug("id-not-found-skipping", lager.Data{"id": idOrPath, "storePath": storePath, "errorMessage": err.Error()})
-			fmt.Println(err)
+			fmt.Printf("%s Skipping delete.\n", err)
 			return nil
 		}
 
