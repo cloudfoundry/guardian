@@ -76,7 +76,11 @@ func (d *Driver) MountFilesystem(logger lager.Logger, filesystemPath, storePath 
 }
 
 func (d *Driver) DeInitFilesystem(logger lager.Logger, storePath string) error {
+	logger.Debug("checking store is mounted")
 	mounted, err := mount.Mounted(storePath)
+	if !mounted {
+		logger.Debug("store not mounted")
+	}
 	if err != nil || !mounted {
 		return err
 	}
@@ -85,6 +89,7 @@ func (d *Driver) DeInitFilesystem(logger lager.Logger, storePath string) error {
 		logger.Error("unmounting-store-path-failed", err, lager.Data{"storePath": storePath})
 		return errorspkg.Wrapf(err, "unmounting store path")
 	}
+	logger.Debug("store unmounted")
 
 	return nil
 }
