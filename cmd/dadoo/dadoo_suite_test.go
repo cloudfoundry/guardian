@@ -36,7 +36,7 @@ func TestDadoo(t *testing.T) {
 		cgroupsRoot = filepath.Join(os.TempDir(), "dadoo-cgroups")
 		Expect(setupCgroups(cgroupsRoot)).To(Succeed())
 
-		bins["dadoo_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo")
+		bins["dadoo_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo", "-mod=vendor")
 		Expect(err).NotTo(HaveOccurred())
 
 		bins["fakerunc_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo/fake_runc")

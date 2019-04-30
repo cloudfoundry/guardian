@@ -66,6 +66,7 @@ func goCompile(mainPackagePath string, buildArgs ...string) string {
 	if os.Getenv("RACE_DETECTION") != "" {
 		buildArgs = append(buildArgs, "-race")
 	}
+	buildArgs = append(buildArgs, "-mod=vendor")
 	bin, err := gexec.Build(mainPackagePath, buildArgs...)
 	Expect(err).NotTo(HaveOccurred())
 	return bin
