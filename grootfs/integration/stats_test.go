@@ -137,7 +137,7 @@ var _ = Describe("Stats", func() {
 			)
 
 			BeforeEach(func() {
-				tardisBin, err := gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis")
+				tardisBin, err := gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis", "-mod=vendor")
 				Expect(err).NotTo(HaveOccurred())
 				tardisBin = integration.MakeBinaryAccessibleToEveryone(tardisBin)
 

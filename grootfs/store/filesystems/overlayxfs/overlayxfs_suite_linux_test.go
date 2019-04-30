@@ -28,7 +28,7 @@ func TestOverlayxfs(t *testing.T) {
 
 	BeforeSuite(func() {
 		var err error
-		TardisBinPath, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis")
+		TardisBinPath, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis", "-mod=vendor")
 		Expect(err).NotTo(HaveOccurred())
 		testhelpers.SuidBinary(TardisBinPath)
 	})
