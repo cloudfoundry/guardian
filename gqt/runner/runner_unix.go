@@ -81,10 +81,11 @@ func clearGrootStore(grootBin, storePath string) error {
 	deleteStore.Stdout = GinkgoWriter
 	deleteStore.Stderr = GinkgoWriter
 
+	premountinfo, _ := ioutil.ReadFile("/proc/self/mountinfo")
 	err := deleteStore.Run()
 	if err != nil {
-		mountinfo, _ := ioutil.ReadFile("/proc/self/mountinfo")
-		return fmt.Errorf("delete-store failed: %s, store path: %s, /proc/self/mountinfo: %s", err.Error(), storePath, string(mountinfo))
+		postmountinfo, _ := ioutil.ReadFile("/proc/self/mountinfo")
+		return fmt.Errorf("delete-store failed: %s, store path: %s, /proc/self/mountinfo (pre): %s, /proc/self/mountinfo (post): %s", err.Error(), storePath, string(premountinfo), string(postmountinfo))
 	}
 
 	return nil
