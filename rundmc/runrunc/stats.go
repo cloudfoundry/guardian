@@ -17,6 +17,11 @@ type StatsNotifier interface {
 	OnStat(handle string, cpuStat garden.ContainerCPUStat, memoryStat garden.ContainerMemoryStat)
 }
 
+//go:generate counterfeiter . Depot
+type Depot interface {
+	CreatedTime(log lager.Logger, handle string) (time.Time, error)
+}
+
 type runcStats struct {
 	Data struct {
 		CPUStats struct {
@@ -43,11 +48,12 @@ type runcState struct {
 type Statser struct {
 	runner RuncCmdRunner
 	runc   RuncBinary
+	depot  Depot
 }
 
-func NewStatser(runner RuncCmdRunner, runc RuncBinary) *Statser {
+func NewStatser(runner RuncCmdRunner, runc RuncBinary, depot Depot) *Statser {
 	return &Statser{
-		runner, runc,
+		runner, runc, depot,
 	}
 }
 
@@ -62,6 +68,15 @@ func (r *Statser) Stats(log lager.Logger, id string) (gardener.StatsContainerMet
 		return gardener.StatsContainerMetrics{}, err
 	}
 
+	ctime := containerState.Created
+	if ctime.IsZero() {
+		var err error
+		ctime, err = r.depot.CreatedTime(log, id)
+		if err != nil {
+			return gardener.StatsContainerMetrics{}, err
+		}
+	}
+
 	stats := gardener.StatsContainerMetrics{
 		Memory: containerStats.Data.MemoryStats.Stats,
 		CPU: garden.ContainerCPUStat{
@@ -73,7 +88,7 @@ func (r *Statser) Stats(log lager.Logger, id string) (gardener.StatsContainerMet
 			Current: containerStats.Data.PidStats.Current,
 			Max:     containerStats.Data.PidStats.Max,
 		},
-		Age: time.Since(containerState.Created),
+		Age: time.Since(ctime),
 	}
 
 	stats.Memory.TotalUsageTowardLimit = stats.Memory.TotalRss + (stats.Memory.TotalCache - stats.Memory.TotalInactiveFile)

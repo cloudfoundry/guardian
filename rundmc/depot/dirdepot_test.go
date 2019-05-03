@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"code.cloudfoundry.org/garden"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
@@ -76,6 +77,19 @@ var _ = Describe("Depot", func() {
 		Expect(os.RemoveAll(depotDir)).To(Succeed())
 	})
 
+	var (
+		bundleSaver            *fakes.FakeBundleSaver
+		bundleGenerator        *fakes.FakeBundleGenerator
+		bindMountSourceCreator *fakes.FakeBindMountSourceCreator
+	)
+
+	JustBeforeEach(func() {
+		bundleSaver = new(fakes.FakeBundleSaver)
+		bundleGenerator = new(fakes.FakeBundleGenerator)
+		bindMountSourceCreator = new(fakes.FakeBindMountSourceCreator)
+		dirdepot = depot.New(depotDir, bundleGenerator, bundleSaver, bindMountSourceCreator)
+	})
+
 	Describe("lookup", func() {
 		Context("when a subdirectory with the given name does not exist", func() {
 			It("returns an ErrDoesNotExist", func() {
@@ -85,20 +99,36 @@ var _ = Describe("Depot", func() {
 		})
 	})
 
-	Describe("create", func() {
-		var (
-			bundleSaver            *fakes.FakeBundleSaver
-			bundleGenerator        *fakes.FakeBundleGenerator
-			bindMountSourceCreator *fakes.FakeBindMountSourceCreator
-		)
-
-		JustBeforeEach(func() {
-			bundleSaver = new(fakes.FakeBundleSaver)
-			bundleGenerator = new(fakes.FakeBundleGenerator)
-			bindMountSourceCreator = new(fakes.FakeBindMountSourceCreator)
-			dirdepot = depot.New(depotDir, bundleGenerator, bundleSaver, bindMountSourceCreator)
+	Describe("created time", func() {
+		It("returns the approximate creation time of the container", func() {
+			Expect(dirdepot.Create(logger, "potato", desiredContainerSpec)).To(Succeed())
+			f, err := os.Create(filepath.Join(depotDir, "potato", "pidfile"))
+			defer f.Close()
+			Expect(err).NotTo(HaveOccurred())
+			time.Sleep(time.Millisecond)
+			ctime, err := dirdepot.CreatedTime(logger, "potato")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ctime).To(BeTemporally("<", time.Now()))
+			Expect(ctime).To(BeTemporally(">", time.Now().Add(-time.Millisecond*500)))
 		})
 
+		Context("when the bundle is not there", func() {
+			It("fails", func() {
+				_, err := dirdepot.CreatedTime(logger, "sweetpotato")
+				Expect(err).To(MatchError("does not exist"))
+			})
+		})
+
+		Context("when the bundle pidfile is not there", func() {
+			It("fails", func() {
+				Expect(dirdepot.Create(logger, "potato", desiredContainerSpec)).To(Succeed())
+				_, err := dirdepot.CreatedTime(logger, "potato")
+				Expect(err).To(MatchError(ContainSubstring("no such file or directory")))
+			})
+		})
+	})
+
+	Describe("create", func() {
 		It("should create a directory", func() {
 			Expect(dirdepot.Create(logger, "aardvaark", desiredContainerSpec)).To(Succeed())
 			Expect(filepath.Join(depotDir, "aardvaark")).To(BeADirectory())

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"code.cloudfoundry.org/garden"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
@@ -81,6 +82,20 @@ func (d *DirectoryDepot) Create(log lager.Logger, handle string, spec spec.Desir
 	}
 
 	return nil
+}
+
+func (d *DirectoryDepot) CreatedTime(log lager.Logger, handle string) (time.Time, error) {
+	dir, err := d.Lookup(log, handle)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	info, err := os.Stat(filepath.Join(dir, "pidfile"))
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return info.ModTime(), nil
 }
 
 func (d *DirectoryDepot) Lookup(log lager.Logger, handle string) (string, error) {

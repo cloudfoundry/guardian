@@ -549,7 +549,7 @@ func (cmd *CommonCommand) wireContainerizer(log lager.Logger, factory GardenFact
 			userLookupper, factory.WireExecRunner("exec", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0))), pidGetter)
 	}
 
-	statser := runrunc.NewStatser(runcLogRunner, runcBinary)
+	statser := runrunc.NewStatser(runcLogRunner, runcBinary, depot)
 
 	var useNestedCgroups bool
 	var execRunner runrunc.ExecRunner = factory.WireExecRunner("run", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)))
