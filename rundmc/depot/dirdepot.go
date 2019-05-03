@@ -92,7 +92,7 @@ func (d *DirectoryDepot) CreatedTime(log lager.Logger, handle string) (time.Time
 
 	info, err := os.Stat(filepath.Join(dir, "pidfile"))
 	if err != nil {
-		return time.Time{}, err
+		return time.Time{}, fmt.Errorf("bundle pidfile does not exist: %#v", err)
 	}
 
 	return info.ModTime(), nil

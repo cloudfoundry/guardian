@@ -123,7 +123,7 @@ var _ = Describe("Depot", func() {
 			It("fails", func() {
 				Expect(dirdepot.Create(logger, "potato", desiredContainerSpec)).To(Succeed())
 				_, err := dirdepot.CreatedTime(logger, "potato")
-				Expect(err).To(MatchError(ContainSubstring("no such file or directory")))
+				Expect(err).To(MatchError(ContainSubstring("bundle pidfile does not exist")))
 			})
 		})
 	})
