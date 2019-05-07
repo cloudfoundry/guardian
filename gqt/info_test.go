@@ -106,6 +106,7 @@ var _ = Describe("Info", func() {
 					"Memory limit as listed in the cgroup": readFileString(filepath.Join(expectedMemoryCgroupPath, "memory.limit_in_bytes")),
 					"Expected limit":                       strconv.FormatUint(containerLimits.Memory.LimitInBytes, 10),
 				}),
+				"<requesting dmesg>",
 			)
 		})
 	})

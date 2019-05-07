@@ -45,12 +45,14 @@ var (
 
 func TestNerd(t *testing.T) {
 	RegisterFailHandler(func(message string, callerSkip ...int) {
-		GinkgoWriter.Write([]byte(fmt.Sprintf("Current UTC time is %s\n", time.Now().UTC().Format(time.RFC3339))))
-		dmesgOutput, dmesgErr := exec.Command("/bin/dmesg", "-T").Output()
-		if dmesgErr != nil {
-			GinkgoWriter.Write([]byte(dmesgErr.Error()))
+		if strings.Contains(message, "<requesting dmesg>") {
+			GinkgoWriter.Write([]byte(fmt.Sprintf("Current UTC time is %s\n", time.Now().UTC().Format(time.RFC3339))))
+			dmesgOutput, dmesgErr := exec.Command("/bin/dmesg", "-T").Output()
+			if dmesgErr != nil {
+				GinkgoWriter.Write([]byte(dmesgErr.Error()))
+			}
+			GinkgoWriter.Write(dmesgOutput)
 		}
-		GinkgoWriter.Write(dmesgOutput)
 
 		Fail(message, callerSkip...)
 	})

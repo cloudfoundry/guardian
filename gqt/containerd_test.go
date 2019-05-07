@@ -484,6 +484,7 @@ var _ = Describe("Containerd", func() {
 					"Memory limit as listed in the cgroup": readFileString(filepath.Join(expectedMemoryCgroupPath, "memory.limit_in_bytes")),
 					"Expected limit":                       strconv.FormatUint(30*mb, 10),
 				}),
+				"<requesting dmesg>",
 			)
 		})
 	})

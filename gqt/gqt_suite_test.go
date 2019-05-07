@@ -63,7 +63,18 @@ type runnerBinaries struct {
 }
 
 func TestGqt(t *testing.T) {
-	RegisterFailHandler(Fail)
+	RegisterFailHandler(func(message string, callerSkip ...int) {
+		if strings.Contains(message, "<requesting dmesg>") {
+			GinkgoWriter.Write([]byte(fmt.Sprintf("Current UTC time is %s\n", time.Now().UTC().Format(time.RFC3339))))
+			dmesgOutput, dmesgErr := exec.Command("/bin/dmesg", "-T").Output()
+			if dmesgErr != nil {
+				GinkgoWriter.Write([]byte(dmesgErr.Error()))
+			}
+			GinkgoWriter.Write(dmesgOutput)
+		}
+
+		Fail(message, callerSkip...)
+	})
 	SetDefaultEventuallyTimeout(5 * time.Second)
 	RunSpecs(t, "GQT Suite")
 }
