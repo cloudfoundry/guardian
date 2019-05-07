@@ -18,7 +18,7 @@ type Config struct {
 	LogFile        string `yaml:"log_file"`
 	Create         Create `yaml:"create"`
 	Clean          Clean  `yaml:"clean"`
-	Init           Init   `yaml:"-"`
+	Init           Init   `yaml:"init"`
 }
 
 type Create struct {
@@ -36,7 +36,7 @@ type Clean struct {
 }
 
 type Init struct {
-	StoreSizeBytes int64
+	StoreSizeBytes int64 `yaml:"store_size_bytes"`
 	OwnerUser      string
 	OwnerGroup     string
 }

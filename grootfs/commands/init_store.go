@@ -50,8 +50,11 @@ var InitStoreCommand = cli.Command{
 			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
-		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder).
-			WithStoreSizeBytes(ctx.Int64("store-size-bytes"))
+		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
+		if ctx.IsSet("store-size-bytes") {
+			configBuilder = configBuilder.WithStoreSizeBytes(ctx.Int64("store-size-bytes"))
+		}
+
 		cfg, err := configBuilder.Build()
 		logger.Debug("init-store", lager.Data{"currentConfig": cfg})
 		if err != nil {

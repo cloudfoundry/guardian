@@ -63,6 +63,44 @@ var _ = Describe("Init Store", func() {
 		Expect(stat.Gid).To(Equal(uint32(rootGID)))
 	})
 
+	Context("when init.store_size_bytes is passed in config", func() {
+		var backingStoreFile string
+		var configFile *os.File
+
+		BeforeEach(func() {
+			storeSizeBytes := 500 * 1024 * 1024
+
+			tmpDir, err := ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+
+			configFile, err = ioutil.TempFile("", "")
+			Expect(err).NotTo(HaveOccurred())
+			ioutil.WriteFile(configFile.Name(), []byte(fmt.Sprintf(`
+init:
+  store_size_bytes: %d
+`, storeSizeBytes)), 0644)
+
+			storePath = filepath.Join(tmpDir, "store")
+			backingStoreFile = fmt.Sprintf("%s.backing-store", storePath)
+
+			runner = runner.WithConfig(configFile.Name()).WithStore(storePath)
+		})
+
+		AfterEach(func() {
+			_ = unix.Unmount(storePath, 0)
+			Expect(os.RemoveAll(backingStoreFile)).To(Succeed())
+		})
+
+		It("creates the backing file with the correct size", func() {
+			err := runner.InitStore(spec)
+			Expect(err).NotTo(HaveOccurred())
+
+			stat, err := os.Stat(backingStoreFile)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(stat.Size()).To(Equal(int64(500 * 1024 * 1024)))
+		})
+	})
+
 	Context("when --store-size-bytes is passed", func() {
 		var backingStoreFile string
 
