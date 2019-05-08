@@ -92,6 +92,14 @@ var _ = Describe("Gardener", func() {
 				_, handle := containerizer.DestroyArgsForCall(0)
 				Expect(handle).To(Equal("poor-banana"))
 			})
+
+			It("should remove the bundle", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+				Expect(err).To(HaveOccurred())
+				Expect(containerizer.RemoveBundleCallCount()).To(Equal(1))
+				_, handle := containerizer.RemoveBundleArgsForCall(0)
+				Expect(handle).To(Equal("poor-banana"))
+			})
 		}
 
 		It("assigns a random handle to the container", func() {
@@ -229,6 +237,26 @@ var _ = Describe("Gardener", func() {
 				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
 				Expect(err).To(HaveOccurred())
 				Eventually(logger).Should(gbytes.Say("failed to create the banana"))
+			})
+
+			Context("when the containerizer fails to delete the container during the cleanup", func() {
+				BeforeEach(func() {
+					containerizer.DestroyReturns(errors.New("failed to destroy the banana"))
+				})
+
+				ItDestroysEverything()
+
+				Context("when nested destroy operations fail", func() {
+					BeforeEach(func() {
+						networker.DestroyReturns(errors.New("failed to destroy the banana network"))
+						volumizer.DestroyReturns(errors.New("failed to destroy the banana volume"))
+						propertyManager.DestroyKeySpaceReturns(errors.New("failed to destroy the banana keyspace"))
+						containerizer.RemoveBundleReturns(errors.New("failed to remove the banana bundle"))
+					})
+
+					ItDestroysEverything()
+				})
+
 			})
 		})
 
@@ -815,7 +843,7 @@ var _ = Describe("Gardener", func() {
 	})
 
 	Describe("Destroy", func() {
-		It("returns garden.ContainreNotFoundError if the container handle isn't in the depot", func() {
+		It("returns garden.ContainerNotFoundError if the container handle isn't in the depot", func() {
 			containerizer.HandlesReturns([]string{}, nil)
 			Expect(gdnr.Destroy("cake!")).To(MatchError(garden.ContainerNotFoundError{Handle: "cake!"}))
 		})

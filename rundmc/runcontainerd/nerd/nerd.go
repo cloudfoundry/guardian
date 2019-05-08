@@ -97,6 +97,7 @@ func (n *Nerd) Delete(log lager.Logger, containerID string) error {
 	if err != nil {
 		switch err.(type) {
 		case *ContainerNotFoundError:
+			log.Debug("container-not-found", lager.Data{"containerID": containerID})
 			return nil
 		case *TaskNotFoundError:
 			log.Debug("deleting-container", lager.Data{"containerID": containerID})
@@ -195,6 +196,7 @@ func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (conta
 
 	log.Debug("loading-task", lager.Data{"containerID": containerID})
 	task, err := container.Task(n.context, cio.Load)
+	log.Debug("task-loaded", lager.Data{"containerID": containerID})
 	if errdefs.IsNotFound(err) {
 		log.Debug("task-not-found", lager.Data{"containerID": containerID})
 		return container, nil, &TaskNotFoundError{Handle: containerID}

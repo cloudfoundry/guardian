@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/lager"
+	multierror "github.com/hashicorp/go-multierror"
 )
 
 //go:generate counterfeiter . SysInfoProvider
@@ -201,7 +202,7 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 
 			log.Info("start")
 
-			err := g.destroy(log, containerSpec.Handle)
+			err := accumulateErrors(log, g.destroy(log, containerSpec.Handle))
 			if err != nil {
 				log.Error("destroy-failed", err)
 			}
@@ -303,28 +304,39 @@ func (g *Gardener) Destroy(handle string) error {
 		return garden.ContainerNotFoundError{Handle: handle}
 	}
 
-	return g.destroy(log, handle)
+	return stopOnError(g.destroy(log, handle))
 }
 
-// destroy idempotently destroys any resources associated with the given handle
-func (g *Gardener) destroy(log lager.Logger, handle string) error {
-	if err := g.Containerizer.Destroy(log, handle); err != nil {
-		return err
+func (g *Gardener) destroy(log lager.Logger, handle string) []func() error {
+	return []func() error{
+		func() error { return g.Containerizer.Destroy(log, handle) },
+		func() error { return g.Networker.Destroy(log, handle) },
+		func() error { return g.Volumizer.Destroy(log.Session(VolumizerSession), handle) },
+		func() error { return g.PropertyManager.DestroyKeySpace(handle) },
+		func() error { return g.Containerizer.RemoveBundle(log, handle) },
+	}
+}
+
+func accumulateErrors(logger lager.Logger, operations []func() error) error {
+	var accumulatedError *multierror.Error
+
+	logger.Info(fmt.Sprintf("accumulateErrors: Operations %d", len(operations)))
+	for i, op := range operations {
+		logger.Info(fmt.Sprintf("accumulateErrors: Operation %d", i))
+		accumulatedError = multierror.Append(accumulatedError, op())
+		logger.Info(fmt.Sprintf("accumulateErrors: Finished operation %d", i))
 	}
 
-	if err := g.Networker.Destroy(log, handle); err != nil {
-		return err
-	}
+	return accumulatedError.ErrorOrNil()
+}
 
-	if err := g.Volumizer.Destroy(log.Session(VolumizerSession), handle); err != nil {
-		return err
+func stopOnError(operations []func() error) error {
+	for _, op := range operations {
+		if err := op(); err != nil {
+			return err
+		}
 	}
-
-	if err := g.PropertyManager.DestroyKeySpace(handle); err != nil {
-		return err
-	}
-
-	return g.Containerizer.RemoveBundle(log, handle)
+	return nil
 }
 
 func (g *Gardener) Stop() {}
@@ -499,7 +511,7 @@ func (g *Gardener) Cleanup(log lager.Logger) error {
 		destroyLog := log.Session("clean-up-container", lager.Data{"handle": handle})
 		destroyLog.Info("start")
 
-		if err := g.destroy(destroyLog, handle); err != nil {
+		if err := stopOnError(g.destroy(destroyLog, handle)); err != nil {
 			destroyLog.Error("failed", err)
 			continue
 		}
