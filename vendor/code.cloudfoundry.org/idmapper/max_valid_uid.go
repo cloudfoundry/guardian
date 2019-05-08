@@ -11,6 +11,8 @@ type IDMap string
 const DefaultUIDMap IDMap = "/proc/self/uid_map"
 const DefaultGIDMap IDMap = "/proc/self/gid_map"
 
+const maxInt = int(^uint(0) >> 1)
+
 func MustGetMaxValidUID() int {
 	return must(DefaultUIDMap.MaxValid())
 }
@@ -25,18 +27,18 @@ func (u IDMap) MaxValid() (int, error) {
 		return 0, err
 	}
 
-	m := 0
+	var m uint
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		var container, host, size int
+		var container, host, size uint
 		if _, err := fmt.Sscanf(scanner.Text(), "%d %d %d", &container, &host, &size); err != nil {
 			return 0, ParseError{Line: scanner.Text(), Err: err}
 		}
 
-		m = Max(m, container+size-1)
+		m = minUint(maxUint(m, container+size-1), uint(maxInt))
 	}
 
-	return m, nil
+	return int(m), nil
 }
 
 func Min(a, b int) int {
@@ -49,6 +51,22 @@ func Min(a, b int) int {
 
 func Max(a, b int) int {
 	if a > b {
+		return a
+	}
+
+	return b
+}
+
+func maxUint(a, b uint) uint {
+	if a > b {
+		return a
+	}
+
+	return b
+}
+
+func minUint(a, b uint) uint {
+	if a < b {
 		return a
 	}
 

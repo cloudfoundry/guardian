@@ -1,9 +1,9 @@
 .PHONY: all
 
 all:
-		GOOS=linux go build -o newuidmap ./cmd/newuidmap
-		GOOS=linux go build -o newgidmap ./cmd/newgidmap
-		GOOS=linux go build -o maximus ./cmd/maximus
+		GOOS=linux go build -mod vendor -o newuidmap ./cmd/newuidmap
+		GOOS=linux go build -mod vendor -o newgidmap ./cmd/newgidmap
+		GOOS=linux go build -mod vendor -o maximus ./cmd/maximus
 
 ###### Help ###################################################################
 

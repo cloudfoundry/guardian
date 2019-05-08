@@ -24,7 +24,7 @@ code.cloudfoundry.org/garden/gardenfakes
 code.cloudfoundry.org/garden/server/timebomb
 # code.cloudfoundry.org/grootfs v0.0.0-20180525140952-c01568707fea
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20170928154045-bd44efed5494
+# code.cloudfoundry.org/idmapper v0.0.0-20190410122444-276ec50ea425
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager v0.0.0-20190115020142-54c4f2530dde
 code.cloudfoundry.org/lager
@@ -229,7 +229,7 @@ github.com/opencontainers/runc/libcontainer/utils
 github.com/opencontainers/runc/libcontainer/cgroups
 github.com/opencontainers/runc/libcontainer/user
 github.com/opencontainers/runc/libcontainer/configs
-# github.com/opencontainers/runtime-spec v0.0.0-20180909173843-eba862dc2470
+# github.com/opencontainers/runtime-spec v1.0.1
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
@@ -253,7 +253,7 @@ github.com/vishvananda/netlink
 github.com/vishvananda/netlink/nl
 # github.com/vishvananda/netns v0.0.0-20171111001504-be1fbeda1936
 github.com/vishvananda/netns
-# golang.org/x/net v0.0.0-20180906233101-161cd47e91fd
+# golang.org/x/net v0.0.0-20190213061140-3a22650c66bd
 golang.org/x/net/html/charset
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
