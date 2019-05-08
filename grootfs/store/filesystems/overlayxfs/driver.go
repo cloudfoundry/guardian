@@ -21,7 +21,6 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/spec"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
-	"github.com/docker/docker/pkg/mount"
 	errorspkg "github.com/pkg/errors"
 	"github.com/tscolari/lagregator"
 	shortid "github.com/ventu-io/go-shortid"
@@ -76,20 +75,15 @@ func (d *Driver) MountFilesystem(logger lager.Logger, filesystemPath, storePath 
 }
 
 func (d *Driver) DeInitFilesystem(logger lager.Logger, storePath string) error {
-	logger.Debug("checking store is mounted")
-	mounted, err := mount.Mounted(storePath)
-	if !mounted {
-		logger.Debug("store not mounted")
-	}
-	if err != nil || !mounted {
-		return err
-	}
-
 	if err := unix.Unmount(storePath, 0); err != nil {
+		if err == unix.ENOENT || err == unix.EINVAL {
+			logger.Debug("store-is-not-a-mountpoint", lager.Data{"storePath": storePath, "umountErr": err.Error()})
+			return nil
+		}
 		logger.Error("unmounting-store-path-failed", err, lager.Data{"storePath": storePath})
 		return errorspkg.Wrapf(err, "unmounting store path")
 	}
-	logger.Debug("store unmounted")
+	logger.Debug("store-unmounted")
 
 	return nil
 }
