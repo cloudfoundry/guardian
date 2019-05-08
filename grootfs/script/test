@@ -127,9 +127,9 @@ do
       exit
       ;;
     a)
-      tmux split-window -p 80 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' ./script/test -u; bash\""
-      tmux split-window -p 80 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=5000 GROOTFS_TEST_GID=5000 ./script/test -i; bash\""
-      tmux split-window -p 50 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 ./script/test -i; bash\""
+      tmux split-window -p 80 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' ./script/test -u; bash --init-file <(echo 'history -s RECURSIVE=1 FLY_TARGET='$FLY_TARGET' ./script/test -u')\""
+      tmux split-window -p 80 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=5000 GROOTFS_TEST_GID=5000 ./script/test -i; bash --init-file <(echo 'history -s RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=5000 GROOTFS_TEST_GID=5000 ./script/test -i')\""
+      tmux split-window -p 50 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 ./script/test -i; bash --init-file <(echo 'history -s RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 ./script/test -i')\""
       exit
       ;;
     *)
