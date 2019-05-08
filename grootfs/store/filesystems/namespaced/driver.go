@@ -34,14 +34,14 @@ type internalDriver interface {
 }
 
 type Driver struct {
-	driver            internalDriver
+	internalDriver
 	reexecer          groot.SandboxReexecer
 	shouldCloneUserNs bool
 }
 
 func New(driver internalDriver, reexecer groot.SandboxReexecer, shouldCloneUserNs bool) *Driver {
 	return &Driver{
-		driver:            driver,
+		internalDriver:    driver,
 		reexecer:          reexecer,
 		shouldCloneUserNs: shouldCloneUserNs,
 	}
@@ -99,24 +99,16 @@ func init() {
 	}
 }
 
-func (d *Driver) VolumePath(logger lager.Logger, id string) (string, error) {
-	return d.driver.VolumePath(logger, id)
-}
-
-func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (string, error) {
-	return d.driver.CreateVolume(logger, parentID, id)
-}
-
 func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 	if !d.shouldCloneUserNs {
-		return d.driver.DestroyVolume(logger, id)
+		return d.internalDriver.DestroyVolume(logger, id)
 	}
 
 	logger = logger.Session("ns-destroy-volume")
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	driverJSON, err := d.driver.Marshal(logger)
+	driverJSON, err := d.internalDriver.Marshal(logger)
 	if err != nil {
 		return errors.Wrap(err, "marshaling driver json")
 	}
@@ -131,36 +123,16 @@ func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 	return nil
 }
 
-func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
-	return d.driver.Volumes(logger)
-}
-
-func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
-	return d.driver.MoveVolume(logger, from, to)
-}
-
-func (d *Driver) WriteVolumeMeta(logger lager.Logger, id string, data base_image_puller.VolumeMeta) error {
-	return d.driver.WriteVolumeMeta(logger, id, data)
-}
-
-func (d *Driver) HandleOpaqueWhiteouts(logger lager.Logger, id string, opaqueWhiteouts []string) error {
-	return d.driver.HandleOpaqueWhiteouts(logger, id, opaqueWhiteouts)
-}
-
-func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (groot.MountInfo, error) {
-	return d.driver.CreateImage(logger, spec)
-}
-
 func (d *Driver) DestroyImage(logger lager.Logger, path string) error {
 	if !d.shouldCloneUserNs {
-		return d.driver.DestroyImage(logger, path)
+		return d.internalDriver.DestroyImage(logger, path)
 	}
 
 	logger = logger.Session("ns-destroy-image")
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	driverJSON, err := d.driver.Marshal(logger)
+	driverJSON, err := d.internalDriver.Marshal(logger)
 	if err != nil {
 		return errors.Wrapf(err, "marshaling driver json")
 	}
@@ -173,14 +145,6 @@ func (d *Driver) DestroyImage(logger lager.Logger, path string) error {
 	}
 
 	return nil
-}
-
-func (d *Driver) FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error) {
-	return d.driver.FetchStats(logger, path)
-}
-
-func (d *Driver) MarkVolumeArtifacts(logger lager.Logger, id string) error {
-	return d.driver.MarkVolumeArtifacts(logger, id)
 }
 
 func specToDriver(spec spec.DriverSpec) (internalDriver, error) {
