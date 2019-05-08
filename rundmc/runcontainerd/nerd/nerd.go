@@ -149,7 +149,23 @@ func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs
 	}
 
 	log.Debug("closing-stdin", lager.Data{"containerID": containerID, "processID": processID})
-	return process.CloseIO(n.context, containerd.WithStdinCloser)
+	go exponentialBackoffCloseIO(process, n.context, log, containerID)
+
+	return nil
+}
+
+func exponentialBackoffCloseIO(process containerd.Process, ctx context.Context, log lager.Logger, containerID string) {
+	duration := 3 * time.Second
+	retries := 10
+	for i := 0; i < retries; i++ {
+		if err := process.CloseIO(ctx, containerd.WithStdinCloser); err != nil {
+			log.Error("failed-closing-stdin", err, lager.Data{"containerID": containerID, "processID": process.ID()})
+			time.Sleep(duration)
+			duration *= 2
+			continue
+		}
+		break
+	}
 }
 
 func withProcessIO(processIO func() (io.Reader, io.Writer, io.Writer), ioFifoDir string) cio.Opt {
@@ -188,18 +204,25 @@ func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (conta
 
 	log.Debug("loading-container", lager.Data{"containerID": containerID})
 	container, err := n.client.LoadContainer(n.context, containerID)
-	if errdefs.IsNotFound(err) {
-		log.Debug("container-not-found", lager.Data{"containerID": containerID})
-		return nil, nil, &ContainerNotFoundError{Handle: containerID}
+	if err != nil {
+		if errdefs.IsNotFound(err) {
+			log.Debug("container-not-found", lager.Data{"containerID": containerID})
+			return nil, nil, &ContainerNotFoundError{Handle: containerID}
+		}
+		log.Debug("loading-container-failed", lager.Data{"containerID": containerID})
+		return nil, nil, err
 	}
 
 	log.Debug("loading-task", lager.Data{"containerID": containerID})
 	task, err := container.Task(n.context, cio.Load)
-	if errdefs.IsNotFound(err) {
-		log.Debug("task-not-found", lager.Data{"containerID": containerID})
-		return container, nil, &TaskNotFoundError{Handle: containerID}
+	if err != nil {
+		if errdefs.IsNotFound(err) {
+			log.Debug("task-not-found", lager.Data{"containerID": containerID})
+			return container, nil, &TaskNotFoundError{Handle: containerID}
+		}
+		log.Debug("loading-task-failed", lager.Data{"containerID": containerID})
+		return container, nil, err
 	}
-
 	return container, task, err
 }
 
