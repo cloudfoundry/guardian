@@ -9,7 +9,7 @@ require (
 	code.cloudfoundry.org/debugserver v0.0.0-20170501225606-70715da12ee9
 	code.cloudfoundry.org/garden v0.0.0-20181019152342-f1dfd0e2a8c4
 	code.cloudfoundry.org/grootfs v0.0.0-20180525140952-c01568707fea
-	code.cloudfoundry.org/idmapper v0.0.0-20170928154045-bd44efed5494
+	code.cloudfoundry.org/idmapper v0.0.0-20190410122444-276ec50ea425
 	code.cloudfoundry.org/lager v0.0.0-20190115020142-54c4f2530dde
 	code.cloudfoundry.org/localip v0.0.0-20170223024724-b88ad0dea95c
 	github.com/BurntSushi/toml v0.3.1
@@ -53,7 +53,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0-rc1
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/opencontainers/runc v1.0.0-rc2.0.20190403200919-029124da7af7
-	github.com/opencontainers/runtime-spec v0.0.0-20180909173843-eba862dc2470
+	github.com/opencontainers/runtime-spec v1.0.1
 	github.com/pkg/errors v0.8.1
 	github.com/poy/eachers v0.0.0-20181020210610-23942921fe77 // indirect
 	github.com/sirupsen/logrus v1.4.1
