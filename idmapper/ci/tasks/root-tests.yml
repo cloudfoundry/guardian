@@ -4,13 +4,13 @@ platform: linux
 image_resource:
   type: docker-image
   source:
-    repository: cfgarden/grootfs-ci
-    tag: latest
+    repository: cfgarden/garden-ci
+    tag: 2.0.11
 
 inputs:
-  - name: idmapper-git-repo
-    path: src/code.cloudfoundry.org/idmapper
+  - name: idmapper
 
 run:
-  path: src/code.cloudfoundry.org/idmapper/ci/scripts/root-tests.sh
+  path: ci/scripts/root-tests.sh
+  dir: idmapper
   user: root
