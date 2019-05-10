@@ -415,6 +415,16 @@ var _ = Describe("Nerd", func() {
 			})
 		})
 	})
+
+	Context("when containerd is not running", func() {
+		BeforeEach(func() {
+			Eventually(containerdSession.Terminate()).Should(gexec.Exit())
+		})
+
+		It("does not panic when loading the container metadata", func() {
+			Expect(func() { cnerd.State(testLogger, "a-random-id") }).NotTo(Panic())
+		})
+	})
 })
 
 func createRootfs(modifyRootfs func(string), perm os.FileMode) string {

@@ -221,9 +221,9 @@ func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (conta
 			return container, nil, &TaskNotFoundError{Handle: containerID}
 		}
 		log.Debug("loading-task-failed", lager.Data{"containerID": containerID})
-		return container, nil, err
+		return nil, nil, err
 	}
-	return container, task, err
+	return container, task, nil
 }
 
 func (n *Nerd) Wait(log lager.Logger, containerID, processID string) (int, error) {
