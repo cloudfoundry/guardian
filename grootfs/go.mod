@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b
-	code.cloudfoundry.org/idmapper v0.0.0-20190410122444-276ec50ea425
+	code.cloudfoundry.org/idmapper v0.0.0-20190509093205-06cf188c2966
 	code.cloudfoundry.org/lager v0.0.0-20181119165122-baf208c4c56b
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/Microsoft/go-winio v0.4.7 // indirect
@@ -17,7 +17,7 @@ require (
 	github.com/containerd/continuity v0.0.0-20180524210603-d3c23511c1bf // indirect
 	github.com/containers/image v1.5.1
 	github.com/containers/storage v1.12.2
-	github.com/docker/distribution v0.0.0-20180522175653-f0cc92778478
+	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
 	github.com/docker/docker-credential-helpers v0.6.0 // indirect
 	github.com/docker/go-connections v0.3.0 // indirect
@@ -26,9 +26,11 @@ require (
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gogo/protobuf v1.0.0 // indirect
+	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/google/go-cmp v0.2.0 // indirect
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.2 // indirect
+	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mailru/easyjson v0.0.0-20180323154445-8b799c424f57 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
@@ -49,7 +51,10 @@ require (
 	github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861
 	github.com/urfave/cli v0.0.0-20161006035353-55f715e28c46
 	github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c
-	golang.org/x/sys v0.0.0-20190415145633-3fd5a3612ccd
+	golang.org/x/net v0.0.0-20190509222800-a4d6f7feada5 // indirect
+	golang.org/x/sys v0.0.0-20190509141414-a5b02f93d862
+	golang.org/x/text v0.3.2 // indirect
+	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 	gotest.tools v2.2.0+incompatible // indirect
 )
