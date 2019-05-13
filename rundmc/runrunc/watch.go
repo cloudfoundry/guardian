@@ -46,7 +46,6 @@ func (r *OomWatcher) WatchEvents(log lager.Logger, handle string) error {
 	}()
 
 	if err := r.commandRunner.Start(cmd); err != nil {
-		log.Error("run-events", err)
 		return fmt.Errorf("start: %s", err)
 	}
 

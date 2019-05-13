@@ -105,6 +105,7 @@ var _ = Describe("Info", func() {
 					"Pids in the container memory cgroup":  listPidsInCgroup(expectedMemoryCgroupPath),
 					"Memory limit as listed in the cgroup": readFileString(filepath.Join(expectedMemoryCgroupPath, "memory.limit_in_bytes")),
 					"Expected limit":                       strconv.FormatUint(containerLimits.Memory.LimitInBytes, 10),
+					"OOM Control":                          readFileString(filepath.Join(expectedMemoryCgroupPath, "memory.oom_control")),
 				}),
 				"<requesting dmesg>",
 			)

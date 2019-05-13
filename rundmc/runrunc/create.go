@@ -77,7 +77,11 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.Pro
 		return err
 	}
 
-	go c.eventsWatcher.WatchEvents(log, id)
+	go func() {
+		if err := c.eventsWatcher.WatchEvents(log, id); err != nil {
+			log.Info("event watcher error", lager.Data{"error": err})
+		}
+	}()
 
 	return nil
 }
