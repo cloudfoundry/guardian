@@ -32,7 +32,8 @@ func (sink *writerSink) Log(log LogFormat) {
 	}
 
 	sink.writeL.Lock()
-	sink.writer.Write(append(log.ToJSON(), '\n'))
+	sink.writer.Write(log.ToJSON())
+	sink.writer.Write([]byte("\n"))
 	sink.writeL.Unlock()
 }
 
@@ -55,6 +56,7 @@ func (sink *prettySink) Log(log LogFormat) {
 	}
 
 	sink.writeL.Lock()
-	sink.writer.Write(append(log.toPrettyJSON(), '\n'))
+	sink.writer.Write(log.toPrettyJSON())
+	sink.writer.Write([]byte("\n"))
 	sink.writeL.Unlock()
 }

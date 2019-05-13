@@ -65,7 +65,7 @@ func Chug(reader io.Reader, out chan<- Entry) {
 	scanner := bufio.NewReader(reader)
 	for {
 		line, err := scanner.ReadBytes('\n')
-		if len(line) > 0 {
+		if line != nil {
 			out <- entry(bytes.TrimSuffix(line, []byte{'\n'}))
 		}
 		if err != nil {

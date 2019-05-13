@@ -11,7 +11,7 @@ code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 # code.cloudfoundry.org/debugserver v0.0.0-20170501225606-70715da12ee9
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20181019152342-f1dfd0e2a8c4
+# code.cloudfoundry.org/garden v0.0.0-20190410122303-a4e51d29c0e5
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
 code.cloudfoundry.org/garden/client/connection
@@ -22,21 +22,20 @@ code.cloudfoundry.org/garden/server/bomberman
 code.cloudfoundry.org/garden/server/streamer
 code.cloudfoundry.org/garden/gardenfakes
 code.cloudfoundry.org/garden/server/timebomb
-# code.cloudfoundry.org/grootfs v0.0.0-20180525140952-c01568707fea
+# code.cloudfoundry.org/grootfs v0.30.1-0.20190513150534-10faab0a0ffb
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20190410122444-276ec50ea425
+# code.cloudfoundry.org/idmapper v0.0.0-20190509093205-06cf188c2966
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager v0.0.0-20190115020142-54c4f2530dde
+# code.cloudfoundry.org/lager v2.0.0+incompatible
 code.cloudfoundry.org/lager
 code.cloudfoundry.org/lager/lagertest
 code.cloudfoundry.org/lager/chug
-code.cloudfoundry.org/lager/internal/truncate
 code.cloudfoundry.org/lager/lagerctx
 # code.cloudfoundry.org/localip v0.0.0-20170223024724-b88ad0dea95c
 code.cloudfoundry.org/localip
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
-# github.com/Microsoft/go-winio v0.4.7
+# github.com/Microsoft/go-winio v0.4.12
 github.com/Microsoft/go-winio
 # github.com/Microsoft/hcsshim v0.6.11
 github.com/Microsoft/hcsshim
@@ -118,7 +117,7 @@ github.com/containerd/containerd/events/exchange
 github.com/containerd/containerd/reference
 github.com/containerd/containerd/filters
 github.com/containerd/containerd/identifiers
-# github.com/containerd/continuity v0.0.0-20181203112020-004b46473808
+# github.com/containerd/continuity v0.0.0-20190426062206-aaeac12a7ffc
 github.com/containerd/continuity/fs
 github.com/containerd/continuity/sysx
 github.com/containerd/continuity/syscallx
@@ -128,26 +127,26 @@ github.com/containerd/fifo
 github.com/containerd/go-runc
 # github.com/containerd/typeurl v0.0.0-20170912152501-f6943554a7e7
 github.com/containerd/typeurl
-# github.com/docker/distribution v0.0.0-20190205005809-0d3efadf0154
+# github.com/docker/distribution v2.7.1+incompatible => github.com/docker/distribution v0.0.0-20190205005809-0d3efadf0154
 github.com/docker/distribution/reference
 github.com/docker/distribution/digestset
-# github.com/docker/docker v0.0.0-20190205134743-1603af96898b
+# github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
 github.com/docker/docker/pkg/reexec
 # github.com/docker/go-events v0.0.0-20170721190031-9461782956ad
 github.com/docker/go-events
-# github.com/docker/go-units v0.3.3
+# github.com/docker/go-units v0.4.0
 github.com/docker/go-units
 # github.com/eapache/go-resiliency v1.1.0
 github.com/eapache/go-resiliency/retrier
 # github.com/gogo/googleapis v1.0.0
 github.com/gogo/googleapis/google/rpc
-# github.com/gogo/protobuf v1.0.0
+# github.com/gogo/protobuf v1.2.1
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/types
 github.com/gogo/protobuf/sortkeys
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
-# github.com/golang/protobuf v1.2.0
+# github.com/golang/protobuf v1.3.1
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
@@ -167,9 +166,9 @@ github.com/hpcloud/tail/winfile
 github.com/jessevdk/go-flags
 # github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1
 github.com/kardianos/osext
-# github.com/konsorten/go-windows-terminal-sequences v1.0.1
+# github.com/konsorten/go-windows-terminal-sequences v1.0.2
 github.com/konsorten/go-windows-terminal-sequences
-# github.com/mailru/easyjson v0.0.0-20180323154445-8b799c424f57
+# github.com/mailru/easyjson v0.0.0-20190403194419-1ea4449da983
 github.com/mailru/easyjson
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
@@ -223,7 +222,7 @@ github.com/opencontainers/go-digest
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
 github.com/opencontainers/image-spec/identity
-# github.com/opencontainers/runc v1.0.0-rc2.0.20190403200919-029124da7af7
+# github.com/opencontainers/runc v1.0.0-rc7
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/utils
 github.com/opencontainers/runc/libcontainer/cgroups
@@ -253,7 +252,7 @@ github.com/vishvananda/netlink
 github.com/vishvananda/netlink/nl
 # github.com/vishvananda/netns v0.0.0-20171111001504-be1fbeda1936
 github.com/vishvananda/netns
-# golang.org/x/net v0.0.0-20190213061140-3a22650c66bd
+# golang.org/x/net v0.0.0-20190509222800-a4d6f7feada5
 golang.org/x/net/html/charset
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -265,12 +264,12 @@ golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
 golang.org/x/net/html/atom
-# golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f
+# golang.org/x/sync v0.0.0-20190423024810-112230192c58
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e
+# golang.org/x/sys v0.0.0-20190509141414-a5b02f93d862
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.3.0
+# golang.org/x/text v0.3.2
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/htmlindex
@@ -288,6 +287,8 @@ golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/internal/utf8internal
 golang.org/x/text/runes
+golang.org/x/text/internal/language
+golang.org/x/text/internal/language/compact
 golang.org/x/text/internal/tag
 # google.golang.org/genproto v0.0.0-20180518175338-11a468237815
 google.golang.org/genproto/googleapis/rpc/status

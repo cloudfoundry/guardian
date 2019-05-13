@@ -10,7 +10,6 @@ import (
 
 type Config struct {
 	StorePath      string `yaml:"store"`
-	FSDriver       string `yaml:"driver"`
 	TardisBin      string `yaml:"tardis_bin"`
 	NewuidmapBin   string `yaml:"newuidmap_bin"`
 	NewgidmapBin   string `yaml:"newgidmap_bin"`
@@ -19,7 +18,7 @@ type Config struct {
 	LogFile        string `yaml:"log_file"`
 	Create         Create `yaml:"create"`
 	Clean          Clean  `yaml:"clean"`
-	Init           Init   `yaml:"-"`
+	Init           Init   `yaml:"init"`
 }
 
 type Create struct {
@@ -37,7 +36,7 @@ type Clean struct {
 }
 
 type Init struct {
-	StoreSizeBytes int64
+	StoreSizeBytes int64 `yaml:"store_size_bytes"`
 	OwnerUser      string
 	OwnerGroup     string
 }
@@ -88,14 +87,6 @@ func (b *Builder) WithInsecureRegistries(insecureRegistries []string) *Builder {
 func (b *Builder) WithStorePath(storePath string, isSet bool) *Builder {
 	if isSet || b.config.StorePath == "" {
 		b.config.StorePath = storePath
-	}
-
-	return b
-}
-
-func (b *Builder) WithFSDriver(driver string, isSet bool) *Builder {
-	if isSet || b.config.FSDriver == "" {
-		b.config.FSDriver = driver
 	}
 
 	return b
