@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"syscall"
-	"time"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -179,8 +178,6 @@ func (r *RunContainerd) Events(log lager.Logger) (<-chan event.Event, error) {
 			for oomEvent := range r.containerManager.OOMEvents(log) {
 				events <- event.NewOOMEvent(oomEvent.ContainerID)
 			}
-
-			time.Sleep(time.Second)
 		}
 	}()
 
