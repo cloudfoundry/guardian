@@ -14,7 +14,6 @@ import (
 
 //go:generate counterfeiter . ProcessPidGetter
 type ProcessPidGetter interface {
-	GetPid(log lager.Logger, handle string) (int, error)
 	GetPeaPid(log lager.Logger, handle, peaID string) (int, error)
 }
 

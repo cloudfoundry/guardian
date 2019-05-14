@@ -24,20 +24,6 @@ type FakeProcessPidGetter struct {
 		result1 int
 		result2 error
 	}
-	GetPidStub        func(lager.Logger, string) (int, error)
-	getPidMutex       sync.RWMutex
-	getPidArgsForCall []struct {
-		arg1 lager.Logger
-		arg2 string
-	}
-	getPidReturns struct {
-		result1 int
-		result2 error
-	}
-	getPidReturnsOnCall map[int]struct {
-		result1 int
-		result2 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -107,77 +93,11 @@ func (fake *FakeProcessPidGetter) GetPeaPidReturnsOnCall(i int, result1 int, res
 	}{result1, result2}
 }
 
-func (fake *FakeProcessPidGetter) GetPid(arg1 lager.Logger, arg2 string) (int, error) {
-	fake.getPidMutex.Lock()
-	ret, specificReturn := fake.getPidReturnsOnCall[len(fake.getPidArgsForCall)]
-	fake.getPidArgsForCall = append(fake.getPidArgsForCall, struct {
-		arg1 lager.Logger
-		arg2 string
-	}{arg1, arg2})
-	fake.recordInvocation("GetPid", []interface{}{arg1, arg2})
-	fake.getPidMutex.Unlock()
-	if fake.GetPidStub != nil {
-		return fake.GetPidStub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	fakeReturns := fake.getPidReturns
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakeProcessPidGetter) GetPidCallCount() int {
-	fake.getPidMutex.RLock()
-	defer fake.getPidMutex.RUnlock()
-	return len(fake.getPidArgsForCall)
-}
-
-func (fake *FakeProcessPidGetter) GetPidCalls(stub func(lager.Logger, string) (int, error)) {
-	fake.getPidMutex.Lock()
-	defer fake.getPidMutex.Unlock()
-	fake.GetPidStub = stub
-}
-
-func (fake *FakeProcessPidGetter) GetPidArgsForCall(i int) (lager.Logger, string) {
-	fake.getPidMutex.RLock()
-	defer fake.getPidMutex.RUnlock()
-	argsForCall := fake.getPidArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeProcessPidGetter) GetPidReturns(result1 int, result2 error) {
-	fake.getPidMutex.Lock()
-	defer fake.getPidMutex.Unlock()
-	fake.GetPidStub = nil
-	fake.getPidReturns = struct {
-		result1 int
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeProcessPidGetter) GetPidReturnsOnCall(i int, result1 int, result2 error) {
-	fake.getPidMutex.Lock()
-	defer fake.getPidMutex.Unlock()
-	fake.GetPidStub = nil
-	if fake.getPidReturnsOnCall == nil {
-		fake.getPidReturnsOnCall = make(map[int]struct {
-			result1 int
-			result2 error
-		})
-	}
-	fake.getPidReturnsOnCall[i] = struct {
-		result1 int
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *FakeProcessPidGetter) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.getPeaPidMutex.RLock()
 	defer fake.getPeaPidMutex.RUnlock()
-	fake.getPidMutex.RLock()
-	defer fake.getPidMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

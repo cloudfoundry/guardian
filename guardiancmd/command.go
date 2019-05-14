@@ -32,6 +32,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
+	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/pid"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
@@ -55,7 +56,13 @@ type GardenFactory interface {
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
 	WireExecRunner(runMode, runcRoot string, containerRootUID, containerRootGID uint32) runrunc.ExecRunner
 	WireRootfsFileCreator() rundmc.RootfsFileCreator
-	WireContainerd(*goci.BndlLoader, *processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, error)
+	WireContainerd(*nerd.Nerd, *goci.BndlLoader, *processes.ProcBuilder, users.UserLookupper, *runrunc.Execer, runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, error)
+	WireNerd() (*nerd.Nerd, error)
+}
+
+type processPidGetter interface {
+	GetPid(log lager.Logger, handle string) (int, error)
+	GetPeaPid(log lager.Logger, handle, peaID string) (int, error)
 }
 
 type GdnCommand struct {
@@ -537,43 +544,61 @@ func (cmd *CommonCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	runcStater := runrunc.NewStater(runcLogRunner, runcBinary)
 	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary, runcStater)
 
+	theNerd, _ := factory.WireNerd()
 	var runner rundmc.OCIRuntime
-	var pidGetter peas.ProcessPidGetter
-	var peaPidGetter peas.ProcessPidGetter = &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}
+	var pidGetter processPidGetter
+	var peaPidGetter processPidGetter
+	pidGetter = &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}
+	peaPidGetter = &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}
+
+	if cmd.useContainerd() {
+		pidGetter = &runcontainerd.PidGetter{Nerd: theNerd}
+		if cmd.Containerd.UseContainerdForProcesses {
+			peaPidGetter = &runcontainerd.PidGetter{Nerd: theNerd}
+		}
+	}
+
 	var peaCreator *peas.PeaCreator
 
 	userLookupper := users.LookupFunc(users.LookupUser)
 
-	wireExecerFunc := func(pidGetter runrunc.PidGetter) *runrunc.Execer {
-		return runrunc.NewExecer(bndlLoader, processBuilder, factory.WireMkdirer(),
-			userLookupper, factory.WireExecRunner("exec", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0))), pidGetter)
+	execer := runrunc.NewExecer(bndlLoader, processBuilder, factory.WireMkdirer(),
+		userLookupper, factory.WireExecRunner("exec", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0))), pidGetter)
+
+	createdTimeInterpreter := func(id string, ctime time.Time) (time.Time, error) {
+		return depot.CreatedTime(log, id)
 	}
 
-	statser := runrunc.NewStatser(runcLogRunner, runcBinary, depot)
+	if cmd.useContainerd() {
+		createdTimeInterpreter = func(id string, ctime time.Time) (time.Time, error) {
+			return ctime, nil
+		}
+	}
+
+	statser := runrunc.NewStatser(runcLogRunner, runcBinary, createdTimeInterpreter)
 
 	var useNestedCgroups bool
 	var execRunner runrunc.ExecRunner = factory.WireExecRunner("run", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)))
 	if cmd.useContainerd() {
+
 		var err error
 		var peaRunner *runcontainerd.RunContainerPea
-		runner, peaRunner, pidGetter, err = factory.WireContainerd(bndlLoader, processBuilder, userLookupper, wireExecerFunc, statser)
+		runner, peaRunner, err = factory.WireContainerd(theNerd, bndlLoader, processBuilder, userLookupper, execer, statser)
 		if err != nil {
 			return nil, err
 		}
 
 		if cmd.Containerd.UseContainerdForProcesses {
-			peaPidGetter = pidGetter
 			execRunner = peaRunner
 			useNestedCgroups = true
 		}
 	} else {
-		pidGetter = &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}
 		runner = runrunc.New(
 			cmdRunner,
 			runcLogRunner,
 			runcBinary,
 			cmd.Runtime.PluginExtraArgs,
-			wireExecerFunc(pidGetter),
+			execer,
 			statser,
 		)
 	}

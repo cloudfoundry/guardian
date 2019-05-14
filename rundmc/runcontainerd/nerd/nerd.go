@@ -199,6 +199,20 @@ func (n *Nerd) GetContainerPID(log lager.Logger, containerID string) (uint32, er
 	return task.Pid(), nil
 }
 
+// func (n *Nerd) GetProcessPID(log lager.Logger, containerID, processID string) (uint32, error) {
+// 	_, task, err := n.loadContainerAndTask(log, containerID)
+// 	if err != nil {
+// 		return 0, err
+// 	}
+//
+// 	process, err := task.LoadProcess(n.context, processID, nil)
+// 	if err != nil {
+// 		return 0, err
+// 	}
+//
+// 	return process.Pid(), nil
+// }
+
 func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (containerd.Container, containerd.Task, error) {
 	var err error
 

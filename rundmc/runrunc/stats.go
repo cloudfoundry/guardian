@@ -17,10 +17,7 @@ type StatsNotifier interface {
 	OnStat(handle string, cpuStat garden.ContainerCPUStat, memoryStat garden.ContainerMemoryStat)
 }
 
-//go:generate counterfeiter . Depot
-type Depot interface {
-	CreatedTime(log lager.Logger, handle string) (time.Time, error)
-}
+type CreatedTimeInterpreter func(string, time.Time) (time.Time, error)
 
 type runcStats struct {
 	Data struct {
@@ -46,14 +43,14 @@ type runcState struct {
 }
 
 type Statser struct {
-	runner RuncCmdRunner
-	runc   RuncBinary
-	depot  Depot
+	runner                 RuncCmdRunner
+	runc                   RuncBinary
+	createdTimeInterpreter CreatedTimeInterpreter
 }
 
-func NewStatser(runner RuncCmdRunner, runc RuncBinary, depot Depot) *Statser {
+func NewStatser(runner RuncCmdRunner, runc RuncBinary, createdTimeInterpreter CreatedTimeInterpreter) *Statser {
 	return &Statser{
-		runner, runc, depot,
+		runner, runc, createdTimeInterpreter,
 	}
 }
 
@@ -71,7 +68,7 @@ func (r *Statser) Stats(log lager.Logger, id string) (gardener.StatsContainerMet
 	ctime := containerState.Created
 	if ctime.IsZero() {
 		var err error
-		ctime, err = r.depot.CreatedTime(log, id)
+		ctime, err = r.createdTimeInterpreter(id, containerState.Created)
 		if err != nil {
 			return gardener.StatsContainerMetrics{}, err
 		}

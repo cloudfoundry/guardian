@@ -141,26 +141,27 @@ func (f *LinuxFactory) WireRootfsFileCreator() rundmc.RootfsFileCreator {
 	return preparerootfs.SymlinkRefusingFileCreator{}
 }
 
-func (f *LinuxFactory) WireContainerd(bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, error) {
-	containerdClient, err := containerd.New(f.config.Containerd.Socket)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
-	ctx = leases.WithLease(ctx, "lease-is-off")
-	nerd := nerd.New(containerdClient, ctx, f.config.Containers.CleanupProcessDirsOnWait, filepath.Join(containerdRuncRoot(), "fifo"))
-	pidGetter := &runcontainerd.PidGetter{Nerd: nerd}
-
+func (f *LinuxFactory) WireContainerd(nerd *nerd.Nerd, bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, execer *runrunc.Execer, statser runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, error) {
 	cgroupManager := runcontainerd.NewCgroupManager(containerdRuncRoot(), containerdNamespace)
 
-	containerdManager := runcontainerd.New(nerd, nerd, bndlLoader, processBuilder, userLookupper, wireExecer(pidGetter), statser, f.config.Containerd.UseContainerdForProcesses, cgroupManager)
+	containerdManager := runcontainerd.New(nerd, nerd, bndlLoader, processBuilder, userLookupper, execer, statser, f.config.Containerd.UseContainerdForProcesses, cgroupManager)
 
 	peaRunner := &runcontainerd.RunContainerPea{
 		PeaManager:     containerdManager,
 		ProcessManager: nerd,
 	}
 
-	return containerdManager, peaRunner, pidGetter, nil
+	return containerdManager, peaRunner, nil
+}
+
+func (f *LinuxFactory) WireNerd() (*nerd.Nerd, error) {
+	containerdClient, err := containerd.New(f.config.Containerd.Socket)
+	if err != nil {
+		return nil, err
+	}
+	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
+	ctx = leases.WithLease(ctx, "lease-is-off")
+	return nerd.New(containerdClient, ctx, f.config.Containers.CleanupProcessDirsOnWait, filepath.Join(containerdRuncRoot(), "fifo")), nil
 }
 
 func initBindMountAndPath(initPathOnHost string) (specs.Mount, string) {

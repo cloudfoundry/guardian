@@ -26,6 +26,7 @@ type ContainerManager interface {
 
 	State(log lager.Logger, containerID string) (int, string, error)
 	GetContainerPID(log lager.Logger, containerID string) (uint32, error)
+	// GetProcessPID(log lager.Logger, containerID, processID string) (uint32, error)
 	OOMEvents(log lager.Logger) <-chan *apievents.TaskOOM
 }
 
