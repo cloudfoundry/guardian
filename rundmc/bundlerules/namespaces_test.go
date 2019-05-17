@@ -14,7 +14,7 @@ var _ = Describe("Namespaces", func() {
 		initialBndl := goci.Bundle()
 
 		desiredContainerSpec := spec.DesiredContainerSpec{Namespaces: map[string]string{"mount": "", "network": "test-net-ns", "user": "test-user-ns"}}
-		transformedBndl, err := bundlerules.Namespaces{}.Apply(initialBndl, desiredContainerSpec, "")
+		transformedBndl, err := bundlerules.Namespaces{}.Apply(initialBndl, desiredContainerSpec)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(transformedBndl.Namespaces()).To(ConsistOf(

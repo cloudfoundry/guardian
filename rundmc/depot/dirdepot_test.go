@@ -164,9 +164,8 @@ var _ = Describe("Depot", func() {
 			desiredContainerSpec.BindMounts = append(desiredContainerSpec.BindMounts, mounts...)
 
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-			actualDesiredSpec, actualContainerDir := bundleGenerator.GenerateArgsForCall(0)
+			actualDesiredSpec := bundleGenerator.GenerateArgsForCall(0)
 			Expect(actualDesiredSpec).To(Equal(desiredContainerSpec))
-			Expect(actualContainerDir).To(Equal(filepath.Join(depotDir, "aardvaark")))
 		})
 
 		Context("when generation fails", func() {

@@ -136,7 +136,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		Namespaces: linuxNamespaces,
 		BindMounts: append(processSpec.BindMounts, defaultBindMounts...),
 		Privileged: privileged,
-	}, sandboxBundlePath)
+	})
 	if genErr != nil {
 		destroyErr := p.Volumizer.Destroy(log, processID)
 		return errs("generating-bundle", multierror.Append(genErr, destroyErr))

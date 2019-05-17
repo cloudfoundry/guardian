@@ -11,7 +11,7 @@ type Base struct {
 	UnprivilegedBase goci.Bndl
 }
 
-func (r Base) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) (goci.Bndl, error) {
+func (r Base) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec) (goci.Bndl, error) {
 	if spec.Privileged {
 		copiedBndl, err := copystructure.Copy(r.PrivilegedBase)
 		if err != nil {

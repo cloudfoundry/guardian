@@ -28,7 +28,7 @@ var _ = Describe("RootFS", func() {
 		var err error
 		returnedBundle, err = rule.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 			BaseConfig: specs.Spec{Root: &specs.Root{Path: rootfsPath}},
-		}, "not-needed-path")
+		})
 		Expect(err).NotTo(HaveOccurred())
 	})
 

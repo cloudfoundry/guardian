@@ -68,7 +68,7 @@ var _ = Describe("MountsRule", func() {
 			spec.DesiredContainerSpec{
 				BindMounts: bindMounts,
 				BaseConfig: specs.Spec{Mounts: desiredImageSpecMounts},
-			}, "not-needed-path")
+			})
 	})
 
 	Context("when the source is a mountpoint", func() {

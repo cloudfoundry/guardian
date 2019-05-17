@@ -24,7 +24,7 @@ var _ = Describe("WindowsRule", func() {
 				Memory: garden.MemoryLimits{LimitInBytes: 4096},
 				CPU:    garden.CPULimits{LimitInShares: 321},
 			},
-		}, "not-needed-path")
+		})
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(*newBndl.Spec.Windows).To(Equal(specs.Windows{
@@ -46,7 +46,7 @@ var _ = Describe("WindowsRule", func() {
 				BaseConfig: specs.Spec{
 					Windows: nil,
 				},
-			}, "not-needed-path")
+			})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(newBndl).To(Equal(goci.Bundle()))

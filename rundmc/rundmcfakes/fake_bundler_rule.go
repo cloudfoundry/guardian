@@ -10,12 +10,11 @@ import (
 )
 
 type FakeBundlerRule struct {
-	ApplyStub        func(goci.Bndl, spec.DesiredContainerSpec, string) (goci.Bndl, error)
+	ApplyStub        func(goci.Bndl, spec.DesiredContainerSpec) (goci.Bndl, error)
 	applyMutex       sync.RWMutex
 	applyArgsForCall []struct {
 		arg1 goci.Bndl
 		arg2 spec.DesiredContainerSpec
-		arg3 string
 	}
 	applyReturns struct {
 		result1 goci.Bndl
@@ -29,18 +28,17 @@ type FakeBundlerRule struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBundlerRule) Apply(arg1 goci.Bndl, arg2 spec.DesiredContainerSpec, arg3 string) (goci.Bndl, error) {
+func (fake *FakeBundlerRule) Apply(arg1 goci.Bndl, arg2 spec.DesiredContainerSpec) (goci.Bndl, error) {
 	fake.applyMutex.Lock()
 	ret, specificReturn := fake.applyReturnsOnCall[len(fake.applyArgsForCall)]
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
 		arg1 goci.Bndl
 		arg2 spec.DesiredContainerSpec
-		arg3 string
-	}{arg1, arg2, arg3})
-	fake.recordInvocation("Apply", []interface{}{arg1, arg2, arg3})
+	}{arg1, arg2})
+	fake.recordInvocation("Apply", []interface{}{arg1, arg2})
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
-		return fake.ApplyStub(arg1, arg2, arg3)
+		return fake.ApplyStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -55,17 +53,17 @@ func (fake *FakeBundlerRule) ApplyCallCount() int {
 	return len(fake.applyArgsForCall)
 }
 
-func (fake *FakeBundlerRule) ApplyCalls(stub func(goci.Bndl, spec.DesiredContainerSpec, string) (goci.Bndl, error)) {
+func (fake *FakeBundlerRule) ApplyCalls(stub func(goci.Bndl, spec.DesiredContainerSpec) (goci.Bndl, error)) {
 	fake.applyMutex.Lock()
 	defer fake.applyMutex.Unlock()
 	fake.ApplyStub = stub
 }
 
-func (fake *FakeBundlerRule) ApplyArgsForCall(i int) (goci.Bndl, spec.DesiredContainerSpec, string) {
+func (fake *FakeBundlerRule) ApplyArgsForCall(i int) (goci.Bndl, spec.DesiredContainerSpec) {
 	fake.applyMutex.RLock()
 	defer fake.applyMutex.RUnlock()
 	argsForCall := fake.applyArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeBundlerRule) ApplyReturns(result1 goci.Bndl, result2 error) {

@@ -11,7 +11,7 @@ type CGroupPath struct {
 	Path string
 }
 
-func (r CGroupPath) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) (goci.Bndl, error) {
+func (r CGroupPath) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec) (goci.Bndl, error) {
 	if spec.Privileged {
 		return bndl, nil
 	}

@@ -8,7 +8,7 @@ import (
 type Env struct {
 }
 
-func (r Env) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) (goci.Bndl, error) {
+func (r Env) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec) (goci.Bndl, error) {
 	process := bndl.Process()
 	var baseEnv []string
 	if spec.BaseConfig.Process != nil {

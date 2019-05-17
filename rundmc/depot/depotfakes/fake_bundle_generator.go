@@ -10,11 +10,10 @@ import (
 )
 
 type FakeBundleGenerator struct {
-	GenerateStub        func(spec.DesiredContainerSpec, string) (goci.Bndl, error)
+	GenerateStub        func(spec.DesiredContainerSpec) (goci.Bndl, error)
 	generateMutex       sync.RWMutex
 	generateArgsForCall []struct {
 		arg1 spec.DesiredContainerSpec
-		arg2 string
 	}
 	generateReturns struct {
 		result1 goci.Bndl
@@ -28,17 +27,16 @@ type FakeBundleGenerator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBundleGenerator) Generate(arg1 spec.DesiredContainerSpec, arg2 string) (goci.Bndl, error) {
+func (fake *FakeBundleGenerator) Generate(arg1 spec.DesiredContainerSpec) (goci.Bndl, error) {
 	fake.generateMutex.Lock()
 	ret, specificReturn := fake.generateReturnsOnCall[len(fake.generateArgsForCall)]
 	fake.generateArgsForCall = append(fake.generateArgsForCall, struct {
 		arg1 spec.DesiredContainerSpec
-		arg2 string
-	}{arg1, arg2})
-	fake.recordInvocation("Generate", []interface{}{arg1, arg2})
+	}{arg1})
+	fake.recordInvocation("Generate", []interface{}{arg1})
 	fake.generateMutex.Unlock()
 	if fake.GenerateStub != nil {
-		return fake.GenerateStub(arg1, arg2)
+		return fake.GenerateStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -53,17 +51,17 @@ func (fake *FakeBundleGenerator) GenerateCallCount() int {
 	return len(fake.generateArgsForCall)
 }
 
-func (fake *FakeBundleGenerator) GenerateCalls(stub func(spec.DesiredContainerSpec, string) (goci.Bndl, error)) {
+func (fake *FakeBundleGenerator) GenerateCalls(stub func(spec.DesiredContainerSpec) (goci.Bndl, error)) {
 	fake.generateMutex.Lock()
 	defer fake.generateMutex.Unlock()
 	fake.GenerateStub = stub
 }
 
-func (fake *FakeBundleGenerator) GenerateArgsForCall(i int) (spec.DesiredContainerSpec, string) {
+func (fake *FakeBundleGenerator) GenerateArgsForCall(i int) spec.DesiredContainerSpec {
 	fake.generateMutex.RLock()
 	defer fake.generateMutex.RUnlock()
 	argsForCall := fake.generateArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1
 }
 
 func (fake *FakeBundleGenerator) GenerateReturns(result1 goci.Bndl, result2 error) {

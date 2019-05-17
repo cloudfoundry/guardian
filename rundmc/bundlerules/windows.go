@@ -8,7 +8,7 @@ import (
 
 type Windows struct{}
 
-func (w Windows) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) (goci.Bndl, error) {
+func (w Windows) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec) (goci.Bndl, error) {
 	if spec.BaseConfig.Windows == nil {
 		return bndl, nil
 	}

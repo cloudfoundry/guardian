@@ -52,7 +52,7 @@ var _ = Describe("Base", func() {
 		It("should use the correct base", func() {
 			retBndl, err := rule.Apply(goci.Bndl{}, spec.DesiredContainerSpec{
 				Privileged: true,
-			}, "not-needed-path")
+			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(retBndl).To(Equal(privilegeBndl))
 		})
@@ -60,7 +60,7 @@ var _ = Describe("Base", func() {
 		It("returns a copy of the original Bndl data structure", func() {
 			retBndl, err := rule.Apply(goci.Bndl{}, spec.DesiredContainerSpec{
 				Privileged: true,
-			}, "not-needed-path")
+			})
 			Expect(err).NotTo(HaveOccurred())
 
 			// Spec.Linux.Resources is a pointer
@@ -72,7 +72,7 @@ var _ = Describe("Base", func() {
 		It("should use the correct base", func() {
 			retBndl, err := rule.Apply(goci.Bndl{}, spec.DesiredContainerSpec{
 				Privileged: false,
-			}, "not-needed-path")
+			})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(retBndl).To(Equal(unprivilegeBndl))
@@ -81,7 +81,7 @@ var _ = Describe("Base", func() {
 		It("returns a copy of the original Bndl data structure", func() {
 			retBndl, err := rule.Apply(goci.Bndl{}, spec.DesiredContainerSpec{
 				Privileged: false,
-			}, "not-needed-path")
+			})
 			Expect(err).NotTo(HaveOccurred())
 
 			// Spec.Linux.Resources is a pointer

@@ -16,7 +16,7 @@ type Limits struct {
 	DisableSwapLimit bool
 }
 
-func (l Limits) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) (goci.Bndl, error) {
+func (l Limits) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec) (goci.Bndl, error) {
 	limit := int64(spec.Limits.Memory.LimitInBytes)
 
 	var swapLimit *int64

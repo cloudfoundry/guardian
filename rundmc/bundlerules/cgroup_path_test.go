@@ -18,7 +18,7 @@ var _ = Describe("CGroup Path", func() {
 
 		newBndl, err := cgroupPathRule.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 			Handle: "banana",
-		}, "not-needed-path")
+		})
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(newBndl.CGroupPath()).To(Equal(filepath.Join("unpriv", "banana")))
@@ -31,7 +31,7 @@ var _ = Describe("CGroup Path", func() {
 
 		newBndl, err := cgroupPathRule.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 			Privileged: true,
-		}, "not-needed-path")
+		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(newBndl.CGroupPath()).To(BeEmpty())
 	})

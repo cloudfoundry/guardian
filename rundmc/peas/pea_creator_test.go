@@ -155,19 +155,19 @@ var _ = Describe("PeaCreator", func() {
 
 		It("passes bind mounts to bundle generator", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+			actualCtrSpec := bundleGenerator.GenerateArgsForCall(0)
 			Expect(actualCtrSpec.BindMounts).To(Equal(append(specifiedBindMounts, defaultBindMounts...)))
 		})
 
 		It("passes the processID as handle to the bundle generator", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+			actualCtrSpec := bundleGenerator.GenerateArgsForCall(0)
 			Expect(actualCtrSpec.Handle).To(Equal(processSpec.ID))
 		})
 
 		It("generates a runtime spec from the VolumeCreator's runtimeSpec", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+			actualCtrSpec := bundleGenerator.GenerateArgsForCall(0)
 			Expect(actualCtrSpec.BaseConfig).To(Equal(specs.Spec{
 				Version: "some-spec-version",
 				Windows: &specs.Windows{
@@ -180,19 +180,19 @@ var _ = Describe("PeaCreator", func() {
 
 		It("passes the container handle as cgroup path to the bundle generator", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+			actualCtrSpec := bundleGenerator.GenerateArgsForCall(0)
 			Expect(actualCtrSpec.CgroupPath).To(Equal(ctrHandle))
 		})
 
 		It("passes sandbox handle to bundle generator", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+			actualCtrSpec := bundleGenerator.GenerateArgsForCall(0)
 			Expect(actualCtrSpec.BaseConfig.Windows.Network.NetworkSharedContainerName).To(Equal(ctrHandle))
 		})
 
 		It("passes Privileged to bundle generator", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+			actualCtrSpec := bundleGenerator.GenerateArgsForCall(0)
 			Expect(actualCtrSpec.Privileged).To(Equal(false))
 		})
 
@@ -203,7 +203,7 @@ var _ = Describe("PeaCreator", func() {
 
 			It("passes <container-handle>/<process-id> as cgroup path to the bundle generator", func() {
 				Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-				actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+				actualCtrSpec := bundleGenerator.GenerateArgsForCall(0)
 				expected := filepath.Join(ctrHandle, processSpec.ID)
 				Expect(actualCtrSpec.CgroupPath).To(Equal(expected))
 			})
@@ -212,7 +212,7 @@ var _ = Describe("PeaCreator", func() {
 		Describe("sharing namespaces", func() {
 			It("shares all namespaces apart from mnt with the container", func() {
 				Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-				actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+				actualCtrSpec := bundleGenerator.GenerateArgsForCall(0)
 				Expect(actualCtrSpec.Namespaces).To(Equal(map[string]string{
 					"mount":   "",
 					"network": "/proc/123/ns/net",
@@ -230,7 +230,7 @@ var _ = Describe("PeaCreator", func() {
 
 				It("shares all namespaces apart from mnt and user with the container", func() {
 					Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-					actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+					actualCtrSpec := bundleGenerator.GenerateArgsForCall(0)
 					Expect(actualCtrSpec.Namespaces).To(Equal(map[string]string{
 						"mount":   "",
 						"network": "/proc/123/ns/net",
@@ -240,12 +240,6 @@ var _ = Describe("PeaCreator", func() {
 					}))
 				})
 			})
-		})
-
-		It("passes the ctrBundlePath to the bundle generator", func() {
-			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-			_, actualCtrBundle := bundleGenerator.GenerateArgsForCall(0)
-			Expect(actualCtrBundle).To(Equal(ctrBundleDir))
 		})
 
 		It("builds a process", func() {
@@ -347,13 +341,13 @@ var _ = Describe("PeaCreator", func() {
 
 			It("provides an explicit cgroup path to bundle generation", func() {
 				Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-				actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+				actualCtrSpec := bundleGenerator.GenerateArgsForCall(0)
 				Expect(actualCtrSpec.CgroupPath).To(Equal(processSpec.ID))
 			})
 
 			It("sets the memory and CPU limits, and no other limits", func() {
 				Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-				actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+				actualCtrSpec := bundleGenerator.GenerateArgsForCall(0)
 				Expect(actualCtrSpec.Limits).To(Equal(garden.Limits{
 					CPU:    processSpec.OverrideContainerLimits.CPU,
 					Memory: processSpec.OverrideContainerLimits.Memory,

@@ -23,7 +23,7 @@ type BundleSaver interface {
 
 //go:generate counterfeiter . BundleGenerator
 type BundleGenerator interface {
-	Generate(desiredContainerSpec spec.DesiredContainerSpec, containerDir string) (goci.Bndl, error)
+	Generate(desiredContainerSpec spec.DesiredContainerSpec) (goci.Bndl, error)
 }
 
 //go:generate counterfeiter . BindMountSourceCreator
@@ -72,7 +72,7 @@ func (d *DirectoryDepot) Create(log lager.Logger, handle string, spec spec.Desir
 	}
 	spec.BindMounts = append(spec.BindMounts, defaultBindMounts...)
 
-	bundle, err := d.bundler.Generate(spec, containerDir)
+	bundle, err := d.bundler.Generate(spec)
 	if err != nil {
 		return errs("generate-failed", err)
 	}

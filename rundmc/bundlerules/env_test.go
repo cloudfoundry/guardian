@@ -35,7 +35,7 @@ var _ = Describe("Env Rule", func() {
 			BaseConfig: specs.Spec{
 				Process: baseconfigProcess,
 			},
-		}, "not-needed-path")
+		})
 		Expect(err).NotTo(HaveOccurred())
 	})
 

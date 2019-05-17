@@ -11,7 +11,7 @@ type Mounts struct {
 	MountOptionsGetter func(path string) ([]string, error)
 }
 
-func (b Mounts) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) (goci.Bndl, error) {
+func (b Mounts) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec) (goci.Bndl, error) {
 	var mounts []specs.Mount
 	for _, m := range spec.BindMounts {
 		mountOptions, err := b.buildMountOptions(m)
