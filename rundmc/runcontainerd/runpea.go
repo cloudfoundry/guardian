@@ -1,15 +1,14 @@
 package runcontainerd
 
 import (
-	"io"
-
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . PeaManager
 type PeaManager interface {
-	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
+	Create(log lager.Logger, id string, bundle goci.Bndl, io garden.ProcessIO) error
 	Delete(log lager.Logger, containerID string) error
 }
 
@@ -19,11 +18,11 @@ type RunContainerPea struct {
 }
 
 func (r *RunContainerPea) Run(
-	log lager.Logger, processID, processBundlePath, sandboxHandle, sandboxBundlePath string,
-	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
+	log lager.Logger, processID string, sandboxHandle string,
+	pio garden.ProcessIO, tty bool, procSpec goci.Bndl, extraCleanup func() error,
 ) (garden.Process, error) {
 
-	if err := r.PeaManager.Create(log, processBundlePath, processID, pio); err != nil {
+	if err := r.PeaManager.Create(log, processID, procSpec, pio); err != nil {
 		return &Process{}, err
 	}
 

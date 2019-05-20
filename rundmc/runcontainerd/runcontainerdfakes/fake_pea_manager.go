@@ -5,17 +5,18 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/lager"
 )
 
 type FakePeaManager struct {
-	CreateStub        func(lager.Logger, string, string, garden.ProcessIO) error
+	CreateStub        func(lager.Logger, string, goci.Bndl, garden.ProcessIO) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 string
-		arg3 string
+		arg3 goci.Bndl
 		arg4 garden.ProcessIO
 	}
 	createReturns struct {
@@ -40,13 +41,13 @@ type FakePeaManager struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakePeaManager) Create(arg1 lager.Logger, arg2 string, arg3 string, arg4 garden.ProcessIO) error {
+func (fake *FakePeaManager) Create(arg1 lager.Logger, arg2 string, arg3 goci.Bndl, arg4 garden.ProcessIO) error {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		arg1 lager.Logger
 		arg2 string
-		arg3 string
+		arg3 goci.Bndl
 		arg4 garden.ProcessIO
 	}{arg1, arg2, arg3, arg4})
 	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3, arg4})
@@ -67,13 +68,13 @@ func (fake *FakePeaManager) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakePeaManager) CreateCalls(stub func(lager.Logger, string, string, garden.ProcessIO) error) {
+func (fake *FakePeaManager) CreateCalls(stub func(lager.Logger, string, goci.Bndl, garden.ProcessIO) error) {
 	fake.createMutex.Lock()
 	defer fake.createMutex.Unlock()
 	fake.CreateStub = stub
 }
 
-func (fake *FakePeaManager) CreateArgsForCall(i int) (lager.Logger, string, string, garden.ProcessIO) {
+func (fake *FakePeaManager) CreateArgsForCall(i int) (lager.Logger, string, goci.Bndl, garden.ProcessIO) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	argsForCall := fake.createArgsForCall[i]

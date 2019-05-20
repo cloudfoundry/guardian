@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"time"
 
 	"code.cloudfoundry.org/clock"
@@ -54,9 +55,9 @@ type GardenFactory interface {
 	CommandRunner() commandrunner.CommandRunner
 	WireVolumizer(logger lager.Logger) gardener.Volumizer
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
-	WireExecRunner(runMode, runcRoot string, containerRootUID, containerRootGID uint32) runrunc.ExecRunner
+	WireExecRunner(runMode, runcRoot string, containerRootUID, containerRootGID uint32, bundleLookuper func(string) (string, error), processPathCalculator func(string, string) string) runrunc.ExecRunner
 	WireRootfsFileCreator() rundmc.RootfsFileCreator
-	WireContainerd(*nerd.Nerd, *goci.BndlLoader, *processes.ProcBuilder, users.UserLookupper, *runrunc.Execer, runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, error)
+	WireContainerd(*nerd.Nerd, *processes.ProcBuilder, users.UserLookupper, *runrunc.Execer, runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, error)
 	WireNerd() (*nerd.Nerd, error)
 }
 
@@ -562,8 +563,16 @@ func (cmd *CommonCommand) wireContainerizer(log lager.Logger, factory GardenFact
 
 	userLookupper := users.LookupFunc(users.LookupUser)
 
+	bundleLookuper := func(handle string) (string, error) {
+		return depot.Lookup(log, handle)
+	}
+
+	processPathCalculator := func(bundlePath, processID string) string {
+		return filepath.Join(bundlePath, "processes", processID)
+	}
+
 	execer := runrunc.NewExecer(bndlLoader, processBuilder, factory.WireMkdirer(),
-		userLookupper, factory.WireExecRunner("exec", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0))), pidGetter)
+		userLookupper, factory.WireExecRunner("exec", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)), bundleLookuper, processPathCalculator), pidGetter, bundleLookuper)
 
 	createdTimeInterpreter := func(id string, ctime time.Time) (time.Time, error) {
 		return depot.CreatedTime(log, id)
@@ -578,12 +587,12 @@ func (cmd *CommonCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	statser := runrunc.NewStatser(runcLogRunner, runcBinary, createdTimeInterpreter)
 
 	var useNestedCgroups bool
-	var execRunner runrunc.ExecRunner = factory.WireExecRunner("run", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)))
+	var execRunner runrunc.ExecRunner = factory.WireExecRunner("run", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)), bundleLookuper, processPathCalculator)
 	if cmd.useContainerd() {
 
 		var err error
 		var peaRunner *runcontainerd.RunContainerPea
-		runner, peaRunner, err = factory.WireContainerd(theNerd, bndlLoader, processBuilder, userLookupper, execer, statser)
+		runner, peaRunner, err = factory.WireContainerd(theNerd, processBuilder, userLookupper, execer, statser)
 		if err != nil {
 			return nil, err
 		}
@@ -600,6 +609,7 @@ func (cmd *CommonCommand) wireContainerizer(log lager.Logger, factory GardenFact
 			cmd.Runtime.PluginExtraArgs,
 			execer,
 			statser,
+			bundleLookuper,
 		)
 	}
 

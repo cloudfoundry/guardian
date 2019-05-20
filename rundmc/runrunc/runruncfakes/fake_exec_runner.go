@@ -2,10 +2,10 @@
 package runruncfakes
 
 import (
-	"io"
 	"sync"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 )
@@ -27,18 +27,16 @@ type FakeExecRunner struct {
 		result1 garden.Process
 		result2 error
 	}
-	RunStub        func(lager.Logger, string, string, string, string, garden.ProcessIO, bool, io.Reader, func() error) (garden.Process, error)
+	RunStub        func(lager.Logger, string, string, garden.ProcessIO, bool, goci.Bndl, func() error) (garden.Process, error)
 	runMutex       sync.RWMutex
 	runArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 string
 		arg3 string
-		arg4 string
-		arg5 string
-		arg6 garden.ProcessIO
-		arg7 bool
-		arg8 io.Reader
-		arg9 func() error
+		arg4 garden.ProcessIO
+		arg5 bool
+		arg6 goci.Bndl
+		arg7 func() error
 	}
 	runReturns struct {
 		result1 garden.Process
@@ -118,24 +116,22 @@ func (fake *FakeExecRunner) AttachReturnsOnCall(i int, result1 garden.Process, r
 	}{result1, result2}
 }
 
-func (fake *FakeExecRunner) Run(arg1 lager.Logger, arg2 string, arg3 string, arg4 string, arg5 string, arg6 garden.ProcessIO, arg7 bool, arg8 io.Reader, arg9 func() error) (garden.Process, error) {
+func (fake *FakeExecRunner) Run(arg1 lager.Logger, arg2 string, arg3 string, arg4 garden.ProcessIO, arg5 bool, arg6 goci.Bndl, arg7 func() error) (garden.Process, error) {
 	fake.runMutex.Lock()
 	ret, specificReturn := fake.runReturnsOnCall[len(fake.runArgsForCall)]
 	fake.runArgsForCall = append(fake.runArgsForCall, struct {
 		arg1 lager.Logger
 		arg2 string
 		arg3 string
-		arg4 string
-		arg5 string
-		arg6 garden.ProcessIO
-		arg7 bool
-		arg8 io.Reader
-		arg9 func() error
-	}{arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9})
-	fake.recordInvocation("Run", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9})
+		arg4 garden.ProcessIO
+		arg5 bool
+		arg6 goci.Bndl
+		arg7 func() error
+	}{arg1, arg2, arg3, arg4, arg5, arg6, arg7})
+	fake.recordInvocation("Run", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6, arg7})
 	fake.runMutex.Unlock()
 	if fake.RunStub != nil {
-		return fake.RunStub(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
+		return fake.RunStub(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -150,17 +146,17 @@ func (fake *FakeExecRunner) RunCallCount() int {
 	return len(fake.runArgsForCall)
 }
 
-func (fake *FakeExecRunner) RunCalls(stub func(lager.Logger, string, string, string, string, garden.ProcessIO, bool, io.Reader, func() error) (garden.Process, error)) {
+func (fake *FakeExecRunner) RunCalls(stub func(lager.Logger, string, string, garden.ProcessIO, bool, goci.Bndl, func() error) (garden.Process, error)) {
 	fake.runMutex.Lock()
 	defer fake.runMutex.Unlock()
 	fake.RunStub = stub
 }
 
-func (fake *FakeExecRunner) RunArgsForCall(i int) (lager.Logger, string, string, string, string, garden.ProcessIO, bool, io.Reader, func() error) {
+func (fake *FakeExecRunner) RunArgsForCall(i int) (lager.Logger, string, string, garden.ProcessIO, bool, goci.Bndl, func() error) {
 	fake.runMutex.RLock()
 	defer fake.runMutex.RUnlock()
 	argsForCall := fake.runArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6, argsForCall.arg7, argsForCall.arg8, argsForCall.arg9
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6, argsForCall.arg7
 }
 
 func (fake *FakeExecRunner) RunReturns(result1 garden.Process, result2 error) {

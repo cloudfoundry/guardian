@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/logging"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -19,22 +20,28 @@ type EventsWatcher interface {
 }
 
 type Creator struct {
-	runc          RuncBinary
-	runcExtraArgs []string
-	commandRunner commandrunner.CommandRunner
-	eventsWatcher EventsWatcher
+	runc           RuncBinary
+	runcExtraArgs  []string
+	commandRunner  commandrunner.CommandRunner
+	eventsWatcher  EventsWatcher
+	bundleLookuper func(handle string) (string, error)
 }
 
-func NewCreator(runc RuncBinary, runcExtraArgs []string, commandRunner commandrunner.CommandRunner, eventsWatcher EventsWatcher) *Creator {
+func NewCreator(runc RuncBinary, runcExtraArgs []string, commandRunner commandrunner.CommandRunner, eventsWatcher EventsWatcher, bundleLookuper func(string) (string, error)) *Creator {
 	return &Creator{
 		runc,
 		runcExtraArgs,
 		commandRunner,
 		eventsWatcher,
+		bundleLookuper,
 	}
 }
 
-func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.ProcessIO) error {
+func (c *Creator) Create(log lager.Logger, id string, bundle goci.Bndl, pio garden.ProcessIO) error {
+	bundlePath, err := c.bundleLookuper(id)
+	if err != nil {
+		return err
+	}
 	logFilePath := filepath.Join(bundlePath, "create.log")
 	pidFilePath := filepath.Join(bundlePath, "pidfile")
 
@@ -70,7 +77,7 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.Pro
 	}
 	cmd.Stdout = pio.Stdout
 	cmd.Stderr = pio.Stderr
-	err := c.commandRunner.Run(cmd)
+	err = c.commandRunner.Run(cmd)
 
 	log.Info("completing")
 	if err := processLogs(log, logFilePath, err); err != nil {

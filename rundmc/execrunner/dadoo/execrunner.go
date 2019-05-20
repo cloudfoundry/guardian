@@ -2,6 +2,7 @@ package dadoo
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,6 +19,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/lager"
 )
@@ -34,11 +36,15 @@ type ExecRunner struct {
 	runMode                  string
 	containerRootHostUID     uint32
 	containerRootHostGID     uint32
+	bundleLookuper           func(containerID string) (string, error)
+	processPathCalculator    func(bundlePath, processID string) string
 }
 
 func NewExecRunner(
 	dadooPath, runcPath, runcRoot string, signallerFactory *signals.SignallerFactory,
 	commandRunner commandrunner.CommandRunner, shouldCleanup bool, runMode string, containerRootHostUID, containerRootHostGID uint32,
+	bundleLookuper func(string) (string, error),
+	processPathCalculator func(string, string) string,
 ) *ExecRunner {
 	return &ExecRunner{
 		dadooPath:                dadooPath,
@@ -52,12 +58,14 @@ func NewExecRunner(
 		runMode:                  runMode,
 		containerRootHostUID:     containerRootHostUID,
 		containerRootHostGID:     containerRootHostGID,
+		bundleLookuper:           bundleLookuper,
+		processPathCalculator:    processPathCalculator,
 	}
 }
 
 func (d *ExecRunner) Run(
-	log lager.Logger, processID, processPath, sandboxHandle, sandboxBundlePath string,
-	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
+	log lager.Logger, processID, sandboxHandle string,
+	pio garden.ProcessIO, tty bool, procBundle goci.Bndl, extraCleanup func() error,
 ) (proc garden.Process, theErr error) {
 	log = log.Session("execrunner", lager.Data{"id": processID})
 
@@ -82,14 +90,22 @@ func (d *ExecRunner) Run(
 	}
 	defer syncr.Close()
 
+	sandboxBundlePath, err := d.bundleLookuper(sandboxHandle)
+	if err != nil {
+		return nil, err
+	}
+	processPath := d.processPathCalculator(sandboxBundlePath, processID)
 	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"), extraCleanup)
 	if err := process.mkfifos(d.containerRootHostUID, d.containerRootHostGID); err != nil {
 		return nil, err
 	}
 
+	processSpec := procBundle.Spec.Process
+	encodedSpec, err := json.Marshal(processSpec)
+
 	cmd := buildDadooCommand(
 		tty, d.dadooPath, d.runMode, d.runcPath, d.runcRoot, processID, processPath, sandboxHandle,
-		[]*os.File{fd3w, logw, syncw}, procJSON,
+		[]*os.File{fd3w, logw, syncw}, bytes.NewReader(encodedSpec),
 	)
 
 	dadooLogFilePath := filepath.Join(sandboxBundlePath, fmt.Sprintf("dadoo.%s.log", processID))

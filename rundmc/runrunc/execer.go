@@ -1,8 +1,6 @@
 package runrunc
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -11,10 +9,12 @@ import (
 	"strconv"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	uuid "github.com/nu7hatch/gouuid"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type Execer struct {
@@ -24,9 +24,12 @@ type Execer struct {
 	userLookupper  users.UserLookupper
 	runner         ExecRunner
 	pidGetter      PidGetter
+	bundleLookuper func(sandboxHandle string) (string, error)
 }
 
-func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookupper users.UserLookupper, runner ExecRunner, pidGetter PidGetter) *Execer {
+func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookupper users.UserLookupper, runner ExecRunner, pidGetter PidGetter,
+	bundleLookuper func(string) (string, error),
+) *Execer {
 	return &Execer{
 		bundleLoader:   bundleLoader,
 		processBuilder: processBuilder,
@@ -34,11 +37,12 @@ func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer
 		userLookupper:  userLookupper,
 		runner:         runner,
 		pidGetter:      pidGetter,
+		bundleLookuper: bundleLookuper,
 	}
 }
 
 // Exec a process in a bundle using 'runc exec'
-func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+func (e *Execer) Exec(log lager.Logger, sandboxHandle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	log = log.Session("exec", lager.Data{"path": spec.Path})
 
 	log.Info("start")
@@ -57,6 +61,11 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec g
 		return nil, err
 	}
 
+	bundlePath, err := e.bundleLookuper(sandboxHandle)
+	if err != nil {
+		log.Error("bundlepath-lookup-failed", err)
+		return nil, err
+	}
 	bundle, err := e.bundleLoader.Load(bundlePath)
 	if err != nil {
 		log.Error("load-bundle-failed", err)
@@ -97,13 +106,14 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec g
 		return nil, err
 	}
 
-	encodedSpec, err := json.Marshal(preparedSpec)
-	if err != nil {
-		return nil, err // this could *almost* be a panic: a valid spec should always encode (but out of caution we'll error)
+	processBundle := goci.Bndl{
+		Spec: specs.Spec{
+			Process: preparedSpec,
+		},
 	}
 
 	return e.runner.Run(
-		log, processID, processPath, sandboxHandle, bundlePath, io, preparedSpec.Terminal, bytes.NewReader(encodedSpec), nil,
+		log, processID, sandboxHandle, io, preparedSpec.Terminal, processBundle, nil,
 	)
 }
 

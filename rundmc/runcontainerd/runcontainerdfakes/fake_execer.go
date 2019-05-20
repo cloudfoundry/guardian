@@ -27,14 +27,13 @@ type FakeExecer struct {
 		result1 garden.Process
 		result2 error
 	}
-	ExecStub        func(lager.Logger, string, string, garden.ProcessSpec, garden.ProcessIO) (garden.Process, error)
+	ExecStub        func(lager.Logger, string, garden.ProcessSpec, garden.ProcessIO) (garden.Process, error)
 	execMutex       sync.RWMutex
 	execArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 string
-		arg3 string
-		arg4 garden.ProcessSpec
-		arg5 garden.ProcessIO
+		arg3 garden.ProcessSpec
+		arg4 garden.ProcessIO
 	}
 	execReturns struct {
 		result1 garden.Process
@@ -115,20 +114,19 @@ func (fake *FakeExecer) AttachReturnsOnCall(i int, result1 garden.Process, resul
 	}{result1, result2}
 }
 
-func (fake *FakeExecer) Exec(arg1 lager.Logger, arg2 string, arg3 string, arg4 garden.ProcessSpec, arg5 garden.ProcessIO) (garden.Process, error) {
+func (fake *FakeExecer) Exec(arg1 lager.Logger, arg2 string, arg3 garden.ProcessSpec, arg4 garden.ProcessIO) (garden.Process, error) {
 	fake.execMutex.Lock()
 	ret, specificReturn := fake.execReturnsOnCall[len(fake.execArgsForCall)]
 	fake.execArgsForCall = append(fake.execArgsForCall, struct {
 		arg1 lager.Logger
 		arg2 string
-		arg3 string
-		arg4 garden.ProcessSpec
-		arg5 garden.ProcessIO
-	}{arg1, arg2, arg3, arg4, arg5})
-	fake.recordInvocation("Exec", []interface{}{arg1, arg2, arg3, arg4, arg5})
+		arg3 garden.ProcessSpec
+		arg4 garden.ProcessIO
+	}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("Exec", []interface{}{arg1, arg2, arg3, arg4})
 	fake.execMutex.Unlock()
 	if fake.ExecStub != nil {
-		return fake.ExecStub(arg1, arg2, arg3, arg4, arg5)
+		return fake.ExecStub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -143,17 +141,17 @@ func (fake *FakeExecer) ExecCallCount() int {
 	return len(fake.execArgsForCall)
 }
 
-func (fake *FakeExecer) ExecCalls(stub func(lager.Logger, string, string, garden.ProcessSpec, garden.ProcessIO) (garden.Process, error)) {
+func (fake *FakeExecer) ExecCalls(stub func(lager.Logger, string, garden.ProcessSpec, garden.ProcessIO) (garden.Process, error)) {
 	fake.execMutex.Lock()
 	defer fake.execMutex.Unlock()
 	fake.ExecStub = stub
 }
 
-func (fake *FakeExecer) ExecArgsForCall(i int) (lager.Logger, string, string, garden.ProcessSpec, garden.ProcessIO) {
+func (fake *FakeExecer) ExecArgsForCall(i int) (lager.Logger, string, garden.ProcessSpec, garden.ProcessIO) {
 	fake.execMutex.RLock()
 	defer fake.execMutex.RUnlock()
 	argsForCall := fake.execArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeExecer) ExecReturns(result1 garden.Process, result2 error) {

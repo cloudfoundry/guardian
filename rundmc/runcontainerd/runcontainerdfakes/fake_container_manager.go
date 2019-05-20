@@ -78,6 +78,20 @@ type FakeContainerManager struct {
 	oOMEventsReturnsOnCall map[int]struct {
 		result1 <-chan *events.TaskOOM
 	}
+	SpecStub        func(lager.Logger, string) (*specs.Spec, error)
+	specMutex       sync.RWMutex
+	specArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+	}
+	specReturns struct {
+		result1 *specs.Spec
+		result2 error
+	}
+	specReturnsOnCall map[int]struct {
+		result1 *specs.Spec
+		result2 error
+	}
 	StateStub        func(lager.Logger, string) (int, string, error)
 	stateMutex       sync.RWMutex
 	stateArgsForCall []struct {
@@ -410,6 +424,70 @@ func (fake *FakeContainerManager) OOMEventsReturnsOnCall(i int, result1 <-chan *
 	}{result1}
 }
 
+func (fake *FakeContainerManager) Spec(arg1 lager.Logger, arg2 string) (*specs.Spec, error) {
+	fake.specMutex.Lock()
+	ret, specificReturn := fake.specReturnsOnCall[len(fake.specArgsForCall)]
+	fake.specArgsForCall = append(fake.specArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Spec", []interface{}{arg1, arg2})
+	fake.specMutex.Unlock()
+	if fake.SpecStub != nil {
+		return fake.SpecStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.specReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeContainerManager) SpecCallCount() int {
+	fake.specMutex.RLock()
+	defer fake.specMutex.RUnlock()
+	return len(fake.specArgsForCall)
+}
+
+func (fake *FakeContainerManager) SpecCalls(stub func(lager.Logger, string) (*specs.Spec, error)) {
+	fake.specMutex.Lock()
+	defer fake.specMutex.Unlock()
+	fake.SpecStub = stub
+}
+
+func (fake *FakeContainerManager) SpecArgsForCall(i int) (lager.Logger, string) {
+	fake.specMutex.RLock()
+	defer fake.specMutex.RUnlock()
+	argsForCall := fake.specArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeContainerManager) SpecReturns(result1 *specs.Spec, result2 error) {
+	fake.specMutex.Lock()
+	defer fake.specMutex.Unlock()
+	fake.SpecStub = nil
+	fake.specReturns = struct {
+		result1 *specs.Spec
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeContainerManager) SpecReturnsOnCall(i int, result1 *specs.Spec, result2 error) {
+	fake.specMutex.Lock()
+	defer fake.specMutex.Unlock()
+	fake.SpecStub = nil
+	if fake.specReturnsOnCall == nil {
+		fake.specReturnsOnCall = make(map[int]struct {
+			result1 *specs.Spec
+			result2 error
+		})
+	}
+	fake.specReturnsOnCall[i] = struct {
+		result1 *specs.Spec
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeContainerManager) State(arg1 lager.Logger, arg2 string) (int, string, error) {
 	fake.stateMutex.Lock()
 	ret, specificReturn := fake.stateReturnsOnCall[len(fake.stateArgsForCall)]
@@ -490,6 +568,8 @@ func (fake *FakeContainerManager) Invocations() map[string][][]interface{} {
 	defer fake.getContainerPIDMutex.RUnlock()
 	fake.oOMEventsMutex.RLock()
 	defer fake.oOMEventsMutex.RUnlock()
+	fake.specMutex.RLock()
+	defer fake.specMutex.RUnlock()
 	fake.stateMutex.RLock()
 	defer fake.stateMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

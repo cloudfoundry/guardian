@@ -169,8 +169,8 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	}
 
 	proc, runErr := p.ExecRunner.Run(
-		log, processID, peaBundlePath, sandboxHandle, sandboxBundlePath,
-		procIO, preparedProcess.Terminal, nil, extraCleanup,
+		log, processID, sandboxHandle,
+		procIO, preparedProcess.Terminal, bndl, extraCleanup,
 	)
 	if runErr != nil {
 		destroyErr := p.Volumizer.Destroy(log, processID)

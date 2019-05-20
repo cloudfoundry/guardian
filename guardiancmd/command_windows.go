@@ -13,7 +13,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
-	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
@@ -65,7 +64,9 @@ func (f *WindowsFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 	return gardener.NewVolumeProvider(noop, noop, gardener.CommandFactory(preparerootfs.Command), f.commandRunner, 0, 0)
 }
 
-func (f *WindowsFactory) WireExecRunner(runMode, runcRoot string, _, _ uint32) runrunc.ExecRunner {
+func (f *WindowsFactory) WireExecRunner(runMode, runcRoot string, _, _ uint32,
+	bundleLookuper func(string) (string, error),
+	processPathCalculator func(string, string) string) runrunc.ExecRunner {
 	return execrunner.NewWindowsExecRunner(f.config.Runtime.Plugin, runMode, f.commandRunner)
 }
 
@@ -99,7 +100,7 @@ func (f *WindowsFactory) WireMkdirer() runrunc.Mkdirer {
 	return mkdirer{}
 }
 
-func (f *WindowsFactory) WireContainerd(bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, error) {
+func (f *WindowsFactory) WireContainerd(processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, error) {
 	return nil, nil, nil, errors.New("containerd not impletemented on windows")
 }
 

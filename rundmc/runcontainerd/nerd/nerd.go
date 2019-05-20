@@ -17,6 +17,7 @@ import (
 	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/errdefs"
 	ctrdevents "github.com/containerd/containerd/events"
+	"github.com/containerd/containerd/oci"
 	"github.com/containerd/containerd/runtime/linux/runctypes"
 	"github.com/containerd/typeurl"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -199,20 +200,6 @@ func (n *Nerd) GetContainerPID(log lager.Logger, containerID string) (uint32, er
 	return task.Pid(), nil
 }
 
-// func (n *Nerd) GetProcessPID(log lager.Logger, containerID, processID string) (uint32, error) {
-// 	_, task, err := n.loadContainerAndTask(log, containerID)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-//
-// 	process, err := task.LoadProcess(n.context, processID, nil)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-//
-// 	return process.Pid(), nil
-// }
-
 func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (containerd.Container, containerd.Task, error) {
 	var err error
 
@@ -360,4 +347,14 @@ func updateTaskInfoCreateOptions(taskInfo *containerd.TaskInfo, updateCreateOpti
 	}
 
 	return updateCreateOptions(opts)
+}
+
+func (n *Nerd) Spec(log lager.Logger, containerID string) (*oci.Spec, error) {
+	container, _, err := n.loadContainerAndTask(log, containerID)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug("getting-container-spec", lager.Data{"containerID": containerID})
+	return container.Spec(n.context)
 }

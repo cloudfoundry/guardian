@@ -31,12 +31,13 @@ type RuncBinary interface {
 func New(
 	runner commandrunner.CommandRunner, runcCmdRunner RuncCmdRunner,
 	runc RuncBinary, runcExtraArgs []string, execer *Execer, statser *Statser,
+	bundleLookuper func(string) (string, error),
 ) *RunRunc {
 	stater := NewStater(runcCmdRunner, runc)
 	oomWatcher := NewOomWatcher(runner, runc)
 
 	return &RunRunc{
-		Creator:    NewCreator(runc, runcExtraArgs, runner, oomWatcher),
+		Creator:    NewCreator(runc, runcExtraArgs, runner, oomWatcher, bundleLookuper),
 		Execer:     execer,
 		OomWatcher: oomWatcher,
 		Statser:    statser,

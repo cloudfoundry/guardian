@@ -15,7 +15,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
-	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
@@ -83,7 +82,9 @@ func (NoopMkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode
 	return nil
 }
 
-func (f *LinuxFactory) WireExecRunner(runMode, runcRoot string, containerRootHostUID, containerRootHostGID uint32) runrunc.ExecRunner {
+func (f *LinuxFactory) WireExecRunner(runMode, runcRoot string, containerRootHostUID, containerRootHostGID uint32,
+	bundleLookuper func(string) (string, error),
+	processPathCalculator func(string, string) string) runrunc.ExecRunner {
 	return dadoo.NewExecRunner(
 		f.config.Bin.Dadoo.Path(),
 		f.config.Runtime.Plugin,
@@ -94,6 +95,8 @@ func (f *LinuxFactory) WireExecRunner(runMode, runcRoot string, containerRootHos
 		runMode,
 		containerRootHostUID,
 		containerRootHostGID,
+		bundleLookuper,
+		processPathCalculator,
 	)
 }
 
@@ -141,10 +144,10 @@ func (f *LinuxFactory) WireRootfsFileCreator() rundmc.RootfsFileCreator {
 	return preparerootfs.SymlinkRefusingFileCreator{}
 }
 
-func (f *LinuxFactory) WireContainerd(nerd *nerd.Nerd, bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, execer *runrunc.Execer, statser runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, error) {
+func (f *LinuxFactory) WireContainerd(nerd *nerd.Nerd, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, execer *runrunc.Execer, statser runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, error) {
 	cgroupManager := runcontainerd.NewCgroupManager(containerdRuncRoot(), containerdNamespace)
 
-	containerdManager := runcontainerd.New(nerd, nerd, bndlLoader, processBuilder, userLookupper, execer, statser, f.config.Containerd.UseContainerdForProcesses, cgroupManager)
+	containerdManager := runcontainerd.New(nerd, nerd, processBuilder, userLookupper, execer, statser, f.config.Containerd.UseContainerdForProcesses, cgroupManager)
 
 	peaRunner := &runcontainerd.RunContainerPea{
 		PeaManager:     containerdManager,

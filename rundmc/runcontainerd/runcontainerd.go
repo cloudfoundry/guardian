@@ -13,6 +13,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/lager"
 	apievents "github.com/containerd/containerd/api/events"
+	"github.com/containerd/containerd/oci"
 	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -25,8 +26,8 @@ type ContainerManager interface {
 	Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer)) error
 
 	State(log lager.Logger, containerID string) (int, string, error)
+	Spec(log lager.Logger, containerID string) (*oci.Spec, error)
 	GetContainerPID(log lager.Logger, containerID string) (uint32, error)
-	// GetProcessPID(log lager.Logger, containerID, processID string) (uint32, error)
 	OOMEvents(log lager.Logger) <-chan *apievents.TaskOOM
 }
 
@@ -48,7 +49,7 @@ type ProcessBuilder interface {
 
 //go:generate counterfeiter . Execer
 type Execer interface {
-	Exec(log lager.Logger, bundlePath string, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, bundlePath string, id string, processId string, io garden.ProcessIO) (garden.Process, error)
 }
 
@@ -60,7 +61,6 @@ type Statser interface {
 type RunContainerd struct {
 	containerManager          ContainerManager
 	processManager            ProcessManager
-	bundleLoader              BundleLoader
 	processBuilder            ProcessBuilder
 	execer                    Execer
 	statser                   Statser
@@ -69,11 +69,10 @@ type RunContainerd struct {
 	cgroupManager             CgroupManager
 }
 
-func New(containerManager ContainerManager, processManager ProcessManager, bundleLoader BundleLoader, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager) *RunContainerd {
+func New(containerManager ContainerManager, processManager ProcessManager, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager) *RunContainerd {
 	return &RunContainerd{
 		containerManager:          containerManager,
 		processManager:            processManager,
-		bundleLoader:              bundleLoader,
 		processBuilder:            processBuilder,
 		execer:                    execer,
 		statser:                   statser,
@@ -83,13 +82,8 @@ func New(containerManager ContainerManager, processManager ProcessManager, bundl
 	}
 }
 
-func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, pio garden.ProcessIO) error {
-	bundle, err := r.bundleLoader.Load(bundlePath)
-	if err != nil {
-		return err
-	}
-
-	err = r.containerManager.Create(log, id, &bundle.Spec, func() (io.Reader, io.Writer, io.Writer) { return pio.Stdin, pio.Stdout, pio.Stderr })
+func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pio garden.ProcessIO) error {
+	err := r.containerManager.Create(log, id, &bundle.Spec, func() (io.Reader, io.Writer, io.Writer) { return pio.Stdin, pio.Stdout, pio.Stderr })
 	if err != nil {
 		return err
 	}
@@ -101,14 +95,9 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, pio gard
 	return nil
 }
 
-func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, gardenProcessSpec garden.ProcessSpec, gardenIO garden.ProcessIO) (garden.Process, error) {
+func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcessSpec garden.ProcessSpec, gardenIO garden.ProcessIO) (garden.Process, error) {
 	if !r.useContainerdForProcesses {
-		return r.execer.Exec(log, bundlePath, containerID, gardenProcessSpec, gardenIO)
-	}
-
-	bundle, err := r.bundleLoader.Load(bundlePath)
-	if err != nil {
-		return nil, err
+		return r.execer.Exec(log, containerID, gardenProcessSpec, gardenIO)
 	}
 
 	containerPid, err := r.containerManager.GetContainerPID(log, containerID)
@@ -138,6 +127,12 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, g
 		return gardenIO.Stdin, gardenIO.Stdout, gardenIO.Stderr
 	}
 
+	containerdSpec, err := r.containerManager.Spec(log, containerID)
+	if err != nil {
+		return nil, err
+	}
+
+	bundle := goci.Bndl{Spec: *containerdSpec}
 	ociProcessSpec := r.processBuilder.BuildProcess(bundle, gardenProcessSpec, resolvedUser.Uid, resolvedUser.Gid)
 	if err = r.containerManager.Exec(log, containerID, gardenProcessSpec.ID, ociProcessSpec, processIO); err != nil {
 		return nil, err

@@ -42,9 +42,11 @@ type BundleLoader interface {
 }
 
 type OCIRuntime interface {
-	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
-	Exec(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	Create(log lager.Logger, containerId string, bundle goci.Bndl, io garden.ProcessIO) error
+	Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	// TODO: get rid of bundlePath
 	Attach(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error)
+	// TODO: get rid of bundlePath
 	Kill(log lager.Logger, bundlePath string) error
 	Delete(log lager.Logger, id string) error
 	State(log lager.Logger, id string) (runrunc.State, error)
@@ -53,6 +55,7 @@ type OCIRuntime interface {
 }
 
 type PeaCreator interface {
+	// TODO: get rid of sandboxBundlePath
 	CreatePea(log lager.Logger, processSpec garden.ProcessSpec, pio garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error)
 }
 
@@ -144,6 +147,7 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 		return err
 	}
 
+	// TODO: depot here mutates the spec before it gets loaded later. Let's move that mutation here and push the depot to the runtime
 	if err := c.depot.Create(log, spec.Handle, spec); err != nil {
 		log.Error("depot-create-failed", err)
 		return err
@@ -155,7 +159,13 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 		return err
 	}
 
-	if err = c.runtime.Create(log, path, spec.Handle, garden.ProcessIO{}); err != nil {
+	containerBundle, err := c.loader.Load(path)
+	if err != nil {
+		log.Error("bundle-load-failed", err)
+		return err
+	}
+
+	if err := c.runtime.Create(log, spec.Handle, containerBundle, garden.ProcessIO{}); err != nil {
 		log.Error("runtime-create-failed", err)
 		return err
 	}
@@ -195,7 +205,7 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 		return nil, err
 	}
 
-	return c.runtime.Exec(log, bundlePath, handle, spec, io)
+	return c.runtime.Exec(log, handle, spec, io)
 }
 
 func shouldResolveUsername(username string) bool {
