@@ -11,6 +11,7 @@ import (
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("Info", func() {
@@ -88,18 +89,26 @@ var _ = Describe("Info", func() {
 		})
 
 		It("adds an out of memory event", func() {
+			stdout := gbytes.NewBuffer()
+			stderr := gbytes.NewBuffer()
 			process, err := container.Run(garden.ProcessSpec{
 				Path: "dd",
 				Args: []string{"if=/dev/urandom", "of=/dev/shm/foo", "bs=1M", "count=32"},
-			}, garden.ProcessIO{})
+			}, garden.ProcessIO{
+				Stdout: stdout,
+				Stderr: stderr,
+			})
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = process.Wait()
+			statusCode, err := process.Wait()
 			Expect(err).NotTo(HaveOccurred())
 			expectedMemoryCgroupPath := client.CgroupSubsystemPath("memory", container.Handle())
 			Eventually(getEventsForContainer(container), time.Minute).Should(
 				ContainElement("Out of memory"),
 				fmt.Sprintf("%#v", map[string]string{
+					"Status code":                          strconv.Itoa(statusCode),
+					"Stdout":                               string(stdout.Contents()),
+					"Stderr":                               string(stderr.Contents()),
 					"Container PID":                        getContainerPid(container.Handle()),
 					"Expected memory cgroup path":          expectedMemoryCgroupPath,
 					"Pids in the container memory cgroup":  listPidsInCgroup(expectedMemoryCgroupPath),

@@ -461,13 +461,18 @@ var _ = Describe("Containerd", func() {
 		})
 
 		It("continues to receive OOM events", func() {
+			stdout := gbytes.NewBuffer()
+			stderr := gbytes.NewBuffer()
 			process, err := container.Run(garden.ProcessSpec{
 				Path: "dd",
 				Args: []string{"if=/dev/urandom", "of=/dev/shm/foo", "bs=1M", "count=32"},
-			}, garden.ProcessIO{})
+			}, garden.ProcessIO{
+				Stdout: stdout,
+				Stderr: stderr,
+			})
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = process.Wait()
+			statusCode, err := process.Wait()
 			Expect(err).NotTo(HaveOccurred())
 			expectedMemoryCgroupPath := client.CgroupSubsystemPath("memory", container.Handle())
 			Eventually(getEventsForContainer(container), time.Minute).Should(
@@ -478,11 +483,15 @@ var _ = Describe("Containerd", func() {
 					listPidsInCgroup(expectedMemoryCgroupPath),
 				),
 				fmt.Sprintf("%#v", map[string]string{
+					"Status code":                          strconv.Itoa(statusCode),
+					"Stdout":                               string(stdout.Contents()),
+					"Stderr":                               string(stderr.Contents()),
 					"Container PID":                        getContainerPid(container.Handle()),
 					"Expected memory cgroup path":          expectedMemoryCgroupPath,
 					"Pids in the container memory cgroup":  listPidsInCgroup(expectedMemoryCgroupPath),
 					"Memory limit as listed in the cgroup": readFileString(filepath.Join(expectedMemoryCgroupPath, "memory.limit_in_bytes")),
 					"Expected limit":                       strconv.FormatUint(30*mb, 10),
+					"OOM Control":                          readFileString(filepath.Join(expectedMemoryCgroupPath, "memory.oom_control")),
 				}),
 				"<requesting dmesg>",
 			)
