@@ -19,6 +19,7 @@ var _ = Describe("Info", func() {
 		client          *runner.RunningGarden
 		container       garden.Container
 		containerLimits garden.Limits
+		image           garden.ImageRef
 	)
 
 	BeforeEach(func() {
@@ -29,6 +30,7 @@ var _ = Describe("Info", func() {
 	JustBeforeEach(func() {
 		var err error
 		container, err = client.Create(garden.ContainerSpec{
+			Image:   image,
 			Network: "10.252.0.2",
 			Properties: garden.Properties{
 				"foo": "bar",
@@ -86,14 +88,14 @@ var _ = Describe("Info", func() {
 	When("the container has a memory limit applied", func() {
 		BeforeEach(func() {
 			containerLimits = garden.Limits{Memory: garden.MemoryLimits{LimitInBytes: 30 * mb}}
+			image = garden.ImageRef{URI: "docker://cfgarden/oom"}
 		})
 
 		It("adds an out of memory event", func() {
 			stdout := gbytes.NewBuffer()
 			stderr := gbytes.NewBuffer()
 			process, err := container.Run(garden.ProcessSpec{
-				Path: "dd",
-				Args: []string{"if=/dev/urandom", "of=/dev/shm/foo", "bs=1M", "count=32"},
+				Path: "/usemem",
 			}, garden.ProcessIO{
 				Stdout: stdout,
 				Stderr: stderr,

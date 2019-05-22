@@ -452,7 +452,16 @@ var _ = Describe("Containerd", func() {
 		JustBeforeEach(func() {
 			var err error
 			restartContainerd()
-			container, err = client.Create(garden.ContainerSpec{Limits: garden.Limits{Memory: garden.MemoryLimits{LimitInBytes: 30 * mb}}})
+			container, err = client.Create(garden.ContainerSpec{
+				Limits: garden.Limits{
+					Memory: garden.MemoryLimits{
+						LimitInBytes: 30 * mb,
+					},
+				},
+				Image: garden.ImageRef{
+					URI: "docker://cfgarden/oom",
+				},
+			})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -464,8 +473,7 @@ var _ = Describe("Containerd", func() {
 			stdout := gbytes.NewBuffer()
 			stderr := gbytes.NewBuffer()
 			process, err := container.Run(garden.ProcessSpec{
-				Path: "dd",
-				Args: []string{"if=/dev/urandom", "of=/dev/shm/foo", "bs=1M", "count=32"},
+				Path: "/usemem",
 			}, garden.ProcessIO{
 				Stdout: stdout,
 				Stderr: stderr,
