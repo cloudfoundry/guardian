@@ -5,11 +5,6 @@
 **Note:** This repository should be imported as
 `code.cloudfoundry.org/grootfs`.
 
-![Groot](assets/groot.png)
-
-[by](https://creativecommons.org/licenses/by-nc-nd/3.0/)
-[chattanooga-choochoo](http://chattanooga-choochoo.deviantart.com/art/Groot-584361210)
-
 GrootFS is the [Cloud Foundry](https://www.cloudfoundry.org) component
 that provides filesystem isolation for containers
 and deals with container (Docker and OCI) images.
