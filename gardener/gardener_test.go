@@ -48,6 +48,8 @@ var _ = Describe("Gardener", func() {
 		restorer = new(fakes.FakeRestorer)
 
 		propertyManager.GetReturns("", true)
+		networker.SetupBindMountsReturns([]garden.BindMount{}, nil)
+		volumizer.CreateReturns(specs.Spec{Root: &specs.Root{Path: ""}}, nil)
 		containerizer.HandlesReturns([]string{"some-handle"}, nil)
 		containerizer.InfoReturns(spec.ActualContainerSpec{Pid: 470, RootFSPath: "rootfs"}, nil)
 
@@ -152,27 +154,23 @@ var _ = Describe("Gardener", func() {
 			Expect(actualContainerSpec).To(Equal(spec))
 		})
 
-		It("calls the containerizer with an unprivileged DesiredContainerSpec", func() {
-			_, err := gdnr.Create(garden.ContainerSpec{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(volumizer.CreateCallCount()).To(Equal(1))
-			_, actualContainerSpec := volumizer.CreateArgsForCall(0)
-			Expect(actualContainerSpec.Privileged).To(BeFalse())
+		It("fails to create privileged containers", func() {
+			_, err := gdnr.Create(garden.ContainerSpec{
+				Privileged: true,
+			})
+			Expect(err).To(MatchError("privileged container creation is disabled"))
 		})
 
-		Context("when the container is privileged", func() {
+		Context("when privileged containers are allowed", func() {
 			BeforeEach(func() {
 				gdnr.AllowPrivilgedContainers = true
 			})
 
-			It("calls the containerizer with a privileged DesiredContainerSpec", func() {
+			It("can create privileged containers", func() {
 				_, err := gdnr.Create(garden.ContainerSpec{
 					Privileged: true,
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(volumizer.CreateCallCount()).To(Equal(1))
-				_, actualContainerSpec := volumizer.CreateArgsForCall(0)
-				Expect(actualContainerSpec.Privileged).To(BeTrue())
 			})
 		})
 
@@ -192,6 +190,50 @@ var _ = Describe("Gardener", func() {
 			})
 
 			ItDestroysEverything()
+		})
+
+		It("sets up bind mounts through the networker", func() {
+			gdnr.AllowPrivilgedContainers = true
+
+			volumizer.CreateReturns(specs.Spec{
+				Root: &specs.Root{Path: "/rootfs/path"},
+			}, nil)
+
+			networker.SetupBindMountsReturns([]garden.BindMount{
+				{SrcPath: "from-networker"},
+			}, nil)
+
+			_, err := gdnr.Create(garden.ContainerSpec{
+				Handle:     "some-ctr",
+				Privileged: true,
+				BindMounts: []garden.BindMount{
+					{SrcPath: "original"},
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(networker.SetupBindMountsCallCount()).To(Equal(1))
+			_, actualHandle, actualPrivileged, actualRootfsPath := networker.SetupBindMountsArgsForCall(0)
+			Expect(actualHandle).To(Equal("some-ctr"))
+			Expect(actualPrivileged).To(BeTrue())
+			Expect(actualRootfsPath).To(Equal("/rootfs/path"))
+
+			Expect(containerizer.CreateCallCount()).To(Equal(1))
+			_, actualDesiredSpec := containerizer.CreateArgsForCall(0)
+			Expect(actualDesiredSpec.BindMounts).To(Equal([]garden.BindMount{
+				{SrcPath: "original"},
+				{SrcPath: "from-networker"},
+			}))
+		})
+
+		Context("when setting up bind mounts fails", func() {
+			It("returns the error", func() {
+				networker.SetupBindMountsReturns(nil, errors.New("failed"))
+
+				_, err := gdnr.Create(garden.ContainerSpec{Handle: "some-ctr"})
+				Expect(err).To(MatchError("failed"))
+			})
 		})
 
 		It("asks the containerizer to create a container", func() {
@@ -317,7 +359,7 @@ var _ = Describe("Gardener", func() {
 		})
 
 		It("passes base config to containerizer", func() {
-			runtimeConfig := specs.Spec{Version: "some-idiosyncratic-version"}
+			runtimeConfig := specs.Spec{Version: "some-idiosyncratic-version", Root: &specs.Root{Path: ""}}
 			volumizer.CreateReturns(runtimeConfig, nil)
 
 			_, err := gdnr.Create(garden.ContainerSpec{})

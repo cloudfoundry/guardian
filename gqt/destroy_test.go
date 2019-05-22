@@ -220,6 +220,10 @@ var _ = Describe("Destroying a Container", func() {
 					Expect(checkBridgePresence(networkBridgeName)).To(BeFalse())
 				})
 			})
+
+			It("removes the depot", func() {
+				Expect(filepath.Join(config.NetworkDepotDir, container.Handle())).NotTo(BeADirectory())
+			})
 		})
 	})
 })

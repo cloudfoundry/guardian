@@ -10,8 +10,8 @@ import (
 	"code.cloudfoundry.org/commandrunner/windows_command_runner"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki"
-	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
+	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
@@ -69,7 +69,7 @@ func (f *WindowsFactory) WireExecRunner(runMode, runcRoot string, _, _ uint32) r
 	return execrunner.NewWindowsExecRunner(f.config.Runtime.Plugin, runMode, f.commandRunner)
 }
 
-func (f *WindowsFactory) WireRootfsFileCreator() rundmc.RootfsFileCreator {
+func (f *WindowsFactory) WireRootfsFileCreator() depot.RootfsFileCreator {
 	return noopRootfsFileCreator{}
 }
 

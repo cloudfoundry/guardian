@@ -7,15 +7,15 @@ import (
 	"path/filepath"
 	"time"
 
-	"code.cloudfoundry.org/garden"
-	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
-	"code.cloudfoundry.org/guardian/rundmc/depot"
-	fakes "code.cloudfoundry.org/guardian/rundmc/depot/depotfakes"
-	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
+	"code.cloudfoundry.org/guardian/rundmc/depot"
+	fakes "code.cloudfoundry.org/guardian/rundmc/depot/depotfakes"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -70,7 +70,7 @@ var _ = Describe("Depot", func() {
 	})
 
 	JustBeforeEach(func() {
-		dirdepot = depot.New(depotDir, nil, nil, nil)
+		dirdepot = depot.New(depotDir, nil, nil)
 	})
 
 	AfterEach(func() {
@@ -78,16 +78,14 @@ var _ = Describe("Depot", func() {
 	})
 
 	var (
-		bundleSaver            *fakes.FakeBundleSaver
-		bundleGenerator        *fakes.FakeBundleGenerator
-		bindMountSourceCreator *fakes.FakeBindMountSourceCreator
+		bundleSaver     *fakes.FakeBundleSaver
+		bundleGenerator *fakes.FakeBundleGenerator
 	)
 
 	JustBeforeEach(func() {
 		bundleSaver = new(fakes.FakeBundleSaver)
 		bundleGenerator = new(fakes.FakeBundleGenerator)
-		bindMountSourceCreator = new(fakes.FakeBindMountSourceCreator)
-		dirdepot = depot.New(depotDir, bundleGenerator, bundleSaver, bindMountSourceCreator)
+		dirdepot = depot.New(depotDir, bundleGenerator, bundleSaver)
 	})
 
 	Describe("lookup", func() {
@@ -134,34 +132,9 @@ var _ = Describe("Depot", func() {
 			Expect(filepath.Join(depotDir, "aardvaark")).To(BeADirectory())
 		})
 
-		It("creates bind mount sources", func() {
-			Expect(dirdepot.Create(logger, "aardvaark", desiredContainerSpec)).To(Succeed())
-			Expect(bindMountSourceCreator.CreateCallCount()).To(Equal(1))
-			actualContainerDir, actualChown := bindMountSourceCreator.CreateArgsForCall(0)
-			Expect(actualContainerDir).To(Equal(filepath.Join(depotDir, "aardvaark")))
-			Expect(actualChown).To(BeTrue())
-		})
-
-		Context("when bind mount creation fails", func() {
-			It("destroys the container directory", func() {
-				bindMountSourceCreator.CreateReturns(nil, errors.New("didn't work"))
-				Expect(dirdepot.Create(logger, "aardvaark", desiredContainerSpec)).NotTo(Succeed())
-				Expect(filepath.Join(depotDir, "aardvaark")).NotTo(BeADirectory())
-			})
-		})
-
 		It("generates the bundle", func() {
-			mounts := []garden.BindMount{{
-				DstPath: "/some/dest",
-				SrcPath: "/some/src",
-				Mode:    garden.BindMountModeRW,
-			}}
-			bindMountSourceCreator.CreateReturns(mounts, nil)
 			bundleGenerator.GenerateReturns(bndle, nil)
 			Expect(dirdepot.Create(logger, "aardvaark", desiredContainerSpec)).To(Succeed())
-
-			// Change expectation
-			desiredContainerSpec.BindMounts = append(desiredContainerSpec.BindMounts, mounts...)
 
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
 			actualDesiredSpec := bundleGenerator.GenerateArgsForCall(0)
@@ -234,7 +207,7 @@ var _ = Describe("Depot", func() {
 			var invalidDepot *depot.DirectoryDepot
 
 			BeforeEach(func() {
-				invalidDepot = depot.New("rubbish", nil, nil, nil)
+				invalidDepot = depot.New("rubbish", nil, nil)
 			})
 
 			It("returns an error", func() {

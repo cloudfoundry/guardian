@@ -101,6 +101,22 @@ type FakeNetworker struct {
 	restoreReturnsOnCall map[int]struct {
 		result1 error
 	}
+	SetupBindMountsStub        func(lager.Logger, string, bool, string) ([]garden.BindMount, error)
+	setupBindMountsMutex       sync.RWMutex
+	setupBindMountsArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+		arg3 bool
+		arg4 string
+	}
+	setupBindMountsReturns struct {
+		result1 []garden.BindMount
+		result2 error
+	}
+	setupBindMountsReturnsOnCall map[int]struct {
+		result1 []garden.BindMount
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -539,6 +555,72 @@ func (fake *FakeNetworker) RestoreReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakeNetworker) SetupBindMounts(arg1 lager.Logger, arg2 string, arg3 bool, arg4 string) ([]garden.BindMount, error) {
+	fake.setupBindMountsMutex.Lock()
+	ret, specificReturn := fake.setupBindMountsReturnsOnCall[len(fake.setupBindMountsArgsForCall)]
+	fake.setupBindMountsArgsForCall = append(fake.setupBindMountsArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+		arg3 bool
+		arg4 string
+	}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("SetupBindMounts", []interface{}{arg1, arg2, arg3, arg4})
+	fake.setupBindMountsMutex.Unlock()
+	if fake.SetupBindMountsStub != nil {
+		return fake.SetupBindMountsStub(arg1, arg2, arg3, arg4)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.setupBindMountsReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeNetworker) SetupBindMountsCallCount() int {
+	fake.setupBindMountsMutex.RLock()
+	defer fake.setupBindMountsMutex.RUnlock()
+	return len(fake.setupBindMountsArgsForCall)
+}
+
+func (fake *FakeNetworker) SetupBindMountsCalls(stub func(lager.Logger, string, bool, string) ([]garden.BindMount, error)) {
+	fake.setupBindMountsMutex.Lock()
+	defer fake.setupBindMountsMutex.Unlock()
+	fake.SetupBindMountsStub = stub
+}
+
+func (fake *FakeNetworker) SetupBindMountsArgsForCall(i int) (lager.Logger, string, bool, string) {
+	fake.setupBindMountsMutex.RLock()
+	defer fake.setupBindMountsMutex.RUnlock()
+	argsForCall := fake.setupBindMountsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+}
+
+func (fake *FakeNetworker) SetupBindMountsReturns(result1 []garden.BindMount, result2 error) {
+	fake.setupBindMountsMutex.Lock()
+	defer fake.setupBindMountsMutex.Unlock()
+	fake.SetupBindMountsStub = nil
+	fake.setupBindMountsReturns = struct {
+		result1 []garden.BindMount
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeNetworker) SetupBindMountsReturnsOnCall(i int, result1 []garden.BindMount, result2 error) {
+	fake.setupBindMountsMutex.Lock()
+	defer fake.setupBindMountsMutex.Unlock()
+	fake.SetupBindMountsStub = nil
+	if fake.setupBindMountsReturnsOnCall == nil {
+		fake.setupBindMountsReturnsOnCall = make(map[int]struct {
+			result1 []garden.BindMount
+			result2 error
+		})
+	}
+	fake.setupBindMountsReturnsOnCall[i] = struct {
+		result1 []garden.BindMount
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeNetworker) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -556,6 +638,8 @@ func (fake *FakeNetworker) Invocations() map[string][][]interface{} {
 	defer fake.networkMutex.RUnlock()
 	fake.restoreMutex.RLock()
 	defer fake.restoreMutex.RUnlock()
+	fake.setupBindMountsMutex.RLock()
+	defer fake.setupBindMountsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

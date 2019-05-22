@@ -54,7 +54,7 @@ type GardenFactory interface {
 	WireVolumizer(logger lager.Logger) gardener.Volumizer
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
 	WireExecRunner(runMode, runcRoot string, containerRootUID, containerRootGID uint32) runrunc.ExecRunner
-	WireRootfsFileCreator() rundmc.RootfsFileCreator
+	WireRootfsFileCreator() depot.RootfsFileCreator
 	WireContainerd(*goci.BndlLoader, *processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, error)
 }
 
@@ -133,6 +133,7 @@ type CommonCommand struct {
 	} `group:"Docker Image Fetching"`
 
 	Network struct {
+		Dir  string   `long:"network-depot" default:"/var/run/gdn/network" description:"Directory in which to store container network configuration."`
 		Pool CIDRFlag `long:"network-pool" default:"10.254.0.0/22" description:"Network range to use for dynamically allocated container subnets."`
 
 		AllowHostAccess bool       `long:"allow-host-access" description:"Allow network access to the host machine."`
@@ -224,7 +225,10 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 		return nil, err
 	}
 
-	networker, iptablesStarter, err := cmd.wireNetworker(logger, factory, propManager, portPool)
+	uidMappings, gidMappings := cmd.idMappings()
+	networkDepot := depot.NewNetworkDepot(cmd.Network.Dir, factory.WireRootfsFileCreator(), wireBindMountSourceCreator(uidMappings, gidMappings))
+
+	networker, iptablesStarter, err := cmd.wireNetworker(logger, factory, propManager, portPool, networkDepot)
 	if err != nil {
 		logger.Error("failed-to-wire-networker", err)
 		return nil, err
@@ -330,8 +334,8 @@ func (cmd *CommonCommand) wirePortPool(logger lager.Logger) (*ports.PortPool, er
 	return portPool, nil
 }
 
-func (cmd *CommonCommand) wireDepot(bundleGenerator depot.BundleGenerator, bundleSaver depot.BundleSaver, bindMountSourceCreator depot.BindMountSourceCreator) *depot.DirectoryDepot {
-	return depot.New(cmd.Containers.Dir, bundleGenerator, bundleSaver, bindMountSourceCreator)
+func (cmd *CommonCommand) wireDepot(bundleGenerator depot.BundleGenerator, bundleSaver depot.BundleSaver) *depot.DirectoryDepot {
+	return depot.New(cmd.Containers.Dir, bundleGenerator, bundleSaver)
 }
 
 func extractIPs(ipflags []IPFlag) []net.IP {
@@ -342,7 +346,7 @@ func extractIPs(ipflags []IPFlag) []net.IP {
 	return ips
 }
 
-func (cmd *CommonCommand) wireNetworker(log lager.Logger, factory GardenFactory, propManager kawasaki.ConfigStore, portPool *ports.PortPool) (gardener.Networker, gardener.Starter, error) {
+func (cmd *CommonCommand) wireNetworker(log lager.Logger, factory GardenFactory, propManager kawasaki.ConfigStore, portPool *ports.PortPool, networkDepot *depot.NetworkDepot) (gardener.Networker, gardener.Starter, error) {
 	externalIP, err := defaultExternalIP(cmd.Network.ExternalIP)
 	if err != nil {
 		return nil, nil, err
@@ -362,6 +366,7 @@ func (cmd *CommonCommand) wireNetworker(log lager.Logger, factory GardenFactory,
 			resolvConfigurer,
 			cmd.Network.Plugin.Path(),
 			cmd.Network.PluginExtraArgs,
+			networkDepot,
 		)
 		return externalNetworker, externalNetworker, nil
 	}
@@ -395,10 +400,11 @@ func (cmd *CommonCommand) wireNetworker(log lager.Logger, factory GardenFactory,
 		subnets.NewPool(cmd.Network.Pool.CIDR()),
 		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, additionalDNSServers, cmd.Network.AdditionalHostEntries, containerMtu),
 		propManager,
-		kawasakifactory.NewDefaultConfigurer(ipTables, cmd.Containers.Dir),
+		kawasakifactory.NewDefaultConfigurer(ipTables, cmd.Network.Dir),
 		portPool,
 		iptables.NewPortForwarder(ipTables),
 		iptables.NewFirewallOpener(ruleTranslator, ipTables),
+		networkDepot,
 	)
 
 	return networker, ipTablesStarter, nil
@@ -521,8 +527,7 @@ func (cmd *CommonCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	template := &rundmc.BundleTemplate{Rules: bundleRules}
 
 	bundleSaver := &goci.BundleSaver{}
-	bindMountSourceCreator := wireBindMountSourceCreator(uidMappings, gidMappings)
-	depot := cmd.wireDepot(template, bundleSaver, bindMountSourceCreator)
+	depot := cmd.wireDepot(template, bundleSaver)
 
 	bndlLoader := &goci.BndlLoader{}
 	processBuilder := processes.NewBuilder(wireEnvFunc(), nonRootMaxCaps)
@@ -581,6 +586,8 @@ func (cmd *CommonCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	eventStore := rundmc.NewEventStore(properties)
 	stateStore := rundmc.NewStateStore(properties)
 
+	bindMountSourceCreator := wireBindMountSourceCreator(uidMappings, gidMappings)
+
 	peaCreator = &peas.PeaCreator{
 		Volumizer:              volumizer,
 		PidGetter:              pidGetter,
@@ -604,7 +611,7 @@ func (cmd *CommonCommand) wireContainerizer(log lager.Logger, factory GardenFact
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
-	return rundmc.New(depot, runner, bndlLoader, nstar, stopper, eventStore, stateStore, factory.WireRootfsFileCreator(), peaCreator, peaUsernameResolver, cpuEntitlementPerShare), nil
+	return rundmc.New(depot, runner, bndlLoader, nstar, stopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare), nil
 }
 
 func (cmd *CommonCommand) useContainerd() bool {

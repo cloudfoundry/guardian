@@ -33,7 +33,6 @@ var _ = Describe("Rundmc", func() {
 		fakeStopper             *fakes.FakeStopper
 		fakeEventStore          *fakes.FakeEventStore
 		fakeStateStore          *fakes.FakeStateStore
-		fakeRootfsFileCreator   *fakes.FakeRootfsFileCreator
 		fakePeaCreator          *fakes.FakePeaCreator
 		fakePeaUsernameResolver *fakes.FakePeaUsernameResolver
 
@@ -49,7 +48,6 @@ var _ = Describe("Rundmc", func() {
 		fakeStopper = new(fakes.FakeStopper)
 		fakeEventStore = new(fakes.FakeEventStore)
 		fakeStateStore = new(fakes.FakeStateStore)
-		fakeRootfsFileCreator = new(fakes.FakeRootfsFileCreator)
 		fakePeaCreator = new(fakes.FakePeaCreator)
 		fakePeaUsernameResolver = new(fakes.FakePeaUsernameResolver)
 		logger = lagertest.NewTestLogger("test")
@@ -58,7 +56,18 @@ var _ = Describe("Rundmc", func() {
 			return "/path/to/" + handle, nil
 		}
 
-		containerizer = rundmc.New(fakeDepot, fakeOCIRuntime, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeEventStore, fakeStateStore, fakeRootfsFileCreator, fakePeaCreator, fakePeaUsernameResolver, 0)
+		containerizer = rundmc.New(
+			fakeDepot,
+			fakeOCIRuntime,
+			fakeBundleLoader,
+			fakeNstarRunner,
+			fakeStopper,
+			fakeEventStore,
+			fakeStateStore,
+			fakePeaCreator,
+			fakePeaUsernameResolver,
+			0,
+		)
 	})
 
 	Describe("Create", func() {
@@ -97,30 +106,6 @@ var _ = Describe("Rundmc", func() {
 			_, path, id, _ := fakeOCIRuntime.CreateArgsForCall(0)
 			Expect(path).To(Equal("/path/to/exuberant!"))
 			Expect(id).To(Equal("exuberant!"))
-		})
-
-		It("should prepare the root file system by creating mount points", func() {
-			Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{
-				Handle:     "exuberant!",
-				BaseConfig: specs.Spec{Root: &specs.Root{Path: "some-rootfs"}},
-			})).To(Succeed())
-
-			Expect(fakeRootfsFileCreator.CreateFilesCallCount()).To(Equal(1))
-			rootfsPath, createdFiles := fakeRootfsFileCreator.CreateFilesArgsForCall(0)
-			Expect(rootfsPath).To(Equal("some-rootfs"))
-			Expect(createdFiles).To(ConsistOf("/etc/hosts", "/etc/resolv.conf"))
-		})
-
-		Context("when creating files in the rootfs fails", func() {
-			BeforeEach(func() {
-				fakeRootfsFileCreator.CreateFilesReturns(errors.New("file-create-fail"))
-			})
-
-			It("returns the error", func() {
-				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{
-					BaseConfig: specs.Spec{Root: &specs.Root{}},
-				})).To(MatchError("file-create-fail"))
-			})
 		})
 
 		Context("when the container creation fails", func() {
@@ -633,8 +618,18 @@ var _ = Describe("Rundmc", func() {
 
 			BeforeEach(func() {
 				entitlementPerSharePercent = 0.01
-				containerizer = rundmc.New(fakeDepot, fakeOCIRuntime, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeEventStore, fakeStateStore, fakeRootfsFileCreator, fakePeaCreator, fakePeaUsernameResolver, entitlementPerSharePercent)
-
+				containerizer = rundmc.New(
+					fakeDepot,
+					fakeOCIRuntime,
+					fakeBundleLoader,
+					fakeNstarRunner,
+					fakeStopper,
+					fakeEventStore,
+					fakeStateStore,
+					fakePeaCreator,
+					fakePeaUsernameResolver,
+					entitlementPerSharePercent,
+				)
 			})
 
 			It("return the CPU entitlement", func() {

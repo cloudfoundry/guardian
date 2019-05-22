@@ -50,6 +50,7 @@ type GdnRunnerConfig struct {
 
 	DefaultRootFS                  string   `flag:"default-rootfs"`
 	DepotDir                       string   `flag:"depot"`
+	NetworkDepotDir                string   `flag:"network-depot"`
 	ConsoleSocketsPath             string   `flag:"console-sockets-path"`
 	BindIP                         string   `flag:"bind-ip"`
 	BindPort                       *int     `flag:"bind-port"`
@@ -207,6 +208,8 @@ func DefaultGdnRunnerConfig(binaries Binaries) GdnRunnerConfig {
 
 	config.ConsoleSocketsPath = filepath.Join(config.TmpDir, "console-sockets")
 	config.DepotDir = filepath.Join(config.TmpDir, "containers")
+	Expect(os.MkdirAll(config.DepotDir, 0755)).To(Succeed())
+	config.NetworkDepotDir = filepath.Join(config.TmpDir, "network")
 	Expect(os.MkdirAll(config.DepotDir, 0755)).To(Succeed())
 
 	if runtime.GOOS == "windows" {

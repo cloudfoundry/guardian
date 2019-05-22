@@ -37,6 +37,7 @@ var _ = Describe("ExternalNetworker", func() {
 		plugin               netplugin.ExternalNetworker
 		handle               string
 		resolvConfigurer     *kawasakifakes.FakeDnsResolvConfigurer
+		networkDepot         *kawasakifakes.FakeNetworkDepot
 		pluginOutput         string
 		pluginErr            error
 		pluginStderr         string
@@ -63,6 +64,7 @@ var _ = Describe("ExternalNetworker", func() {
 		logger = lagertest.NewTestLogger("test")
 		externalIP := net.ParseIP("1.2.3.4")
 		resolvConfigurer = new(kawasakifakes.FakeDnsResolvConfigurer)
+		networkDepot = new(kawasakifakes.FakeNetworkDepot)
 		plugin = netplugin.New(
 			fakeCommandRunner,
 			configStore,
@@ -72,6 +74,7 @@ var _ = Describe("ExternalNetworker", func() {
 			resolvConfigurer,
 			"some/path",
 			[]string{"arg1", "arg2", "arg3"},
+			networkDepot,
 		)
 
 		pluginErr = nil
@@ -463,7 +466,7 @@ var _ = Describe("ExternalNetworker", func() {
 	})
 
 	Describe("Destroy", func() {
-		It("executes the external plugin with the correct args", func() {
+		It("executes the external plugin with the correct args and destroys the depot", func() {
 			Expect(plugin.Destroy(logger, "my-handle")).To(Succeed())
 
 			cmd := fakeCommandRunner.ExecutedCommands()[0]
@@ -477,6 +480,11 @@ var _ = Describe("ExternalNetworker", func() {
 				"--action", "down",
 				"--handle", "my-handle",
 			}))
+
+			Expect(networkDepot.DestroyCallCount()).To(Equal(1))
+			actualLogger, actualHandle := networkDepot.DestroyArgsForCall(0)
+			Expect(actualLogger).To(Equal(logger))
+			Expect(actualHandle).To(Equal("my-handle"))
 		})
 
 		Context("when the external plugin errors", func() {
@@ -485,6 +493,15 @@ var _ = Describe("ExternalNetworker", func() {
 			})
 			It("returns the error", func() {
 				Expect(plugin.Destroy(logger, "my-handle")).To(MatchError("external networker down: boom"))
+			})
+		})
+
+		Context("when destroying the depot fails", func() {
+			It("returns the error", func() {
+				networkDepot.DestroyReturns(errors.New("failed"))
+
+				err := plugin.Destroy(logger, "my-handle")
+				Expect(err).To(MatchError("failed"))
 			})
 		})
 	})
@@ -662,6 +679,34 @@ var _ = Describe("ExternalNetworker", func() {
 			Expect(plugin.BulkNetOut(logger, handle, rules)).To(Succeed())
 
 			Expect(logger).To(gbytes.Say("result.*some-stderr-bytes"))
+		})
+	})
+
+	Describe("SetupBindMounts", func() {
+		It("delegates to the network depot", func() {
+			networkDepot.SetupBindMountsReturns([]garden.BindMount{{SrcPath: "src"}}, nil)
+
+			bindMounts, err := plugin.SetupBindMounts(logger, "handle", true, "rootfs/path")
+
+			Expect(networkDepot.SetupBindMountsCallCount()).To(Equal(1))
+			actualLogger, actualHandle, actualPrivileged, actualRootfsPath := networkDepot.SetupBindMountsArgsForCall(0)
+			Expect(actualLogger).To(Equal(logger))
+			Expect(actualHandle).To(Equal("handle"))
+			Expect(actualPrivileged).To(BeTrue())
+			Expect(actualRootfsPath).To(Equal("rootfs/path"))
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bindMounts).To(HaveLen(1))
+			Expect(bindMounts[0].SrcPath).To(Equal("src"))
+		})
+
+		Context("when setting up the bind mounts fails", func() {
+			It("returns the error", func() {
+				networkDepot.SetupBindMountsReturns(nil, errors.New("failed"))
+
+				_, err := plugin.SetupBindMounts(logger, "handle", true, "rootfs/path")
+				Expect(err).To(MatchError("failed"))
+			})
 		})
 	})
 })

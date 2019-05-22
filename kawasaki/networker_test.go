@@ -30,10 +30,11 @@ var _ = Describe("Networker", func() {
 		fakeFirewallOpener *fakes.FakeFirewallOpener
 		fakeConfigurer     *fakes.FakeConfigurer
 		containerSpec      garden.ContainerSpec
-		networker          kawasaki.Networker
+		networker          *kawasaki.Networker
 		logger             lager.Logger
 		networkConfig      kawasaki.NetworkConfig
 		config             map[string]string
+		fakeNetworkDepot   *fakes.FakeNetworkDepot
 	)
 
 	BeforeEach(func() {
@@ -45,6 +46,7 @@ var _ = Describe("Networker", func() {
 		fakePortPool = new(fakes.FakePortPool)
 		fakeFirewallOpener = new(fakes.FakeFirewallOpener)
 		fakeConfigurer = new(fakes.FakeConfigurer)
+		fakeNetworkDepot = new(fakes.FakeNetworkDepot)
 
 		containerSpec = garden.ContainerSpec{
 			Handle:  "some-handle",
@@ -83,6 +85,7 @@ var _ = Describe("Networker", func() {
 			fakePortPool,
 			fakePortForwarder,
 			fakeFirewallOpener,
+			fakeNetworkDepot,
 		)
 
 		ip, subnet, err := net.ParseCIDR("123.123.123.12/24")
@@ -389,6 +392,27 @@ var _ = Describe("Networker", func() {
 				})
 			})
 		})
+
+		Describe("destroying the depot", func() {
+			It("delegates destruction to the depot", func() {
+				err := networker.Destroy(logger, "some-handle")
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeNetworkDepot.DestroyCallCount()).To(Equal(1))
+				actualLogger, actualHandle := fakeNetworkDepot.DestroyArgsForCall(0)
+				Expect(actualLogger).To(Equal(logger))
+				Expect(actualHandle).To(Equal("some-handle"))
+			})
+
+			Context("when destroying the depot fails", func() {
+				It("returns the error", func() {
+					fakeNetworkDepot.DestroyReturns(errors.New("failed"))
+
+					err := networker.Destroy(logger, "some-handle")
+					Expect(err).To(MatchError("failed"))
+				})
+			})
+		})
 	})
 
 	Describe("NetOut", func() {
@@ -615,6 +639,34 @@ var _ = Describe("Networker", func() {
 			})
 			It("returns an appropriate error", func() {
 				Expect(networker.Restore(logger, "some-handle")).To(MatchError("port pool removing some-handle: failed-to-remove-from-port-pool"))
+			})
+		})
+	})
+
+	Describe("SetupBindMounts", func() {
+		It("delegates to the network depot", func() {
+			fakeNetworkDepot.SetupBindMountsReturns([]garden.BindMount{{SrcPath: "src"}}, nil)
+
+			bindMounts, err := networker.SetupBindMounts(logger, "handle", true, "rootfs/path")
+
+			Expect(fakeNetworkDepot.SetupBindMountsCallCount()).To(Equal(1))
+			actualLogger, actualHandle, actualPrivileged, actualRootfsPath := fakeNetworkDepot.SetupBindMountsArgsForCall(0)
+			Expect(actualLogger).To(Equal(logger))
+			Expect(actualHandle).To(Equal("handle"))
+			Expect(actualPrivileged).To(BeTrue())
+			Expect(actualRootfsPath).To(Equal("rootfs/path"))
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bindMounts).To(HaveLen(1))
+			Expect(bindMounts[0].SrcPath).To(Equal("src"))
+		})
+
+		Context("when setting up the bind mounts fails", func() {
+			It("returns the error", func() {
+				fakeNetworkDepot.SetupBindMountsReturns(nil, errors.New("failed"))
+
+				_, err := networker.SetupBindMounts(logger, "handle", true, "rootfs/path")
+				Expect(err).To(MatchError("failed"))
 			})
 		})
 	})

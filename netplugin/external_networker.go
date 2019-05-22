@@ -18,6 +18,12 @@ import (
 
 const NetworkPropertyPrefix = "network."
 
+//go:generate counterfeiter . NetworkDepot
+type NetworkDepot interface {
+	SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error)
+	Destroy(log lager.Logger, handle string) error
+}
+
 type externalBinaryNetworker struct {
 	commandRunner         commandrunner.CommandRunner
 	configStore           kawasaki.ConfigStore
@@ -27,6 +33,7 @@ type externalBinaryNetworker struct {
 	resolvConfigurer      kawasaki.DnsResolvConfigurer
 	path                  string
 	extraArg              []string
+	networkDepot          NetworkDepot
 }
 
 func New(
@@ -38,6 +45,7 @@ func New(
 	resolvConfigurer kawasaki.DnsResolvConfigurer,
 	path string,
 	extraArg []string,
+	networkDepot NetworkDepot,
 ) ExternalNetworker {
 	return &externalBinaryNetworker{
 		commandRunner:         commandRunner,
@@ -48,6 +56,7 @@ func New(
 		resolvConfigurer:      resolvConfigurer,
 		path:                  path,
 		extraArg:              extraArg,
+		networkDepot:          networkDepot,
 	}
 }
 
@@ -82,6 +91,10 @@ type UpOutputs struct {
 	Properties    map[string]string
 	DNSServers    []string `json:"dns_servers,omitempty"`
 	SearchDomains []string `json:"search_domains,omitempty"`
+}
+
+func (p *externalBinaryNetworker) SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error) {
+	return p.networkDepot.SetupBindMounts(log, handle, privileged, rootfsPath)
 }
 
 func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {
@@ -137,7 +150,12 @@ func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 }
 
 func (p *externalBinaryNetworker) Destroy(log lager.Logger, handle string) error {
-	return p.exec(log, "down", handle, nil, nil)
+	err := p.exec(log, "down", handle, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	return p.networkDepot.Destroy(log, handle)
 }
 
 func (p *externalBinaryNetworker) Restore(log lager.Logger, handle string) error {

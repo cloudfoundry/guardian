@@ -80,25 +80,18 @@ type PortForwarderSpec struct {
 }
 
 //go:generate counterfeiter . FirewallOpener
-
 type FirewallOpener interface {
 	Open(log lager.Logger, instance, handle string, rule garden.NetOutRule) error
 	BulkOpen(log lager.Logger, instance, handle string, rule []garden.NetOutRule) error
 }
 
-//go:generate counterfeiter . Networker
-
-type Networker interface {
-	Capacity() uint64
-	Network(log lager.Logger, spec garden.ContainerSpec, pid int) error
+//go:generate counterfeiter . NetworkDepot
+type NetworkDepot interface {
+	SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error)
 	Destroy(log lager.Logger, handle string) error
-	NetIn(log lager.Logger, handle string, externalPort, containerPort uint32) (uint32, uint32, error)
-	NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error
-	BulkNetOut(log lager.Logger, handle string, rules []garden.NetOutRule) error
-	Restore(log lager.Logger, handle string) error
 }
 
-type networker struct {
+type Networker struct {
 	specParser     SpecParser
 	subnetPool     subnets.Pool
 	configCreator  ConfigCreator
@@ -107,6 +100,7 @@ type networker struct {
 	portPool       PortPool
 	firewallOpener FirewallOpener
 	configurer     Configurer
+	networkDepot   NetworkDepot
 }
 
 func New(
@@ -118,8 +112,9 @@ func New(
 	portPool PortPool,
 	portForwarder PortForwarder,
 	firewallOpener FirewallOpener,
-) *networker {
-	return &networker{
+	networkDepot NetworkDepot,
+) *Networker {
+	return &Networker{
 		specParser:    specParser,
 		subnetPool:    subnetPool,
 		configCreator: configCreator,
@@ -130,10 +125,15 @@ func New(
 		portPool:      portPool,
 
 		firewallOpener: firewallOpener,
+		networkDepot:   networkDepot,
 	}
 }
 
-func (n *networker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {
+func (n *Networker) SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error) {
+	return n.networkDepot.SetupBindMounts(log, handle, privileged, rootfsPath)
+}
+
+func (n *Networker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {
 	log = log.Session("network", lager.Data{
 		"handle": containerSpec.Handle,
 		"spec":   containerSpec.Network,
@@ -181,11 +181,11 @@ func (n *networker) Network(log lager.Logger, containerSpec garden.ContainerSpec
 }
 
 // Capacity returns the number of subnets this network can host
-func (n *networker) Capacity() uint64 {
+func (n *Networker) Capacity() uint64 {
 	return uint64(n.subnetPool.Capacity())
 }
 
-func (n *networker) NetIn(log lager.Logger, handle string, externalPort, containerPort uint32) (uint32, uint32, error) {
+func (n *Networker) NetIn(log lager.Logger, handle string, externalPort, containerPort uint32) (uint32, uint32, error) {
 	cfg, err := load(n.configStore, handle)
 	if err != nil {
 		return 0, 0, err
@@ -225,7 +225,7 @@ func (n *networker) NetIn(log lager.Logger, handle string, externalPort, contain
 	return externalPort, containerPort, nil
 }
 
-func (n *networker) NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error {
+func (n *Networker) NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error {
 	cfg, err := load(n.configStore, handle)
 	if err != nil {
 		return err
@@ -234,7 +234,7 @@ func (n *networker) NetOut(log lager.Logger, handle string, rule garden.NetOutRu
 	return n.firewallOpener.Open(log, cfg.IPTableInstance, handle, rule)
 }
 
-func (n *networker) BulkNetOut(log lager.Logger, handle string, rules []garden.NetOutRule) error {
+func (n *Networker) BulkNetOut(log lager.Logger, handle string, rules []garden.NetOutRule) error {
 	cfg, err := load(n.configStore, handle)
 	if err != nil {
 		return err
@@ -243,7 +243,7 @@ func (n *networker) BulkNetOut(log lager.Logger, handle string, rules []garden.N
 	return n.firewallOpener.BulkOpen(log, cfg.IPTableInstance, handle, rules)
 }
 
-func (n *networker) Destroy(log lager.Logger, handle string) error {
+func (n *Networker) Destroy(log lager.Logger, handle string) error {
 	cfg, err := load(n.configStore, handle)
 	if err != nil {
 		log.Error("no-properties-for-container-skipping-destroy-network", err)
@@ -270,14 +270,16 @@ func (n *networker) Destroy(log lager.Logger, handle string) error {
 		}
 	}
 
-	err = n.subnetPool.RunIfFree(cfg.Subnet, func() error {
+	if err := n.subnetPool.RunIfFree(cfg.Subnet, func() error {
 		return n.configurer.DestroyBridge(log, cfg)
-	})
+	}); err != nil {
+		return err
+	}
 
-	return err
+	return n.networkDepot.Destroy(log, handle)
 }
 
-func (n *networker) Restore(log lager.Logger, handle string) error {
+func (n *Networker) Restore(log lager.Logger, handle string) error {
 	networkConfig, err := load(n.configStore, handle)
 	if err != nil {
 		return fmt.Errorf("loading %s: %v", handle, err)

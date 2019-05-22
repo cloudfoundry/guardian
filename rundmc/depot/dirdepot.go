@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"code.cloudfoundry.org/garden"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
@@ -26,25 +25,18 @@ type BundleGenerator interface {
 	Generate(desiredContainerSpec spec.DesiredContainerSpec) (goci.Bndl, error)
 }
 
-//go:generate counterfeiter . BindMountSourceCreator
-type BindMountSourceCreator interface {
-	Create(containerDir string, privileged bool) ([]garden.BindMount, error)
-}
-
 // a depot which stores containers as subdirs of a depot directory
 type DirectoryDepot struct {
-	dir                    string
-	bundler                BundleGenerator
-	bundleSaver            BundleSaver
-	BindMountSourceCreator BindMountSourceCreator
+	dir         string
+	bundler     BundleGenerator
+	bundleSaver BundleSaver
 }
 
-func New(dir string, bundler BundleGenerator, bundleSaver BundleSaver, bindMountSourceCreator BindMountSourceCreator) *DirectoryDepot {
+func New(dir string, bundler BundleGenerator, bundleSaver BundleSaver) *DirectoryDepot {
 	return &DirectoryDepot{
-		dir:                    dir,
-		bundler:                bundler,
-		bundleSaver:            bundleSaver,
-		BindMountSourceCreator: bindMountSourceCreator,
+		dir:         dir,
+		bundler:     bundler,
+		bundleSaver: bundleSaver,
 	}
 }
 
@@ -65,12 +57,6 @@ func (d *DirectoryDepot) Create(log lager.Logger, handle string, spec spec.Desir
 		log.Error(msg, err, lager.Data{"path": containerDir})
 		return err
 	}
-
-	defaultBindMounts, err := d.BindMountSourceCreator.Create(containerDir, !spec.Privileged)
-	if err != nil {
-		return errs("create-bindmount-sources-failed", err)
-	}
-	spec.BindMounts = append(spec.BindMounts, defaultBindMounts...)
 
 	bundle, err := d.bundler.Generate(spec)
 	if err != nil {

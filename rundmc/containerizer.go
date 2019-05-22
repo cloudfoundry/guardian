@@ -26,7 +26,6 @@ import (
 //go:generate counterfeiter . BundleLoader
 //go:generate counterfeiter . Stopper
 //go:generate counterfeiter . StateStore
-//go:generate counterfeiter . RootfsFileCreator
 //go:generate counterfeiter . PeaCreator
 //go:generate counterfeiter . PeaUsernameResolver
 
@@ -75,10 +74,6 @@ type StateStore interface {
 	IsStopped(handle string) bool
 }
 
-type RootfsFileCreator interface {
-	CreateFiles(rootFSPath string, pathsToCreate ...string) error
-}
-
 type PeaUsernameResolver interface {
 	ResolveUser(log lager.Logger, bundlePath, handle string, image garden.ImageRef, username string) (int, int, error)
 }
@@ -92,13 +87,23 @@ type Containerizer struct {
 	nstar                  NstarRunner
 	events                 EventStore
 	states                 StateStore
-	rootfsFileCreator      RootfsFileCreator
 	peaCreator             PeaCreator
 	peaUsernameResolver    PeaUsernameResolver
 	cpuEntitlementPerShare float64
 }
 
-func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, events EventStore, states StateStore, rootfsFileCreator RootfsFileCreator, peaCreator PeaCreator, peaUsernameResolver PeaUsernameResolver, cpuEntitlementPerShare float64) *Containerizer {
+func New(
+	depot Depot,
+	runtime OCIRuntime,
+	loader BundleLoader,
+	nstarRunner NstarRunner,
+	stopper Stopper,
+	events EventStore,
+	states StateStore,
+	peaCreator PeaCreator,
+	peaUsernameResolver PeaUsernameResolver,
+	cpuEntitlementPerShare float64,
+) *Containerizer {
 	containerizer := &Containerizer{
 		depot:                  depot,
 		runtime:                runtime,
@@ -107,7 +112,6 @@ func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner Nstar
 		stopper:                stopper,
 		events:                 events,
 		states:                 states,
-		rootfsFileCreator:      rootfsFileCreator,
 		peaCreator:             peaCreator,
 		peaUsernameResolver:    peaUsernameResolver,
 		cpuEntitlementPerShare: cpuEntitlementPerShare,
@@ -138,11 +142,6 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 
 	log.Info("start")
 	defer log.Info("finished")
-
-	if err := c.rootfsFileCreator.CreateFiles(spec.BaseConfig.Root.Path, "/etc/hosts", "/etc/resolv.conf"); err != nil {
-		log.Error("create-rootfs-mountpoint-files-failed", err)
-		return err
-	}
 
 	if err := c.depot.Create(log, spec.Handle, spec); err != nil {
 		log.Error("depot-create-failed", err)

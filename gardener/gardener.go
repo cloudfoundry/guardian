@@ -59,6 +59,7 @@ type Containerizer interface {
 }
 
 type Networker interface {
+	SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error)
 	Network(log lager.Logger, spec garden.ContainerSpec, pid int) error
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
@@ -221,15 +222,21 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 		return nil, err
 	}
 
+	networkBindMounts, err := g.Networker.SetupBindMounts(log, containerSpec.Handle, containerSpec.Privileged, runtimeSpec.Root.Path)
+	if err != nil {
+		return nil, err
+	}
+
 	desiredSpec := spec.DesiredContainerSpec{
 		Handle:     containerSpec.Handle,
 		Hostname:   containerSpec.Handle,
 		Privileged: containerSpec.Privileged,
 		Env:        containerSpec.Env,
-		BindMounts: containerSpec.BindMounts,
+		BindMounts: append(containerSpec.BindMounts, networkBindMounts...),
 		Limits:     containerSpec.Limits,
 		BaseConfig: runtimeSpec,
 	}
+
 	if err := g.Containerizer.Create(log, desiredSpec); err != nil {
 		return nil, err
 	}
