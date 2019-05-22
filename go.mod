@@ -8,7 +8,7 @@ require (
 	code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b
 	code.cloudfoundry.org/debugserver v0.0.0-20170501225606-70715da12ee9
 	code.cloudfoundry.org/garden v0.0.0-20190410122303-a4e51d29c0e5
-	code.cloudfoundry.org/grootfs v0.30.1-0.20190513150534-10faab0a0ffb
+	code.cloudfoundry.org/grootfs v0.30.1-0.20190522085853-876c4256a5ef
 	code.cloudfoundry.org/idmapper v0.0.0-20190509093205-06cf188c2966
 	code.cloudfoundry.org/lager v2.0.0+incompatible
 	code.cloudfoundry.org/localip v0.0.0-20170223024724-b88ad0dea95c
@@ -50,7 +50,7 @@ require (
 	github.com/opencontainers/runc v1.0.0-rc7
 	github.com/opencontainers/runtime-spec v1.0.1
 	github.com/pkg/errors v0.8.1
-	github.com/sirupsen/logrus v1.4.1
+	github.com/sirupsen/logrus v1.4.2
 	github.com/st3v/glager v0.3.0
 	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/syndtr/gocapability v0.0.0-20180223013746-33e07d32887e // indirect
@@ -58,8 +58,9 @@ require (
 	github.com/urfave/cli v1.20.0
 	github.com/vishvananda/netlink v1.0.0
 	github.com/vishvananda/netns v0.0.0-20171111001504-be1fbeda1936
+	golang.org/x/net v0.0.0-20190520210107-018c4d40a106 // indirect
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
-	golang.org/x/sys v0.0.0-20190509141414-a5b02f93d862
+	golang.org/x/sys v0.0.0-20190522044717-8097e1b27ff5
 	google.golang.org/genproto v0.0.0-20180518175338-11a468237815 // indirect
 	google.golang.org/grpc v1.12.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2
