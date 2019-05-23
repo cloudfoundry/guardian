@@ -222,7 +222,7 @@ var _ = Describe("Destroying a Container", func() {
 			})
 
 			It("removes the depot", func() {
-				Expect(filepath.Join(config.NetworkDepotDir, container.Handle())).NotTo(BeADirectory())
+				Expect(filepath.Join(config.DepotDir, container.Handle())).NotTo(BeADirectory())
 			})
 		})
 	})

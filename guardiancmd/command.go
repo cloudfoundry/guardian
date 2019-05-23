@@ -133,7 +133,6 @@ type CommonCommand struct {
 	} `group:"Docker Image Fetching"`
 
 	Network struct {
-		Dir  string   `long:"network-depot" default:"/var/run/gdn/network" description:"Directory in which to store container network configuration."`
 		Pool CIDRFlag `long:"network-pool" default:"10.254.0.0/22" description:"Network range to use for dynamically allocated container subnets."`
 
 		AllowHostAccess bool       `long:"allow-host-access" description:"Allow network access to the host machine."`
@@ -226,7 +225,7 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 	}
 
 	uidMappings, gidMappings := cmd.idMappings()
-	networkDepot := depot.NewNetworkDepot(cmd.Network.Dir, factory.WireRootfsFileCreator(), wireBindMountSourceCreator(uidMappings, gidMappings))
+	networkDepot := depot.NewNetworkDepot(cmd.Containers.Dir, factory.WireRootfsFileCreator(), wireBindMountSourceCreator(uidMappings, gidMappings))
 
 	networker, iptablesStarter, err := cmd.wireNetworker(logger, factory, propManager, portPool, networkDepot)
 	if err != nil {
@@ -400,7 +399,7 @@ func (cmd *CommonCommand) wireNetworker(log lager.Logger, factory GardenFactory,
 		subnets.NewPool(cmd.Network.Pool.CIDR()),
 		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, additionalDNSServers, cmd.Network.AdditionalHostEntries, containerMtu),
 		propManager,
-		kawasakifactory.NewDefaultConfigurer(ipTables, cmd.Network.Dir),
+		kawasakifactory.NewDefaultConfigurer(ipTables, cmd.Containers.Dir),
 		portPool,
 		iptables.NewPortForwarder(ipTables),
 		iptables.NewFirewallOpener(ruleTranslator, ipTables),

@@ -134,7 +134,7 @@ func (f *LinuxFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {
 		HostsFileCompiler: &dns.HostsFileCompiler{},
 		ResolvCompiler:    &dns.ResolvCompiler{},
 		ResolvFilePath:    "/etc/resolv.conf",
-		DepotDir:          f.config.Network.Dir,
+		DepotDir:          f.config.Containers.Dir,
 	}
 }
 
