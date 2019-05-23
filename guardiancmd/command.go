@@ -263,7 +263,7 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 		}
 	}
 
-	containerizer, err := cmd.wireContainerizer(logger, factory, propManager, volumizer, peaCleaner, cpuEntitlementPerShare)
+	containerizer, err := cmd.wireContainerizer(logger, factory, propManager, volumizer, peaCleaner, cpuEntitlementPerShare, networkDepot)
 	if err != nil {
 		logger.Error("failed-to-wire-containerizer", err)
 		return nil, err
@@ -346,7 +346,7 @@ func extractIPs(ipflags []IPFlag) []net.IP {
 	return ips
 }
 
-func (cmd *CommonCommand) wireNetworker(log lager.Logger, factory GardenFactory, propManager kawasaki.ConfigStore, portPool *ports.PortPool, networkDepot *depot.NetworkDepot) (gardener.Networker, gardener.Starter, error) {
+func (cmd *CommonCommand) wireNetworker(log lager.Logger, factory GardenFactory, propManager kawasaki.ConfigStore, portPool *ports.PortPool, networkDepot depot.NetworkDepot) (gardener.Networker, gardener.Starter, error) {
 	externalIP, err := defaultExternalIP(cmd.Network.ExternalIP)
 	if err != nil {
 		return nil, nil, err
@@ -444,9 +444,15 @@ func (cmd *CommonCommand) wireImagePlugin(commandRunner commandrunner.CommandRun
 	return gardener.NewVolumeProvider(imagePlugin, imagePlugin, gardener.CommandFactory(preparerootfs.Command), commandRunner, uid, gid)
 }
 
-func (cmd *CommonCommand) wireContainerizer(log lager.Logger, factory GardenFactory,
-	properties gardener.PropertyManager, volumizer peas.Volumizer, peaCleaner gardener.PeaCleaner, cpuEntitlementPerShare float64) (*rundmc.Containerizer, error) {
-
+func (cmd *CommonCommand) wireContainerizer(
+	log lager.Logger,
+	factory GardenFactory,
+	properties gardener.PropertyManager,
+	volumizer peas.Volumizer,
+	peaCleaner gardener.PeaCleaner,
+	cpuEntitlementPerShare float64,
+	networkDepot depot.NetworkDepot,
+) (*rundmc.Containerizer, error) {
 	initMount, initPath := initBindMountAndPath(cmd.Bin.Init.Path())
 
 	defaultMounts := append(defaultBindMounts(), initMount)
@@ -586,20 +592,18 @@ func (cmd *CommonCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	eventStore := rundmc.NewEventStore(properties)
 	stateStore := rundmc.NewStateStore(properties)
 
-	bindMountSourceCreator := wireBindMountSourceCreator(uidMappings, gidMappings)
-
 	peaCreator = &peas.PeaCreator{
-		Volumizer:              volumizer,
-		PidGetter:              pidGetter,
-		PrivilegedGetter:       privilegeChecker,
-		BindMountSourceCreator: bindMountSourceCreator,
-		BundleGenerator:        template,
-		ProcessBuilder:         processBuilder,
-		BundleSaver:            bundleSaver,
-		ExecRunner:             execRunner,
-		RuncDeleter:            runcDeleter,
-		PeaCleaner:             peaCleaner,
-		NestedCgroups:          useNestedCgroups,
+		Volumizer:        volumizer,
+		PidGetter:        pidGetter,
+		PrivilegedGetter: privilegeChecker,
+		NetworkDepot:     networkDepot,
+		BundleGenerator:  template,
+		ProcessBuilder:   processBuilder,
+		BundleSaver:      bundleSaver,
+		ExecRunner:       execRunner,
+		RuncDeleter:      runcDeleter,
+		PeaCleaner:       peaCleaner,
+		NestedCgroups:    useNestedCgroups,
 	}
 
 	peaUsernameResolver := &peas.PeaUsernameResolver{

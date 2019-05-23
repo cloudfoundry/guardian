@@ -24,16 +24,16 @@ var _ = Describe("PeaCreator", func() {
 	const imageURI = "some-image-uri"
 
 	var (
-		volumizer              *peasfakes.FakeVolumizer
-		peaCleaner             *gardenerfakes.FakePeaCleaner
-		runcDeleter            *peasfakes.FakeRuncDeleter
-		pidGetter              *peasfakes.FakePidGetter
-		bindMountSourceCreator *depotfakes.FakeBindMountSourceCreator
-		bundleGenerator        *depotfakes.FakeBundleGenerator
-		bundleSaver            *depotfakes.FakeBundleSaver
-		processBuilder         *runruncfakes.FakeProcessBuilder
-		execRunner             *runruncfakes.FakeExecRunner
-		privilegedGetter       *peasfakes.FakePrivilegedGetter
+		volumizer        *peasfakes.FakeVolumizer
+		peaCleaner       *gardenerfakes.FakePeaCleaner
+		runcDeleter      *peasfakes.FakeRuncDeleter
+		pidGetter        *peasfakes.FakePidGetter
+		networkDepot     *peasfakes.FakeNetworkDepot
+		bundleGenerator  *depotfakes.FakeBundleGenerator
+		bundleSaver      *depotfakes.FakeBundleSaver
+		processBuilder   *runruncfakes.FakeProcessBuilder
+		execRunner       *runruncfakes.FakeExecRunner
+		privilegedGetter *peasfakes.FakePrivilegedGetter
 
 		peaCreator *peas.PeaCreator
 
@@ -60,12 +60,15 @@ var _ = Describe("PeaCreator", func() {
 	BeforeEach(func() {
 		volumizer = new(peasfakes.FakeVolumizer)
 		peaCleaner = new(gardenerfakes.FakePeaCleaner)
-		volumizer.CreateReturns(specs.Spec{Version: "some-spec-version"}, nil)
+		volumizer.CreateReturns(specs.Spec{
+			Version: "some-spec-version",
+			Root:    &specs.Root{Path: "/rootfs/path"},
+		}, nil)
 		runcDeleter = new(peasfakes.FakeRuncDeleter)
 		pidGetter = new(peasfakes.FakePidGetter)
 		pidGetter.GetPidReturns(123, nil)
-		bindMountSourceCreator = new(depotfakes.FakeBindMountSourceCreator)
-		bindMountSourceCreator.CreateReturns(defaultBindMounts, nil)
+		networkDepot = new(peasfakes.FakeNetworkDepot)
+		networkDepot.SetupBindMountsReturns(defaultBindMounts, nil)
 
 		bundleGenerator = new(depotfakes.FakeBundleGenerator)
 		bundleGenerator.GenerateReturns(generatedBundle, nil)
@@ -81,16 +84,16 @@ var _ = Describe("PeaCreator", func() {
 		privilegedGetter.PrivilegedReturns(false, nil)
 
 		peaCreator = &peas.PeaCreator{
-			Volumizer:              volumizer,
-			PidGetter:              pidGetter,
-			BindMountSourceCreator: bindMountSourceCreator,
-			BundleGenerator:        bundleGenerator,
-			BundleSaver:            bundleSaver,
-			ProcessBuilder:         processBuilder,
-			ExecRunner:             execRunner,
-			PrivilegedGetter:       privilegedGetter,
-			RuncDeleter:            runcDeleter,
-			PeaCleaner:             peaCleaner,
+			Volumizer:        volumizer,
+			PidGetter:        pidGetter,
+			NetworkDepot:     networkDepot,
+			BundleGenerator:  bundleGenerator,
+			BundleSaver:      bundleSaver,
+			ProcessBuilder:   processBuilder,
+			ExecRunner:       execRunner,
+			PrivilegedGetter: privilegedGetter,
+			RuncDeleter:      runcDeleter,
+			PeaCleaner:       peaCleaner,
 		}
 
 		var err error
@@ -146,11 +149,12 @@ var _ = Describe("PeaCreator", func() {
 			Expect(actualSpec.Privileged).To(Equal(false))
 		})
 
-		It("creates the sources for bind mounts", func() {
-			Expect(bindMountSourceCreator.CreateCallCount()).To(Equal(1))
-			actualContainerDir, actualChown := bindMountSourceCreator.CreateArgsForCall(0)
-			Expect(actualContainerDir).To(Equal(ctrBundleDir))
-			Expect(actualChown).To(BeTrue())
+		It("sets up bind mounts", func() {
+			Expect(networkDepot.SetupBindMountsCallCount()).To(Equal(1))
+			_, actualHandle, actualPrivileged, actualRootfsPath := networkDepot.SetupBindMountsArgsForCall(0)
+			Expect(actualHandle).To(Equal(ctrHandle))
+			Expect(actualPrivileged).To(BeFalse())
+			Expect(actualRootfsPath).To(Equal("/rootfs/path"))
 		})
 
 		It("passes bind mounts to bundle generator", func() {
@@ -170,6 +174,7 @@ var _ = Describe("PeaCreator", func() {
 			actualCtrSpec := bundleGenerator.GenerateArgsForCall(0)
 			Expect(actualCtrSpec.BaseConfig).To(Equal(specs.Spec{
 				Version: "some-spec-version",
+				Root:    &specs.Root{Path: "/rootfs/path"},
 				Windows: &specs.Windows{
 					Network: &specs.WindowsNetwork{
 						NetworkSharedContainerName: "pea-creator-tests",
@@ -365,9 +370,9 @@ var _ = Describe("PeaCreator", func() {
 			_, createErr = peaCreator.CreatePea(log, processSpec, garden.ProcessIO{}, ctrHandle, ctrBundleDir)
 		})
 
-		Context("when the bind mount source creator return an error", func() {
+		Context("when the network depot returns an error", func() {
 			BeforeEach(func() {
-				bindMountSourceCreator.CreateReturns(nil, errors.New("explode"))
+				networkDepot.SetupBindMountsReturns(nil, errors.New("explode"))
 			})
 
 			It("returns a wrapped error", func() {

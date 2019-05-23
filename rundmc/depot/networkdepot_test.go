@@ -21,7 +21,7 @@ var _ = Describe("NetworkDepot", func() {
 		bindMountSourceCreator *fakes.FakeBindMountSourceCreator
 		rootfsFileCreator      *fakes.FakeRootfsFileCreator
 		logger                 lager.Logger
-		networkDepot           *depot.NetworkDepot
+		networkDepot           depot.NetworkDepot
 	)
 
 	BeforeEach(func() {
@@ -76,9 +76,6 @@ var _ = Describe("NetworkDepot", func() {
 		It("creates container directory", func() {
 			containerDir := filepath.Join(dir, "my-container")
 			Expect(containerDir).To(BeADirectory())
-			containerDirStat, err := os.Stat(containerDir)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(containerDirStat.Mode() & os.ModePerm).To(Equal(os.FileMode(0755)))
 		})
 
 		It("creates the network bind mounts", func() {

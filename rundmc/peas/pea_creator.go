@@ -42,18 +42,24 @@ type RuncDeleter interface {
 	Delete(log lager.Logger, handle string) error
 }
 
+//go:generate counterfeiter . NetworkDepot
+type NetworkDepot interface {
+	SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error)
+	Destroy(log lager.Logger, handle string) error
+}
+
 type PeaCreator struct {
-	Volumizer              Volumizer
-	PidGetter              PidGetter
-	PrivilegedGetter       PrivilegedGetter
-	BindMountSourceCreator depot.BindMountSourceCreator
-	BundleGenerator        depot.BundleGenerator
-	BundleSaver            depot.BundleSaver
-	ProcessBuilder         runrunc.ProcessBuilder
-	ExecRunner             runrunc.ExecRunner
-	RuncDeleter            RuncDeleter
-	PeaCleaner             gardener.PeaCleaner
-	NestedCgroups          bool
+	Volumizer        Volumizer
+	PidGetter        PidGetter
+	PrivilegedGetter PrivilegedGetter
+	NetworkDepot     NetworkDepot
+	BundleGenerator  depot.BundleGenerator
+	BundleSaver      depot.BundleSaver
+	ProcessBuilder   runrunc.ProcessBuilder
+	ExecRunner       runrunc.ExecRunner
+	RuncDeleter      RuncDeleter
+	PeaCleaner       gardener.PeaCleaner
+	NestedCgroups    bool
 }
 
 func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (_ garden.Process, theErr error) {
@@ -78,11 +84,6 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		return errs("determining-privileged", err)
 	}
 
-	defaultBindMounts, err := p.BindMountSourceCreator.Create(sandboxBundlePath, !privileged)
-	if err != nil {
-		return errs("creating-bind-mount-sources", err)
-	}
-
 	if processSpec.Dir == "" {
 		processSpec.Dir = "/"
 	}
@@ -103,6 +104,11 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	})
 	if err != nil {
 		return errs("creating-volume", err)
+	}
+
+	defaultBindMounts, err := p.NetworkDepot.SetupBindMounts(log, sandboxHandle, privileged, runtimeSpec.Root.Path)
+	if err != nil {
+		return errs("creating-bind-mount-sources", err)
 	}
 
 	if runtimeSpec.Windows == nil {

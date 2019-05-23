@@ -28,15 +28,15 @@ func NewNetworkDepot(
 	dir string,
 	rootfsFileCreator RootfsFileCreator,
 	bindMountSourceCreator BindMountSourceCreator,
-) *NetworkDepot {
-	return &NetworkDepot{
+) NetworkDepot {
+	return NetworkDepot{
 		dir:                    dir,
 		rootfsFileCreator:      rootfsFileCreator,
 		bindMountSourceCreator: bindMountSourceCreator,
 	}
 }
 
-func (d *NetworkDepot) SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error) {
+func (d NetworkDepot) SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error) {
 	log = log.Session("network-depot-setup-bindmounts", lager.Data{"handle": handle})
 
 	log.Info("start")
@@ -67,7 +67,7 @@ func (d *NetworkDepot) SetupBindMounts(log lager.Logger, handle string, privileg
 	return defaultBindMounts, nil
 }
 
-func (d *NetworkDepot) Destroy(log lager.Logger, handle string) error {
+func (d NetworkDepot) Destroy(log lager.Logger, handle string) error {
 	log = log.Session("network-depot-destroy", lager.Data{"handle": handle})
 
 	log.Info("start")
@@ -76,6 +76,6 @@ func (d *NetworkDepot) Destroy(log lager.Logger, handle string) error {
 	return os.RemoveAll(d.toDir(handle))
 }
 
-func (d *NetworkDepot) toDir(handle string) string {
+func (d NetworkDepot) toDir(handle string) string {
 	return filepath.Join(d.dir, handle)
 }
