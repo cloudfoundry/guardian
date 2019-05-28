@@ -34,7 +34,7 @@ type PidGetter interface {
 
 //go:generate counterfeiter . PrivilegedGetter
 type PrivilegedGetter interface {
-	Privileged(bundlePath string) (bool, error)
+	Privileged(handle string) (bool, error)
 }
 
 //go:generate counterfeiter . RuncDeleter
@@ -79,7 +79,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	log.Info("creating", lager.Data{"process_id": processID})
 	defer log.Info("done")
 
-	privileged, err := p.PrivilegedGetter.Privileged(sandboxBundlePath)
+	privileged, err := p.PrivilegedGetter.Privileged(sandboxHandle)
 	if err != nil {
 		return errs("determining-privileged", err)
 	}

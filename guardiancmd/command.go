@@ -543,7 +543,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin, Root: runcRoot}
 
 	pidFileReader := wirePidfileReader()
-	privilegeChecker := &privchecker.PrivilegeChecker{BundleLoader: bndlLoader}
+	privilegeChecker := &privchecker.PrivilegeChecker{BundleLoader: bndlLoader, Depot: depot, Log: log}
 	runcStater := runrunc.NewStater(runcLogRunner, runcBinary)
 	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary, runcStater)
 

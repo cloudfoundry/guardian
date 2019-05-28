@@ -133,8 +133,8 @@ var _ = Describe("PeaCreator", func() {
 
 		It("checks the sandbox container's privilege", func() {
 			Expect(privilegedGetter.PrivilegedCallCount()).To(Equal(1))
-			actualBundlePath := privilegedGetter.PrivilegedArgsForCall(0)
-			Expect(actualBundlePath).To(Equal(ctrBundleDir))
+			actualId := privilegedGetter.PrivilegedArgsForCall(0)
+			Expect(actualId).To(Equal(ctrHandle))
 		})
 
 		It("creates a volume", func() {
