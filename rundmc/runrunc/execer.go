@@ -22,17 +22,17 @@ type Execer struct {
 	processBuilder ProcessBuilder
 	mkdirer        Mkdirer
 	userLookupper  users.UserLookupper
-	runner         ExecRunner
+	execRunner     ExecRunner
 	pidGetter      PidGetter
 }
 
-func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookupper users.UserLookupper, runner ExecRunner, pidGetter PidGetter) *Execer {
+func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookupper users.UserLookupper, execRunner ExecRunner, pidGetter PidGetter) *Execer {
 	return &Execer{
 		bundleLoader:   bundleLoader,
 		processBuilder: processBuilder,
 		mkdirer:        mkdirer,
 		userLookupper:  userLookupper,
-		runner:         runner,
+		execRunner:     execRunner,
 		pidGetter:      pidGetter,
 	}
 }
@@ -102,7 +102,7 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec g
 		return nil, err // this could *almost* be a panic: a valid spec should always encode (but out of caution we'll error)
 	}
 
-	return e.runner.Run(
+	return e.execRunner.Run(
 		log, processID, processPath, sandboxHandle, bundlePath, io, preparedSpec.Terminal, bytes.NewReader(encodedSpec), nil,
 	)
 }
@@ -110,5 +110,5 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec g
 // Attach attaches to an already running process by guid
 func (e *Execer) Attach(log lager.Logger, bundlePath, id, processID string, io garden.ProcessIO) (garden.Process, error) {
 	processesPath := path.Join(bundlePath, "processes")
-	return e.runner.Attach(log, processID, io, processesPath)
+	return e.execRunner.Attach(log, processID, io, processesPath)
 }
