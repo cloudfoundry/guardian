@@ -547,7 +547,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	runcStater := runrunc.NewStater(runcLogRunner, runcBinary)
 	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary, runcStater)
 
-	var runner rundmc.OCIRuntime
+	var ociRuntime rundmc.OCIRuntime
 	var pidGetter peas.ProcessPidGetter
 	var peaPidGetter peas.ProcessPidGetter = &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}
 	var peaCreator *peas.PeaCreator
@@ -566,7 +566,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	if cmd.useContainerd() {
 		var err error
 		var peaRunner *runcontainerd.RunContainerPea
-		runner, peaRunner, pidGetter, err = factory.WireContainerd(bndlLoader, processBuilder, userLookupper, wireExecerFunc, statser)
+		ociRuntime, peaRunner, pidGetter, err = factory.WireContainerd(bndlLoader, processBuilder, userLookupper, wireExecerFunc, statser)
 		if err != nil {
 			return nil, err
 		}
@@ -578,7 +578,7 @@ func (cmd *CommonCommand) wireContainerizer(
 		}
 	} else {
 		pidGetter = &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}
-		runner = runrunc.New(
+		ociRuntime = runrunc.New(
 			cmdRunner,
 			runcLogRunner,
 			runcBinary,
@@ -614,7 +614,7 @@ func (cmd *CommonCommand) wireContainerizer(
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
-	return rundmc.New(depot, runner, bndlLoader, nstar, stopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare), nil
+	return rundmc.New(depot, ociRuntime, bndlLoader, nstar, stopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare), nil
 }
 
 func (cmd *CommonCommand) useContainerd() bool {
