@@ -17,6 +17,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
+	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/privchecker"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/lager"
@@ -99,8 +100,8 @@ func (f *WindowsFactory) WireMkdirer() runrunc.Mkdirer {
 	return mkdirer{}
 }
 
-func (f *WindowsFactory) WireContainerd(bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, error) {
-	return nil, nil, nil, errors.New("containerd not impletemented on windows")
+func (f *WindowsFactory) WireContainerd(bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, error) {
+	return nil, nil, nil, nil, errors.New("containerd not impletemented on windows")
 }
 
 func wireEnvFunc() processes.EnvFunc {

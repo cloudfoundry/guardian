@@ -113,6 +113,26 @@ var _ = Describe("Nerd", func() {
 		})
 	})
 
+	Describe("Spec", func() {
+		AfterEach(func() {
+			cnerd.Delete(testLogger, containerID)
+		})
+
+		It("returns the container spec", func() {
+			spec := generateSpec(containerdContext, containerdClient, containerID)
+			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
+
+			actualSpec, err := cnerd.Spec(testLogger, containerID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualSpec).To(Equal(spec))
+		})
+
+		It("fails when container id not found", func() {
+			_, err := cnerd.Spec(testLogger, "notAContainerId")
+			Expect(err).To(MatchError("container notAContainerId not found"))
+		})
+	})
+
 	Describe("Exec", func() {
 		JustBeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)

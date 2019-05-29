@@ -21,6 +21,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
+	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/privchecker"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/guardian/rundmc/users"
@@ -142,10 +143,10 @@ func (f *LinuxFactory) WireRootfsFileCreator() depot.RootfsFileCreator {
 	return preparerootfs.SymlinkRefusingFileCreator{}
 }
 
-func (f *LinuxFactory) WireContainerd(bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, error) {
+func (f *LinuxFactory) WireContainerd(bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, error) {
 	containerdClient, err := containerd.New(f.config.Containerd.Socket)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
 	ctx = leases.WithLease(ctx, "lease-is-off")
@@ -161,7 +162,9 @@ func (f *LinuxFactory) WireContainerd(bndlLoader *goci.BndlLoader, processBuilde
 		ProcessManager: nerd,
 	}
 
-	return containerdManager, peaRunner, pidGetter, nil
+	privilegeChecker := &privchecker.PrivilegeChecker{ContainerManager: nerd, Log: log}
+
+	return containerdManager, peaRunner, pidGetter, privilegeChecker, nil
 }
 
 func initBindMountAndPath(initPathOnHost string) (specs.Mount, string) {

@@ -309,6 +309,16 @@ func (n *Nerd) OOMEvents(log lager.Logger) <-chan *apievents.TaskOOM {
 	return oomEvents
 }
 
+func (n *Nerd) Spec(log lager.Logger, containerID string) (*specs.Spec, error) {
+	container, _, err := n.loadContainerAndTask(log, containerID)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug("getting-container-spec", lager.Data{"containerID": containerID})
+	return container.Spec(n.context)
+}
+
 func coerceEvent(event *ctrdevents.Envelope) (*apievents.TaskOOM, error) {
 	if event.Event == nil {
 		return nil, errors.New("empty event")

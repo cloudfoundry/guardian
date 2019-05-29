@@ -28,10 +28,11 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
-	"code.cloudfoundry.org/guardian/rundmc/peas/privchecker"
+	runcprivchecker "code.cloudfoundry.org/guardian/rundmc/peas/privchecker"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
+	containerdprivchecker "code.cloudfoundry.org/guardian/rundmc/runcontainerd/privchecker"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/pid"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
@@ -55,7 +56,7 @@ type GardenFactory interface {
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
 	WireExecRunner(runMode, runcRoot string, containerRootUID, containerRootGID uint32) runrunc.ExecRunner
 	WireRootfsFileCreator() depot.RootfsFileCreator
-	WireContainerd(*goci.BndlLoader, *processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, error)
+	WireContainerd(*goci.BndlLoader, *processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser, lager.Logger) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *containerdprivchecker.PrivilegeChecker, error)
 }
 
 type GdnCommand struct {
@@ -543,7 +544,6 @@ func (cmd *CommonCommand) wireContainerizer(
 	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin, Root: runcRoot}
 
 	pidFileReader := wirePidfileReader()
-	privilegeChecker := &privchecker.PrivilegeChecker{BundleLoader: bndlLoader, Depot: depot, Log: log}
 	runcStater := runrunc.NewStater(runcLogRunner, runcBinary)
 	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary, runcStater)
 
@@ -551,6 +551,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	var pidGetter peas.ProcessPidGetter
 	var peaPidGetter peas.ProcessPidGetter = &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}
 	var peaCreator *peas.PeaCreator
+	var privilegeChecker peas.PrivilegedGetter
 
 	userLookupper := users.LookupFunc(users.LookupUser)
 
@@ -566,7 +567,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	if cmd.useContainerd() {
 		var err error
 		var peaRunner *runcontainerd.RunContainerPea
-		ociRuntime, peaRunner, pidGetter, err = factory.WireContainerd(bndlLoader, processBuilder, userLookupper, wireExecerFunc, statser)
+		ociRuntime, peaRunner, pidGetter, privilegeChecker, err = factory.WireContainerd(bndlLoader, processBuilder, userLookupper, wireExecerFunc, statser, log)
 		if err != nil {
 			return nil, err
 		}
@@ -586,6 +587,7 @@ func (cmd *CommonCommand) wireContainerizer(
 			wireExecerFunc(pidGetter),
 			statser,
 		)
+		privilegeChecker = &runcprivchecker.PrivilegeChecker{BundleLoader: bndlLoader, Depot: depot, Log: log}
 	}
 
 	eventStore := rundmc.NewEventStore(properties)
