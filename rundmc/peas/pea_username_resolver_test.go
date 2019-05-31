@@ -94,7 +94,7 @@ var _ = Describe("PeaUsernameResolver", func() {
 
 	It("creates the resolve user helper pea with the correct params", func() {
 		Expect(peaCreator.CreatePeaCallCount()).To(Equal(1))
-		_, processSpec, _, handle, bundlePath := peaCreator.CreatePeaArgsForCall(0)
+		_, processSpec, _, handle := peaCreator.CreatePeaArgsForCall(0)
 		Expect(processSpec.Path).To(Equal("/path/to/process"))
 		Expect(processSpec.User).To(Equal("0:0"))
 		Expect(processSpec.BindMounts).To(ConsistOf(
@@ -105,7 +105,6 @@ var _ = Describe("PeaUsernameResolver", func() {
 		))
 		Expect(processSpec.Image).To(Equal(garden.ImageRef{URI: "image-uri"}))
 		Expect(handle).To(Equal("handle"))
-		Expect(bundlePath).To(Equal("/path/to/bundle"))
 	})
 
 	It("kills the resolve user helper pea", func() {

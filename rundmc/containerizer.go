@@ -52,7 +52,7 @@ type OCIRuntime interface {
 }
 
 type PeaCreator interface {
-	CreatePea(log lager.Logger, processSpec garden.ProcessSpec, pio garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error)
+	CreatePea(log lager.Logger, processSpec garden.ProcessSpec, pio garden.ProcessIO, sandboxHandle string) (garden.Process, error)
 }
 
 type NstarRunner interface {
@@ -185,7 +185,7 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 			spec.User = fmt.Sprintf("%d:%d", resolvedUID, resolvedGID)
 		}
 
-		return c.peaCreator.CreatePea(log, spec, io, handle, bundlePath)
+		return c.peaCreator.CreatePea(log, spec, io, handle)
 	}
 
 	if spec.BindMounts != nil {

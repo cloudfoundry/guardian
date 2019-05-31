@@ -16,24 +16,28 @@ import (
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/logging"
+	"code.cloudfoundry.org/guardian/rundmc/depot"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
 
 type WindowsExecRunner struct {
-	runtimePath   string
-	runMode       string
-	commandRunner commandrunner.CommandRunner
-	processes     map[string]*process
-	processMux    *sync.Mutex
+	runtimePath     string
+	commandRunner   commandrunner.CommandRunner
+	processes       map[string]*process
+	processMux      *sync.Mutex
+	bundleSaver     depot.BundleSaver
+	bundleLookupper depot.BundleLookupper
 }
 
-func NewWindowsExecRunner(runtimePath, runMode string, commandRunner commandrunner.CommandRunner) *WindowsExecRunner {
+func NewWindowsExecRunner(runtimePath, runMode string, commandRunner commandrunner.CommandRunner, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper) *WindowsExecRunner {
 	return &WindowsExecRunner{
-		runtimePath:   runtimePath,
-		runMode:       runMode,
-		commandRunner: commandRunner,
-		processes:     map[string]*process{},
-		processMux:    new(sync.Mutex),
+		runtimePath:     runtimePath,
+		commandRunner:   commandRunner,
+		processes:       map[string]*process{},
+		processMux:      new(sync.Mutex),
+		bundleSaver:     bundleSaver,
+		bundleLookupper: bundleLookupper,
 	}
 }
 
@@ -53,7 +57,7 @@ type process struct {
 }
 
 func (e *WindowsExecRunner) Run(
-	log lager.Logger, processID, processPath, sandboxHandle, _ string,
+	log lager.Logger, processID, sandboxHandle string,
 	pio garden.ProcessIO, _ bool, procJSON io.Reader, extraCleanup func() error,
 ) (garden.Process, error) {
 	log = log.Session("execrunner")
@@ -85,6 +89,20 @@ func (e *WindowsExecRunner) Run(
 	}
 	defer stderrW.Close()
 
+	bundlePath, err := e.bundleLookupper.Lookup(log, sandboxHandle)
+	if err != nil {
+		return nil, err
+	}
+
+	processPath := filepath.Join(bundlePath, "processes", processID)
+	if _, err := os.Stat(processPath); err == nil {
+		return nil, errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
+	}
+
+	if err := os.MkdirAll(processPath, 0700); err != nil {
+		return nil, err
+	}
+
 	var childLogW syscall.Handle
 
 	// GetCurrentProcess doesn't error
@@ -95,17 +113,13 @@ func (e *WindowsExecRunner) Run(
 		return nil, errors.Wrap(err, "duplicating log pipe handle")
 	}
 
-	cmd := exec.Command(e.runtimePath, "--debug", "--log-handle", strconv.FormatUint(uint64(childLogW), 10), "--log-format", "json", e.runMode, "--pid-file", filepath.Join(processPath, "pidfile"))
+	cmd := exec.Command(e.runtimePath, "--debug", "--log-handle", strconv.FormatUint(uint64(childLogW), 10), "--log-format", "json", "exec", "--pid-file", filepath.Join(processPath, "pidfile"))
 
-	if e.runMode == "exec" {
-		specPath := filepath.Join(processPath, "spec.json")
-		if err := writeProcessJSON(procJSON, specPath); err != nil {
-			return nil, err
-		}
-		cmd.Args = append(cmd.Args, "-p", specPath, sandboxHandle)
-	} else {
-		cmd.Args = append(cmd.Args, "--bundle", processPath, processID)
+	specPath := filepath.Join(processPath, "spec.json")
+	if err := writeProcessJSON(procJSON, specPath); err != nil {
+		return nil, err
 	}
+	cmd.Args = append(cmd.Args, "-p", specPath, sandboxHandle)
 
 	cmd.Stdin = stdinR
 	cmd.Stdout = stdoutW
@@ -183,6 +197,135 @@ func writeProcessJSON(procJSON io.Reader, specPath string) error {
 	}
 
 	return nil
+}
+
+func (e *WindowsExecRunner) RunPea(
+	log lager.Logger, processID string, processBundle goci.Bndl, sandboxHandle string,
+	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
+) (garden.Process, error) {
+	log = log.Session("execrunner")
+
+	log.Info("start")
+	defer log.Info("done")
+
+	logR, logW, err := os.Pipe()
+	if err != nil {
+		return nil, errors.Wrap(err, "creating log pipe")
+	}
+	defer logW.Close()
+
+	stdinR, stdinW, err := os.Pipe()
+	if err != nil {
+		return nil, errors.Wrap(err, "creating stdin pipe")
+	}
+	defer stdinR.Close()
+
+	stdoutR, stdoutW, err := os.Pipe()
+	if err != nil {
+		return nil, errors.Wrap(err, "creating stdout pipe")
+	}
+	defer stdoutW.Close()
+
+	stderrR, stderrW, err := os.Pipe()
+	if err != nil {
+		return nil, errors.Wrap(err, "creating stderr pipe")
+	}
+	defer stderrW.Close()
+
+	bundlePath, err := e.bundleLookupper.Lookup(log, sandboxHandle)
+	if err != nil {
+		return nil, err
+	}
+
+	processPath := filepath.Join(bundlePath, "processes", processID)
+	if _, err := os.Stat(processPath); err == nil {
+		return nil, errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
+	}
+
+	if err := os.MkdirAll(processPath, 0700); err != nil {
+		return nil, err
+	}
+
+	err = e.bundleSaver.Save(processBundle, processPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var childLogW syscall.Handle
+
+	// GetCurrentProcess doesn't error
+	self, _ := syscall.GetCurrentProcess()
+	// duplicate handle so it is inheritable by child process
+	err = syscall.DuplicateHandle(self, syscall.Handle(logW.Fd()), self, &childLogW, 0, true, syscall.DUPLICATE_SAME_ACCESS)
+	if err != nil {
+		return nil, errors.Wrap(err, "duplicating log pipe handle")
+	}
+
+	cmd := exec.Command(e.runtimePath, "--debug", "--log-handle", strconv.FormatUint(uint64(childLogW), 10), "--log-format", "json", "run", "--pid-file", filepath.Join(processPath, "pidfile"))
+	cmd.Args = append(cmd.Args, "--bundle", processPath, processID)
+	cmd.Stdin = stdinR
+	cmd.Stdout = stdoutW
+	cmd.Stderr = stderrW
+
+	if err := e.commandRunner.Start(cmd); err != nil {
+		return nil, errors.Wrap(err, "execing runtime plugin")
+	}
+
+	go streamLogs(log, logR)
+
+	cleanup := func() error {
+		e.processMux.Lock()
+		delete(e.processes, processID)
+		e.processMux.Unlock()
+
+		if extraCleanup != nil {
+			return extraCleanup()
+		}
+
+		return nil
+	}
+
+	proc := &process{
+		id:           processID,
+		cleanup:      cleanup,
+		logger:       log,
+		stdin:        stdinW,
+		stdout:       stdoutR,
+		stderr:       stderrR,
+		stdoutWriter: NewDynamicMultiWriter(),
+		stderrWriter: NewDynamicMultiWriter(),
+		outputWg:     &sync.WaitGroup{},
+		exitMutex:    new(sync.RWMutex),
+	}
+
+	e.processMux.Lock()
+	e.processes[processID] = proc
+	e.processMux.Unlock()
+
+	proc.stream(pio, false)
+
+	proc.exitMutex.Lock()
+
+	go func() {
+		if err := e.commandRunner.Wait(cmd); err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
+					proc.exitCode = status.ExitStatus()
+				} else {
+					proc.exitCode = 1
+					proc.exitErr = errors.New("couldn't get WaitStatus")
+				}
+			} else {
+				proc.exitCode = 1
+				proc.exitErr = err
+			}
+		}
+		// the streamLogs go func will only exit once this handle is closed
+		syscall.CloseHandle(childLogW)
+		proc.exitMutex.Unlock()
+	}()
+
+	return proc, nil
 }
 
 func (e *WindowsExecRunner) Attach(log lager.Logger, processID string, pio garden.ProcessIO, _ string) (garden.Process, error) {

@@ -62,7 +62,7 @@ type PeaCreator struct {
 	NestedCgroups    bool
 }
 
-func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (_ garden.Process, theErr error) {
+func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle string) (_ garden.Process, theErr error) {
 	errs := func(action string, err error) (garden.Process, error) {
 		wrappedErr := errorwrapper.Wrap(err, action)
 		log.Error(action, wrappedErr)
@@ -148,36 +148,14 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		return errs("generating-bundle", multierror.Append(genErr, destroyErr))
 	}
 
-	peaBundlePath := filepath.Join(sandboxBundlePath, "processes", processID)
-	if mkdirErr := os.MkdirAll(peaBundlePath, 0700); mkdirErr != nil {
-		return nil, mkdirErr
-	}
-	defer func() {
-		if theErr == nil {
-			return
-		}
-
-		if err := os.RemoveAll(peaBundlePath); err != nil {
-			log.Info("failed-to-remove-pea-process-dir: "+err.Error(), lager.Data{"process_id": processID})
-		}
-	}()
-
 	preparedProcess := p.ProcessBuilder.BuildProcess(bndl, processSpec, userUID, userGID)
-
 	bndl = bndl.WithProcess(*preparedProcess)
-	if saveErr := p.BundleSaver.Save(bndl, peaBundlePath); saveErr != nil {
-		destroyErr := p.Volumizer.Destroy(log, processID)
-		return errs("saving-bundle", multierror.Append(saveErr, destroyErr))
-	}
 
 	extraCleanup := func() error {
 		return p.PeaCleaner.Clean(log, processID)
 	}
 
-	proc, runErr := p.ExecRunner.Run(
-		log, processID, peaBundlePath, sandboxHandle, sandboxBundlePath,
-		procIO, preparedProcess.Terminal, nil, extraCleanup,
-	)
+	proc, runErr := p.ExecRunner.RunPea(log, processID, bndl, sandboxHandle, procIO, preparedProcess.Terminal, nil, extraCleanup)
 	if runErr != nil {
 		destroyErr := p.Volumizer.Destroy(log, processID)
 		return nil, multierror.Append(runErr, destroyErr)

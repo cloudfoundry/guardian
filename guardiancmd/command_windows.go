@@ -66,8 +66,8 @@ func (f *WindowsFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 	return gardener.NewVolumeProvider(noop, noop, gardener.CommandFactory(preparerootfs.Command), f.commandRunner, 0, 0)
 }
 
-func (f *WindowsFactory) WireExecRunner(runMode, runcRoot string, _, _ uint32) runrunc.ExecRunner {
-	return execrunner.NewWindowsExecRunner(f.config.Runtime.Plugin, runMode, f.commandRunner)
+func (f *WindowsFactory) WireExecRunner(runMode, runcRoot string, _, _ uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper) runrunc.ExecRunner {
+	return execrunner.NewWindowsExecRunner(f.config.Runtime.Plugin, runMode, f.commandRunner, bundleSaver, bundleLookupper)
 }
 
 func (f *WindowsFactory) WireRootfsFileCreator() depot.RootfsFileCreator {

@@ -123,12 +123,8 @@ var _ = Describe("PeaCreator", func() {
 			// We don't bother testing that some fake garden.Process is returned by
 			// the mock ExecRunner, we leave this verification to our integration
 			// tests.
-			_, err := peaCreator.CreatePea(log, processSpec, pio, ctrHandle, ctrBundleDir)
+			_, err := peaCreator.CreatePea(log, processSpec, pio, ctrHandle)
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("creates the bundle directory", func() {
-			Expect(filepath.Join(ctrBundleDir, "processes", processSpec.ID)).To(BeADirectory())
 		})
 
 		It("checks the sandbox container's privilege", func() {
@@ -256,25 +252,15 @@ var _ = Describe("PeaCreator", func() {
 			Expect(actualContainerGID).To(Equal(5))
 		})
 
-		It("saves the bundle (containing the built process) to disk", func() {
-			Expect(bundleSaver.SaveCallCount()).To(Equal(1))
-			actualBundle, actualBundlePath := bundleSaver.SaveArgsForCall(0)
-			expectedBundle := generatedBundle.WithProcess(specs.Process{Cwd: "some-cwd"})
-			Expect(actualBundle).To(Equal(expectedBundle))
-			Expect(actualBundlePath).To(Equal(filepath.Join(ctrBundleDir, "processes", processSpec.ID)))
-		})
-
 		It("creates a runc container based on the bundle", func() {
-			Eventually(execRunner.RunCallCount()).Should(Equal(1))
-			_, actualProcessID, actualProcessPath, actualSandboxHandle, actualSandboxBundlePath,
-				actualPio, actualTTY, actualProcJSON, _ := execRunner.RunArgsForCall(0)
+			Eventually(execRunner.RunPeaCallCount()).Should(Equal(1))
+			_, actualProcessID, actualBundle, actualSandboxHandle, actualPio, actualTTY, actualProcJSON, _ := execRunner.RunPeaArgsForCall(0)
 			Expect(actualProcessID).To(Equal(processSpec.ID))
-			Expect(actualProcessPath).To(Equal(filepath.Join(ctrBundleDir, "processes", processSpec.ID)))
 			Expect(actualSandboxHandle).To(Equal(ctrHandle))
-			Expect(actualSandboxBundlePath).To(Equal(ctrBundleDir))
 			Expect(actualPio).To(Equal(pio))
 			Expect(actualTTY).To(BeFalse())
 			Expect(actualProcJSON).To(BeNil())
+			Expect(actualBundle).To(Equal(generatedBundle.WithProcess(*builtProcess)))
 		})
 
 		Context("when the runtime spec uses a TTY", func() {
@@ -283,32 +269,21 @@ var _ = Describe("PeaCreator", func() {
 			})
 
 			It("runs with one", func() {
-				Eventually(execRunner.RunCallCount()).Should(Equal(1))
-				_, _, _, _, _, _, actualTTY, _, _ := execRunner.RunArgsForCall(0)
+				Eventually(execRunner.RunPeaCallCount()).Should(Equal(1))
+				_, _, _, _, _, actualTTY, _, _ := execRunner.RunPeaArgsForCall(0)
 				Expect(actualTTY).To(BeTrue())
 			})
 		})
 
 		It("cleans up the pea", func() {
-			Eventually(execRunner.RunCallCount()).Should(Equal(1))
-			_, _, _, _, _, _, _, _, cleanup := execRunner.RunArgsForCall(0)
+			Eventually(execRunner.RunPeaCallCount()).Should(Equal(1))
+			_, _, _, _, _, _, _, cleanup := execRunner.RunPeaArgsForCall(0)
 			Expect(cleanup()).To(Succeed())
 			Expect(peaCleaner.CleanCallCount()).To(Equal(1))
 			_, processID := peaCleaner.CleanArgsForCall(0)
 			Expect(processID).To(Equal(processSpec.ID))
 		})
 
-		Context("when the process spec has no ID", func() {
-			BeforeEach(func() {
-				processSpec.ID = ""
-			})
-
-			It("generates process ID", func() {
-				processDirs, err := ioutil.ReadDir(filepath.Join(ctrBundleDir, "processes"))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(processDirs).To(HaveLen(1))
-			})
-		})
 		builtProcess = &specs.Process{Cwd: "some-cwd"}
 
 		Context("when no working dir is specified", func() {
@@ -367,7 +342,7 @@ var _ = Describe("PeaCreator", func() {
 		)
 
 		JustBeforeEach(func() {
-			_, createErr = peaCreator.CreatePea(log, processSpec, garden.ProcessIO{}, ctrHandle, ctrBundleDir)
+			_, createErr = peaCreator.CreatePea(log, processSpec, garden.ProcessIO{}, ctrHandle)
 		})
 
 		Context("when the network depot returns an error", func() {
@@ -415,31 +390,6 @@ var _ = Describe("PeaCreator", func() {
 			})
 		})
 
-		Context("when the bundle saver returns an error", func() {
-			BeforeEach(func() {
-				bundleSaver.SaveReturns(errors.New("papaya"))
-			})
-
-			It("returns a wrapped error", func() {
-				Expect(createErr).To(MatchError(ContainSubstring("papaya")))
-			})
-
-			It("invokes cleanup on the volumizer", func() {
-				Expect(volumizer.DestroyCallCount()).To(Equal(1))
-			})
-
-			Context("and volumizer.Destroy returns an error", func() {
-				BeforeEach(func() {
-					volumizer.DestroyReturns(errors.New("Pikachu!"))
-				})
-
-				It("contains both error strings in the returned error", func() {
-					Expect(createErr.Error()).To(ContainSubstring("Pikachu!"))
-					Expect(createErr.Error()).To(ContainSubstring("papaya"))
-				})
-			})
-		})
-
 		Context("when the volume creator returns an error", func() {
 			BeforeEach(func() {
 				volumizer.CreateReturns(specs.Spec{}, errors.New("coconut"))
@@ -462,7 +412,7 @@ var _ = Describe("PeaCreator", func() {
 
 		Context("when the exec runner returns an error", func() {
 			BeforeEach(func() {
-				execRunner.RunReturns(nil, errors.New("execrunner-error"))
+				execRunner.RunPeaReturns(nil, errors.New("execrunner-error"))
 			})
 
 			It("returns an error", func() {

@@ -46,7 +46,7 @@ func (r *PeaUsernameResolver) ResolveUser(log lager.Logger, bundlePath, handle s
 			User:       "0:0",
 			BindMounts: []garden.BindMount{gardenInitBindMount},
 			Image:      image,
-		}, garden.ProcessIO{}, handle, bundlePath,
+		}, garden.ProcessIO{}, handle,
 	)
 	if err != nil {
 		return -1, -1, err

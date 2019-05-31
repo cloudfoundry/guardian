@@ -2,8 +2,12 @@ package runcontainerd
 
 import (
 	"io"
+	"os"
+	"path/filepath"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/depot"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -13,15 +17,44 @@ type PeaManager interface {
 	Delete(log lager.Logger, containerID string) error
 }
 
+//go:generate counterfeiter . BundleLookupper
+type BundleLookupper interface {
+	Lookup(log lager.Logger, handle string) (string, error)
+}
+
 type RunContainerPea struct {
-	PeaManager     PeaManager
-	ProcessManager ProcessManager
+	PeaManager      PeaManager
+	ProcessManager  ProcessManager
+	BundleLookupper BundleLookupper
+	BundleSaver     depot.BundleSaver
 }
 
 func (r *RunContainerPea) Run(
-	log lager.Logger, processID, processBundlePath, sandboxHandle, sandboxBundlePath string,
+	log lager.Logger, processID, sandboxHandle string,
 	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 ) (garden.Process, error) {
+	return nil, nil
+}
+
+func (r *RunContainerPea) RunPea(
+	log lager.Logger, processID string, processBundle goci.Bndl, sandboxHandle string,
+	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
+) (garden.Process, error) {
+
+	sandboxBundlePath, err := r.BundleLookupper.Lookup(log, sandboxHandle)
+	if err != nil {
+		return nil, err
+	}
+
+	processBundlePath := filepath.Join(sandboxBundlePath, "processes", processID)
+	if err := os.MkdirAll(processBundlePath, 0700); err != nil {
+		return nil, err
+	}
+
+	err = r.BundleSaver.Save(processBundle, processBundlePath)
+	if err != nil {
+		return nil, err
+	}
 
 	if err := r.PeaManager.Create(log, processBundlePath, processID, pio); err != nil {
 		return &Process{}, err

@@ -3,6 +3,7 @@ package dadoo
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,7 +18,9 @@ import (
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/logging"
+	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/lager"
 )
@@ -31,14 +34,16 @@ type ExecRunner struct {
 	cleanupProcessDirsOnWait bool
 	processes                map[string]*process
 	processesMutex           *sync.Mutex
-	runMode                  string
 	containerRootHostUID     uint32
 	containerRootHostGID     uint32
+	bundleSaver              depot.BundleSaver
+	bundleLookupper          depot.BundleLookupper
 }
 
 func NewExecRunner(
 	dadooPath, runcPath, runcRoot string, signallerFactory *signals.SignallerFactory,
 	commandRunner commandrunner.CommandRunner, shouldCleanup bool, runMode string, containerRootHostUID, containerRootHostGID uint32,
+	bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper,
 ) *ExecRunner {
 	return &ExecRunner{
 		dadooPath:                dadooPath,
@@ -49,14 +54,25 @@ func NewExecRunner(
 		cleanupProcessDirsOnWait: shouldCleanup,
 		processes:                map[string]*process{},
 		processesMutex:           new(sync.Mutex),
-		runMode:                  runMode,
 		containerRootHostUID:     containerRootHostUID,
 		containerRootHostGID:     containerRootHostGID,
+		bundleSaver:              bundleSaver,
+		bundleLookupper:          bundleLookupper,
 	}
 }
 
+// ExecRunner
+// 	Run
+// 		processDepot.createProcessDir
+// 		processRunner.runProcess
+//
+// 	RunPea
+// 		processDepot.createProcessDir
+// 		bundleSaver.saveBundle
+// 		processRunner.runProcess
+
 func (d *ExecRunner) Run(
-	log lager.Logger, processID, processPath, sandboxHandle, sandboxBundlePath string,
+	log lager.Logger, processID, sandboxHandle string,
 	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 ) (proc garden.Process, theErr error) {
 	log = log.Session("execrunner", lager.Data{"id": processID})
@@ -82,17 +98,186 @@ func (d *ExecRunner) Run(
 	}
 	defer syncr.Close()
 
+	bundlePath, err := d.bundleLookupper.Lookup(log, sandboxHandle)
+	if err != nil {
+		return nil, err
+	}
+
+	processPath := filepath.Join(bundlePath, "processes", processID)
+	if _, err := os.Stat(processPath); err == nil {
+		return nil, errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
+	}
+
+	if err := os.MkdirAll(processPath, 0700); err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		if theErr == nil {
+			return
+		}
+
+		if err := os.RemoveAll(processPath); err != nil {
+			log.Info("failed-to-remove-process-dir: "+err.Error(), lager.Data{"process_id": processID})
+		}
+	}()
+
 	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"), extraCleanup)
 	if err := process.mkfifos(d.containerRootHostUID, d.containerRootHostGID); err != nil {
 		return nil, err
 	}
 
 	cmd := buildDadooCommand(
-		tty, d.dadooPath, d.runMode, d.runcPath, d.runcRoot, processID, processPath, sandboxHandle,
+		tty, d.dadooPath, "exec", d.runcPath, d.runcRoot, processID, processPath, sandboxHandle,
 		[]*os.File{fd3w, logw, syncw}, procJSON,
 	)
 
-	dadooLogFilePath := filepath.Join(sandboxBundlePath, fmt.Sprintf("dadoo.%s.log", processID))
+	dadooLogFilePath := filepath.Join(bundlePath, fmt.Sprintf("dadoo.%s.log", processID))
+	dadooLogFile, err := os.Create(dadooLogFilePath)
+	if err != nil {
+		return nil, err
+	}
+	defer dadooLogFile.Close()
+	cmd.Stdout = dadooLogFile
+	cmd.Stderr = dadooLogFile
+
+	if err := d.commandRunner.Start(cmd); err != nil {
+		return nil, err
+	}
+	go func() {
+		// wait on spawned process to avoid zombies
+		d.commandRunner.Wait(cmd)
+		if copyErr := copyDadooLogsToGuardianLogger(dadooLogFilePath, log); copyErr != nil {
+			log.Error("reading-dadoo-log-file", copyErr)
+		}
+	}()
+
+	fd3w.Close()
+	logw.Close()
+	syncw.Close()
+
+	stdin, stdout, stderr, err := process.openPipes(pio)
+	if err != nil {
+		return nil, err
+	}
+
+	syncMsg := make([]byte, 1)
+	_, err = syncr.Read(syncMsg)
+	if err != nil {
+		return nil, err
+	}
+
+	process.streamData(pio, stdin, stdout, stderr)
+
+	doneReadingRuncLogs := make(chan []byte)
+	go func(log lager.Logger, logs io.Reader, logTag string, done chan<- []byte) {
+		scanner := bufio.NewScanner(logs)
+
+		nextLogLine := []byte("")
+		for scanner.Scan() {
+			nextLogLine = scanner.Bytes()
+			logging.ForwardRuncLogsToLager(log, logTag, nextLogLine)
+		}
+		done <- nextLogLine
+	}(log, logr, "runc", doneReadingRuncLogs)
+
+	defer func() {
+		lastLogLine := <-doneReadingRuncLogs
+		if theErr == nil {
+			return
+		}
+
+		if isNoSuchExecutable(lastLogLine) {
+			theErr = garden.ExecutableNotFoundError{Message: logging.MsgFromLastLogLine(lastLogLine)}
+			return
+		}
+
+		theErr = logging.WrapWithErrorFromLastLogLine("runc exec", theErr, lastLogLine)
+	}()
+
+	log.Info("read-exit-fd")
+	runcExitStatus := make([]byte, 1)
+	bytesRead, err := fd3r.Read(runcExitStatus)
+	if bytesRead == 0 || err != nil {
+		return nil, fmt.Errorf("failed to read runc exit code %v", err)
+	}
+	log.Info("runc-exit-status", lager.Data{"status": runcExitStatus[0]})
+	if runcExitStatus[0] != 0 {
+		return nil, fmt.Errorf("exit status %d", runcExitStatus[0])
+	}
+
+	return process, nil
+}
+
+func (d *ExecRunner) RunPea(
+	log lager.Logger, processID string, processBundle goci.Bndl, sandboxHandle string,
+	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
+) (proc garden.Process, theErr error) {
+	log = log.Session("execrunner", lager.Data{"id": processID})
+
+	log.Info("start")
+	defer log.Info("done")
+
+	fd3r, fd3w, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	defer fd3r.Close()
+
+	logr, logw, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	defer logr.Close()
+
+	syncr, syncw, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	defer syncr.Close()
+
+	bundlePath, err := d.bundleLookupper.Lookup(log, sandboxHandle)
+	if err != nil {
+		return nil, err
+	}
+
+	processPath := filepath.Join(bundlePath, "processes", processID)
+	if _, err := os.Stat(processPath); err == nil {
+		return nil, errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
+	}
+
+	if err := os.MkdirAll(processPath, 0700); err != nil {
+		return nil, err
+	}
+
+	// TODO: runpea only
+	err = d.bundleSaver.Save(processBundle, processPath)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: runpea only
+
+	defer func() {
+		if theErr == nil {
+			return
+		}
+
+		if err := os.RemoveAll(processPath); err != nil {
+			log.Info("failed-to-remove-process-dir: "+err.Error(), lager.Data{"process_id": processID})
+		}
+	}()
+
+	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"), extraCleanup)
+	if err := process.mkfifos(d.containerRootHostUID, d.containerRootHostGID); err != nil {
+		return nil, err
+	}
+
+	cmd := buildDadooCommand(
+		tty, d.dadooPath, "run", d.runcPath, d.runcRoot, processID, processPath, sandboxHandle,
+		[]*os.File{fd3w, logw, syncw}, procJSON,
+	)
+
+	dadooLogFilePath := filepath.Join(bundlePath, fmt.Sprintf("dadoo.%s.log", processID))
 	dadooLogFile, err := os.Create(dadooLogFilePath)
 	if err != nil {
 		return nil, err

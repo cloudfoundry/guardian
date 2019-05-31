@@ -10,14 +10,13 @@ import (
 )
 
 type FakePeaCreator struct {
-	CreatePeaStub        func(lager.Logger, garden.ProcessSpec, garden.ProcessIO, string, string) (garden.Process, error)
+	CreatePeaStub        func(lager.Logger, garden.ProcessSpec, garden.ProcessIO, string) (garden.Process, error)
 	createPeaMutex       sync.RWMutex
 	createPeaArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 garden.ProcessSpec
 		arg3 garden.ProcessIO
 		arg4 string
-		arg5 string
 	}
 	createPeaReturns struct {
 		result1 garden.Process
@@ -31,7 +30,7 @@ type FakePeaCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakePeaCreator) CreatePea(arg1 lager.Logger, arg2 garden.ProcessSpec, arg3 garden.ProcessIO, arg4 string, arg5 string) (garden.Process, error) {
+func (fake *FakePeaCreator) CreatePea(arg1 lager.Logger, arg2 garden.ProcessSpec, arg3 garden.ProcessIO, arg4 string) (garden.Process, error) {
 	fake.createPeaMutex.Lock()
 	ret, specificReturn := fake.createPeaReturnsOnCall[len(fake.createPeaArgsForCall)]
 	fake.createPeaArgsForCall = append(fake.createPeaArgsForCall, struct {
@@ -39,12 +38,11 @@ func (fake *FakePeaCreator) CreatePea(arg1 lager.Logger, arg2 garden.ProcessSpec
 		arg2 garden.ProcessSpec
 		arg3 garden.ProcessIO
 		arg4 string
-		arg5 string
-	}{arg1, arg2, arg3, arg4, arg5})
-	fake.recordInvocation("CreatePea", []interface{}{arg1, arg2, arg3, arg4, arg5})
+	}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("CreatePea", []interface{}{arg1, arg2, arg3, arg4})
 	fake.createPeaMutex.Unlock()
 	if fake.CreatePeaStub != nil {
-		return fake.CreatePeaStub(arg1, arg2, arg3, arg4, arg5)
+		return fake.CreatePeaStub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -59,17 +57,17 @@ func (fake *FakePeaCreator) CreatePeaCallCount() int {
 	return len(fake.createPeaArgsForCall)
 }
 
-func (fake *FakePeaCreator) CreatePeaCalls(stub func(lager.Logger, garden.ProcessSpec, garden.ProcessIO, string, string) (garden.Process, error)) {
+func (fake *FakePeaCreator) CreatePeaCalls(stub func(lager.Logger, garden.ProcessSpec, garden.ProcessIO, string) (garden.Process, error)) {
 	fake.createPeaMutex.Lock()
 	defer fake.createPeaMutex.Unlock()
 	fake.CreatePeaStub = stub
 }
 
-func (fake *FakePeaCreator) CreatePeaArgsForCall(i int) (lager.Logger, garden.ProcessSpec, garden.ProcessIO, string, string) {
+func (fake *FakePeaCreator) CreatePeaArgsForCall(i int) (lager.Logger, garden.ProcessSpec, garden.ProcessIO, string) {
 	fake.createPeaMutex.RLock()
 	defer fake.createPeaMutex.RUnlock()
 	argsForCall := fake.createPeaArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakePeaCreator) CreatePeaReturns(result1 garden.Process, result2 error) {
