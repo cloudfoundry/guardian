@@ -17,11 +17,15 @@ import (
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/depot/depotfakes"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
+	"code.cloudfoundry.org/guardian/rundmc/execrunner/execrunnerfakes"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("WindowsExecRunner", func() {
@@ -39,6 +43,7 @@ var _ = Describe("WindowsExecRunner", func() {
 		processIO             garden.ProcessIO
 		runErr                error
 		processID             string
+		bundlePath            string
 		processPath           string
 		logs                  string
 		wincExitCode          int
@@ -46,17 +51,30 @@ var _ = Describe("WindowsExecRunner", func() {
 		wincStartErrors       bool
 		waitBeforeStdoutWrite bool
 		proceed               chan struct{}
+		bundleSaver           *depotfakes.FakeBundleSaver
+		bundleLookupper       *depotfakes.FakeBundleLookupper
+		processDepot          *execrunnerfakes.FakeProcessDepot
 	)
 
 	BeforeEach(func() {
 		cmdRunner = fake_command_runner.New()
 		logger = lagertest.NewTestLogger("test-execrunner-windows")
 
-		execRunner = execrunner.NewWindowsExecRunner(runtimePath, "exec", cmdRunner)
-		processID = "process-id"
+		bundleSaver = new(depotfakes.FakeBundleSaver)
+		bundleLookupper = new(depotfakes.FakeBundleLookupper)
+		processDepot = new(execrunnerfakes.FakeProcessDepot)
+
 		var err error
-		processPath, err = ioutil.TempDir("", "processes")
-		Expect(err).ToNot(HaveOccurred())
+		bundlePath, err = ioutil.TempDir("", "dadooexecrunnerbundle")
+		Expect(err).NotTo(HaveOccurred())
+		bundleLookupper.LookupReturns(bundlePath, nil)
+
+		execRunner = execrunner.NewWindowsExecRunner(runtimePath, cmdRunner, bundleSaver, bundleLookupper, processDepot)
+		processID = "process-id"
+		processPath = filepath.Join(bundlePath, "processes", processID)
+		Expect(os.MkdirAll(processPath, 0700)).To(Succeed())
+
+		processDepot.CreateProcessDirReturns(processPath, nil)
 
 		wincWaitErrors = false
 		wincStartErrors = false
@@ -127,9 +145,7 @@ var _ = Describe("WindowsExecRunner", func() {
 			process, runErr = execRunner.Run(
 				logger,
 				processID,
-				processPath,
 				"handle",
-				"not-used",
 				processIO,
 				false,
 				bytes.NewBufferString("some-process"),
@@ -139,6 +155,13 @@ var _ = Describe("WindowsExecRunner", func() {
 
 		It("does not error", func() {
 			Expect(runErr).NotTo(HaveOccurred())
+		})
+
+		It("creates the process folder in the depot", func() {
+			Expect(processDepot.CreateProcessDirCallCount()).To(Equal(1))
+			_, actualSandboxHandle, actualProcessID := processDepot.CreateProcessDirArgsForCall(0)
+			Expect(actualSandboxHandle).To(Equal("handle"))
+			Expect(actualProcessID).To(Equal(processID))
 		})
 
 		It("runs the runtime plugin", func() {
@@ -162,53 +185,187 @@ var _ = Describe("WindowsExecRunner", func() {
 			Expect(string(actualContents)).To(Equal("some-process"))
 		})
 
-		Context("when the exec mode is 'run'", func() {
+		When("creating the process folder in the depot fails", func() {
 			BeforeEach(func() {
-				execRunner = execrunner.NewWindowsExecRunner(runtimePath, "run", cmdRunner)
+				processDepot.CreateProcessDirReturns("", errors.New("create-process-dir-error"))
 			})
 
-			It("executes the runtime plugin with the correct arguments", func() {
-				Expect(cmdRunner.StartedCommands()).To(HaveLen(1))
-				Expect(cmdRunner.StartedCommands()[0].Path).To(Equal(runtimePath))
-				Expect(cmdRunner.StartedCommands()[0].Args).To(ConsistOf(
-					runtimePath,
-					"--debug",
-					"--log-handle", MatchRegexp("\\d+"),
-					"--log-format", "json",
-					"run",
-					"--pid-file", MatchRegexp(".*"),
-					"--bundle", processPath,
-					processID,
-				))
+			It("fails", func() {
+				Expect(runErr).To(MatchError("create-process-dir-error"))
+			})
+		})
+
+		Describe("logging", func() {
+			BeforeEach(func() {
+				processID = "some-process-id"
+				logs = `{"time":"2016-03-02T13:56:38Z", "level":"warning", "msg":"some-message"}
+{"time":"2016-03-02T13:56:38Z", "level":"error", "msg":"some-error"}`
 			})
 
-			Describe("cleanup", func() {
-				var called bool
+			It("forwards the logs to lager", func() {
+				var execLogs []lager.LogFormat
+				Eventually(func() []lager.LogFormat {
+					execLogs = []lager.LogFormat{}
+					for _, log := range logger.Logs() {
+						if log.Message == "test-execrunner-windows.execrunner.winc" {
+							execLogs = append(execLogs, log)
+						}
+					}
+					return execLogs
+				}).Should(HaveLen(2))
 
+				Expect(execLogs[0].Data).To(HaveKeyWithValue("message", "some-message"))
+			})
+
+			It("the gofunc streaming logs exits", func() {
+				Eventually(func() bool {
+					found := false
+					for _, log := range logger.Logs() {
+						if log.Message == "test-execrunner-windows.execrunner.done-streaming-winc-logs" {
+							found = true
+						}
+					}
+					return found
+				}).Should(BeTrue())
+			})
+		})
+
+		Context("when a process ID is passed", func() {
+			BeforeEach(func() {
+				processID = "frank"
+			})
+
+			It("uses it", func() {
+				Expect(process.ID()).To(Equal("frank"))
+			})
+		})
+
+		Context("when the runtime plugin can't be started", func() {
+			BeforeEach(func() {
+				wincStartErrors = true
+			})
+
+			It("returns an error", func() {
+				Expect(runErr).To(MatchError("execing runtime plugin: oops"))
+			})
+		})
+
+		Context("when stdin, stdout, and stderr streams are passed in", func() {
+			var (
+				stdout *bytes.Buffer
+				stderr *bytes.Buffer
+			)
+
+			BeforeEach(func() {
+				stdout = new(bytes.Buffer)
+				stderr = new(bytes.Buffer)
+				processIO = garden.ProcessIO{Stdin: strings.NewReader("omg"), Stdout: stdout, Stderr: stderr}
+
+			})
+
+			It("passes them to the command", func() {
+				_, err := process.Wait()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(stdout.String()).To(Equal("hello stdout"))
+				Expect(stderr.String()).To(Equal("omg"))
+			})
+		})
+	})
+
+	Describe("RunPea", func() {
+		JustBeforeEach(func() {
+			process, runErr = execRunner.RunPea(
+				logger,
+				processID,
+				goci.Bndl{Spec: specs.Spec{Version: "my-bundle"}},
+				"handle",
+				processIO,
+				false,
+				bytes.NewBufferString("some-process"),
+				cleanupFunc,
+			)
+		})
+
+		It("succeeds", func() {
+			Expect(runErr).NotTo(HaveOccurred())
+		})
+
+		It("executes the runtime plugin with the correct arguments", func() {
+			Expect(cmdRunner.StartedCommands()).To(HaveLen(1))
+			Expect(cmdRunner.StartedCommands()[0].Path).To(Equal(runtimePath))
+			Expect(cmdRunner.StartedCommands()[0].Args).To(ConsistOf(
+				runtimePath,
+				"--debug",
+				"--log-handle", MatchRegexp("\\d+"),
+				"--log-format", "json",
+				"run",
+				"--pid-file", MatchRegexp(".*"),
+				"--bundle", processPath,
+				processID,
+			))
+		})
+
+		It("creates the process folder in the depot", func() {
+			Expect(processDepot.CreateProcessDirCallCount()).To(Equal(1))
+			_, actualSandboxHandle, actualProcessID := processDepot.CreateProcessDirArgsForCall(0)
+			Expect(actualSandboxHandle).To(Equal("handle"))
+			Expect(actualProcessID).To(Equal(processID))
+		})
+
+		It("writes the bundle spec", func() {
+			Expect(bundleSaver.SaveCallCount()).To(Equal(1))
+			actualBundle, actualPath := bundleSaver.SaveArgsForCall(0)
+			Expect(actualBundle.Spec.Version).To(Equal("my-bundle"))
+			Expect(actualPath).To(Equal(processPath))
+		})
+
+		When("creating the process folder in the depot fails", func() {
+			BeforeEach(func() {
+				processDepot.CreateProcessDirReturns("", errors.New("create-process-dir-error"))
+			})
+
+			It("fails", func() {
+				Expect(runErr).To(MatchError("create-process-dir-error"))
+			})
+		})
+
+		When("saving the bundle in the depot fails", func() {
+			BeforeEach(func() {
+				bundleSaver.SaveReturns(errors.New("save-error"))
+			})
+
+			It("fails", func() {
+				Expect(runErr).To(MatchError("save-error"))
+			})
+		})
+
+		Describe("cleanup", func() {
+			var called bool
+
+			BeforeEach(func() {
+				called = false
+				cleanupFunc = func() error {
+					called = true
+					return nil
+				}
+			})
+
+			It("performs extra cleanup after Wait returns", func() {
+				process.Wait()
+				Expect(called).To(BeTrue())
+			})
+
+			Context("when the extra cleanup returns an error", func() {
 				BeforeEach(func() {
-					called = false
 					cleanupFunc = func() error {
-						called = true
-						return nil
+						return errors.New("a-cleanup-error")
 					}
 				})
 
-				It("performs extra cleanup after Wait returns", func() {
+				It("logs the error", func() {
 					process.Wait()
-					Expect(called).To(BeTrue())
-				})
-
-				Context("when the extra cleanup returns an error", func() {
-					BeforeEach(func() {
-						cleanupFunc = func() error {
-							return errors.New("a-cleanup-error")
-						}
-					})
-
-					It("logs the error", func() {
-						process.Wait()
-						Expect(string(logger.Buffer().Contents())).To(ContainSubstring("a-cleanup-error"))
-					})
+					Expect(string(logger.Buffer().Contents())).To(ContainSubstring("a-cleanup-error"))
 				})
 			})
 		})
@@ -301,9 +458,7 @@ var _ = Describe("WindowsExecRunner", func() {
 			process, err = execRunner.Run(
 				lagertest.NewTestLogger("execrunner-windows"),
 				processID,
-				processPath,
 				"handle",
-				"not-used",
 				processIO,
 				false,
 				bytes.NewBufferString("some-process"),
@@ -409,14 +564,13 @@ var _ = Describe("WindowsExecRunner", func() {
 			process, runErr = execRunner.Run(
 				logger,
 				processID,
-				processPath,
 				"handle",
-				"not-used",
 				processIO,
 				false,
 				bytes.NewBufferString("some-process"),
 				cleanupFunc,
 			)
+			Expect(runErr).NotTo(HaveOccurred())
 		})
 
 		It("returns the process with the given id", func() {

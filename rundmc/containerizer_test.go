@@ -171,10 +171,9 @@ var _ = Describe("Rundmc", func() {
 				fakeDepot.LookupReturns("some-bundle-path", nil)
 				containerizer.Run(logger, "some-handle", processSpec, pio)
 				Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(1))
-				_, actualProcessSpec, actualProcessIO, actualHandle, actualBundlePath := fakePeaCreator.CreatePeaArgsForCall(0)
+				_, actualProcessSpec, actualProcessIO, actualHandle := fakePeaCreator.CreatePeaArgsForCall(0)
 				Expect(actualProcessSpec).To(Equal(processSpec))
 				Expect(actualHandle).To(Equal("some-handle"))
-				Expect(actualBundlePath).To(Equal("some-bundle-path"))
 				Expect(actualProcessIO).To(Equal(pio))
 			})
 
@@ -222,7 +221,7 @@ var _ = Describe("Rundmc", func() {
 						Expect(resolverInputUsername).To(Equal("foobar"))
 
 						Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(1))
-						_, createdPeaProcessSpec, _, _, _ := fakePeaCreator.CreatePeaArgsForCall(0)
+						_, createdPeaProcessSpec, _, _ := fakePeaCreator.CreatePeaArgsForCall(0)
 						Expect(createdPeaProcessSpec.User).To(Equal("1:2"))
 					})
 				})

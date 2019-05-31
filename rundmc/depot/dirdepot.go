@@ -25,6 +25,11 @@ type BundleGenerator interface {
 	Generate(desiredContainerSpec spec.DesiredContainerSpec) (goci.Bndl, error)
 }
 
+//go:generate counterfeiter . BundleLookupper
+type BundleLookupper interface {
+	Lookup(log lager.Logger, handle string) (string, error)
+}
+
 // a depot which stores containers as subdirs of a depot directory
 type DirectoryDepot struct {
 	dir         string

@@ -16,24 +16,30 @@ import (
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/logging"
+	"code.cloudfoundry.org/guardian/rundmc/depot"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
 
 type WindowsExecRunner struct {
-	runtimePath   string
-	runMode       string
-	commandRunner commandrunner.CommandRunner
-	processes     map[string]*process
-	processMux    *sync.Mutex
+	runtimePath     string
+	commandRunner   commandrunner.CommandRunner
+	processes       map[string]*process
+	processMux      *sync.Mutex
+	bundleSaver     depot.BundleSaver
+	bundleLookupper depot.BundleLookupper
+	processDepot    ProcessDepot
 }
 
-func NewWindowsExecRunner(runtimePath, runMode string, commandRunner commandrunner.CommandRunner) *WindowsExecRunner {
+func NewWindowsExecRunner(runtimePath string, commandRunner commandrunner.CommandRunner, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot ProcessDepot) *WindowsExecRunner {
 	return &WindowsExecRunner{
-		runtimePath:   runtimePath,
-		runMode:       runMode,
-		commandRunner: commandRunner,
-		processes:     map[string]*process{},
-		processMux:    new(sync.Mutex),
+		runtimePath:     runtimePath,
+		commandRunner:   commandRunner,
+		processes:       map[string]*process{},
+		processMux:      new(sync.Mutex),
+		bundleSaver:     bundleSaver,
+		bundleLookupper: bundleLookupper,
+		processDepot:    processDepot,
 	}
 }
 
@@ -53,7 +59,7 @@ type process struct {
 }
 
 func (e *WindowsExecRunner) Run(
-	log lager.Logger, processID, processPath, sandboxHandle, _ string,
+	log lager.Logger, processID, sandboxHandle string,
 	pio garden.ProcessIO, _ bool, procJSON io.Reader, extraCleanup func() error,
 ) (garden.Process, error) {
 	log = log.Session("execrunner")
@@ -61,6 +67,58 @@ func (e *WindowsExecRunner) Run(
 	log.Info("start")
 	defer log.Info("done")
 
+	processPath, err := e.processDepot.CreateProcessDir(log, sandboxHandle, processID)
+	if err != nil {
+		return nil, err
+	}
+
+	specPath := filepath.Join(processPath, "spec.json")
+	if err := writeProcessJSON(procJSON, specPath); err != nil {
+		return nil, err
+	}
+	return e.runProcess(log, "exec", []string{"-p", specPath, sandboxHandle}, processID, processPath, pio,
+		extraCleanup)
+}
+
+func writeProcessJSON(procJSON io.Reader, specPath string) error {
+	specFile, err := os.OpenFile(specPath, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return errors.Wrap(err, "opening process spec file for writing")
+	}
+	defer specFile.Close()
+	if _, err := io.Copy(specFile, procJSON); err != nil {
+		return errors.Wrap(err, "writing process spec")
+	}
+
+	return nil
+}
+
+func (e *WindowsExecRunner) RunPea(
+	log lager.Logger, processID string, processBundle goci.Bndl, sandboxHandle string,
+	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
+) (garden.Process, error) {
+	log = log.Session("execrunner")
+
+	log.Info("start")
+	defer log.Info("done")
+
+	processPath, err := e.processDepot.CreateProcessDir(log, sandboxHandle, processID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.bundleSaver.Save(processBundle, processPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return e.runProcess(log, "run", []string{"--bundle", processPath, processID}, processID, processPath, pio, extraCleanup)
+}
+
+func (e *WindowsExecRunner) runProcess(
+	log lager.Logger, runMode string, runtimeExtraArgs []string, processID, processPath string,
+	pio garden.ProcessIO, extraCleanup func() error,
+) (garden.Process, error) {
 	logR, logW, err := os.Pipe()
 	if err != nil {
 		return nil, errors.Wrap(err, "creating log pipe")
@@ -95,17 +153,8 @@ func (e *WindowsExecRunner) Run(
 		return nil, errors.Wrap(err, "duplicating log pipe handle")
 	}
 
-	cmd := exec.Command(e.runtimePath, "--debug", "--log-handle", strconv.FormatUint(uint64(childLogW), 10), "--log-format", "json", e.runMode, "--pid-file", filepath.Join(processPath, "pidfile"))
-
-	if e.runMode == "exec" {
-		specPath := filepath.Join(processPath, "spec.json")
-		if err := writeProcessJSON(procJSON, specPath); err != nil {
-			return nil, err
-		}
-		cmd.Args = append(cmd.Args, "-p", specPath, sandboxHandle)
-	} else {
-		cmd.Args = append(cmd.Args, "--bundle", processPath, processID)
-	}
+	cmd := exec.Command(e.runtimePath, "--debug", "--log-handle", strconv.FormatUint(uint64(childLogW), 10), "--log-format", "json", runMode, "--pid-file", filepath.Join(processPath, "pidfile"))
+	cmd.Args = append(cmd.Args, runtimeExtraArgs...)
 
 	cmd.Stdin = stdinR
 	cmd.Stdout = stdoutW
@@ -170,19 +219,6 @@ func (e *WindowsExecRunner) Run(
 	}()
 
 	return proc, nil
-}
-
-func writeProcessJSON(procJSON io.Reader, specPath string) error {
-	specFile, err := os.OpenFile(specPath, os.O_WRONLY|os.O_CREATE, 0600)
-	if err != nil {
-		return errors.Wrap(err, "opening process spec file for writing")
-	}
-	defer specFile.Close()
-	if _, err := io.Copy(specFile, procJSON); err != nil {
-		return errors.Wrap(err, "writing process spec")
-	}
-
-	return nil
 }
 
 func (e *WindowsExecRunner) Attach(log lager.Logger, processID string, pio garden.ProcessIO, _ string) (garden.Process, error) {

@@ -148,23 +148,16 @@ var _ = Describe("Execer", func() {
 
 			It("generates one", func() {
 				Expect(execRunner.RunCallCount()).To(Equal(1))
-				_, processID, _, _, _, _, _, _, _ := execRunner.RunArgsForCall(0)
+				_, processID, _, _, _, _, _ := execRunner.RunArgsForCall(0)
 				Expect(processID).NotTo(Equal(""))
 			})
 		})
 
-		It("creates the process directory", func() {
-			Expect(filepath.Join(bundlePath, "processes", spec.ID)).To(BeADirectory())
-		})
-
 		It("runs the process", func() {
 			Expect(execRunner.RunCallCount()).To(Equal(1))
-			_, processID, actualProcessPath, actualSandboxHandle, actualSandboxBundlePath,
-				actualPIO, actualTTY, actualProcJSON, _ := execRunner.RunArgsForCall(0)
+			_, processID, actualSandboxHandle, actualPIO, actualTTY, actualProcJSON, _ := execRunner.RunArgsForCall(0)
 			Expect(processID).To(Equal(spec.ID))
-			Expect(actualProcessPath).To(Equal(filepath.Join(bundlePath, "processes", processID)))
 			Expect(actualSandboxHandle).To(Equal(id))
-			Expect(actualSandboxBundlePath).To(Equal(bundlePath))
 
 			Expect(actualPIO).To(Equal(pio))
 			Expect(actualTTY).To(BeFalse())
@@ -183,7 +176,7 @@ var _ = Describe("Execer", func() {
 
 			It("runs the process, specifying a TTY", func() {
 				Expect(execRunner.RunCallCount()).To(Equal(1))
-				_, _, _, _, _, _, actualTTY, _, _ := execRunner.RunArgsForCall(0)
+				_, _, _, _, actualTTY, _, _ := execRunner.RunArgsForCall(0)
 				Expect(actualTTY).To(BeTrue())
 			})
 		})
@@ -241,16 +234,6 @@ var _ = Describe("Execer", func() {
 
 			It("returns an error", func() {
 				Expect(execErr).To(MatchError(ContainSubstring("mkdir")))
-			})
-		})
-
-		Context("when the process ID is already in use", func() {
-			BeforeEach(func() {
-				Expect(os.MkdirAll(filepath.Join(bundlePath, "processes", spec.ID), 0700)).To(Succeed())
-			})
-
-			It("returns an error", func() {
-				Expect(execErr).To(MatchError("process ID 'some-process-id' already in use"))
 			})
 		})
 

@@ -3,9 +3,7 @@ package runrunc
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -57,11 +55,13 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec g
 		return nil, err
 	}
 
+	// NOT needed by 100% containerd procs vv
 	bundle, err := e.bundleLoader.Load(bundlePath)
 	if err != nil {
 		log.Error("load-bundle-failed", err)
 		return nil, err
 	}
+	// NOT needed by 100% containerd procs ^^
 
 	hostUID := idmapper.MappingList(bundle.Spec.Linux.UIDMappings).Map(user.Uid)
 	hostGID := idmapper.MappingList(bundle.Spec.Linux.GIDMappings).Map(user.Gid)
@@ -78,8 +78,6 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec g
 
 	preparedSpec := e.processBuilder.BuildProcess(bundle, spec, user.Uid, user.Gid)
 
-	processesPath := filepath.Join(bundlePath, "processes")
-
 	processID := spec.ID
 	if processID == "" {
 		randomID, err := uuid.NewV4()
@@ -88,14 +86,6 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec g
 		}
 		processID = fmt.Sprintf("%s", randomID)
 	}
-	processPath := filepath.Join(processesPath, processID)
-	if _, err := os.Stat(processPath); err == nil {
-		return nil, errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
-	}
-
-	if err := os.MkdirAll(processPath, 0700); err != nil {
-		return nil, err
-	}
 
 	encodedSpec, err := json.Marshal(preparedSpec)
 	if err != nil {
@@ -103,7 +93,7 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec g
 	}
 
 	return e.execRunner.Run(
-		log, processID, processPath, sandboxHandle, bundlePath, io, preparedSpec.Terminal, bytes.NewReader(encodedSpec), nil,
+		log, processID, sandboxHandle, io, preparedSpec.Terminal, bytes.NewReader(encodedSpec), nil,
 	)
 }
 

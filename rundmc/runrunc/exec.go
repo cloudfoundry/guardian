@@ -28,7 +28,11 @@ type BundleLoader interface {
 //go:generate counterfeiter . ExecRunner
 type ExecRunner interface {
 	Run(
-		log lager.Logger, processID, processPath, sandboxHandle, sandboxBundlePath string,
+		log lager.Logger, processID, sandboxHandle string,
+		pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
+	) (garden.Process, error)
+	RunPea(
+		log lager.Logger, processID string, bundle goci.Bndl, sandboxHandle string,
 		pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 	) (garden.Process, error)
 	Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error)
