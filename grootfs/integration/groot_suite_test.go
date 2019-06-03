@@ -61,7 +61,7 @@ func TestGroot(t *testing.T) {
 		tardisBin = integration.MakeBinaryAccessibleToEveryone(tardisBin)
 		testhelpers.SuidBinary(tardisBin)
 
-		namespacerBin, err := gexec.Build("code.cloudfoundry.org/grootfs/integration/namespacer")
+		namespacerBin, err := gexec.Build("code.cloudfoundry.org/grootfs/integration/namespacer", "-mod=vendor")
 		Expect(err).NotTo(HaveOccurred())
 
 		return []byte(grootFSBin + ":" + tardisBin + ":" + namespacerBin)
