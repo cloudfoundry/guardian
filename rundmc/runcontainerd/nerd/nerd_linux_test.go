@@ -423,7 +423,7 @@ var _ = Describe("Nerd", func() {
 		Context("when OOM occurs", func() {
 			BeforeEach(func() {
 				processSpec = &specs.Process{
-					Args: []string{"/bin/dd", "if=/dev/urandom", "of=/dev/shm/foo", "bs=1M", "count=31"},
+					Args: []string{"/bin/usemem"},
 					Cwd:  "/",
 				}
 			})
