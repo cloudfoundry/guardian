@@ -399,7 +399,7 @@ var _ = Describe("Run", func() {
 				container, err = client.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
-				fakeRuncBinPath, err := gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc_stderr")
+				fakeRuncBinPath, err := gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc_stderr", "-mod=vendor")
 				Expect(err).NotTo(HaveOccurred())
 
 				config.RuntimePluginBin = fakeRuncBinPath

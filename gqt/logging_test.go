@@ -21,7 +21,7 @@ var _ = Describe("runC Logging", func() {
 	})
 
 	JustBeforeEach(func() {
-		binPath, err := gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc")
+		binPath, err := gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc", "-mod=vendor")
 		Expect(err).NotTo(HaveOccurred())
 
 		containerSpec := garden.ContainerSpec{}

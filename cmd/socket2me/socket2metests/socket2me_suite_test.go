@@ -11,7 +11,7 @@ import (
 var socket2MeBinPath string
 
 var _ = SynchronizedBeforeSuite(func() []byte {
-	binPath, err := gexec.Build("code.cloudfoundry.org/guardian/cmd/socket2me")
+	binPath, err := gexec.Build("code.cloudfoundry.org/guardian/cmd/socket2me", "-mod=vendor")
 	Expect(err).NotTo(HaveOccurred())
 	return []byte(binPath)
 }, func(binPath []byte) {

@@ -39,7 +39,7 @@ func TestDadoo(t *testing.T) {
 		bins["dadoo_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo", "-mod=vendor")
 		Expect(err).NotTo(HaveOccurred())
 
-		bins["fakerunc_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo/fake_runc")
+		bins["fakerunc_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo/fake_runc", "-mod=vendor")
 		Expect(err).NotTo(HaveOccurred())
 
 		data, err := json.Marshal(bins)
