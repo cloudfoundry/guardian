@@ -82,24 +82,6 @@ func (d *ExecRunner) Run(
 	log.Info("start")
 	defer log.Info("done")
 
-	fd3r, fd3w, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	defer fd3r.Close()
-
-	logr, logw, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	defer logr.Close()
-
-	syncr, syncw, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	defer syncr.Close()
-
 	processPath, err := d.processDepot.CreateProcessDir(log, sandboxHandle, processID)
 	if err != nil {
 		return nil, err
@@ -115,93 +97,7 @@ func (d *ExecRunner) Run(
 		}
 	}()
 
-	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"), extraCleanup)
-	if err := process.mkfifos(d.containerRootHostUID, d.containerRootHostGID); err != nil {
-		return nil, err
-	}
-
-	cmd := buildDadooCommand(
-		tty, d.dadooPath, "exec", d.runcPath, d.runcRoot, processID, processPath, sandboxHandle,
-		[]*os.File{fd3w, logw, syncw}, procJSON,
-	)
-
-	// TODO this is kind of an hack - do we have a better place for dadoo logs
-	// that would not depend on the dir structure of the depot?
-	dadooLogFilePath := filepath.Join(processPath, "..", "..", fmt.Sprintf("dadoo.%s.log", processID))
-	dadooLogFile, err := os.Create(dadooLogFilePath)
-	if err != nil {
-		return nil, err
-	}
-	defer dadooLogFile.Close()
-	cmd.Stdout = dadooLogFile
-	cmd.Stderr = dadooLogFile
-
-	if err := d.commandRunner.Start(cmd); err != nil {
-		return nil, err
-	}
-	go func() {
-		// wait on spawned process to avoid zombies
-		d.commandRunner.Wait(cmd)
-		if copyErr := copyDadooLogsToGuardianLogger(dadooLogFilePath, log); copyErr != nil {
-			log.Error("reading-dadoo-log-file", copyErr)
-		}
-	}()
-
-	fd3w.Close()
-	logw.Close()
-	syncw.Close()
-
-	stdin, stdout, stderr, err := process.openPipes(pio)
-	if err != nil {
-		return nil, err
-	}
-
-	syncMsg := make([]byte, 1)
-	_, err = syncr.Read(syncMsg)
-	if err != nil {
-		return nil, err
-	}
-
-	process.streamData(pio, stdin, stdout, stderr)
-
-	doneReadingRuncLogs := make(chan []byte)
-	go func(log lager.Logger, logs io.Reader, logTag string, done chan<- []byte) {
-		scanner := bufio.NewScanner(logs)
-
-		nextLogLine := []byte("")
-		for scanner.Scan() {
-			nextLogLine = scanner.Bytes()
-			logging.ForwardRuncLogsToLager(log, logTag, nextLogLine)
-		}
-		done <- nextLogLine
-	}(log, logr, "runc", doneReadingRuncLogs)
-
-	defer func() {
-		lastLogLine := <-doneReadingRuncLogs
-		if theErr == nil {
-			return
-		}
-
-		if isNoSuchExecutable(lastLogLine) {
-			theErr = garden.ExecutableNotFoundError{Message: logging.MsgFromLastLogLine(lastLogLine)}
-			return
-		}
-
-		theErr = logging.WrapWithErrorFromLastLogLine("runc exec", theErr, lastLogLine)
-	}()
-
-	log.Info("read-exit-fd")
-	runcExitStatus := make([]byte, 1)
-	bytesRead, err := fd3r.Read(runcExitStatus)
-	if bytesRead == 0 || err != nil {
-		return nil, fmt.Errorf("failed to read runc exit code %v", err)
-	}
-	log.Info("runc-exit-status", lager.Data{"status": runcExitStatus[0]})
-	if runcExitStatus[0] != 0 {
-		return nil, fmt.Errorf("exit status %d", runcExitStatus[0])
-	}
-
-	return process, nil
+	return d.runProcess(log, "exec", processID, processPath, sandboxHandle, pio, tty, procJSON, extraCleanup)
 }
 
 func (d *ExecRunner) RunPea(
@@ -212,24 +108,6 @@ func (d *ExecRunner) RunPea(
 
 	log.Info("start")
 	defer log.Info("done")
-
-	fd3r, fd3w, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	defer fd3r.Close()
-
-	logr, logw, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	defer logr.Close()
-
-	syncr, syncw, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	defer syncr.Close()
 
 	processPath, err := d.processDepot.CreateProcessDir(log, sandboxHandle, processID)
 	if err != nil {
@@ -251,16 +129,43 @@ func (d *ExecRunner) RunPea(
 		}
 	}()
 
+	return d.runProcess(log, "run", processID, processPath, sandboxHandle, pio, tty, procJSON, extraCleanup)
+}
+
+func (d *ExecRunner) runProcess(
+	log lager.Logger, runMode, processID, processPath, sandboxHandle string,
+	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
+) (proc garden.Process, theErr error) {
+	fd3r, fd3w, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	defer fd3r.Close()
+
+	logr, logw, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	defer logr.Close()
+
+	syncr, syncw, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	defer syncr.Close()
+
 	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"), extraCleanup)
 	if err := process.mkfifos(d.containerRootHostUID, d.containerRootHostGID); err != nil {
 		return nil, err
 	}
 
 	cmd := buildDadooCommand(
-		tty, d.dadooPath, "run", d.runcPath, d.runcRoot, processID, processPath, sandboxHandle,
+		tty, d.dadooPath, runMode, d.runcPath, d.runcRoot, processID, processPath, sandboxHandle,
 		[]*os.File{fd3w, logw, syncw}, procJSON,
 	)
 
+	// TODO this is kind of an hack - do we have a better place for dadoo logs
+	// that would not depend on the dir structure of the depot?
 	dadooLogFilePath := filepath.Join(processPath, "..", "..", fmt.Sprintf("dadoo.%s.log", processID))
 	dadooLogFile, err := os.Create(dadooLogFilePath)
 	if err != nil {

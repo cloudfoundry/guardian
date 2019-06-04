@@ -29,13 +29,6 @@ type RunContainerPea struct {
 	ProcessDepot    execrunner.ProcessDepot
 }
 
-func (r *RunContainerPea) Run(
-	log lager.Logger, processID, sandboxHandle string,
-	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
-) (garden.Process, error) {
-	return nil, nil
-}
-
 func (r *RunContainerPea) RunPea(
 	log lager.Logger, processID string, processBundle goci.Bndl, sandboxHandle string,
 	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,

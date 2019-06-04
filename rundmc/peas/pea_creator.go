@@ -2,6 +2,7 @@ package peas
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 	multierror "github.com/hashicorp/go-multierror"
@@ -48,6 +50,13 @@ type NetworkDepot interface {
 	Destroy(log lager.Logger, handle string) error
 }
 
+type ExecRunner interface {
+	RunPea(
+		log lager.Logger, processID string, bundle goci.Bndl, sandboxHandle string,
+		pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
+	) (garden.Process, error)
+}
+
 type PeaCreator struct {
 	Volumizer        Volumizer
 	PidGetter        PidGetter
@@ -56,7 +65,7 @@ type PeaCreator struct {
 	BundleGenerator  depot.BundleGenerator
 	BundleSaver      depot.BundleSaver
 	ProcessBuilder   runrunc.ProcessBuilder
-	ExecRunner       runrunc.ExecRunner
+	ExecRunner       ExecRunner
 	RuncDeleter      RuncDeleter
 	PeaCleaner       gardener.PeaCleaner
 	NestedCgroups    bool

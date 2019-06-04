@@ -566,7 +566,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	statser := runrunc.NewStatser(runcLogRunner, runcBinary, depot)
 
 	var useNestedCgroups bool
-	var execRunner runrunc.ExecRunner = factory.WireExecRunner("run", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)), bundleSaver, depot, processDepot)
+	var peasExecRunner peas.ExecRunner = factory.WireExecRunner("run", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)), bundleSaver, depot, processDepot)
 	if cmd.useContainerd() {
 		var err error
 		var peaRunner *runcontainerd.RunContainerPea
@@ -579,7 +579,7 @@ func (cmd *CommonCommand) wireContainerizer(
 
 		if cmd.Containerd.UseContainerdForProcesses {
 			peaPidGetter = pidGetter
-			execRunner = peaRunner
+			peasExecRunner = peaRunner
 			useNestedCgroups = true
 		}
 	} else {
@@ -606,7 +606,7 @@ func (cmd *CommonCommand) wireContainerizer(
 		BundleGenerator:  template,
 		ProcessBuilder:   processBuilder,
 		BundleSaver:      bundleSaver,
-		ExecRunner:       execRunner,
+		ExecRunner:       peasExecRunner,
 		RuncDeleter:      runcDeleter,
 		PeaCleaner:       peaCleaner,
 		NestedCgroups:    useNestedCgroups,

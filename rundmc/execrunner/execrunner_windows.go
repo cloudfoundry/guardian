@@ -67,116 +67,17 @@ func (e *WindowsExecRunner) Run(
 	log.Info("start")
 	defer log.Info("done")
 
-	logR, logW, err := os.Pipe()
-	if err != nil {
-		return nil, errors.Wrap(err, "creating log pipe")
-	}
-	defer logW.Close()
-
-	stdinR, stdinW, err := os.Pipe()
-	if err != nil {
-		return nil, errors.Wrap(err, "creating stdin pipe")
-	}
-	defer stdinR.Close()
-
-	stdoutR, stdoutW, err := os.Pipe()
-	if err != nil {
-		return nil, errors.Wrap(err, "creating stdout pipe")
-	}
-	defer stdoutW.Close()
-
-	stderrR, stderrW, err := os.Pipe()
-	if err != nil {
-		return nil, errors.Wrap(err, "creating stderr pipe")
-	}
-	defer stderrW.Close()
-
 	processPath, err := e.processDepot.CreateProcessDir(log, sandboxHandle, processID)
 	if err != nil {
 		return nil, err
 	}
 
-	var childLogW syscall.Handle
-
-	// GetCurrentProcess doesn't error
-	self, _ := syscall.GetCurrentProcess()
-	// duplicate handle so it is inheritable by child process
-	err = syscall.DuplicateHandle(self, syscall.Handle(logW.Fd()), self, &childLogW, 0, true, syscall.DUPLICATE_SAME_ACCESS)
-	if err != nil {
-		return nil, errors.Wrap(err, "duplicating log pipe handle")
-	}
-
-	cmd := exec.Command(e.runtimePath, "--debug", "--log-handle", strconv.FormatUint(uint64(childLogW), 10), "--log-format", "json", "exec", "--pid-file", filepath.Join(processPath, "pidfile"))
-
 	specPath := filepath.Join(processPath, "spec.json")
 	if err := writeProcessJSON(procJSON, specPath); err != nil {
 		return nil, err
 	}
-	cmd.Args = append(cmd.Args, "-p", specPath, sandboxHandle)
-
-	cmd.Stdin = stdinR
-	cmd.Stdout = stdoutW
-	cmd.Stderr = stderrW
-
-	if err := e.commandRunner.Start(cmd); err != nil {
-		return nil, errors.Wrap(err, "execing runtime plugin")
-	}
-
-	go streamLogs(log, logR)
-
-	cleanup := func() error {
-		e.processMux.Lock()
-		delete(e.processes, processID)
-		e.processMux.Unlock()
-
-		if extraCleanup != nil {
-			return extraCleanup()
-		}
-
-		return nil
-	}
-
-	proc := &process{
-		id:           processID,
-		cleanup:      cleanup,
-		logger:       log,
-		stdin:        stdinW,
-		stdout:       stdoutR,
-		stderr:       stderrR,
-		stdoutWriter: NewDynamicMultiWriter(),
-		stderrWriter: NewDynamicMultiWriter(),
-		outputWg:     &sync.WaitGroup{},
-		exitMutex:    new(sync.RWMutex),
-	}
-
-	e.processMux.Lock()
-	e.processes[processID] = proc
-	e.processMux.Unlock()
-
-	proc.stream(pio, false)
-
-	proc.exitMutex.Lock()
-
-	go func() {
-		if err := e.commandRunner.Wait(cmd); err != nil {
-			if exitErr, ok := err.(*exec.ExitError); ok {
-				if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
-					proc.exitCode = status.ExitStatus()
-				} else {
-					proc.exitCode = 1
-					proc.exitErr = errors.New("couldn't get WaitStatus")
-				}
-			} else {
-				proc.exitCode = 1
-				proc.exitErr = err
-			}
-		}
-		// the streamLogs go func will only exit once this handle is closed
-		syscall.CloseHandle(childLogW)
-		proc.exitMutex.Unlock()
-	}()
-
-	return proc, nil
+	return e.runProcess(log, "exec", []string{"-p", specPath, sandboxHandle}, processID, processPath, pio,
+		extraCleanup)
 }
 
 func writeProcessJSON(procJSON io.Reader, specPath string) error {
@@ -201,6 +102,23 @@ func (e *WindowsExecRunner) RunPea(
 	log.Info("start")
 	defer log.Info("done")
 
+	processPath, err := e.processDepot.CreateProcessDir(log, sandboxHandle, processID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.bundleSaver.Save(processBundle, processPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return e.runProcess(log, "run", []string{"--bundle", processPath, processID}, processID, processPath, pio, extraCleanup)
+}
+
+func (e *WindowsExecRunner) runProcess(
+	log lager.Logger, runMode string, runtimeExtraArgs []string, processID, processPath string,
+	pio garden.ProcessIO, extraCleanup func() error,
+) (garden.Process, error) {
 	logR, logW, err := os.Pipe()
 	if err != nil {
 		return nil, errors.Wrap(err, "creating log pipe")
@@ -225,16 +143,6 @@ func (e *WindowsExecRunner) RunPea(
 	}
 	defer stderrW.Close()
 
-	processPath, err := e.processDepot.CreateProcessDir(log, sandboxHandle, processID)
-	if err != nil {
-		return nil, err
-	}
-
-	err = e.bundleSaver.Save(processBundle, processPath)
-	if err != nil {
-		return nil, err
-	}
-
 	var childLogW syscall.Handle
 
 	// GetCurrentProcess doesn't error
@@ -245,8 +153,9 @@ func (e *WindowsExecRunner) RunPea(
 		return nil, errors.Wrap(err, "duplicating log pipe handle")
 	}
 
-	cmd := exec.Command(e.runtimePath, "--debug", "--log-handle", strconv.FormatUint(uint64(childLogW), 10), "--log-format", "json", "run", "--pid-file", filepath.Join(processPath, "pidfile"))
-	cmd.Args = append(cmd.Args, "--bundle", processPath, processID)
+	cmd := exec.Command(e.runtimePath, "--debug", "--log-handle", strconv.FormatUint(uint64(childLogW), 10), "--log-format", "json", runMode, "--pid-file", filepath.Join(processPath, "pidfile"))
+	cmd.Args = append(cmd.Args, runtimeExtraArgs...)
+
 	cmd.Stdin = stdinR
 	cmd.Stdout = stdoutW
 	cmd.Stderr = stderrW
