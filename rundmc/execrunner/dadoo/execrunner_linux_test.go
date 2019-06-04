@@ -20,6 +20,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/depot/depotfakes"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
+	"code.cloudfoundry.org/guardian/rundmc/execrunner/execrunnerfakes"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/guardian/rundmc/signals/signalsfakes"
@@ -29,6 +30,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("Dadoo ExecRunner", func() {
@@ -56,6 +58,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		dadooWaitGroup                         *sync.WaitGroup
 		bundleSaver                            *depotfakes.FakeBundleSaver
 		bundleLookupper                        *depotfakes.FakeBundleLookupper
+		processDepot                           *execrunnerfakes.FakeProcessDepot
 	)
 
 	BeforeEach(func() {
@@ -77,9 +80,13 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		bundleLookupper.LookupReturns(bundlePath, nil)
 
 		processPath = filepath.Join(bundlePath, "processes", processID)
+		Expect(os.MkdirAll(processPath, 0700)).To(Succeed())
+
+		processDepot = new(execrunnerfakes.FakeProcessDepot)
+		processDepot.CreateProcessDirReturns(processPath, nil)
 
 		runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root",
-			signallerFactory, fakeCommandRunner, false, "exec", 5, 6, bundleSaver, bundleLookupper)
+			signallerFactory, fakeCommandRunner, false, "exec", 5, 6, bundleSaver, bundleLookupper, processDepot)
 		log = lagertest.NewTestLogger("test")
 
 		runcReturns = 0
@@ -221,6 +228,23 @@ var _ = Describe("Dadoo ExecRunner", func() {
 	})
 
 	Describe("Run", func() {
+		It("creates the process folder in the depot", func() {
+			_, err := runner.Run(log, processID, "some-handle", defaultProcessIO(), false, nil, nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(processDepot.CreateProcessDirCallCount()).To(Equal(1))
+			_, actualSandboxHandle, actualProcessID := processDepot.CreateProcessDirArgsForCall(0)
+			Expect(actualSandboxHandle).To(Equal("some-handle"))
+			Expect(actualProcessID).To(Equal(processID))
+
+			Expect(filepath.Join(processPath, "stdin")).To(BeAnExistingFile())
+			Expect(filepath.Join(processPath, "stdout")).To(BeAnExistingFile())
+			Expect(filepath.Join(processPath, "stderr")).To(BeAnExistingFile())
+			Expect(filepath.Join(processPath, "winsz")).To(BeAnExistingFile())
+			Expect(filepath.Join(processPath, "exit")).To(BeAnExistingFile())
+			Expect(filepath.Join(processPath, "exitcode")).To(BeAnExistingFile())
+		})
+
 		It("executes the dadoo binary with the correct arguments", func() {
 			_, err := runner.Run(log, processID, "some-handle", defaultProcessIO(), false, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
@@ -236,6 +260,17 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					"some-handle",
 				),
 			)
+		})
+
+		When("creating the process folder in the depot fails", func() {
+			BeforeEach(func() {
+				processDepot.CreateProcessDirReturns("", errors.New("create-process-dir-error"))
+			})
+
+			It("fails", func() {
+				_, err := runner.Run(log, processID, "some-handle", defaultProcessIO(), false, nil, nil)
+				Expect(err).To(MatchError("create-process-dir-error"))
+			})
 		})
 
 		Context("when TTY is requested", func() {
@@ -314,7 +349,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		Context("when cleanupProcessDirsOnWait is true", func() {
 			BeforeEach(func() {
 				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root",
-					signallerFactory, fakeCommandRunner, true, "exec", 5, 6, bundleSaver, bundleLookupper)
+					signallerFactory, fakeCommandRunner, true, "exec", 5, 6, bundleSaver, bundleLookupper, processDepot)
 			})
 
 			It("cleans up the processes dir after Wait returns", func() {
@@ -333,7 +368,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		Context("when cleanupProcessDirsOnWait is false", func() {
 			BeforeEach(func() {
 				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root",
-					signallerFactory, fakeCommandRunner, false, "exec", 5, 6, bundleSaver, bundleLookupper)
+					signallerFactory, fakeCommandRunner, false, "exec", 5, 6, bundleSaver, bundleLookupper, processDepot)
 			})
 
 			It("does not clean up the processes dir after Wait returns", func() {
@@ -750,7 +785,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			Context("when cleanupProcessDirsOnWait is true", func() {
 				JustBeforeEach(func() {
 					runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root",
-						signallerFactory, fakeCommandRunner, true, "exec", 5, 6, bundleSaver, bundleLookupper)
+						signallerFactory, fakeCommandRunner, true, "exec", 5, 6, bundleSaver, bundleLookupper, processDepot)
 				})
 
 				It("cleans up the map entry and the process path", func() {
@@ -771,6 +806,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				})
 			})
 		})
+
 		It("closed stdin when the stdin stream ends", func() {
 			stdout := gbytes.NewBuffer()
 			stderr := gbytes.NewBuffer()
@@ -813,7 +849,34 @@ var _ = Describe("Dadoo ExecRunner", func() {
 	Describe("RunPea", func() {
 		BeforeEach(func() {
 			runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root",
-				signallerFactory, fakeCommandRunner, false, "run", 5, 6, bundleSaver, bundleLookupper)
+				signallerFactory, fakeCommandRunner, false, "run", 5, 6, bundleSaver, bundleLookupper, processDepot)
+		})
+
+		It("creates the process folder in the depot", func() {
+			_, err := runner.RunPea(log, processID, goci.Bndl{}, "some-handle", defaultProcessIO(), false, nil, nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(processDepot.CreateProcessDirCallCount()).To(Equal(1))
+			_, actualSandboxHandle, actualProcessID := processDepot.CreateProcessDirArgsForCall(0)
+			Expect(actualSandboxHandle).To(Equal("some-handle"))
+			Expect(actualProcessID).To(Equal(processID))
+
+			Expect(filepath.Join(processPath, "stdin")).To(BeAnExistingFile())
+			Expect(filepath.Join(processPath, "stdout")).To(BeAnExistingFile())
+			Expect(filepath.Join(processPath, "stderr")).To(BeAnExistingFile())
+			Expect(filepath.Join(processPath, "winsz")).To(BeAnExistingFile())
+			Expect(filepath.Join(processPath, "exit")).To(BeAnExistingFile())
+			Expect(filepath.Join(processPath, "exitcode")).To(BeAnExistingFile())
+		})
+
+		It("saves the bundle in the depot", func() {
+			_, err := runner.RunPea(log, processID, goci.Bndl{Spec: specs.Spec{Version: "my-bundle"}}, "some-handle", defaultProcessIO(), false, nil, nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(bundleSaver.SaveCallCount()).To(Equal(1))
+			actualProcessBundle, actualProcessPath := bundleSaver.SaveArgsForCall(0)
+			Expect(actualProcessBundle.Spec.Version).To(Equal("my-bundle"))
+			Expect(actualProcessPath).To(Equal(processPath))
 		})
 
 		It("executes the dadoo binary with the correct arguments", func() {
@@ -831,6 +894,28 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					processID,
 				),
 			)
+		})
+
+		When("creating the process folder in the depot fails", func() {
+			BeforeEach(func() {
+				processDepot.CreateProcessDirReturns("", errors.New("create-process-dir-error"))
+			})
+
+			It("fails", func() {
+				_, err := runner.Run(log, processID, "some-handle", defaultProcessIO(), false, nil, nil)
+				Expect(err).To(MatchError("create-process-dir-error"))
+			})
+		})
+
+		When("saving the bundle in the depot fails", func() {
+			BeforeEach(func() {
+				bundleSaver.SaveReturns(errors.New("save-error"))
+			})
+
+			It("fails", func() {
+				_, err := runner.RunPea(log, processID, goci.Bndl{}, "some-handle", defaultProcessIO(), false, nil, nil)
+				Expect(err).To(MatchError("save-error"))
+			})
 		})
 
 		Context("when TTY is requested", func() {
@@ -909,7 +994,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		Context("when cleanupProcessDirsOnWait is true", func() {
 			BeforeEach(func() {
 				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root",
-					signallerFactory, fakeCommandRunner, true, "exec", 5, 6, bundleSaver, bundleLookupper)
+					signallerFactory, fakeCommandRunner, true, "exec", 5, 6, bundleSaver, bundleLookupper, processDepot)
 			})
 
 			It("cleans up the processes dir after Wait returns", func() {
@@ -928,7 +1013,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		Context("when cleanupProcessDirsOnWait is false", func() {
 			BeforeEach(func() {
 				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root",
-					signallerFactory, fakeCommandRunner, false, "exec", 5, 6, bundleSaver, bundleLookupper)
+					signallerFactory, fakeCommandRunner, false, "exec", 5, 6, bundleSaver, bundleLookupper, processDepot)
 			})
 
 			It("does not clean up the processes dir after Wait returns", func() {
@@ -1345,7 +1430,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			Context("when cleanupProcessDirsOnWait is true", func() {
 				JustBeforeEach(func() {
 					runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root",
-						signallerFactory, fakeCommandRunner, true, "run", 5, 6, bundleSaver, bundleLookupper)
+						signallerFactory, fakeCommandRunner, true, "run", 5, 6, bundleSaver, bundleLookupper, processDepot)
 				})
 
 				It("cleans up the map entry and the process path", func() {
@@ -1408,7 +1493,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 	Describe("Attach after Run", func() {
 		Context("when cleanupProcessDirsOnWait is true", func() {
 			BeforeEach(func() {
-				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root", signallerFactory, fakeCommandRunner, true, "exec", 5, 6, bundleSaver, bundleLookupper)
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root", signallerFactory, fakeCommandRunner, true, "exec", 5, 6, bundleSaver, bundleLookupper, processDepot)
 			})
 
 			It("cleans up the processes dir after Wait returns", func() {
@@ -1428,7 +1513,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		Context("when cleanupProcessDirsOnWait is false", func() {
 			BeforeEach(func() {
-				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root", signallerFactory, fakeCommandRunner, false, "exec", 5, 6, bundleSaver, bundleLookupper)
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root", signallerFactory, fakeCommandRunner, false, "exec", 5, 6, bundleSaver, bundleLookupper, processDepot)
 			})
 
 			It("does not clean up the processes dir after Wait returns", func() {
@@ -1598,7 +1683,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		Context("when no process with the specified ID exists", func() {
 			BeforeEach(func() {
-				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root", signallerFactory, fakeCommandRunner, true, "exec", 5, 6, bundleSaver, bundleLookupper)
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root", signallerFactory, fakeCommandRunner, true, "exec", 5, 6, bundleSaver, bundleLookupper, processDepot)
 			})
 
 			It("returns ProcessNotFoundError", func() {

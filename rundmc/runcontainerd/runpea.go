@@ -2,11 +2,10 @@ package runcontainerd
 
 import (
 	"io"
-	"os"
-	"path/filepath"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
+	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
@@ -27,6 +26,7 @@ type RunContainerPea struct {
 	ProcessManager  ProcessManager
 	BundleLookupper BundleLookupper
 	BundleSaver     depot.BundleSaver
+	ProcessDepot    execrunner.ProcessDepot
 }
 
 func (r *RunContainerPea) Run(
@@ -41,13 +41,8 @@ func (r *RunContainerPea) RunPea(
 	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 ) (garden.Process, error) {
 
-	sandboxBundlePath, err := r.BundleLookupper.Lookup(log, sandboxHandle)
+	processBundlePath, err := r.ProcessDepot.CreateProcessDir(log, sandboxHandle, processID)
 	if err != nil {
-		return nil, err
-	}
-
-	processBundlePath := filepath.Join(sandboxBundlePath, "processes", processID)
-	if err := os.MkdirAll(processBundlePath, 0700); err != nil {
 		return nil, err
 	}
 

@@ -15,6 +15,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
+	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
@@ -85,7 +86,7 @@ func (NoopMkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode
 	return nil
 }
 
-func (f *LinuxFactory) WireExecRunner(runMode, runcRoot string, containerRootHostUID, containerRootHostGID uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper) runrunc.ExecRunner {
+func (f *LinuxFactory) WireExecRunner(runMode, runcRoot string, containerRootHostUID, containerRootHostGID uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot execrunner.ProcessDepot) runrunc.ExecRunner {
 	return dadoo.NewExecRunner(
 		f.config.Bin.Dadoo.Path(),
 		f.config.Runtime.Plugin,
@@ -98,6 +99,7 @@ func (f *LinuxFactory) WireExecRunner(runMode, runcRoot string, containerRootHos
 		containerRootHostGID,
 		bundleSaver,
 		bundleLookupper,
+		processDepot,
 	)
 }
 

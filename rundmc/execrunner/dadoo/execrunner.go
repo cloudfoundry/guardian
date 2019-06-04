@@ -3,7 +3,6 @@ package dadoo
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -38,12 +37,14 @@ type ExecRunner struct {
 	containerRootHostGID     uint32
 	bundleSaver              depot.BundleSaver
 	bundleLookupper          depot.BundleLookupper
+	processDepot             execrunner.ProcessDepot
 }
 
 func NewExecRunner(
 	dadooPath, runcPath, runcRoot string, signallerFactory *signals.SignallerFactory,
 	commandRunner commandrunner.CommandRunner, shouldCleanup bool, runMode string, containerRootHostUID, containerRootHostGID uint32,
 	bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper,
+	processDepot execrunner.ProcessDepot,
 ) *ExecRunner {
 	return &ExecRunner{
 		dadooPath:                dadooPath,
@@ -58,6 +59,7 @@ func NewExecRunner(
 		containerRootHostGID:     containerRootHostGID,
 		bundleSaver:              bundleSaver,
 		bundleLookupper:          bundleLookupper,
+		processDepot:             processDepot,
 	}
 }
 
@@ -98,17 +100,8 @@ func (d *ExecRunner) Run(
 	}
 	defer syncr.Close()
 
-	bundlePath, err := d.bundleLookupper.Lookup(log, sandboxHandle)
+	processPath, err := d.processDepot.CreateProcessDir(log, sandboxHandle, processID)
 	if err != nil {
-		return nil, err
-	}
-
-	processPath := filepath.Join(bundlePath, "processes", processID)
-	if _, err := os.Stat(processPath); err == nil {
-		return nil, errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
-	}
-
-	if err := os.MkdirAll(processPath, 0700); err != nil {
 		return nil, err
 	}
 
@@ -132,7 +125,9 @@ func (d *ExecRunner) Run(
 		[]*os.File{fd3w, logw, syncw}, procJSON,
 	)
 
-	dadooLogFilePath := filepath.Join(bundlePath, fmt.Sprintf("dadoo.%s.log", processID))
+	// TODO this is kind of an hack - do we have a better place for dadoo logs
+	// that would not depend on the dir structure of the depot?
+	dadooLogFilePath := filepath.Join(processPath, "..", "..", fmt.Sprintf("dadoo.%s.log", processID))
 	dadooLogFile, err := os.Create(dadooLogFilePath)
 	if err != nil {
 		return nil, err
@@ -236,26 +231,15 @@ func (d *ExecRunner) RunPea(
 	}
 	defer syncr.Close()
 
-	bundlePath, err := d.bundleLookupper.Lookup(log, sandboxHandle)
+	processPath, err := d.processDepot.CreateProcessDir(log, sandboxHandle, processID)
 	if err != nil {
 		return nil, err
 	}
 
-	processPath := filepath.Join(bundlePath, "processes", processID)
-	if _, err := os.Stat(processPath); err == nil {
-		return nil, errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
-	}
-
-	if err := os.MkdirAll(processPath, 0700); err != nil {
-		return nil, err
-	}
-
-	// TODO: runpea only
 	err = d.bundleSaver.Save(processBundle, processPath)
 	if err != nil {
 		return nil, err
 	}
-	// TODO: runpea only
 
 	defer func() {
 		if theErr == nil {
@@ -277,7 +261,7 @@ func (d *ExecRunner) RunPea(
 		[]*os.File{fd3w, logw, syncw}, procJSON,
 	)
 
-	dadooLogFilePath := filepath.Join(bundlePath, fmt.Sprintf("dadoo.%s.log", processID))
+	dadooLogFilePath := filepath.Join(processPath, "..", "..", fmt.Sprintf("dadoo.%s.log", processID))
 	dadooLogFile, err := os.Create(dadooLogFilePath)
 	if err != nil {
 		return nil, err

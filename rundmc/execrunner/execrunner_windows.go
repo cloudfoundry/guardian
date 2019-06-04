@@ -28,9 +28,10 @@ type WindowsExecRunner struct {
 	processMux      *sync.Mutex
 	bundleSaver     depot.BundleSaver
 	bundleLookupper depot.BundleLookupper
+	processDepot    ProcessDepot
 }
 
-func NewWindowsExecRunner(runtimePath, runMode string, commandRunner commandrunner.CommandRunner, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper) *WindowsExecRunner {
+func NewWindowsExecRunner(runtimePath, runMode string, commandRunner commandrunner.CommandRunner, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot ProcessDepot) *WindowsExecRunner {
 	return &WindowsExecRunner{
 		runtimePath:     runtimePath,
 		commandRunner:   commandRunner,
@@ -38,6 +39,7 @@ func NewWindowsExecRunner(runtimePath, runMode string, commandRunner commandrunn
 		processMux:      new(sync.Mutex),
 		bundleSaver:     bundleSaver,
 		bundleLookupper: bundleLookupper,
+		processDepot:    processDepot,
 	}
 }
 
@@ -89,17 +91,8 @@ func (e *WindowsExecRunner) Run(
 	}
 	defer stderrW.Close()
 
-	bundlePath, err := e.bundleLookupper.Lookup(log, sandboxHandle)
+	processPath, err := e.processDepot.CreateProcessDir(log, sandboxHandle, processID)
 	if err != nil {
-		return nil, err
-	}
-
-	processPath := filepath.Join(bundlePath, "processes", processID)
-	if _, err := os.Stat(processPath); err == nil {
-		return nil, errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
-	}
-
-	if err := os.MkdirAll(processPath, 0700); err != nil {
 		return nil, err
 	}
 
@@ -232,17 +225,8 @@ func (e *WindowsExecRunner) RunPea(
 	}
 	defer stderrW.Close()
 
-	bundlePath, err := e.bundleLookupper.Lookup(log, sandboxHandle)
+	processPath, err := e.processDepot.CreateProcessDir(log, sandboxHandle, processID)
 	if err != nil {
-		return nil, err
-	}
-
-	processPath := filepath.Join(bundlePath, "processes", processID)
-	if _, err := os.Stat(processPath); err == nil {
-		return nil, errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
-	}
-
-	if err := os.MkdirAll(processPath, 0700); err != nil {
 		return nil, err
 	}
 

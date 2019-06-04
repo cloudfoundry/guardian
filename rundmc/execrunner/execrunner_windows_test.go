@@ -19,6 +19,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/depot/depotfakes"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
+	"code.cloudfoundry.org/guardian/rundmc/execrunner/execrunnerfakes"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -52,6 +53,7 @@ var _ = Describe("WindowsExecRunner", func() {
 		proceed               chan struct{}
 		bundleSaver           *depotfakes.FakeBundleSaver
 		bundleLookupper       *depotfakes.FakeBundleLookupper
+		processDepot          *execrunnerfakes.FakeProcessDepot
 	)
 
 	BeforeEach(func() {
@@ -60,15 +62,19 @@ var _ = Describe("WindowsExecRunner", func() {
 
 		bundleSaver = new(depotfakes.FakeBundleSaver)
 		bundleLookupper = new(depotfakes.FakeBundleLookupper)
+		processDepot = new(execrunnerfakes.FakeProcessDepot)
 
 		var err error
 		bundlePath, err = ioutil.TempDir("", "dadooexecrunnerbundle")
 		Expect(err).NotTo(HaveOccurred())
 		bundleLookupper.LookupReturns(bundlePath, nil)
 
-		execRunner = execrunner.NewWindowsExecRunner(runtimePath, "exec", cmdRunner, bundleSaver, bundleLookupper)
+		execRunner = execrunner.NewWindowsExecRunner(runtimePath, "exec", cmdRunner, bundleSaver, bundleLookupper, processDepot)
 		processID = "process-id"
 		processPath = filepath.Join(bundlePath, "processes", processID)
+		Expect(os.MkdirAll(processPath, 0700)).To(Succeed())
+
+		processDepot.CreateProcessDirReturns(processPath, nil)
 
 		wincWaitErrors = false
 		wincStartErrors = false
@@ -151,6 +157,13 @@ var _ = Describe("WindowsExecRunner", func() {
 			Expect(runErr).NotTo(HaveOccurred())
 		})
 
+		It("creates the process folder in the depot", func() {
+			Expect(processDepot.CreateProcessDirCallCount()).To(Equal(1))
+			_, actualSandboxHandle, actualProcessID := processDepot.CreateProcessDirArgsForCall(0)
+			Expect(actualSandboxHandle).To(Equal("handle"))
+			Expect(actualProcessID).To(Equal(processID))
+		})
+
 		It("runs the runtime plugin", func() {
 			Expect(cmdRunner.StartedCommands()).To(HaveLen(1))
 			Expect(cmdRunner.StartedCommands()[0].Path).To(Equal(runtimePath))
@@ -170,6 +183,16 @@ var _ = Describe("WindowsExecRunner", func() {
 			actualContents, err := ioutil.ReadFile(filepath.Join(processPath, "spec.json"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(actualContents)).To(Equal("some-process"))
+		})
+
+		When("creating the process folder in the depot fails", func() {
+			BeforeEach(func() {
+				processDepot.CreateProcessDirReturns("", errors.New("create-process-dir-error"))
+			})
+
+			It("fails", func() {
+				Expect(runErr).To(MatchError("create-process-dir-error"))
+			})
 		})
 
 		Describe("logging", func() {
@@ -250,9 +273,9 @@ var _ = Describe("WindowsExecRunner", func() {
 		})
 	})
 
-	FDescribe("RunPea", func() {
+	Describe("RunPea", func() {
 		JustBeforeEach(func() {
-			execRunner = execrunner.NewWindowsExecRunner(runtimePath, "run", cmdRunner, bundleSaver, bundleLookupper)
+			execRunner = execrunner.NewWindowsExecRunner(runtimePath, "run", cmdRunner, bundleSaver, bundleLookupper, processDepot)
 			process, runErr = execRunner.RunPea(
 				logger,
 				processID,
@@ -263,6 +286,10 @@ var _ = Describe("WindowsExecRunner", func() {
 				bytes.NewBufferString("some-process"),
 				cleanupFunc,
 			)
+		})
+
+		It("succeeds", func() {
+			Expect(runErr).NotTo(HaveOccurred())
 		})
 
 		It("executes the runtime plugin with the correct arguments", func() {
@@ -280,11 +307,38 @@ var _ = Describe("WindowsExecRunner", func() {
 			))
 		})
 
+		It("creates the process folder in the depot", func() {
+			Expect(processDepot.CreateProcessDirCallCount()).To(Equal(1))
+			_, actualSandboxHandle, actualProcessID := processDepot.CreateProcessDirArgsForCall(0)
+			Expect(actualSandboxHandle).To(Equal("handle"))
+			Expect(actualProcessID).To(Equal(processID))
+		})
+
 		It("writes the bundle spec", func() {
 			Expect(bundleSaver.SaveCallCount()).To(Equal(1))
 			actualBundle, actualPath := bundleSaver.SaveArgsForCall(0)
 			Expect(actualBundle.Spec.Version).To(Equal("my-bundle"))
 			Expect(actualPath).To(Equal(processPath))
+		})
+
+		When("creating the process folder in the depot fails", func() {
+			BeforeEach(func() {
+				processDepot.CreateProcessDirReturns("", errors.New("create-process-dir-error"))
+			})
+
+			It("fails", func() {
+				Expect(runErr).To(MatchError("create-process-dir-error"))
+			})
+		})
+
+		When("saving the bundle in the depot fails", func() {
+			BeforeEach(func() {
+				bundleSaver.SaveReturns(errors.New("save-error"))
+			})
+
+			It("fails", func() {
+				Expect(runErr).To(MatchError("save-error"))
+			})
 		})
 
 		Describe("cleanup", func() {
