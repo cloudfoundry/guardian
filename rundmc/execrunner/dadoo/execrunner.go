@@ -42,7 +42,7 @@ type ExecRunner struct {
 
 func NewExecRunner(
 	dadooPath, runcPath, runcRoot string, signallerFactory *signals.SignallerFactory,
-	commandRunner commandrunner.CommandRunner, shouldCleanup bool, runMode string, containerRootHostUID, containerRootHostGID uint32,
+	commandRunner commandrunner.CommandRunner, shouldCleanup bool, containerRootHostUID, containerRootHostGID uint32,
 	bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper,
 	processDepot execrunner.ProcessDepot,
 ) *ExecRunner {

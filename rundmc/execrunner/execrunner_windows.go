@@ -31,7 +31,7 @@ type WindowsExecRunner struct {
 	processDepot    ProcessDepot
 }
 
-func NewWindowsExecRunner(runtimePath, runMode string, commandRunner commandrunner.CommandRunner, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot ProcessDepot) *WindowsExecRunner {
+func NewWindowsExecRunner(runtimePath string, commandRunner commandrunner.CommandRunner, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot ProcessDepot) *WindowsExecRunner {
 	return &WindowsExecRunner{
 		runtimePath:     runtimePath,
 		commandRunner:   commandRunner,

@@ -69,7 +69,7 @@ var _ = Describe("WindowsExecRunner", func() {
 		Expect(err).NotTo(HaveOccurred())
 		bundleLookupper.LookupReturns(bundlePath, nil)
 
-		execRunner = execrunner.NewWindowsExecRunner(runtimePath, "exec", cmdRunner, bundleSaver, bundleLookupper, processDepot)
+		execRunner = execrunner.NewWindowsExecRunner(runtimePath, cmdRunner, bundleSaver, bundleLookupper, processDepot)
 		processID = "process-id"
 		processPath = filepath.Join(bundlePath, "processes", processID)
 		Expect(os.MkdirAll(processPath, 0700)).To(Succeed())
@@ -275,7 +275,6 @@ var _ = Describe("WindowsExecRunner", func() {
 
 	Describe("RunPea", func() {
 		JustBeforeEach(func() {
-			execRunner = execrunner.NewWindowsExecRunner(runtimePath, "run", cmdRunner, bundleSaver, bundleLookupper, processDepot)
 			process, runErr = execRunner.RunPea(
 				logger,
 				processID,

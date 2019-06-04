@@ -55,7 +55,7 @@ type GardenFactory interface {
 	CommandRunner() commandrunner.CommandRunner
 	WireVolumizer(logger lager.Logger) gardener.Volumizer
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
-	WireExecRunner(runMode, runcRoot string, containerRootUID, containerRootGID uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot execrunner.ProcessDepot) runrunc.ExecRunner
+	WireExecRunner(runcRoot string, containerRootUID, containerRootGID uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot execrunner.ProcessDepot) runrunc.ExecRunner
 	WireRootfsFileCreator() depot.RootfsFileCreator
 	WireContainerd(*goci.BndlLoader, *processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser, lager.Logger) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *containerdprivchecker.PrivilegeChecker, error)
 }
@@ -558,21 +558,22 @@ func (cmd *CommonCommand) wireContainerizer(
 
 	processDepot := execrunner.NewProcessDirDepot(depot)
 
+	var execRunner runrunc.ExecRunner = factory.WireExecRunner(runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)), bundleSaver, depot, processDepot)
 	wireExecerFunc := func(pidGetter runrunc.PidGetter) *runrunc.Execer {
-		return runrunc.NewExecer(bndlLoader, processBuilder, factory.WireMkdirer(),
-			userLookupper, factory.WireExecRunner("exec", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)), bundleSaver, depot, processDepot), pidGetter)
+		return runrunc.NewExecer(bndlLoader, processBuilder, factory.WireMkdirer(), userLookupper, execRunner, pidGetter)
 	}
 
 	statser := runrunc.NewStatser(runcLogRunner, runcBinary, depot)
 
 	var useNestedCgroups bool
-	var peasExecRunner peas.ExecRunner = factory.WireExecRunner("run", runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)), bundleSaver, depot, processDepot)
+	var peasExecRunner peas.ExecRunner = execRunner
 	if cmd.useContainerd() {
 		var err error
 		var peaRunner *runcontainerd.RunContainerPea
 		ociRuntime, peaRunner, pidGetter, privilegeChecker, err = factory.WireContainerd(bndlLoader, processBuilder, userLookupper, wireExecerFunc, statser, log)
 		peaRunner.BundleSaver = bundleSaver
 		peaRunner.BundleLookupper = depot
+		peaRunner.ProcessDepot = processDepot
 		if err != nil {
 			return nil, err
 		}
