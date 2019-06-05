@@ -175,7 +175,7 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 		return nil, err
 	}
 
-	if spec.Image != (garden.ImageRef{}) {
+	if isPea(spec) {
 		if shouldResolveUsername(spec.User) {
 			resolvedUID, resolvedGID, err := c.peaUsernameResolver.ResolveUser(log, bundlePath, handle, spec.Image, spec.User)
 			if err != nil {
@@ -195,6 +195,10 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 	}
 
 	return c.runtime.Exec(log, bundlePath, handle, spec, io)
+}
+
+func isPea(spec garden.ProcessSpec) bool {
+	return spec.Image != (garden.ImageRef{})
 }
 
 func shouldResolveUsername(username string) bool {
