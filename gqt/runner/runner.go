@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden/client"
 	"code.cloudfoundry.org/garden/client/connection"
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
@@ -23,6 +24,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 )
@@ -298,6 +300,33 @@ func Start(config GdnRunnerConfig) *RunningGarden {
 	return gdn
 }
 
+func (r *RunningGarden) Create(spec garden.ContainerSpec) (garden.Container, error) {
+	container, err := r.Client.Create(spec)
+	if err != nil {
+		return nil, err
+	}
+
+	containerPid, err := r.getContainerPid(container.Handle())
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Fprintf(GinkgoWriter, "GQT runner created container with id %s and pid %s", container.Handle(), containerPid)
+	return container, nil
+}
+
+func (r *RunningGarden) getContainerPid(handle string) (string, error) {
+	if isContainerd() {
+		return r.listProcesses(handle), nil
+	}
+
+	pidBytes, err := ioutil.ReadFile(filepath.Join(r.DepotDir, handle, "pidfile"))
+	if err != nil {
+		return "", err
+	}
+	return string(pidBytes), nil
+}
+
 func (r *RunningGarden) Kill() error {
 	r.process.Signal(syscall.SIGKILL)
 	select {
@@ -472,4 +501,24 @@ func initGrootStore(grootBin, storePath string, idMappings []string) {
 	initStore.Stdout = GinkgoWriter
 	initStore.Stderr = GinkgoWriter
 	Expect(initStore.Run()).To(Succeed())
+}
+
+func isContainerd() bool {
+	return os.Getenv("CONTAINERD_ENABLED") == "true"
+}
+
+func (r *RunningGarden) listProcesses(containerID string) string {
+	return r.runCtr([]string{"tasks", "ps", containerID})
+}
+
+func (r *RunningGarden) runCtr(args []string) string {
+	socket := r.GdnRunnerConfig.ContainerdSocket
+	defaultArgs := []string{"--address", socket, "--namespace", "garden"}
+	cmd := exec.Command("ctr", append(defaultArgs, args...)...)
+
+	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+	Eventually(session).Should(gexec.Exit(0), string(session.Err.Contents()))
+
+	return string(session.Out.Contents())
 }

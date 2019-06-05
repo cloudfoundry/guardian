@@ -73,6 +73,15 @@ func TestGqt(t *testing.T) {
 			GinkgoWriter.Write(dmesgOutput)
 		}
 
+		if strings.Contains(message, "container init still running") {
+			GinkgoWriter.Write([]byte(fmt.Sprintf("Current Ginkgo node is %d\n", GinkgoParallelNode())))
+			psTreeOut, psTreeErr := exec.Command("ps", "auxf").Output()
+			if psTreeErr != nil {
+				GinkgoWriter.Write([]byte(psTreeErr.Error()))
+			}
+			GinkgoWriter.Write(psTreeOut)
+		}
+
 		Fail(message, callerSkip...)
 	})
 	SetDefaultEventuallyTimeout(5 * time.Second)
