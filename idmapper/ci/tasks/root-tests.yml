@@ -2,7 +2,7 @@
 platform: linux
 
 image_resource:
-  type: docker-image
+  type: registry-image
   source:
     repository: cfgarden/garden-ci
     tag: 2.0.13
