@@ -78,6 +78,15 @@ var _ = Describe("ImagePlugin", func() {
 		Expect(data[0]["original_timestamp"]).To(BeTemporally("~", time.Unix(1540895553, 922393799), 100*time.Nanosecond))
 	})
 
+	It("skips empty logs", func() {
+		_, err := relogger.Write([]byte{})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(fakeLogger.ErrorCallCount()).To(Equal(0))
+		Expect(fakeLogger.InfoCallCount()).To(Equal(0))
+		Expect(fakeLogger.DebugCallCount()).To(Equal(0))
+	})
+
 	Context("when the entry is not a lager log entry", func() {
 		It("wraps it with a lager error log entry", func() {
 			_, err := relogger.Write([]byte(`some random log line`))
