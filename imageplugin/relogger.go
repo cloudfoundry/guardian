@@ -37,6 +37,9 @@ func (r Relogger) Write(data []byte) (n int, err error) {
 }
 
 func (r Relogger) relogEntry(entry chug.Entry) {
+	if len(entry.Raw) == 0 {
+		return
+	}
 	if !entry.IsLager {
 		r.destination.Error("error", nil, map[string]interface{}{"output": string(entry.Raw)})
 		return
