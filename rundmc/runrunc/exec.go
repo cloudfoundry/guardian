@@ -20,6 +20,11 @@ type Mkdirer interface {
 	MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
 }
 
+//go:generate counterfeiter . DepotPathLookuper
+type DepotPathLookuper interface {
+	Lookup(log lager.Logger, handle string) (path string, err error)
+}
+
 //go:generate counterfeiter . BundleLoader
 type BundleLoader interface {
 	Load(path string) (goci.Bndl, error)

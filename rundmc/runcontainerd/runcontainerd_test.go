@@ -229,7 +229,7 @@ var _ = Describe("Runcontainerd", func() {
 
 		BeforeEach(func() {
 			fakeProcess = new(gardenfakes.FakeProcess)
-			execer.ExecReturns(fakeProcess, nil)
+			execer.ExecWithBndlReturns(fakeProcess, nil)
 			containerID = "container-id"
 			bundlePath = "bundle-path"
 			processSpec = garden.ProcessSpec{
@@ -240,6 +240,7 @@ var _ = Describe("Runcontainerd", func() {
 				Args: []string{"test-binary"},
 			})
 			bundle = goci.Bndl{Spec: specs.Spec{Hostname: "test-hostname"}}
+			containerManager.SpecReturns(&bundle.Spec, nil)
 			bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
 				if path == bundlePath {
 					return bundle, nil
@@ -254,23 +255,39 @@ var _ = Describe("Runcontainerd", func() {
 		})
 
 		JustBeforeEach(func() {
-			execProcess, execErr = runContainerd.Exec(logger, bundlePath, containerID, processSpec, processIO)
+			execProcess, execErr = runContainerd.Exec(logger, containerID, processSpec, processIO)
+		})
+
+		It("gets the bundle", func() {
+			Expect(containerManager.SpecCallCount()).To(Equal(1))
+			_, actualContainerID := containerManager.SpecArgsForCall(0)
+			Expect(actualContainerID).To(Equal(containerID))
 		})
 
 		It("delegates to execer", func() {
-			Expect(execer.ExecCallCount()).To(Equal(1))
-			actualLogger, actualBundlePath, actualSandboxHandle, actualProcessSpec, actualIO := execer.ExecArgsForCall(0)
+			Expect(execer.ExecWithBndlCallCount()).To(Equal(1))
+			actualLogger, actualSandboxHandle, actualBundle, actualProcessSpec, actualIO := execer.ExecWithBndlArgsForCall(0)
 			Expect(actualLogger).To(Equal(logger))
-			Expect(actualBundlePath).To(Equal(bundlePath))
 			Expect(actualSandboxHandle).To(Equal(containerID))
+			Expect(actualBundle).To(Equal(bundle))
 			Expect(actualProcessSpec).To(Equal(processSpec))
 			Expect(actualIO).To(Equal(processIO))
 			Expect(execProcess).To(Equal(fakeProcess))
 		})
 
+		Context("when getting the bundle fails", func() {
+			BeforeEach(func() {
+				containerManager.SpecReturns(nil, errors.New("getting-bundle-failed"))
+			})
+
+			It("propagates the error", func() {
+				Expect(execErr).To(MatchError("getting-bundle-failed"))
+			})
+		})
+
 		Context("when the execer fails", func() {
 			BeforeEach(func() {
-				execer.ExecReturns(nil, errors.New("execer-failed"))
+				execer.ExecWithBndlReturns(nil, errors.New("execer-failed"))
 			})
 
 			It("returns the execer error", func() {
@@ -391,6 +408,16 @@ var _ = Describe("Runcontainerd", func() {
 					Expect(secondActualSignal).To(Equal(syscall.SIGKILL))
 				})
 
+				Context("when getting the bundle fails", func() {
+					BeforeEach(func() {
+						containerManager.SpecReturns(nil, errors.New("you-are-a-failure"))
+					})
+
+					It("propagates the error", func() {
+						Expect(execErr).To(MatchError("you-are-a-failure"))
+					})
+				})
+
 				Context("when waiting on the process fails", func() {
 					BeforeEach(func() {
 						processManager.WaitReturns(17, errors.New("Oh no."))
@@ -438,16 +465,6 @@ var _ = Describe("Runcontainerd", func() {
 
 				It("returns the error", func() {
 					Expect(execErr).To(MatchError("get-container-pid-failure"))
-				})
-			})
-
-			Context("when bundleLoader returns an error", func() {
-				BeforeEach(func() {
-					bundleLoader.LoadReturns(goci.Bndl{}, errors.New("error-loading-bundle"))
-				})
-
-				It("returns the error", func() {
-					Expect(execErr).To(MatchError("error-loading-bundle"))
 				})
 			})
 

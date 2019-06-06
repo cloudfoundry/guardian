@@ -126,8 +126,7 @@ var _ = Describe("Rundmc", func() {
 			containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello"}, garden.ProcessIO{})
 			Expect(fakeOCIRuntime.ExecCallCount()).To(Equal(1))
 
-			_, path, id, spec, _ := fakeOCIRuntime.ExecArgsForCall(0)
-			Expect(path).To(Equal("/path/to/some-handle"))
+			_, id, spec, _ := fakeOCIRuntime.ExecArgsForCall(0)
 			Expect(id).To(Equal("some-handle"))
 			Expect(spec.Path).To(Equal("hello"))
 		})
