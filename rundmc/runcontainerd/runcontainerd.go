@@ -27,6 +27,7 @@ type ContainerManager interface {
 	State(log lager.Logger, containerID string) (int, string, error)
 	GetContainerPID(log lager.Logger, containerID string) (uint32, error)
 	OOMEvents(log lager.Logger) <-chan *apievents.TaskOOM
+	Spec(log lager.Logger, containerID string) (*specs.Spec, error)
 }
 
 //go:generate counterfeiter . ProcessManager
@@ -47,7 +48,7 @@ type ProcessBuilder interface {
 
 //go:generate counterfeiter . Execer
 type Execer interface {
-	Exec(log lager.Logger, bundlePath string, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	ExecWithBndl(log lager.Logger, id string, bndl goci.Bndl, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, bundlePath string, id string, processId string, io garden.ProcessIO) (garden.Process, error)
 }
 
@@ -100,14 +101,14 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, pio gard
 	return nil
 }
 
-func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, gardenProcessSpec garden.ProcessSpec, gardenIO garden.ProcessIO) (garden.Process, error) {
-	if !r.useContainerdForProcesses {
-		return r.execer.Exec(log, bundlePath, containerID, gardenProcessSpec, gardenIO)
-	}
-
-	bundle, err := r.bundleLoader.Load(bundlePath)
+func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcessSpec garden.ProcessSpec, gardenIO garden.ProcessIO) (garden.Process, error) {
+	bundle, err := r.getBundle(log, containerID)
 	if err != nil {
 		return nil, err
+	}
+
+	if !r.useContainerdForProcesses {
+		return r.execer.ExecWithBndl(log, containerID, bundle, gardenProcessSpec, gardenIO)
 	}
 
 	containerPid, err := r.containerManager.GetContainerPID(log, containerID)
@@ -143,6 +144,15 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, containerID string, g
 	}
 
 	return NewProcess(log, containerID, gardenProcessSpec.ID, r.processManager), nil
+}
+
+func (r *RunContainerd) getBundle(log lager.Logger, containerID string) (goci.Bndl, error) {
+	spec, err := r.containerManager.Spec(log, containerID)
+	if err != nil {
+		return goci.Bndl{}, err
+	}
+
+	return goci.Bndl{Spec: *spec}, nil
 }
 
 func (r *RunContainerd) Attach(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error) {

@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
@@ -17,6 +18,7 @@ import (
 
 type Execer struct {
 	bundleLoader   BundleLoader
+	depot          DepotPathLookuper
 	processBuilder ProcessBuilder
 	mkdirer        Mkdirer
 	userLookupper  users.UserLookupper
@@ -24,9 +26,10 @@ type Execer struct {
 	pidGetter      PidGetter
 }
 
-func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookupper users.UserLookupper, execRunner ExecRunner, pidGetter PidGetter) *Execer {
+func NewExecer(bundleLoader BundleLoader, depot DepotPathLookuper, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookupper users.UserLookupper, execRunner ExecRunner, pidGetter PidGetter) *Execer {
 	return &Execer{
 		bundleLoader:   bundleLoader,
+		depot:          depot,
 		processBuilder: processBuilder,
 		mkdirer:        mkdirer,
 		userLookupper:  userLookupper,
@@ -36,8 +39,28 @@ func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer
 }
 
 // Exec a process in a bundle using 'runc exec'
-func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+func (e *Execer) Exec(log lager.Logger, sandboxHandle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	log = log.Session("exec", lager.Data{"path": spec.Path})
+
+	log.Info("start")
+	defer log.Info("finished")
+
+	bundlePath, err := e.depot.Lookup(log, sandboxHandle)
+	if err != nil {
+		log.Error("lookup-failed", err)
+		return nil, err
+	}
+	bundle, err := e.bundleLoader.Load(bundlePath)
+	if err != nil {
+		log.Error("load-bundle-failed", err)
+		return nil, err
+	}
+
+	return e.ExecWithBndl(log, sandboxHandle, bundle, spec, io)
+}
+
+func (e *Execer) ExecWithBndl(log lager.Logger, sandboxHandle string, bundle goci.Bndl, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+	log = log.Session("exec-with-bndl", lager.Data{"path": spec.Path})
 
 	log.Info("start")
 	defer log.Info("finished")
@@ -54,14 +77,6 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec g
 		log.Error("user-lookup-failed", err)
 		return nil, err
 	}
-
-	// NOT needed by 100% containerd procs vv
-	bundle, err := e.bundleLoader.Load(bundlePath)
-	if err != nil {
-		log.Error("load-bundle-failed", err)
-		return nil, err
-	}
-	// NOT needed by 100% containerd procs ^^
 
 	hostUID := idmapper.MappingList(bundle.Spec.Linux.UIDMappings).Map(user.Uid)
 	hostGID := idmapper.MappingList(bundle.Spec.Linux.GIDMappings).Map(user.Gid)

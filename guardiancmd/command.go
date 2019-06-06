@@ -560,7 +560,7 @@ func (cmd *CommonCommand) wireContainerizer(
 
 	var execRunner runrunc.ExecRunner = factory.WireExecRunner(runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)), bundleSaver, depot, processDepot)
 	wireExecerFunc := func(pidGetter runrunc.PidGetter) *runrunc.Execer {
-		return runrunc.NewExecer(bndlLoader, processBuilder, factory.WireMkdirer(), userLookupper, execRunner, pidGetter)
+		return runrunc.NewExecer(bndlLoader, depot, processBuilder, factory.WireMkdirer(), userLookupper, execRunner, pidGetter)
 	}
 
 	statser := runrunc.NewStatser(runcLogRunner, runcBinary, depot)

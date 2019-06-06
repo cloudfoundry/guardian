@@ -42,7 +42,7 @@ type BundleLoader interface {
 
 type OCIRuntime interface {
 	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
-	Exec(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error)
 	Kill(log lager.Logger, bundlePath string) error
 	Delete(log lager.Logger, id string) error
@@ -194,7 +194,7 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 		return nil, err
 	}
 
-	return c.runtime.Exec(log, bundlePath, handle, spec, io)
+	return c.runtime.Exec(log, handle, spec, io)
 }
 
 func isPea(spec garden.ProcessSpec) bool {
