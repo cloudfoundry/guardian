@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b
-	code.cloudfoundry.org/idmapper v0.0.0-20190509093205-06cf188c2966
+	code.cloudfoundry.org/idmapper v0.0.0-20190605151133-eea8522b4bbd
 	code.cloudfoundry.org/lager v0.0.0-20181119165122-baf208c4c56b
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/Microsoft/go-winio v0.4.7 // indirect
@@ -51,8 +51,8 @@ require (
 	github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861
 	github.com/urfave/cli v0.0.0-20161006035353-55f715e28c46
 	github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c
-	golang.org/x/net v0.0.0-20190509222800-a4d6f7feada5 // indirect
-	golang.org/x/sys v0.0.0-20190509141414-a5b02f93d862
+	golang.org/x/net v0.0.0-20190603091049-60506f45cf65 // indirect
+	golang.org/x/sys v0.0.0-20190602015325-4c4f7f33c9ed
 	golang.org/x/text v0.3.2 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v2 v2.2.2
