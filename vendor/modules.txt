@@ -11,7 +11,7 @@ code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 # code.cloudfoundry.org/debugserver v0.0.0-20170501225606-70715da12ee9
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20190410122303-a4e51d29c0e5
+# code.cloudfoundry.org/garden v0.0.0-20190605151055-e9c503bfdeed
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
 code.cloudfoundry.org/garden/client/connection
@@ -22,9 +22,9 @@ code.cloudfoundry.org/garden/server/bomberman
 code.cloudfoundry.org/garden/server/streamer
 code.cloudfoundry.org/garden/gardenfakes
 code.cloudfoundry.org/garden/server/timebomb
-# code.cloudfoundry.org/grootfs v0.30.1-0.20190603153917-fafcaf9eabf8
+# code.cloudfoundry.org/grootfs v0.30.1-0.20190606091919-a9461293e4b8
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20190509093205-06cf188c2966
+# code.cloudfoundry.org/idmapper v0.0.0-20190605151133-eea8522b4bbd
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager v2.0.0+incompatible
 code.cloudfoundry.org/lager
