@@ -47,14 +47,6 @@ func (runc RuncBinary) EventsCommand(id string) *exec.Cmd {
 	return exec.Command(runc.Path, runc.addRootFlagIfNeeded([]string{"events", id})...)
 }
 
-// KillCommand returns an *exec.Cmd that, when run, will signal the running
-// container.
-func (runc RuncBinary) KillCommand(id, signal, logFile string) *exec.Cmd {
-	return exec.Command(
-		runc.Path, runc.addRootFlagIfNeeded(runc.addGlobalFlags([]string{"kill", id, signal}, logFile))...,
-	)
-}
-
 // StateCommand returns an *exec.Cmd that, when run, will get the state of the
 // container.
 func (runc RuncBinary) StateCommand(id, logFile string) *exec.Cmd {

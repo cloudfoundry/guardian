@@ -104,24 +104,6 @@ var _ = Describe("Commands", func() {
 		})
 	})
 
-	Describe("KillCommand", func() {
-		It("creates an *exec.Cmd to signal the bundle", func() {
-			cmd := binary.KillCommand("my-bundle-id", "TERM", "log.file")
-			Expect(cmd.Args).To(Equal([]string{"funC", "--root", "fancy-root", "--debug", "--log", "log.file", "--log-format", "json", "kill", "my-bundle-id", "TERM"}))
-		})
-
-		Context("when runcroot is not set", func() {
-			BeforeEach(func() {
-				binary = goci.RuncBinary{Path: "funC"}
-			})
-
-			It("does not pass the root flag", func() {
-				cmd := binary.KillCommand("my-bundle-id", "TERM", "log.file")
-				Expect(cmd.Args).NotTo(ContainElement("--root"))
-			})
-		})
-	})
-
 	Describe("StateCommand", func() {
 		It("creates an *exec.Cmd to get the state of the bundle", func() {
 			cmd := binary.StateCommand("my-bundle-id", "log.file")

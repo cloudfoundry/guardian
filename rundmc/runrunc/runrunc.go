@@ -13,7 +13,6 @@ type RunRunc struct {
 	*OomWatcher
 	*Statser
 	*Stater
-	*Killer
 	*Deleter
 }
 
@@ -24,7 +23,6 @@ type RuncBinary interface {
 	EventsCommand(id string) *exec.Cmd
 	StateCommand(id, logFile string) *exec.Cmd
 	StatsCommand(id, logFile string) *exec.Cmd
-	KillCommand(id, signal, logFile string) *exec.Cmd
 	DeleteCommand(id string, force bool, logFile string) *exec.Cmd
 }
 
@@ -41,7 +39,6 @@ func New(
 		OomWatcher: oomWatcher,
 		Statser:    statser,
 		Stater:     stater,
-		Killer:     NewKiller(runcCmdRunner, runc),
 		Deleter:    NewDeleter(runcCmdRunner, runc, stater),
 	}
 }

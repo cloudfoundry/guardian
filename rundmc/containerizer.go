@@ -40,7 +40,6 @@ type OCIRuntime interface {
 	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
 	Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, id, processId string, io garden.ProcessIO) (garden.Process, error)
-	Kill(log lager.Logger, bundlePath string) error
 	Delete(log lager.Logger, id string) error
 	State(log lager.Logger, id string) (runrunc.State, error)
 	Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)

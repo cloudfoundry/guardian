@@ -159,10 +159,6 @@ func (r *RunContainerd) Attach(log lager.Logger, id, processId string, io garden
 	return r.execer.Attach(log, id, processId, io)
 }
 
-func (r *RunContainerd) Kill(log lager.Logger, bundlePath string) error {
-	return fmt.Errorf("Kill is not implemented yet")
-}
-
 func (r *RunContainerd) Delete(log lager.Logger, id string) error {
 	return r.containerManager.Delete(log, id)
 }
