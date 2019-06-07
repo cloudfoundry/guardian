@@ -57,7 +57,7 @@ type GardenFactory interface {
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
 	WireExecRunner(runcRoot string, containerRootUID, containerRootGID uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot execrunner.ProcessDepot) runrunc.ExecRunner
 	WireRootfsFileCreator() depot.RootfsFileCreator
-	WireContainerd(*goci.BndlLoader, *processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser, lager.Logger) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *containerdprivchecker.PrivilegeChecker, error)
+	WireContainerd(*goci.BndlLoader, *processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser, lager.Logger) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *containerdprivchecker.PrivilegeChecker, peas.BundleLoader, error)
 }
 
 type GdnCommand struct {
@@ -335,8 +335,8 @@ func (cmd *CommonCommand) wirePortPool(logger lager.Logger) (*ports.PortPool, er
 	return portPool, nil
 }
 
-func (cmd *CommonCommand) wireDepot(bundleGenerator depot.BundleGenerator, bundleSaver depot.BundleSaver) *depot.DirectoryDepot {
-	return depot.New(cmd.Containers.Dir, bundleGenerator, bundleSaver)
+func (cmd *CommonCommand) wireDepot(bundleGenerator depot.BundleGenerator, bundleSaver depot.BundleSaver, bundleLoader depot.BundleLoader) *depot.DirectoryDepot {
+	return depot.New(cmd.Containers.Dir, bundleGenerator, bundleSaver, bundleLoader)
 }
 
 func extractIPs(ipflags []IPFlag) []net.IP {
@@ -534,9 +534,9 @@ func (cmd *CommonCommand) wireContainerizer(
 	template := &rundmc.BundleTemplate{Rules: bundleRules}
 
 	bundleSaver := &goci.BundleSaver{}
-	depot := cmd.wireDepot(template, bundleSaver)
-
 	bndlLoader := &goci.BndlLoader{}
+	depot := cmd.wireDepot(template, bundleSaver, bndlLoader)
+
 	processBuilder := processes.NewBuilder(wireEnvFunc(), nonRootMaxCaps)
 
 	cmdRunner := factory.CommandRunner()
@@ -567,16 +567,19 @@ func (cmd *CommonCommand) wireContainerizer(
 
 	var useNestedCgroups bool
 	var peasExecRunner peas.ExecRunner = execRunner
+	var peasBundleLoader peas.BundleLoader = depot
 	if cmd.useContainerd() {
 		var err error
 		var peaRunner *runcontainerd.RunContainerPea
-		ociRuntime, peaRunner, pidGetter, privilegeChecker, err = factory.WireContainerd(bndlLoader, processBuilder, userLookupper, wireExecerFunc, statser, log)
-		peaRunner.BundleSaver = bundleSaver
-		peaRunner.BundleLookupper = depot
-		peaRunner.ProcessDepot = processDepot
+		var peaBundleLoader peas.BundleLoader
+		ociRuntime, peaRunner, pidGetter, privilegeChecker, peaBundleLoader, err = factory.WireContainerd(bndlLoader, processBuilder, userLookupper, wireExecerFunc, statser, log)
 		if err != nil {
 			return nil, err
 		}
+		peaRunner.BundleSaver = bundleSaver
+		peaRunner.BundleLookupper = depot
+		peaRunner.ProcessDepot = processDepot
+		peasBundleLoader = peaBundleLoader
 
 		if cmd.Containerd.UseContainerdForProcesses {
 			peaPidGetter = pidGetter
@@ -616,7 +619,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	peaUsernameResolver := &peas.PeaUsernameResolver{
 		PidGetter:     peaPidGetter,
 		PeaCreator:    peaCreator,
-		Loader:        bndlLoader,
+		BundleLoader:  peasBundleLoader,
 		UserLookupper: users.LookupFunc(users.LookupUser),
 	}
 

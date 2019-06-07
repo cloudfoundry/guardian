@@ -70,7 +70,7 @@ var _ = Describe("Depot", func() {
 	})
 
 	JustBeforeEach(func() {
-		dirdepot = depot.New(depotDir, nil, nil)
+		dirdepot = depot.New(depotDir, nil, nil, nil)
 	})
 
 	AfterEach(func() {
@@ -79,13 +79,18 @@ var _ = Describe("Depot", func() {
 
 	var (
 		bundleSaver     *fakes.FakeBundleSaver
+		bundleLoader    *fakes.FakeBundleLoader
 		bundleGenerator *fakes.FakeBundleGenerator
 	)
 
-	JustBeforeEach(func() {
+	BeforeEach(func() {
 		bundleSaver = new(fakes.FakeBundleSaver)
+		bundleLoader = new(fakes.FakeBundleLoader)
 		bundleGenerator = new(fakes.FakeBundleGenerator)
-		dirdepot = depot.New(depotDir, bundleGenerator, bundleSaver)
+	})
+
+	JustBeforeEach(func() {
+		dirdepot = depot.New(depotDir, bundleGenerator, bundleSaver, bundleLoader)
 	})
 
 	Describe("lookup", func() {
@@ -207,7 +212,7 @@ var _ = Describe("Depot", func() {
 			var invalidDepot *depot.DirectoryDepot
 
 			BeforeEach(func() {
-				invalidDepot = depot.New("rubbish", nil, nil)
+				invalidDepot = depot.New("rubbish", nil, nil, nil)
 			})
 
 			It("returns an error", func() {
@@ -224,6 +229,42 @@ var _ = Describe("Depot", func() {
 
 		It("returns the depot dir", func() {
 			Expect(dirdepot.GetDir()).To(Equal("/path/to/depot"))
+		})
+	})
+
+	Describe("Load", func() {
+		var (
+			loadErr    error
+			bundlePath string
+		)
+
+		BeforeEach(func() {
+			Expect(os.MkdirAll(filepath.Join(depotDir, "container-handle"), 0755)).To(Succeed())
+			bundlePath = filepath.Join(depotDir, "container-handle")
+		})
+
+		JustBeforeEach(func() {
+			_, loadErr = dirdepot.Load(logger, "container-handle")
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(bundlePath))
+		})
+
+		It("loads the bundle", func() {
+			Expect(bundleLoader.LoadCallCount()).To(Equal(1))
+			actualBundlePath := bundleLoader.LoadArgsForCall(0)
+			Expect(actualBundlePath).To(Equal(bundlePath))
+		})
+
+		Context("when loading the bundle fails", func() {
+			BeforeEach(func() {
+				bundleLoader.LoadReturns(goci.Bndl{}, errors.New("hey"))
+			})
+
+			It("fails", func() {
+				Expect(loadErr).To(MatchError("hey"))
+			})
 		})
 	})
 })
