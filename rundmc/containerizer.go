@@ -23,7 +23,6 @@ import (
 //go:generate counterfeiter . OCIRuntime
 //go:generate counterfeiter . NstarRunner
 //go:generate counterfeiter . EventStore
-//go:generate counterfeiter . BundleLoader
 //go:generate counterfeiter . Stopper
 //go:generate counterfeiter . StateStore
 //go:generate counterfeiter . PeaCreator
@@ -32,12 +31,9 @@ import (
 type Depot interface {
 	Create(log lager.Logger, handle string, desiredContainerSpec spec.DesiredContainerSpec) error
 	Lookup(log lager.Logger, handle string) (path string, err error)
+	Load(log lager.Logger, handle string) (bundle goci.Bndl, err error)
 	Destroy(log lager.Logger, handle string) error
 	Handles() ([]string, error)
-}
-
-type BundleLoader interface {
-	Load(path string) (goci.Bndl, error)
 }
 
 type OCIRuntime interface {
@@ -81,7 +77,6 @@ type PeaUsernameResolver interface {
 // Containerizer knows how to manage a depot of container bundles
 type Containerizer struct {
 	depot                  Depot
-	loader                 BundleLoader
 	runtime                OCIRuntime
 	stopper                Stopper
 	nstar                  NstarRunner
@@ -95,7 +90,6 @@ type Containerizer struct {
 func New(
 	depot Depot,
 	runtime OCIRuntime,
-	loader BundleLoader,
 	nstarRunner NstarRunner,
 	stopper Stopper,
 	events EventStore,
@@ -107,7 +101,6 @@ func New(
 	containerizer := &Containerizer{
 		depot:                  depot,
 		runtime:                runtime,
-		loader:                 loader,
 		nstar:                  nstarRunner,
 		stopper:                stopper,
 		events:                 events,
@@ -298,7 +291,12 @@ func (c *Containerizer) RemoveBundle(log lager.Logger, handle string) error {
 }
 
 func (c *Containerizer) Info(log lager.Logger, handle string) (spec.ActualContainerSpec, error) {
-	bundlePath, bundle, err := c.loadBundle(log, handle)
+	bundlePath, err := c.depot.Lookup(log, handle)
+	if err != nil {
+		return spec.ActualContainerSpec{}, err
+	}
+
+	bundle, err := c.depot.Load(log, handle)
 	if err != nil {
 		return spec.ActualContainerSpec{}, err
 	}
@@ -352,7 +350,7 @@ func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.Actua
 		StatsContainerMetrics: containerMetrics,
 	}
 
-	_, bundle, err := c.loadBundle(log, handle)
+	bundle, err := c.depot.Load(log, handle)
 	if err != nil && err != depot.ErrDoesNotExist {
 		return gardener.ActualContainerMetrics{}, err
 	}
@@ -363,16 +361,6 @@ func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.Actua
 
 	return actualContainerMetrics, nil
 
-}
-
-func (c *Containerizer) loadBundle(log lager.Logger, handle string) (string, goci.Bndl, error) {
-	bundlePath, err := c.depot.Lookup(log, handle)
-	if err != nil {
-		return "", goci.Bndl{}, err
-	}
-
-	bundle, err := c.loader.Load(bundlePath)
-	return bundlePath, bundle, err
 }
 
 // Handles returns a list of all container handles
