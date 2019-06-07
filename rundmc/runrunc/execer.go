@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"path"
 	"path/filepath"
 	"strconv"
 
@@ -106,7 +105,6 @@ func (e *Execer) ExecWithBndl(log lager.Logger, sandboxHandle string, bundle goc
 }
 
 // Attach attaches to an already running process by guid
-func (e *Execer) Attach(log lager.Logger, bundlePath, id, processID string, io garden.ProcessIO) (garden.Process, error) {
-	processesPath := path.Join(bundlePath, "processes")
-	return e.execRunner.Attach(log, processID, io, processesPath)
+func (e *Execer) Attach(log lager.Logger, id, processID string, io garden.ProcessIO) (garden.Process, error) {
+	return e.execRunner.Attach(log, id, processID, io)
 }

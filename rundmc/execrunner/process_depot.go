@@ -13,6 +13,7 @@ import (
 //go:generate counterfeiter . ProcessDepot
 type ProcessDepot interface {
 	CreateProcessDir(log lager.Logger, sandboxHandle, processID string) (string, error)
+	LookupProcessDir(log lager.Logger, sandboxHandle, processID string) (string, error)
 }
 
 type ProcessDirDepot struct {
@@ -35,6 +36,23 @@ func (d ProcessDirDepot) CreateProcessDir(log lager.Logger, sandboxHandle, proce
 	}
 
 	if err := os.MkdirAll(processPath, 0700); err != nil {
+		return "", err
+	}
+
+	return processPath, nil
+}
+
+func (d ProcessDirDepot) LookupProcessDir(log lager.Logger, sandboxHandle, processID string) (string, error) {
+	bundlePath, err := d.bundleLookupper.Lookup(log, sandboxHandle)
+	if err != nil {
+		return "", err
+	}
+
+	processPath := filepath.Join(bundlePath, "processes", processID)
+	if _, err := os.Stat(processPath); err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("process %s not found", processID)
+		}
 		return "", err
 	}
 

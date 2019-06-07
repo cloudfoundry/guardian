@@ -39,7 +39,7 @@ type Depot interface {
 type OCIRuntime interface {
 	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
 	Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
-	Attach(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error)
+	Attach(log lager.Logger, id, processId string, io garden.ProcessIO) (garden.Process, error)
 	Kill(log lager.Logger, bundlePath string) error
 	Delete(log lager.Logger, id string) error
 	State(log lager.Logger, id string) (runrunc.State, error)
@@ -198,13 +198,7 @@ func (c *Containerizer) Attach(log lager.Logger, handle string, processID string
 	log.Info("started")
 	defer log.Info("finished")
 
-	path, err := c.depot.Lookup(log, handle)
-	if err != nil {
-		log.Error("lookup-failed", err)
-		return nil, err
-	}
-
-	return c.runtime.Attach(log, path, handle, processID, io)
+	return c.runtime.Attach(log, handle, processID, io)
 }
 
 // StreamIn streams files in to the container

@@ -35,7 +35,7 @@ type ExecRunner interface {
 		log lager.Logger, processID string, bundle goci.Bndl, sandboxHandle string,
 		pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 	) (garden.Process, error)
-	Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error)
+	Attach(log lager.Logger, sandboxHandle, processID string, io garden.ProcessIO) (garden.Process, error)
 }
 
 //go:generate counterfeiter . ProcessBuilder

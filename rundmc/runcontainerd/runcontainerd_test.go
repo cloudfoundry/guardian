@@ -508,7 +508,7 @@ var _ = Describe("Runcontainerd", func() {
 		})
 
 		JustBeforeEach(func() {
-			attachProcess, attachError = runContainerd.Attach(logger, "bundle-path", "some-id", "some-proc-id", io)
+			attachProcess, attachError = runContainerd.Attach(logger, "some-id", "some-proc-id", io)
 		})
 
 		It("delegates to execer", func() {
@@ -516,9 +516,8 @@ var _ = Describe("Runcontainerd", func() {
 			Expect(attachProcess).To(BeIdenticalTo(process))
 
 			Expect(execer.AttachCallCount()).To(Equal(1))
-			actualLogger, actualBundlePath, actualContainerID, actualProcessID, actualIO := execer.AttachArgsForCall(0)
+			actualLogger, actualContainerID, actualProcessID, actualIO := execer.AttachArgsForCall(0)
 			Expect(actualLogger).To(Equal(logger))
-			Expect(actualBundlePath).To(Equal("bundle-path"))
 			Expect(actualContainerID).To(Equal("some-id"))
 			Expect(actualProcessID).To(Equal("some-proc-id"))
 			Expect(actualIO).To(Equal(io))

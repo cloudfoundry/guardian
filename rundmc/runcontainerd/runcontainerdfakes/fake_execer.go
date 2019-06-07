@@ -11,14 +11,13 @@ import (
 )
 
 type FakeExecer struct {
-	AttachStub        func(lager.Logger, string, string, string, garden.ProcessIO) (garden.Process, error)
+	AttachStub        func(lager.Logger, string, string, garden.ProcessIO) (garden.Process, error)
 	attachMutex       sync.RWMutex
 	attachArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 string
 		arg3 string
-		arg4 string
-		arg5 garden.ProcessIO
+		arg4 garden.ProcessIO
 	}
 	attachReturns struct {
 		result1 garden.Process
@@ -49,20 +48,19 @@ type FakeExecer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeExecer) Attach(arg1 lager.Logger, arg2 string, arg3 string, arg4 string, arg5 garden.ProcessIO) (garden.Process, error) {
+func (fake *FakeExecer) Attach(arg1 lager.Logger, arg2 string, arg3 string, arg4 garden.ProcessIO) (garden.Process, error) {
 	fake.attachMutex.Lock()
 	ret, specificReturn := fake.attachReturnsOnCall[len(fake.attachArgsForCall)]
 	fake.attachArgsForCall = append(fake.attachArgsForCall, struct {
 		arg1 lager.Logger
 		arg2 string
 		arg3 string
-		arg4 string
-		arg5 garden.ProcessIO
-	}{arg1, arg2, arg3, arg4, arg5})
-	fake.recordInvocation("Attach", []interface{}{arg1, arg2, arg3, arg4, arg5})
+		arg4 garden.ProcessIO
+	}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("Attach", []interface{}{arg1, arg2, arg3, arg4})
 	fake.attachMutex.Unlock()
 	if fake.AttachStub != nil {
-		return fake.AttachStub(arg1, arg2, arg3, arg4, arg5)
+		return fake.AttachStub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -77,17 +75,17 @@ func (fake *FakeExecer) AttachCallCount() int {
 	return len(fake.attachArgsForCall)
 }
 
-func (fake *FakeExecer) AttachCalls(stub func(lager.Logger, string, string, string, garden.ProcessIO) (garden.Process, error)) {
+func (fake *FakeExecer) AttachCalls(stub func(lager.Logger, string, string, garden.ProcessIO) (garden.Process, error)) {
 	fake.attachMutex.Lock()
 	defer fake.attachMutex.Unlock()
 	fake.AttachStub = stub
 }
 
-func (fake *FakeExecer) AttachArgsForCall(i int) (lager.Logger, string, string, string, garden.ProcessIO) {
+func (fake *FakeExecer) AttachArgsForCall(i int) (lager.Logger, string, string, garden.ProcessIO) {
 	fake.attachMutex.RLock()
 	defer fake.attachMutex.RUnlock()
 	argsForCall := fake.attachArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeExecer) AttachReturns(result1 garden.Process, result2 error) {

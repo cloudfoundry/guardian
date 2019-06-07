@@ -221,7 +221,7 @@ func (e *WindowsExecRunner) runProcess(
 	return proc, nil
 }
 
-func (e *WindowsExecRunner) Attach(log lager.Logger, processID string, pio garden.ProcessIO, _ string) (garden.Process, error) {
+func (e *WindowsExecRunner) Attach(log lager.Logger, _, processID string, pio garden.ProcessIO) (garden.Process, error) {
 	proc, err := e.getProcess(processID)
 	if err != nil {
 		return nil, err

@@ -49,7 +49,7 @@ type ProcessBuilder interface {
 //go:generate counterfeiter . Execer
 type Execer interface {
 	ExecWithBndl(log lager.Logger, id string, bndl goci.Bndl, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
-	Attach(log lager.Logger, bundlePath string, id string, processId string, io garden.ProcessIO) (garden.Process, error)
+	Attach(log lager.Logger, id string, processId string, io garden.ProcessIO) (garden.Process, error)
 }
 
 //go:generate counterfeiter . Statser
@@ -155,8 +155,8 @@ func (r *RunContainerd) getBundle(log lager.Logger, containerID string) (goci.Bn
 	return goci.Bndl{Spec: *spec}, nil
 }
 
-func (r *RunContainerd) Attach(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error) {
-	return r.execer.Attach(log, bundlePath, id, processId, io)
+func (r *RunContainerd) Attach(log lager.Logger, id, processId string, io garden.ProcessIO) (garden.Process, error) {
+	return r.execer.Attach(log, id, processId, io)
 }
 
 func (r *RunContainerd) Kill(log lager.Logger, bundlePath string) error {

@@ -230,24 +230,9 @@ var _ = Describe("Rundmc", func() {
 			containerizer.Attach(logger, "some-handle", "123", garden.ProcessIO{})
 			Expect(fakeOCIRuntime.AttachCallCount()).To(Equal(1))
 
-			_, path, id, processId, _ := fakeOCIRuntime.AttachArgsForCall(0)
-			Expect(path).To(Equal("/path/to/some-handle"))
+			_, id, processId, _ := fakeOCIRuntime.AttachArgsForCall(0)
 			Expect(id).To(Equal("some-handle"))
 			Expect(processId).To(Equal("123"))
-		})
-
-		Context("when looking up the container fails", func() {
-			It("returns an error", func() {
-				fakeDepot.LookupReturns("", errors.New("blam"))
-				_, err := containerizer.Attach(logger, "some-handle", "123", garden.ProcessIO{})
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("does not attempt to exec the process", func() {
-				fakeDepot.LookupReturns("", errors.New("blam"))
-				containerizer.Attach(logger, "some-handle", "123", garden.ProcessIO{})
-				Expect(fakeOCIRuntime.AttachCallCount()).To(Equal(0))
-			})
 		})
 	})
 

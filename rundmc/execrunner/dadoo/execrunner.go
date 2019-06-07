@@ -259,13 +259,10 @@ func buildDadooCommand(tty bool, dadooPath, dadooRunMode, runcPath, runcRoot, pr
 	return cmd
 }
 
-func (d *ExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
-	processPath := filepath.Join(processesPath, processID)
-	if _, err := os.Stat(processPath); err != nil {
-		if os.IsNotExist(err) {
-			return nil, garden.ProcessNotFoundError{ProcessID: processID}
-		}
-		return nil, err
+func (d *ExecRunner) Attach(log lager.Logger, sandboxHandle, processID string, io garden.ProcessIO) (garden.Process, error) {
+	processPath, err := d.processDepot.LookupProcessDir(log, sandboxHandle, processID)
+	if err != nil {
+		return nil, garden.ProcessNotFoundError{ProcessID: processID}
 	}
 
 	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"), nil)

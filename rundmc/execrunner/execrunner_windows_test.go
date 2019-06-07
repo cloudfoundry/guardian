@@ -574,14 +574,14 @@ var _ = Describe("WindowsExecRunner", func() {
 		})
 
 		It("returns the process with the given id", func() {
-			p, err := execRunner.Attach(logger, processID, garden.ProcessIO{}, "")
+			p, err := execRunner.Attach(logger, "", processID, garden.ProcessIO{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(p).To(Equal(process))
 		})
 
 		It("calling Wait on the returned process gives the exit code", func() {
-			p, err := execRunner.Attach(logger, processID, garden.ProcessIO{}, "")
+			p, err := execRunner.Attach(logger, "", processID, garden.ProcessIO{})
 			Expect(err).NotTo(HaveOccurred())
 
 			code, err := p.Wait()
@@ -599,7 +599,7 @@ var _ = Describe("WindowsExecRunner", func() {
 				Stderr: aerr,
 			}
 
-			p, err := execRunner.Attach(logger, processID, attachIO, "")
+			p, err := execRunner.Attach(logger, "", processID, attachIO)
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = p.Wait()
@@ -630,7 +630,7 @@ var _ = Describe("WindowsExecRunner", func() {
 				attachStdout := new(bytes.Buffer)
 				attachStderr := new(bytes.Buffer)
 
-				_, err := execRunner.Attach(logger, processID, garden.ProcessIO{Stdout: attachStdout, Stderr: attachStderr}, "")
+				_, err := execRunner.Attach(logger, "", processID, garden.ProcessIO{Stdout: attachStdout, Stderr: attachStderr})
 				Expect(err).NotTo(HaveOccurred())
 
 				process.Wait()
@@ -644,7 +644,7 @@ var _ = Describe("WindowsExecRunner", func() {
 
 		Context("a process with the given id does not exist", func() {
 			It("returns a ProcessNotFound error", func() {
-				_, err := execRunner.Attach(logger, "does-not-exist", garden.ProcessIO{}, "")
+				_, err := execRunner.Attach(logger, "", "does-not-exist", garden.ProcessIO{})
 				Expect(err).To(MatchError(garden.ProcessNotFoundError{ProcessID: "does-not-exist"}))
 			})
 		})
