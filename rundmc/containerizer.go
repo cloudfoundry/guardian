@@ -75,7 +75,7 @@ type StateStore interface {
 }
 
 type PeaUsernameResolver interface {
-	ResolveUser(log lager.Logger, bundlePath, handle string, image garden.ImageRef, username string) (int, int, error)
+	ResolveUser(log lager.Logger, handle string, image garden.ImageRef, username string) (int, int, error)
 }
 
 // Containerizer knows how to manage a depot of container bundles
@@ -169,15 +169,9 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 	log.Info("started")
 	defer log.Info("finished")
 
-	bundlePath, err := c.depot.Lookup(log, handle)
-	if err != nil {
-		log.Error("lookup-failed", err)
-		return nil, err
-	}
-
 	if isPea(spec) {
 		if shouldResolveUsername(spec.User) {
-			resolvedUID, resolvedGID, err := c.peaUsernameResolver.ResolveUser(log, bundlePath, handle, spec.Image, spec.User)
+			resolvedUID, resolvedGID, err := c.peaUsernameResolver.ResolveUser(log, handle, spec.Image, spec.User)
 			if err != nil {
 				return nil, err
 			}

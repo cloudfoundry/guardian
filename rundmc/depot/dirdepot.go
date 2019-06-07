@@ -20,6 +20,11 @@ type BundleSaver interface {
 	Save(bundle goci.Bndl, path string) error
 }
 
+//go:generate counterfeiter . BundleLoader
+type BundleLoader interface {
+	Load(path string) (goci.Bndl, error)
+}
+
 //go:generate counterfeiter . BundleGenerator
 type BundleGenerator interface {
 	Generate(desiredContainerSpec spec.DesiredContainerSpec) (goci.Bndl, error)
@@ -32,16 +37,18 @@ type BundleLookupper interface {
 
 // a depot which stores containers as subdirs of a depot directory
 type DirectoryDepot struct {
-	dir         string
-	bundler     BundleGenerator
-	bundleSaver BundleSaver
+	dir          string
+	bundler      BundleGenerator
+	bundleSaver  BundleSaver
+	bundleLoader BundleLoader
 }
 
-func New(dir string, bundler BundleGenerator, bundleSaver BundleSaver) *DirectoryDepot {
+func New(dir string, bundler BundleGenerator, bundleSaver BundleSaver, bundleLoader BundleLoader) *DirectoryDepot {
 	return &DirectoryDepot{
-		dir:         dir,
-		bundler:     bundler,
-		bundleSaver: bundleSaver,
+		dir:          dir,
+		bundler:      bundler,
+		bundleSaver:  bundleSaver,
+		bundleLoader: bundleLoader,
 	}
 }
 
@@ -89,6 +96,19 @@ func (d *DirectoryDepot) CreatedTime(log lager.Logger, handle string) (time.Time
 	return info.ModTime(), nil
 }
 
+func (d *DirectoryDepot) Load(log lager.Logger, handle string) (goci.Bndl, error) {
+	log = log.Session("lood", lager.Data{"handle": handle})
+
+	log.Debug("started")
+	defer log.Debug("finished")
+
+	bundlePath, err := d.Lookup(log, handle)
+	if err != nil {
+		return goci.Bndl{}, err
+	}
+	return d.bundleLoader.Load(bundlePath)
+}
+
 func (d *DirectoryDepot) Lookup(log lager.Logger, handle string) (string, error) {
 	log = log.Session("lookup", lager.Data{"handle": handle})
 
@@ -113,11 +133,6 @@ func (d *DirectoryDepot) Destroy(log lager.Logger, handle string) error {
 
 func (d *DirectoryDepot) GetDir() string {
 	return d.dir
-}
-
-//go:generate counterfeiter . BundleLoader
-type BundleLoader interface {
-	Load(bundleDir string) (goci.Bndl, error)
 }
 
 func (d *DirectoryDepot) Handles() ([]string, error) {

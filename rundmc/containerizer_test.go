@@ -216,7 +216,7 @@ var _ = Describe("Rundmc", func() {
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(fakePeaUsernameResolver.ResolveUserCallCount()).To(Equal(1))
-						_, _, _, _, resolverInputUsername := fakePeaUsernameResolver.ResolveUserArgsForCall(0)
+						_, _, _, resolverInputUsername := fakePeaUsernameResolver.ResolveUserArgsForCall(0)
 						Expect(resolverInputUsername).To(Equal("foobar"))
 
 						Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(1))
@@ -224,20 +224,6 @@ var _ = Describe("Rundmc", func() {
 						Expect(createdPeaProcessSpec.User).To(Equal("1:2"))
 					})
 				})
-			})
-		})
-
-		Context("when looking up the container fails", func() {
-			It("returns an error", func() {
-				fakeDepot.LookupReturns("", errors.New("blam"))
-				_, err := containerizer.Run(logger, "some-handle", garden.ProcessSpec{}, garden.ProcessIO{})
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("does not attempt to exec the process", func() {
-				fakeDepot.LookupReturns("", errors.New("blam"))
-				containerizer.Run(logger, "some-handle", garden.ProcessSpec{}, garden.ProcessIO{})
-				Expect(fakeOCIRuntime.ExecCallCount()).To(Equal(0))
 			})
 		})
 	})

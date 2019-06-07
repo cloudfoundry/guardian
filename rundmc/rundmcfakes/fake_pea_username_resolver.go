@@ -10,14 +10,13 @@ import (
 )
 
 type FakePeaUsernameResolver struct {
-	ResolveUserStub        func(lager.Logger, string, string, garden.ImageRef, string) (int, int, error)
+	ResolveUserStub        func(lager.Logger, string, garden.ImageRef, string) (int, int, error)
 	resolveUserMutex       sync.RWMutex
 	resolveUserArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 string
-		arg3 string
-		arg4 garden.ImageRef
-		arg5 string
+		arg3 garden.ImageRef
+		arg4 string
 	}
 	resolveUserReturns struct {
 		result1 int
@@ -33,20 +32,19 @@ type FakePeaUsernameResolver struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakePeaUsernameResolver) ResolveUser(arg1 lager.Logger, arg2 string, arg3 string, arg4 garden.ImageRef, arg5 string) (int, int, error) {
+func (fake *FakePeaUsernameResolver) ResolveUser(arg1 lager.Logger, arg2 string, arg3 garden.ImageRef, arg4 string) (int, int, error) {
 	fake.resolveUserMutex.Lock()
 	ret, specificReturn := fake.resolveUserReturnsOnCall[len(fake.resolveUserArgsForCall)]
 	fake.resolveUserArgsForCall = append(fake.resolveUserArgsForCall, struct {
 		arg1 lager.Logger
 		arg2 string
-		arg3 string
-		arg4 garden.ImageRef
-		arg5 string
-	}{arg1, arg2, arg3, arg4, arg5})
-	fake.recordInvocation("ResolveUser", []interface{}{arg1, arg2, arg3, arg4, arg5})
+		arg3 garden.ImageRef
+		arg4 string
+	}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("ResolveUser", []interface{}{arg1, arg2, arg3, arg4})
 	fake.resolveUserMutex.Unlock()
 	if fake.ResolveUserStub != nil {
-		return fake.ResolveUserStub(arg1, arg2, arg3, arg4, arg5)
+		return fake.ResolveUserStub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -61,17 +59,17 @@ func (fake *FakePeaUsernameResolver) ResolveUserCallCount() int {
 	return len(fake.resolveUserArgsForCall)
 }
 
-func (fake *FakePeaUsernameResolver) ResolveUserCalls(stub func(lager.Logger, string, string, garden.ImageRef, string) (int, int, error)) {
+func (fake *FakePeaUsernameResolver) ResolveUserCalls(stub func(lager.Logger, string, garden.ImageRef, string) (int, int, error)) {
 	fake.resolveUserMutex.Lock()
 	defer fake.resolveUserMutex.Unlock()
 	fake.ResolveUserStub = stub
 }
 
-func (fake *FakePeaUsernameResolver) ResolveUserArgsForCall(i int) (lager.Logger, string, string, garden.ImageRef, string) {
+func (fake *FakePeaUsernameResolver) ResolveUserArgsForCall(i int) (lager.Logger, string, garden.ImageRef, string) {
 	fake.resolveUserMutex.RLock()
 	defer fake.resolveUserMutex.RUnlock()
 	argsForCall := fake.resolveUserArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakePeaUsernameResolver) ResolveUserReturns(result1 int, result2 int, result3 error) {

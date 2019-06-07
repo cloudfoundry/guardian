@@ -29,7 +29,7 @@ var _ = Describe("PeaUsernameResolver", func() {
 
 		pidGetter          *peasfakes.FakeProcessPidGetter
 		peaCreator         *rundmcfakes.FakePeaCreator
-		loader             *rundmcfakes.FakeBundleLoader
+		loader             *peasfakes.FakeBundleLoader
 		userLookupper      *usersfakes.FakeUserLookupper
 		userResolveProcess *gardenfakes.FakeProcess
 
@@ -39,7 +39,7 @@ var _ = Describe("PeaUsernameResolver", func() {
 	BeforeEach(func() {
 		pidGetter = new(peasfakes.FakeProcessPidGetter)
 		peaCreator = new(rundmcfakes.FakePeaCreator)
-		loader = new(rundmcfakes.FakeBundleLoader)
+		loader = new(peasfakes.FakeBundleLoader)
 		userLookupper = new(usersfakes.FakeUserLookupper)
 		userResolveProcess = new(gardenfakes.FakeProcess)
 
@@ -66,13 +66,20 @@ var _ = Describe("PeaUsernameResolver", func() {
 		resolver = peas.PeaUsernameResolver{
 			PidGetter:     pidGetter,
 			PeaCreator:    peaCreator,
-			Loader:        loader,
+			BundleLoader:  loader,
 			UserLookupper: userLookupper,
 		}
 	})
 
 	JustBeforeEach(func() {
-		resolvedUid, resolvedGid, resolveErr = resolver.ResolveUser(lagertest.NewTestLogger(""), "/path/to/bundle", "handle", garden.ImageRef{URI: "image-uri"}, "foobar")
+		resolvedUid, resolvedGid, resolveErr = resolver.ResolveUser(lagertest.NewTestLogger(""), "handle", garden.ImageRef{URI: "image-uri"}, "foobar")
+	})
+
+	It("loads the bundle", func() {
+		Expect(loader.LoadCallCount()).To(Equal(1))
+		_, actualContainerID := loader.LoadArgsForCall(0)
+		Expect(actualContainerID).To(Equal("handle"))
+
 	})
 
 	It("resolves username", func() {

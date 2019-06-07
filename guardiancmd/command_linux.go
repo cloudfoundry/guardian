@@ -18,6 +18,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
@@ -146,10 +147,10 @@ func (f *LinuxFactory) WireRootfsFileCreator() depot.RootfsFileCreator {
 	return preparerootfs.SymlinkRefusingFileCreator{}
 }
 
-func (f *LinuxFactory) WireContainerd(bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, error) {
+func (f *LinuxFactory) WireContainerd(bndlLoader *goci.BndlLoader, processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, peas.BundleLoader, error) {
 	containerdClient, err := containerd.New(f.config.Containerd.Socket)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
 	ctx = leases.WithLease(ctx, "lease-is-off")
@@ -166,8 +167,9 @@ func (f *LinuxFactory) WireContainerd(bndlLoader *goci.BndlLoader, processBuilde
 	}
 
 	privilegeChecker := &privchecker.PrivilegeChecker{ContainerManager: nerd, Log: log}
+	peaBundleLoader := runcontainerd.NewBndlLoader(nerd)
 
-	return containerdManager, peaRunner, pidGetter, privilegeChecker, nil
+	return containerdManager, peaRunner, pidGetter, privilegeChecker, peaBundleLoader, nil
 }
 
 func initBindMountAndPath(initPathOnHost string) (specs.Mount, string) {

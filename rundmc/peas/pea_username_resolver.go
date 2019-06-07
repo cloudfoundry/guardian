@@ -7,6 +7,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -18,19 +19,24 @@ type ProcessPidGetter interface {
 	GetPeaPid(log lager.Logger, handle, peaID string) (int, error)
 }
 
+//go:generate counterfeiter . BundleLoader
+type BundleLoader interface {
+	Load(log lager.Logger, handle string) (goci.Bndl, error)
+}
+
 type PeaUsernameResolver struct {
 	PidGetter     ProcessPidGetter
 	PeaCreator    rundmc.PeaCreator
-	Loader        rundmc.BundleLoader
 	UserLookupper users.UserLookupper
+	BundleLoader  BundleLoader
 }
 
-func (r *PeaUsernameResolver) ResolveUser(log lager.Logger, bundlePath, handle string, image garden.ImageRef, username string) (int, int, error) {
-	log = log.Session("resolve-user", lager.Data{"bundlePath": bundlePath, "handle": handle, "image": image, "username": username})
+func (r *PeaUsernameResolver) ResolveUser(log lager.Logger, handle string, image garden.ImageRef, username string) (int, int, error) {
+	log = log.Session("resolve-user", lager.Data{"handle": handle, "image": image, "username": username})
 	log.Info("resolve-user-start")
 	defer log.Info("resolve-user-ended")
 
-	bndl, err := r.Loader.Load(bundlePath)
+	bndl, err := r.BundleLoader.Load(log, handle)
 	if err != nil {
 		return -1, -1, err
 	}
