@@ -18,12 +18,6 @@ import (
 
 const NetworkPropertyPrefix = "network."
 
-//go:generate counterfeiter . NetworkDepot
-type NetworkDepot interface {
-	SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error)
-	Destroy(log lager.Logger, handle string) error
-}
-
 type externalBinaryNetworker struct {
 	commandRunner         commandrunner.CommandRunner
 	configStore           kawasaki.ConfigStore
@@ -33,7 +27,7 @@ type externalBinaryNetworker struct {
 	resolvConfigurer      kawasaki.DnsResolvConfigurer
 	path                  string
 	extraArg              []string
-	networkDepot          NetworkDepot
+	networkDepot          kawasaki.NetworkDepot
 }
 
 func New(
@@ -45,7 +39,7 @@ func New(
 	resolvConfigurer kawasaki.DnsResolvConfigurer,
 	path string,
 	extraArg []string,
-	networkDepot NetworkDepot,
+	networkDepot kawasaki.NetworkDepot,
 ) ExternalNetworker {
 	return &externalBinaryNetworker{
 		commandRunner:         commandRunner,
