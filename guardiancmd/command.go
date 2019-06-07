@@ -560,7 +560,7 @@ func (cmd *CommonCommand) wireContainerizer(
 
 	var execRunner runrunc.ExecRunner = factory.WireExecRunner(runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)), bundleSaver, depot, processDepot)
 	wireExecerFunc := func(pidGetter runrunc.PidGetter) *runrunc.Execer {
-		return runrunc.NewExecer(bndlLoader, depot, processBuilder, factory.WireMkdirer(), userLookupper, execRunner, pidGetter)
+		return runrunc.NewExecer(depot, processBuilder, factory.WireMkdirer(), userLookupper, execRunner, pidGetter)
 	}
 
 	statser := runrunc.NewStatser(runcLogRunner, runcBinary, depot)
@@ -596,7 +596,7 @@ func (cmd *CommonCommand) wireContainerizer(
 			wireExecerFunc(pidGetter),
 			statser,
 		)
-		privilegeChecker = &runcprivchecker.PrivilegeChecker{BundleLoader: bndlLoader, Depot: depot, Log: log}
+		privilegeChecker = &runcprivchecker.PrivilegeChecker{BundleLoader: depot, Log: log}
 	}
 
 	eventStore := rundmc.NewEventStore(properties)
@@ -625,7 +625,7 @@ func (cmd *CommonCommand) wireContainerizer(
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
-	return rundmc.New(depot, ociRuntime, bndlLoader, nstar, stopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare), nil
+	return rundmc.New(depot, ociRuntime, nstar, stopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare), nil
 }
 
 func (cmd *CommonCommand) useContainerd() bool {

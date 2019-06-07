@@ -3,28 +3,23 @@ package privchecker
 import (
 	"fmt"
 
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . Depot
-type Depot interface {
-	Lookup(log lager.Logger, handle string) (path string, err error)
+type BundleLoader interface {
+	Load(log lager.Logger, handle string) (bundle goci.Bndl, err error)
 }
 
 type PrivilegeChecker struct {
 	BundleLoader runrunc.BundleLoader
-	Depot        Depot
 	Log          lager.Logger
 }
 
 func (p *PrivilegeChecker) Privileged(id string) (bool, error) {
-	bundlePath, err := p.Depot.Lookup(p.Log, id)
-	if err != nil {
-		return false, fmt.Errorf("looking up bundle: %s", err)
-	}
-
-	bundle, err := p.BundleLoader.Load(bundlePath)
+	bundle, err := p.BundleLoader.Load(p.Log, id)
 	if err != nil {
 		return false, fmt.Errorf("loading bundle: %s", err)
 	}

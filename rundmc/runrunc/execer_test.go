@@ -23,7 +23,6 @@ import (
 var _ = Describe("Execer", func() {
 	var (
 		bundleLoader       *fakes.FakeBundleLoader
-		depot              *fakes.FakeDepotPathLookuper
 		processBuilder     *fakes.FakeProcessBuilder
 		mkdirer            *fakes.FakeMkdirer
 		userLookupper      *usersfakes.FakeUserLookupper
@@ -86,12 +85,9 @@ var _ = Describe("Execer", func() {
 		execRunner = new(fakes.FakeExecRunner)
 		pidGetter = new(fakes.FakePidGetter)
 		pidGetter.GetPidReturns(1234, nil)
-		depot = new(fakes.FakeDepotPathLookuper)
-		depot.LookupReturns(bundlePath, nil)
 
 		execer = runrunc.NewExecer(
 			bundleLoader,
-			depot,
 			processBuilder,
 			mkdirer,
 			userLookupper,
@@ -234,25 +230,10 @@ var _ = Describe("Execer", func() {
 			_, execErr = execer.Exec(logger, id, spec, pio)
 		})
 
-		It("look ups the bundle path", func() {
-			Expect(depot.LookupCallCount()).To(Equal(1))
-			_, sandboxHandle := depot.LookupArgsForCall(0)
-			Expect(sandboxHandle).To(Equal(id))
-		})
-
 		It("loads the bundle", func() {
 			Expect(bundleLoader.LoadCallCount()).To(Equal(1))
-			Expect(bundleLoader.LoadArgsForCall(0)).To(Equal(bundlePath))
-		})
-
-		Context("when looking up the bundle path fails", func() {
-			BeforeEach(func() {
-				depot.LookupReturns("", errors.New("BOO"))
-			})
-
-			It("returns an error", func() {
-				Expect(execErr).To(MatchError(ContainSubstring("BOO")))
-			})
+			_, actualId := bundleLoader.LoadArgsForCall(0)
+			Expect(actualId).To(Equal(id))
 		})
 
 		Context("when loading the bundle fails", func() {

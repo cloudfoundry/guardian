@@ -6,13 +6,15 @@ import (
 
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/lager"
 )
 
 type FakeBundleLoader struct {
-	LoadStub        func(string) (goci.Bndl, error)
+	LoadStub        func(lager.Logger, string) (goci.Bndl, error)
 	loadMutex       sync.RWMutex
 	loadArgsForCall []struct {
-		arg1 string
+		arg1 lager.Logger
+		arg2 string
 	}
 	loadReturns struct {
 		result1 goci.Bndl
@@ -26,16 +28,17 @@ type FakeBundleLoader struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBundleLoader) Load(arg1 string) (goci.Bndl, error) {
+func (fake *FakeBundleLoader) Load(arg1 lager.Logger, arg2 string) (goci.Bndl, error) {
 	fake.loadMutex.Lock()
 	ret, specificReturn := fake.loadReturnsOnCall[len(fake.loadArgsForCall)]
 	fake.loadArgsForCall = append(fake.loadArgsForCall, struct {
-		arg1 string
-	}{arg1})
-	fake.recordInvocation("Load", []interface{}{arg1})
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Load", []interface{}{arg1, arg2})
 	fake.loadMutex.Unlock()
 	if fake.LoadStub != nil {
-		return fake.LoadStub(arg1)
+		return fake.LoadStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -50,17 +53,17 @@ func (fake *FakeBundleLoader) LoadCallCount() int {
 	return len(fake.loadArgsForCall)
 }
 
-func (fake *FakeBundleLoader) LoadCalls(stub func(string) (goci.Bndl, error)) {
+func (fake *FakeBundleLoader) LoadCalls(stub func(lager.Logger, string) (goci.Bndl, error)) {
 	fake.loadMutex.Lock()
 	defer fake.loadMutex.Unlock()
 	fake.LoadStub = stub
 }
 
-func (fake *FakeBundleLoader) LoadArgsForCall(i int) string {
+func (fake *FakeBundleLoader) LoadArgsForCall(i int) (lager.Logger, string) {
 	fake.loadMutex.RLock()
 	defer fake.loadMutex.RUnlock()
 	argsForCall := fake.loadArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeBundleLoader) LoadReturns(result1 goci.Bndl, result2 error) {

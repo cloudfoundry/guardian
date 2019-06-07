@@ -7,7 +7,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
-	"github.com/opencontainers/runtime-spec/specs-go"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 //go:generate counterfeiter . UidGenerator
@@ -20,14 +20,9 @@ type Mkdirer interface {
 	MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
 }
 
-//go:generate counterfeiter . DepotPathLookuper
-type DepotPathLookuper interface {
-	Lookup(log lager.Logger, handle string) (path string, err error)
-}
-
 //go:generate counterfeiter . BundleLoader
 type BundleLoader interface {
-	Load(path string) (goci.Bndl, error)
+	Load(log lager.Logger, handle string) (goci.Bndl, error)
 }
 
 //go:generate counterfeiter . ExecRunner

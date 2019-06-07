@@ -18,7 +18,6 @@ import (
 
 type Execer struct {
 	bundleLoader   BundleLoader
-	depot          DepotPathLookuper
 	processBuilder ProcessBuilder
 	mkdirer        Mkdirer
 	userLookupper  users.UserLookupper
@@ -26,10 +25,9 @@ type Execer struct {
 	pidGetter      PidGetter
 }
 
-func NewExecer(bundleLoader BundleLoader, depot DepotPathLookuper, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookupper users.UserLookupper, execRunner ExecRunner, pidGetter PidGetter) *Execer {
+func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookupper users.UserLookupper, execRunner ExecRunner, pidGetter PidGetter) *Execer {
 	return &Execer{
 		bundleLoader:   bundleLoader,
-		depot:          depot,
 		processBuilder: processBuilder,
 		mkdirer:        mkdirer,
 		userLookupper:  userLookupper,
@@ -45,12 +43,7 @@ func (e *Execer) Exec(log lager.Logger, sandboxHandle string, spec garden.Proces
 	log.Info("start")
 	defer log.Info("finished")
 
-	bundlePath, err := e.depot.Lookup(log, sandboxHandle)
-	if err != nil {
-		log.Error("lookup-failed", err)
-		return nil, err
-	}
-	bundle, err := e.bundleLoader.Load(bundlePath)
+	bundle, err := e.bundleLoader.Load(log, sandboxHandle)
 	if err != nil {
 		log.Error("load-bundle-failed", err)
 		return nil, err

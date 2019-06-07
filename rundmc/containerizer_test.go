@@ -21,13 +21,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/opencontainers/runtime-spec/specs-go"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("Rundmc", func() {
 	var (
 		fakeDepot               *fakes.FakeDepot
-		fakeBundleLoader        *fakes.FakeBundleLoader
 		fakeOCIRuntime          *fakes.FakeOCIRuntime
 		fakeNstarRunner         *fakes.FakeNstarRunner
 		fakeStopper             *fakes.FakeStopper
@@ -43,7 +42,6 @@ var _ = Describe("Rundmc", func() {
 	BeforeEach(func() {
 		fakeDepot = new(fakes.FakeDepot)
 		fakeOCIRuntime = new(fakes.FakeOCIRuntime)
-		fakeBundleLoader = new(fakes.FakeBundleLoader)
 		fakeNstarRunner = new(fakes.FakeNstarRunner)
 		fakeStopper = new(fakes.FakeStopper)
 		fakeEventStore = new(fakes.FakeEventStore)
@@ -59,7 +57,6 @@ var _ = Describe("Rundmc", func() {
 		containerizer = rundmc.New(
 			fakeDepot,
 			fakeOCIRuntime,
-			fakeBundleLoader,
 			fakeNstarRunner,
 			fakeStopper,
 			fakeEventStore,
@@ -444,8 +441,8 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		JustBeforeEach(func() {
-			fakeBundleLoader.LoadStub = func(bundlePath string) (goci.Bndl, error) {
-				if bundlePath != "/path/to/some-handle" {
+			fakeDepot.LoadStub = func(_ lager.Logger, handle string) (goci.Bndl, error) {
+				if handle != "some-handle" {
 					return goci.Bundle(), errors.New("cannot find bundle")
 				}
 
@@ -508,7 +505,7 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when loading the bundle fails", func() {
 			It("should return the error", func() {
-				fakeBundleLoader.LoadReturns(goci.Bundle(), errors.New("aquaman-error"))
+				fakeDepot.LoadReturns(goci.Bundle(), errors.New("aquaman-error"))
 				_, err := containerizer.Info(logger, "some-handle")
 				Expect(err).To(MatchError("aquaman-error"))
 			})
@@ -569,17 +566,15 @@ var _ = Describe("Rundmc", func() {
 	Describe("Metrics", func() {
 		JustBeforeEach(func() {
 			memoryLimit := int64(100)
-			fakeBundleLoader.LoadStub = func(bundlePath string) (goci.Bndl, error) {
-				return goci.Bndl{
-					Spec: specs.Spec{
-						Root: &specs.Root{},
-						Linux: &specs.Linux{
-							Resources: &specs.LinuxResources{
-								Memory: &specs.LinuxMemory{
-									Limit: &memoryLimit,
-								}}}},
-				}, nil
-			}
+			fakeDepot.LoadReturns(goci.Bndl{
+				Spec: specs.Spec{
+					Root: &specs.Root{},
+					Linux: &specs.Linux{
+						Resources: &specs.LinuxResources{
+							Memory: &specs.LinuxMemory{
+								Limit: &memoryLimit,
+							}}}},
+			}, nil)
 		})
 
 		It("returns the CPU metrics", func() {
@@ -605,7 +600,6 @@ var _ = Describe("Rundmc", func() {
 				containerizer = rundmc.New(
 					fakeDepot,
 					fakeOCIRuntime,
-					fakeBundleLoader,
 					fakeNstarRunner,
 					fakeStopper,
 					fakeEventStore,
@@ -618,7 +612,7 @@ var _ = Describe("Rundmc", func() {
 
 			It("return the CPU entitlement", func() {
 				cpuShares := uint64(100)
-				fakeBundleLoader.LoadReturns(goci.Bundle().WithCPUShares(specs.LinuxCPU{Shares: &cpuShares}), nil)
+				fakeDepot.LoadReturns(goci.Bundle().WithCPUShares(specs.LinuxCPU{Shares: &cpuShares}), nil)
 
 				containerAge := time.Second * 5
 				fakeOCIRuntime.StatsReturns(gardener.StatsContainerMetrics{
