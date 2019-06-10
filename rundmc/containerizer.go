@@ -284,12 +284,7 @@ func (c *Containerizer) RemoveBundle(log lager.Logger, handle string) error {
 }
 
 func (c *Containerizer) Info(log lager.Logger, handle string) (spec.ActualContainerSpec, error) {
-	bundlePath, err := c.depot.Lookup(log, handle)
-	if err != nil {
-		return spec.ActualContainerSpec{}, err
-	}
-
-	bundle, err := c.depot.Load(log, handle)
+	bundlePath, bundle, err := c.runtime.BundleInfo(log, handle)
 	if err != nil {
 		return spec.ActualContainerSpec{}, err
 	}

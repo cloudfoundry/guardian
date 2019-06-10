@@ -426,12 +426,12 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		JustBeforeEach(func() {
-			fakeDepot.LoadStub = func(_ lager.Logger, handle string) (goci.Bndl, error) {
+			fakeOCIRuntime.BundleInfoStub = func(_ lager.Logger, handle string) (string, goci.Bndl, error) {
 				if handle != "some-handle" {
-					return goci.Bundle(), errors.New("cannot find bundle")
+					return "", goci.Bundle(), errors.New("cannot find bundle")
 				}
 
-				return goci.Bndl{
+				return "/path/to/" + handle, goci.Bndl{
 					Spec: specs.Spec{
 						Root: &specs.Root{},
 						Linux: &specs.Linux{
@@ -467,11 +467,11 @@ var _ = Describe("Rundmc", func() {
 			Expect(actualSpec.Pid).To(Equal(42))
 		})
 
-		Context("when looking up the bundle path fails", func() {
+		Context("when loading up the bundle info fails", func() {
 			It("should return the error", func() {
-				fakeDepot.LookupReturns("", errors.New("spiderman-error"))
+				fakeOCIRuntime.BundleInfoReturns("", goci.Bndl{}, errors.New("bundle-info-error"))
 				_, err := containerizer.Info(logger, "some-handle")
-				Expect(err).To(MatchError("spiderman-error"))
+				Expect(err).To(MatchError("bundle-info-error"))
 			})
 		})
 
@@ -485,22 +485,6 @@ var _ = Describe("Rundmc", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actualSpec.Limits.Memory.LimitInBytes).To(BeEquivalentTo(0))
 				Expect(actualSpec.Limits.CPU.LimitInShares).To(BeEquivalentTo(0))
-			})
-		})
-
-		Context("when looking up the bundle path fails", func() {
-			It("should return the error", func() {
-				fakeDepot.LookupReturns("", errors.New("lookup-error"))
-				_, err := containerizer.Info(logger, "some-handle")
-				Expect(err).To(MatchError("lookup-error"))
-			})
-		})
-
-		Context("when loading the bundle fails", func() {
-			It("should return the error", func() {
-				fakeDepot.LoadReturns(goci.Bundle(), errors.New("load-error"))
-				_, err := containerizer.Info(logger, "some-handle")
-				Expect(err).To(MatchError("load-error"))
 			})
 		})
 

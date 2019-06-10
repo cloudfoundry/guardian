@@ -58,6 +58,8 @@ var _ = Describe("Info", func() {
 	})
 
 	It("can return the container path", func() {
+		skipIfContainerd()
+
 		info, err := container.Info()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(info.ContainerPath).To(Equal(path.Join(client.DepotDir, container.Handle())))
