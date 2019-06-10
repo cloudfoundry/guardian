@@ -445,6 +445,25 @@ var _ = Describe("Nerd", func() {
 			Expect(func() { cnerd.State(testLogger, "a-random-id") }).NotTo(Panic())
 		})
 	})
+
+	Describe("Handles", func() {
+		AfterEach(func() {
+			cnerd.Delete(testLogger, "banana")
+			cnerd.Delete(testLogger, "banana2")
+		})
+
+		It("returns the list of container handles", func() {
+			spec := generateSpec(containerdContext, containerdClient, "banana")
+			Expect(cnerd.Create(testLogger, "banana", spec, processIO)).To(Succeed())
+			spec = generateSpec(containerdContext, containerdClient, "banana2")
+			Expect(cnerd.Create(testLogger, "banana2", spec, processIO)).To(Succeed())
+
+			handles, err := cnerd.Handles()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(handles).To(ConsistOf("banana", "banana2"))
+		})
+	})
 })
 
 func createRootfs(modifyRootfs func(string), perm os.FileMode) string {

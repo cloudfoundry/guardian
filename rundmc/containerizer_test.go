@@ -631,27 +631,23 @@ var _ = Describe("Rundmc", func() {
 		})
 	})
 
-	Describe("handles", func() {
-		Context("when handles exist", func() {
-			BeforeEach(func() {
-				fakeDepot.HandlesReturns([]string{"banana", "banana2"}, nil)
-			})
-
-			It("should return the handles", func() {
-				Expect(containerizer.Handles()).To(ConsistOf("banana", "banana2"))
-			})
+	Describe("Handles", func() {
+		BeforeEach(func() {
+			fakeOCIRuntime.HandlesReturns([]string{"banana", "banana2"}, nil)
 		})
 
-		Context("when the depot returns an error", func() {
-			testErr := errors.New("spiderman error")
+		It("should return the handles", func() {
+			Expect(containerizer.Handles()).To(ConsistOf("banana", "banana2"))
+		})
 
+		Context("when the runtime returns an error", func() {
 			BeforeEach(func() {
-				fakeDepot.HandlesReturns([]string{}, testErr)
+				fakeOCIRuntime.HandlesReturns([]string{}, errors.New("handles-error"))
 			})
 
 			It("should return the error", func() {
 				_, err := containerizer.Handles()
-				Expect(err).To(MatchError(testErr))
+				Expect(err).To(MatchError("handles-error"))
 			})
 		})
 	})

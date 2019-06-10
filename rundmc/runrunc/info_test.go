@@ -90,4 +90,34 @@ var _ = Describe("Infoer", func() {
 			})
 		})
 	})
+
+	Describe("Handles", func() {
+		var (
+			handles []string
+			err     error
+		)
+
+		BeforeEach(func() {
+			fakeDepot.HandlesReturns([]string{"banana", "banana2"}, nil)
+		})
+
+		JustBeforeEach(func() {
+			handles, err = infoer.Handles()
+		})
+
+		It("returns the list of handles", func() {
+			Expect(err).NotTo(HaveOccurred())
+			Expect(handles).To(ConsistOf("banana", "banana2"))
+		})
+
+		When("getting the list of handles from the depot fails", func() {
+			BeforeEach(func() {
+				fakeDepot.HandlesReturns(nil, errors.New("handles-error"))
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("handles-error"))
+			})
+		})
+	})
 })

@@ -35,6 +35,7 @@ type Depot interface {
 	CreatedTime(log lager.Logger, handle string) (time.Time, error)
 	Lookup(log lager.Logger, handle string) (path string, err error)
 	Load(log lager.Logger, handle string) (bundle goci.Bndl, err error)
+	Handles() ([]string, error)
 }
 
 func New(

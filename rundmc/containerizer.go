@@ -44,6 +44,7 @@ type OCIRuntime interface {
 	Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)
 	Events(log lager.Logger) (<-chan event.Event, error)
 	BundleInfo(log lager.Logger, id string) (string, goci.Bndl, error)
+	Handles() ([]string, error)
 }
 
 type PeaCreator interface {
@@ -358,7 +359,7 @@ func isNotFound(err error) bool {
 
 // Handles returns a list of all container handles
 func (c *Containerizer) Handles() ([]string, error) {
-	return c.depot.Handles()
+	return c.runtime.Handles()
 }
 
 func calculateCPUEntitlement(shares uint64, entitlementPerShare float64, containerAge time.Duration) uint64 {

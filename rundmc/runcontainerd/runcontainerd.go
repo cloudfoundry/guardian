@@ -21,13 +21,12 @@ import (
 type ContainerManager interface {
 	Create(log lager.Logger, containerID string, spec *specs.Spec, processIO func() (io.Reader, io.Writer, io.Writer)) error
 	Delete(log lager.Logger, containerID string) error
-
 	Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer)) error
-
 	State(log lager.Logger, containerID string) (int, string, error)
 	GetContainerPID(log lager.Logger, containerID string) (uint32, error)
 	OOMEvents(log lager.Logger) <-chan *apievents.TaskOOM
 	Spec(log lager.Logger, containerID string) (*specs.Spec, error)
+	Handles() ([]string, error)
 }
 
 //go:generate counterfeiter . ProcessManager
@@ -205,4 +204,8 @@ func (r *RunContainerd) BundleInfo(log lager.Logger, handle string) (string, goc
 func isNotFound(err error) bool {
 	_, ok := err.(ContainerNotFoundError)
 	return ok
+}
+
+func (r *RunContainerd) Handles() ([]string, error) {
+	return r.containerManager.Handles()
 }

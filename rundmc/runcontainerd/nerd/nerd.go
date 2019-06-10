@@ -338,6 +338,20 @@ func coerceEvent(event *ctrdevents.Envelope) (*apievents.TaskOOM, error) {
 	return oom, nil
 }
 
+func (n *Nerd) Handles() ([]string, error) {
+	containers, err := n.client.Containers(n.context)
+	if err != nil {
+		return nil, err
+	}
+
+	handles := []string{}
+	for _, container := range containers {
+		handles = append(handles, container.ID())
+	}
+
+	return handles, nil
+}
+
 func WithCurrentUIDAndGID(ctx context.Context, c *containerd.Client, ti *containerd.TaskInfo) error {
 	return updateTaskInfoCreateOptions(ti, func(opts *runctypes.CreateOptions) error {
 		opts.IoUid = uint32(syscall.Geteuid())

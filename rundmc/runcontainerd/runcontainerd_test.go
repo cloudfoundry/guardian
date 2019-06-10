@@ -685,4 +685,34 @@ var _ = Describe("Runcontainerd", func() {
 			})
 		})
 	})
+
+	Describe("Handles", func() {
+		var (
+			handles []string
+			err     error
+		)
+
+		BeforeEach(func() {
+			containerManager.HandlesReturns([]string{"banana", "banana2"}, nil)
+		})
+
+		JustBeforeEach(func() {
+			handles, err = runContainerd.Handles()
+		})
+
+		It("returns the list of handles", func() {
+			Expect(err).NotTo(HaveOccurred())
+			Expect(handles).To(ConsistOf("banana", "banana2"))
+		})
+
+		When("getting the list of handles from the container manager fails", func() {
+			BeforeEach(func() {
+				containerManager.HandlesReturns(nil, errors.New("handles-error"))
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("handles-error"))
+			})
+		})
+	})
 })
