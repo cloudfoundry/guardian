@@ -564,6 +564,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	}
 
 	statser := runrunc.NewStatser(runcLogRunner, runcBinary, depot)
+	infoer := runrunc.NewInfoer(depot)
 
 	var useNestedCgroups bool
 	var peasExecRunner peas.ExecRunner = execRunner
@@ -595,6 +596,7 @@ func (cmd *CommonCommand) wireContainerizer(
 			cmd.Runtime.PluginExtraArgs,
 			wireExecerFunc(pidGetter),
 			statser,
+			infoer,
 		)
 		privilegeChecker = &runcprivchecker.PrivilegeChecker{BundleLoader: depot, Log: log}
 	}

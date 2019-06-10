@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
 	apievents "github.com/containerd/containerd/api/events"
@@ -96,9 +97,9 @@ func (n *Nerd) Delete(log lager.Logger, containerID string) error {
 	container, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
 		switch err.(type) {
-		case *ContainerNotFoundError:
+		case runcontainerd.ContainerNotFoundError:
 			return nil
-		case *TaskNotFoundError:
+		case runcontainerd.TaskNotFoundError:
 			log.Debug("deleting-container", lager.Data{"containerID": containerID})
 			return container.Delete(n.context)
 		}
@@ -207,7 +208,7 @@ func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (conta
 	if err != nil {
 		if errdefs.IsNotFound(err) {
 			log.Debug("container-not-found", lager.Data{"containerID": containerID})
-			return nil, nil, &ContainerNotFoundError{Handle: containerID}
+			return nil, nil, runcontainerd.ContainerNotFoundError{Handle: containerID}
 		}
 		log.Debug("loading-container-failed", lager.Data{"containerID": containerID})
 		return nil, nil, err
@@ -218,7 +219,7 @@ func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (conta
 	if err != nil {
 		if errdefs.IsNotFound(err) {
 			log.Debug("task-not-found", lager.Data{"containerID": containerID})
-			return container, nil, &TaskNotFoundError{Handle: containerID}
+			return container, nil, runcontainerd.TaskNotFoundError{Handle: containerID}
 		}
 		log.Debug("loading-task-failed", lager.Data{"containerID": containerID})
 		return nil, nil, err

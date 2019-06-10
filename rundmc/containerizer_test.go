@@ -559,7 +559,7 @@ var _ = Describe("Rundmc", func() {
 	Describe("Metrics", func() {
 		JustBeforeEach(func() {
 			memoryLimit := int64(100)
-			fakeDepot.LoadReturns(goci.Bndl{
+			fakeOCIRuntime.BundleInfoReturns("", goci.Bndl{
 				Spec: specs.Spec{
 					Root: &specs.Root{},
 					Linux: &specs.Linux{
@@ -608,7 +608,7 @@ var _ = Describe("Rundmc", func() {
 
 			It("return the CPU entitlement", func() {
 				cpuShares := uint64(100)
-				fakeDepot.LoadReturns(goci.Bundle().WithCPUShares(specs.LinuxCPU{Shares: &cpuShares}), nil)
+				fakeOCIRuntime.BundleInfoReturns("", goci.Bundle().WithCPUShares(specs.LinuxCPU{Shares: &cpuShares}), nil)
 
 				containerAge := time.Second * 5
 				fakeOCIRuntime.StatsReturns(gardener.StatsContainerMetrics{

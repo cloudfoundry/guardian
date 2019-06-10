@@ -189,3 +189,20 @@ func (r *RunContainerd) Events(log lager.Logger) (<-chan event.Event, error) {
 
 	return events, nil
 }
+
+func (r *RunContainerd) BundleInfo(log lager.Logger, handle string) (string, goci.Bndl, error) {
+	containerSpec, err := r.containerManager.Spec(log, handle)
+	if isNotFound(err) {
+		return "", goci.Bndl{}, garden.ContainerNotFoundError{Handle: handle}
+	}
+	if err != nil {
+		return "", goci.Bndl{}, err
+	}
+
+	return "", goci.Bndl{Spec: *containerSpec}, nil
+}
+
+func isNotFound(err error) bool {
+	_, ok := err.(ContainerNotFoundError)
+	return ok
+}

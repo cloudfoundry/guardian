@@ -11,7 +11,6 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
-	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
@@ -44,6 +43,7 @@ type OCIRuntime interface {
 	State(log lager.Logger, id string) (runrunc.State, error)
 	Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)
 	Events(log lager.Logger) (<-chan event.Event, error)
+	BundleInfo(log lager.Logger, id string) (string, goci.Bndl, error)
 }
 
 type PeaCreator interface {
@@ -343,17 +343,22 @@ func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.Actua
 		StatsContainerMetrics: containerMetrics,
 	}
 
-	bundle, err := c.depot.Load(log, handle)
-	if err != nil && err != depot.ErrDoesNotExist {
+	_, bundle, err := c.runtime.BundleInfo(log, handle)
+	if isNotFound(err) { // pea
+		return actualContainerMetrics, nil
+	}
+	if err != nil {
 		return gardener.ActualContainerMetrics{}, err
 	}
 
-	if err == nil {
-		actualContainerMetrics.CPUEntitlement = calculateCPUEntitlement(getShares(bundle), c.cpuEntitlementPerShare, containerMetrics.Age)
-	}
+	actualContainerMetrics.CPUEntitlement = calculateCPUEntitlement(getShares(bundle), c.cpuEntitlementPerShare, containerMetrics.Age)
 
 	return actualContainerMetrics, nil
+}
 
+func isNotFound(err error) bool {
+	_, ok := err.(garden.ContainerNotFoundError)
+	return ok
 }
 
 // Handles returns a list of all container handles

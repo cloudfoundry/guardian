@@ -17,11 +17,6 @@ type StatsNotifier interface {
 	OnStat(handle string, cpuStat garden.ContainerCPUStat, memoryStat garden.ContainerMemoryStat)
 }
 
-//go:generate counterfeiter . Depot
-type Depot interface {
-	CreatedTime(log lager.Logger, handle string) (time.Time, error)
-}
-
 type runcStats struct {
 	Data struct {
 		CPUStats struct {

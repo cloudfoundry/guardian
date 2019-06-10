@@ -638,4 +638,51 @@ var _ = Describe("Runcontainerd", func() {
 
 		})
 	})
+
+	Describe("BundleInfo", func() {
+		var (
+			bundlePath string
+			bundle     goci.Bndl
+			err        error
+		)
+
+		BeforeEach(func() {
+			containerManager.SpecReturns(&specs.Spec{Version: "my-spec"}, nil)
+		})
+
+		JustBeforeEach(func() {
+			bundlePath, bundle, err = runContainerd.BundleInfo(logger, "my-container")
+		})
+
+		It("returns the bundle for the specified container", func() {
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bundlePath).To(BeEmpty())
+			Expect(bundle.Spec.Version).To(Equal("my-spec"))
+
+			Expect(containerManager.SpecCallCount()).To(Equal(1))
+			actualLogger, actualHandle := containerManager.SpecArgsForCall(0)
+			Expect(actualLogger).To(Equal(logger))
+			Expect(actualHandle).To(Equal("my-container"))
+		})
+
+		When("the container does not exist", func() {
+			BeforeEach(func() {
+				containerManager.SpecReturns(&specs.Spec{}, runcontainerd.ContainerNotFoundError{Handle: "my-container"})
+			})
+
+			It("returns a garden.ContainerNotFoundError", func() {
+				Expect(err).To(Equal(garden.ContainerNotFoundError{Handle: "my-container"}))
+			})
+		})
+
+		When("getting the container spec fails", func() {
+			BeforeEach(func() {
+				containerManager.SpecReturns(&specs.Spec{}, errors.New("spec-error"))
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("spec-error"))
+			})
+		})
+	})
 })

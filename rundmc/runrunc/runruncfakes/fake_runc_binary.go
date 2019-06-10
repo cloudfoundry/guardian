@@ -46,19 +46,6 @@ type FakeRuncBinary struct {
 	execCommandReturnsOnCall map[int]struct {
 		result1 *exec.Cmd
 	}
-	KillCommandStub        func(string, string, string) *exec.Cmd
-	killCommandMutex       sync.RWMutex
-	killCommandArgsForCall []struct {
-		arg1 string
-		arg2 string
-		arg3 string
-	}
-	killCommandReturns struct {
-		result1 *exec.Cmd
-	}
-	killCommandReturnsOnCall map[int]struct {
-		result1 *exec.Cmd
-	}
 	RunCommandStub        func(string, string, string, string, []string) *exec.Cmd
 	runCommandMutex       sync.RWMutex
 	runCommandArgsForCall []struct {
@@ -286,68 +273,6 @@ func (fake *FakeRuncBinary) ExecCommandReturnsOnCall(i int, result1 *exec.Cmd) {
 	}{result1}
 }
 
-func (fake *FakeRuncBinary) KillCommand(arg1 string, arg2 string, arg3 string) *exec.Cmd {
-	fake.killCommandMutex.Lock()
-	ret, specificReturn := fake.killCommandReturnsOnCall[len(fake.killCommandArgsForCall)]
-	fake.killCommandArgsForCall = append(fake.killCommandArgsForCall, struct {
-		arg1 string
-		arg2 string
-		arg3 string
-	}{arg1, arg2, arg3})
-	fake.recordInvocation("KillCommand", []interface{}{arg1, arg2, arg3})
-	fake.killCommandMutex.Unlock()
-	if fake.KillCommandStub != nil {
-		return fake.KillCommandStub(arg1, arg2, arg3)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	fakeReturns := fake.killCommandReturns
-	return fakeReturns.result1
-}
-
-func (fake *FakeRuncBinary) KillCommandCallCount() int {
-	fake.killCommandMutex.RLock()
-	defer fake.killCommandMutex.RUnlock()
-	return len(fake.killCommandArgsForCall)
-}
-
-func (fake *FakeRuncBinary) KillCommandCalls(stub func(string, string, string) *exec.Cmd) {
-	fake.killCommandMutex.Lock()
-	defer fake.killCommandMutex.Unlock()
-	fake.KillCommandStub = stub
-}
-
-func (fake *FakeRuncBinary) KillCommandArgsForCall(i int) (string, string, string) {
-	fake.killCommandMutex.RLock()
-	defer fake.killCommandMutex.RUnlock()
-	argsForCall := fake.killCommandArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
-}
-
-func (fake *FakeRuncBinary) KillCommandReturns(result1 *exec.Cmd) {
-	fake.killCommandMutex.Lock()
-	defer fake.killCommandMutex.Unlock()
-	fake.KillCommandStub = nil
-	fake.killCommandReturns = struct {
-		result1 *exec.Cmd
-	}{result1}
-}
-
-func (fake *FakeRuncBinary) KillCommandReturnsOnCall(i int, result1 *exec.Cmd) {
-	fake.killCommandMutex.Lock()
-	defer fake.killCommandMutex.Unlock()
-	fake.KillCommandStub = nil
-	if fake.killCommandReturnsOnCall == nil {
-		fake.killCommandReturnsOnCall = make(map[int]struct {
-			result1 *exec.Cmd
-		})
-	}
-	fake.killCommandReturnsOnCall[i] = struct {
-		result1 *exec.Cmd
-	}{result1}
-}
-
 func (fake *FakeRuncBinary) RunCommand(arg1 string, arg2 string, arg3 string, arg4 string, arg5 []string) *exec.Cmd {
 	var arg5Copy []string
 	if arg5 != nil {
@@ -548,8 +473,6 @@ func (fake *FakeRuncBinary) Invocations() map[string][][]interface{} {
 	defer fake.eventsCommandMutex.RUnlock()
 	fake.execCommandMutex.RLock()
 	defer fake.execCommandMutex.RUnlock()
-	fake.killCommandMutex.RLock()
-	defer fake.killCommandMutex.RUnlock()
 	fake.runCommandMutex.RLock()
 	defer fake.runCommandMutex.RUnlock()
 	fake.stateCommandMutex.RLock()

@@ -2,8 +2,11 @@ package runrunc
 
 import (
 	"os/exec"
+	"time"
 
 	"code.cloudfoundry.org/commandrunner"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"code.cloudfoundry.org/lager"
 )
 
 // da doo
@@ -14,6 +17,7 @@ type RunRunc struct {
 	*Statser
 	*Stater
 	*Deleter
+	*Infoer
 }
 
 //go:generate counterfeiter . RuncBinary
@@ -26,9 +30,17 @@ type RuncBinary interface {
 	DeleteCommand(id string, force bool, logFile string) *exec.Cmd
 }
 
+//go:generate counterfeiter . Depot
+type Depot interface {
+	CreatedTime(log lager.Logger, handle string) (time.Time, error)
+	Lookup(log lager.Logger, handle string) (path string, err error)
+	Load(log lager.Logger, handle string) (bundle goci.Bndl, err error)
+}
+
 func New(
 	runner commandrunner.CommandRunner, runcCmdRunner RuncCmdRunner,
 	runc RuncBinary, runcExtraArgs []string, execer *Execer, statser *Statser,
+	infoer *Infoer,
 ) *RunRunc {
 	stater := NewStater(runcCmdRunner, runc)
 	oomWatcher := NewOomWatcher(runner, runc)
@@ -40,5 +52,6 @@ func New(
 		Statser:    statser,
 		Stater:     stater,
 		Deleter:    NewDeleter(runcCmdRunner, runc, stater),
+		Infoer:     infoer,
 	}
 }
