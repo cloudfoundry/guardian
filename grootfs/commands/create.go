@@ -273,7 +273,7 @@ func createFetcher(baseImageUrl *url.URL, systemContext types.SystemContext, cre
 	}
 
 	skipOCILayerValidation := createCfg.SkipLayerValidation && baseImageUrl.Scheme == "oci"
-	layerSource := source.NewLayerSource(systemContext, skipOCILayerValidation, shouldSkipImageQuotaValidation(createCfg), createCfg.DiskLimitSizeBytes, baseImageUrl)
+	layerSource := source.NewLayerSource(systemContext, skipOCILayerValidation, shouldSkipImageQuotaValidation(createCfg), createCfg.DiskLimitSizeBytes, baseImageUrl, source.CreateImageSource)
 	return layer_fetcher.NewLayerFetcher(&layerSource)
 }
 

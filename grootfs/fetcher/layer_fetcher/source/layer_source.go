@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -22,14 +21,19 @@ import (
 	manifestpkg "github.com/containers/image/manifest"
 	_ "github.com/containers/image/oci/layout"
 	"github.com/containers/image/pkg/blobinfocache/none"
-	"github.com/containers/image/transports"
 	"github.com/containers/image/types"
 	digestpkg "github.com/opencontainers/go-digest"
 	errorspkg "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
-const MAX_DOCKER_RETRIES = 3
+const (
+	MAX_DOCKER_RETRIES = 3
+	UNKNOWN_LAYER_SIZE = -1
+)
+
+//go:generate counterfeiter . ImageSourceCreator
+type ImageSourceCreator func(logger lager.Logger, systemContext types.SystemContext, baseImageURL *url.URL) (types.ImageSource, error)
 
 type LayerSource struct {
 	skipOCILayerValidation bool
@@ -39,15 +43,17 @@ type LayerSource struct {
 	imageSource              types.ImageSource
 	imageQuota               int64
 	skipImageQuotaValidation bool
+	imageSourceCreator       ImageSourceCreator
 }
 
-func NewLayerSource(systemContext types.SystemContext, skipOCILayerValidation, skipImageQuotaValidation bool, diskLimit int64, baseImageURL *url.URL) LayerSource {
+func NewLayerSource(systemContext types.SystemContext, skipOCILayerValidation, skipImageQuotaValidation bool, diskLimit int64, baseImageURL *url.URL, imageSourceCreator ImageSourceCreator) LayerSource {
 	return LayerSource{
 		systemContext:            systemContext,
 		skipOCILayerValidation:   skipOCILayerValidation,
 		baseImageURL:             baseImageURL,
 		imageQuota:               diskLimit,
 		skipImageQuotaValidation: skipImageQuotaValidation,
+		imageSourceCreator:       imageSourceCreator,
 	}
 }
 
@@ -103,15 +109,17 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 		URLs:   layerInfo.URLs,
 	}
 
-	blob, size, err := s.getBlobWithRetries(logger, imgSrc, blobInfo)
+	blob, reportedSize, err := s.getBlobWithRetries(logger, imgSrc, blobInfo)
 	if err != nil {
 		return "", 0, err
 	}
 	defer blob.Close()
-	logger.Debug("got-blob-stream", lager.Data{"digest": layerInfo.BlobID, "size": size, "mediaType": layerInfo.MediaType})
 
-	if err = s.validateLayerSize(layerInfo, size); err != nil {
-		return "", 0, err
+	countingBlobReader := NewCountingReader(blob)
+	logger.Debug("got-blob-stream", lager.Data{"digest": layerInfo.BlobID, "reportedSize": reportedSize, "mediaType": layerInfo.MediaType})
+
+	if err = s.validateLayerSize(layerInfo, reportedSize); err != nil {
+		return "", 0, errorspkg.Wrap(err, "validating reported blob size")
 	}
 
 	blobTempFile, err := ioutil.TempFile("", fmt.Sprintf("blob-%s", strings.Replace(layerInfo.BlobID, ":", "-", -1)))
@@ -128,7 +136,7 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 	}()
 
 	blobIDHash := sha256.New()
-	digestReader := ioutil.NopCloser(io.TeeReader(blob, blobIDHash))
+	digestReader := ioutil.NopCloser(io.TeeReader(countingBlobReader, blobIDHash))
 	if layerInfo.MediaType == "" || strings.Contains(layerInfo.MediaType, "gzip") {
 		logger.Debug("uncompressing-blob")
 
@@ -153,6 +161,11 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 		return "", 0, errorspkg.Wrap(err, "writing blob to tempfile")
 	}
 
+	actualSize := countingBlobReader.GetBytesRead()
+	if err = s.validateLayerSize(layerInfo, actualSize); err != nil {
+		return "", 0, errorspkg.Wrap(err, "validating actual blob size")
+	}
+
 	blobIDHex := strings.Split(layerInfo.BlobID, ":")[1]
 	if err = s.checkCheckSum(logger, blobIDHash, blobIDHex); err != nil {
 		return "", 0, errorspkg.Wrap(err, "layerID digest mismatch")
@@ -164,7 +177,7 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 
 	s.imageQuota -= uncompressedSize
 
-	return blobTempFile.Name(), size, nil
+	return blobTempFile.Name(), actualSize, nil
 }
 
 func (s *LayerSource) shouldEnforceImageQuotaValidation() bool {
@@ -172,11 +185,11 @@ func (s *LayerSource) shouldEnforceImageQuotaValidation() bool {
 }
 
 func (s *LayerSource) validateLayerSize(layerInfo groot.LayerInfo, size int64) error {
-	if s.skipOCILayerValidation || isV1Image(layerInfo) || layerInfo.Size == size {
+	if s.skipOCILayerValidation || isV1Image(layerInfo) || size == UNKNOWN_LAYER_SIZE || layerInfo.Size == size {
 		return nil
 	}
 
-	return errors.New("layer size is different from the value in the manifest")
+	return fmt.Errorf("layer size is different from the value in the manifest; expected: %d, actual %d", layerInfo.Size, size)
 }
 
 func isV1Image(layerInfo groot.LayerInfo) bool {
@@ -223,23 +236,6 @@ func (s *LayerSource) checkCheckSum(logger lager.Logger, hash hash.Hash, digest 
 	return nil
 }
 
-func (s *LayerSource) reference(logger lager.Logger) (types.ImageReference, error) {
-	refString := "/"
-	if s.baseImageURL.Host != "" {
-		refString += "/" + s.baseImageURL.Host
-	}
-	refString += s.baseImageURL.Path
-
-	logger.Debug("parsing-reference", lager.Data{"refString": refString})
-	transport := transports.Get(s.baseImageURL.Scheme)
-	ref, err := transport.ParseReference(refString)
-	if err != nil {
-		return nil, errorspkg.Wrap(err, "parsing url failed")
-	}
-
-	return ref, nil
-}
-
 func (s *LayerSource) getImageWithRetries(logger lager.Logger) (types.Image, error) {
 	var imgErr error
 	var img types.Image
@@ -263,27 +259,13 @@ func (s *LayerSource) getImageWithRetries(logger lager.Logger) (types.Image, err
 func (s *LayerSource) getImageSource(logger lager.Logger) (types.ImageSource, error) {
 	if s.imageSource == nil {
 		var err error
-		s.imageSource, err = s.createImageSource(logger)
+		s.imageSource, err = s.imageSourceCreator(logger, s.systemContext, s.baseImageURL)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return s.imageSource, nil
-}
-
-func (s *LayerSource) createImageSource(logger lager.Logger) (types.ImageSource, error) {
-	ref, err := s.reference(logger)
-	if err != nil {
-		return nil, err
-	}
-
-	imgSrc, err := ref.NewImageSource(context.TODO(), &s.systemContext)
-	if err != nil {
-		return nil, errorspkg.Wrap(err, "creating image source")
-	}
-
-	return imgSrc, nil
 }
 
 func (s *LayerSource) convertImage(logger lager.Logger, originalImage types.Image) (types.Image, error) {

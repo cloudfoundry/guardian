@@ -9,10 +9,12 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
+	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source/sourcefakes"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/testhelpers"
@@ -39,6 +41,7 @@ var _ = Describe("Layer source: Docker", func() {
 		skipOCILayerValidation   bool
 		skipImageQuotaValidation bool
 		imageQuota               int64
+		imageSourceCreator       source.ImageSourceCreator
 	)
 
 	BeforeEach(func() {
@@ -52,6 +55,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 		skipOCILayerValidation = false
 		skipImageQuotaValidation = true
+		imageSourceCreator = source.CreateImageSource
 		imageQuota = 0
 
 		configBlob = "sha256:217f3b4afdf698d639f854d9c6d640903a011413bc7e7bffeabe63c7ca7e4a7d"
@@ -77,7 +81,7 @@ var _ = Describe("Layer source: Docker", func() {
 	})
 
 	JustBeforeEach(func() {
-		layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, skipImageQuotaValidation, imageQuota, baseImageURL)
+		layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, skipImageQuotaValidation, imageQuota, baseImageURL, imageSourceCreator)
 	})
 
 	AfterEach(func() {
@@ -687,6 +691,49 @@ var _ = Describe("Layer source: Docker", func() {
 
 				It("returns quota exceeded error", func() {
 					Expect(blobErr).To(MatchError(ContainSubstring("uncompressed layer size exceeds quota")))
+				})
+			})
+		})
+
+		Context("when the docker registry does not report blob size", func() {
+			var (
+				blob io.ReadCloser
+			)
+			BeforeEach(func() {
+				fakeImageSourceCreator := new(sourcefakes.FakeImageSourceCreator)
+				imageSourceCreator = fakeImageSourceCreator.Spy
+				imageSource := new(sourcefakes.FakeImageSource)
+
+				layerInfo.BlobID = "sha256:b454a485b4601f27bc4bd08d6136a69244ac778423caf37deb65e4749f691f84"
+				layerInfo.DiffID = "3d16a9d9679dba04b90edeeca13dfaa986a268a7e0f4764250bacc2bed236b73"
+				layerInfo.Size = 1145393
+
+				var err error
+				blob, err = os.Open(filepath.FromSlash("../../../integration/assets/remote-layers/garden-busybox-remote/b454a485b4601f27bc4bd08d6136a69244ac778423caf37deb65e4749f691f84"))
+				Expect(err).NotTo(HaveOccurred())
+				imageSource.GetBlobReturns(blob, -1, nil)
+				fakeImageSourceCreator.Returns(imageSource, nil)
+			})
+
+			AfterEach(func() {
+				blob.Close()
+			})
+
+			It("does not fail", func() {
+				Expect(blobErr).NotTo(HaveOccurred())
+			})
+
+			It("returns the actual blob size", func() {
+				Expect(blobSize).To(Equal(int64(1145393)))
+			})
+
+			Context("when the actual layer size does not match the manifest layer size", func() {
+				BeforeEach(func() {
+					layerInfo.Size = 123
+				})
+
+				It("returns an error", func() {
+					Expect(blobErr).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
 				})
 			})
 		})

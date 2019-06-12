@@ -64,7 +64,7 @@ var _ = Describe("Layer source: OCI", func() {
 	})
 
 	JustBeforeEach(func() {
-		layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, skipImageQuotaValidation, imageQuota, baseImageURL)
+		layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, skipImageQuotaValidation, imageQuota, baseImageURL, source.CreateImageSource)
 	})
 
 	Describe("Manifest", func() {
