@@ -15,17 +15,17 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 )
 
-var _ = Describe("Infoer", func() {
+var _ = Describe("BundleManager", func() {
 	var (
-		infoer    *Infoer
-		fakeDepot *runruncfakes.FakeDepot
-		logger    *lagertest.TestLogger
+		bundleManager *BundleManager
+		fakeDepot     *runruncfakes.FakeDepot
+		logger        *lagertest.TestLogger
 	)
 
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("test")
 		fakeDepot = new(runruncfakes.FakeDepot)
-		infoer = NewInfoer(fakeDepot)
+		bundleManager = NewBundleManager(fakeDepot)
 	})
 
 	Describe("BundleInfo", func() {
@@ -41,7 +41,7 @@ var _ = Describe("Infoer", func() {
 		})
 
 		JustBeforeEach(func() {
-			bundlePath, bundle, err = infoer.BundleInfo(logger, "my-container")
+			bundlePath, bundle, err = bundleManager.BundleInfo(logger, "my-container")
 		})
 
 		It("returns the bundle for the specified container", func() {
@@ -87,6 +87,60 @@ var _ = Describe("Infoer", func() {
 
 			It("returns an error", func() {
 				Expect(err).To(MatchError("load-error"))
+			})
+		})
+	})
+
+	Describe("BundleIDs", func() {
+		var (
+			bundleIDs []string
+			err       error
+		)
+
+		BeforeEach(func() {
+			fakeDepot.HandlesReturns([]string{"banana", "banana2"}, nil)
+		})
+
+		JustBeforeEach(func() {
+			bundleIDs, err = bundleManager.BundleIDs()
+		})
+
+		It("returns the list of bundleIDs", func() {
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bundleIDs).To(ConsistOf("banana", "banana2"))
+		})
+
+		When("getting the list of bundleIDs from the depot fails", func() {
+			BeforeEach(func() {
+				fakeDepot.HandlesReturns(nil, errors.New("handles-error"))
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("handles-error"))
+			})
+		})
+	})
+
+	Describe("RemoveBundle", func() {
+		var err error
+
+		JustBeforeEach(func() {
+			err = bundleManager.RemoveBundle(nil, "testHandle")
+		})
+
+		It("removes the bundle forim the depot", func() {
+			Expect(fakeDepot.DestroyCallCount()).To(Equal(1))
+			_, handle := fakeDepot.DestroyArgsForCall(0)
+			Expect(handle).To(Equal("testHandle"))
+		})
+
+		When("destroying the bundle errors", func() {
+			BeforeEach(func() {
+				fakeDepot.DestroyReturns(errors.New("boom"))
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("boom"))
 			})
 		})
 	})

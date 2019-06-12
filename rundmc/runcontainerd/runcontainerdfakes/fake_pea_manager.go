@@ -36,6 +36,18 @@ type FakePeaManager struct {
 	deleteReturnsOnCall map[int]struct {
 		result1 error
 	}
+	RemoveBundleStub        func(lager.Logger, string) error
+	removeBundleMutex       sync.RWMutex
+	removeBundleArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+	}
+	removeBundleReturns struct {
+		result1 error
+	}
+	removeBundleReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -164,6 +176,67 @@ func (fake *FakePeaManager) DeleteReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakePeaManager) RemoveBundle(arg1 lager.Logger, arg2 string) error {
+	fake.removeBundleMutex.Lock()
+	ret, specificReturn := fake.removeBundleReturnsOnCall[len(fake.removeBundleArgsForCall)]
+	fake.removeBundleArgsForCall = append(fake.removeBundleArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("RemoveBundle", []interface{}{arg1, arg2})
+	fake.removeBundleMutex.Unlock()
+	if fake.RemoveBundleStub != nil {
+		return fake.RemoveBundleStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.removeBundleReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakePeaManager) RemoveBundleCallCount() int {
+	fake.removeBundleMutex.RLock()
+	defer fake.removeBundleMutex.RUnlock()
+	return len(fake.removeBundleArgsForCall)
+}
+
+func (fake *FakePeaManager) RemoveBundleCalls(stub func(lager.Logger, string) error) {
+	fake.removeBundleMutex.Lock()
+	defer fake.removeBundleMutex.Unlock()
+	fake.RemoveBundleStub = stub
+}
+
+func (fake *FakePeaManager) RemoveBundleArgsForCall(i int) (lager.Logger, string) {
+	fake.removeBundleMutex.RLock()
+	defer fake.removeBundleMutex.RUnlock()
+	argsForCall := fake.removeBundleArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakePeaManager) RemoveBundleReturns(result1 error) {
+	fake.removeBundleMutex.Lock()
+	defer fake.removeBundleMutex.Unlock()
+	fake.RemoveBundleStub = nil
+	fake.removeBundleReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakePeaManager) RemoveBundleReturnsOnCall(i int, result1 error) {
+	fake.removeBundleMutex.Lock()
+	defer fake.removeBundleMutex.Unlock()
+	fake.RemoveBundleStub = nil
+	if fake.removeBundleReturnsOnCall == nil {
+		fake.removeBundleReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.removeBundleReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakePeaManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -171,6 +244,8 @@ func (fake *FakePeaManager) Invocations() map[string][][]interface{} {
 	defer fake.createMutex.RUnlock()
 	fake.deleteMutex.RLock()
 	defer fake.deleteMutex.RUnlock()
+	fake.removeBundleMutex.RLock()
+	defer fake.removeBundleMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

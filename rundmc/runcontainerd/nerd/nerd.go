@@ -94,26 +94,22 @@ func withProcessKillLogging(log lager.Logger) func(context.Context, containerd.P
 }
 
 func (n *Nerd) Delete(log lager.Logger, containerID string) error {
-	container, task, err := n.loadContainerAndTask(log, containerID)
+	_, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
 		switch err.(type) {
 		case runcontainerd.ContainerNotFoundError:
+			log.Debug("container-already-deleted", lager.Data{"containerID": containerID})
 			return nil
 		case runcontainerd.TaskNotFoundError:
-			log.Debug("deleting-container", lager.Data{"containerID": containerID})
-			return container.Delete(n.context)
+			log.Debug("task-already-deleted", lager.Data{"containerID": containerID})
+			return nil
 		}
 		return err
 	}
 
 	log.Debug("deleting-task", lager.Data{"containerID": containerID})
 	_, err = task.Delete(n.context, withProcessKillLogging(log))
-	if err != nil {
-		return err
-	}
-
-	log.Debug("deleting-container", lager.Data{"containerID": containerID})
-	return container.Delete(n.context)
+	return err
 }
 
 func (n *Nerd) State(log lager.Logger, containerID string) (int, string, error) {
@@ -200,17 +196,23 @@ func (n *Nerd) GetContainerPID(log lager.Logger, containerID string) (uint32, er
 	return task.Pid(), nil
 }
 
-func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (containerd.Container, containerd.Task, error) {
-	var err error
-
+func (n *Nerd) loadContainer(log lager.Logger, containerID string) (containerd.Container, error) {
 	log.Debug("loading-container", lager.Data{"containerID": containerID})
 	container, err := n.client.LoadContainer(n.context, containerID)
 	if err != nil {
 		if errdefs.IsNotFound(err) {
 			log.Debug("container-not-found", lager.Data{"containerID": containerID})
-			return nil, nil, runcontainerd.ContainerNotFoundError{Handle: containerID}
+			return nil, runcontainerd.ContainerNotFoundError{Handle: containerID}
 		}
 		log.Debug("loading-container-failed", lager.Data{"containerID": containerID})
+		return nil, err
+	}
+	return container, nil
+}
+
+func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (containerd.Container, containerd.Task, error) {
+	container, err := n.loadContainer(log, containerID)
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -336,6 +338,36 @@ func coerceEvent(event *ctrdevents.Envelope) (*apievents.TaskOOM, error) {
 	}
 
 	return oom, nil
+}
+
+func (n *Nerd) BundleIDs() ([]string, error) {
+	containers, err := n.client.Containers(n.context)
+	if err != nil {
+		return nil, err
+	}
+
+	handles := []string{}
+	for _, container := range containers {
+		handles = append(handles, container.ID())
+	}
+
+	return handles, nil
+}
+
+func (n *Nerd) RemoveBundle(log lager.Logger, handle string) error {
+	container, err := n.loadContainer(log, handle)
+	if err == nil {
+		log.Debug("deleting-container", lager.Data{"containerID": handle})
+		return container.Delete(n.context)
+	}
+
+	if _, isNotFound := err.(runcontainerd.ContainerNotFoundError); isNotFound {
+		log.Debug("container-already-deleted", lager.Data{"containerID": handle})
+		return nil
+	}
+
+	log.Debug("loading-container-failed", lager.Data{"handle": handle})
+	return err
 }
 
 func WithCurrentUIDAndGID(ctx context.Context, c *containerd.Client, ti *containerd.TaskInfo) error {

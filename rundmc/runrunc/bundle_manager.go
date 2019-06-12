@@ -7,17 +7,17 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type Infoer struct {
+type BundleManager struct {
 	depot Depot
 }
 
-func NewInfoer(depot Depot) *Infoer {
-	return &Infoer{
+func NewBundleManager(depot Depot) *BundleManager {
+	return &BundleManager{
 		depot: depot,
 	}
 }
 
-func (i *Infoer) BundleInfo(log lager.Logger, handle string) (string, goci.Bndl, error) {
+func (i *BundleManager) BundleInfo(log lager.Logger, handle string) (string, goci.Bndl, error) {
 	bundlePath, err := i.depot.Lookup(log, handle)
 	if err == depot.ErrDoesNotExist {
 		return "", goci.Bndl{}, garden.ContainerNotFoundError{Handle: handle}
@@ -29,4 +29,12 @@ func (i *Infoer) BundleInfo(log lager.Logger, handle string) (string, goci.Bndl,
 	bundle, err := i.depot.Load(log, handle)
 
 	return bundlePath, bundle, err
+}
+
+func (i *BundleManager) BundleIDs() ([]string, error) {
+	return i.depot.Handles()
+}
+
+func (i *BundleManager) RemoveBundle(log lager.Logger, handle string) error {
+	return i.depot.Destroy(log, handle)
 }

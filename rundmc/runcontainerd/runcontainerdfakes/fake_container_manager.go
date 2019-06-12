@@ -12,6 +12,18 @@ import (
 )
 
 type FakeContainerManager struct {
+	BundleIDsStub        func() ([]string, error)
+	bundleIDsMutex       sync.RWMutex
+	bundleIDsArgsForCall []struct {
+	}
+	bundleIDsReturns struct {
+		result1 []string
+		result2 error
+	}
+	bundleIDsReturnsOnCall map[int]struct {
+		result1 []string
+		result2 error
+	}
 	CreateStub        func(lager.Logger, string, *specs.Spec, func() (io.Reader, io.Writer, io.Writer)) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
@@ -78,6 +90,18 @@ type FakeContainerManager struct {
 	oOMEventsReturnsOnCall map[int]struct {
 		result1 <-chan *events.TaskOOM
 	}
+	RemoveBundleStub        func(lager.Logger, string) error
+	removeBundleMutex       sync.RWMutex
+	removeBundleArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+	}
+	removeBundleReturns struct {
+		result1 error
+	}
+	removeBundleReturnsOnCall map[int]struct {
+		result1 error
+	}
 	SpecStub        func(lager.Logger, string) (*specs.Spec, error)
 	specMutex       sync.RWMutex
 	specArgsForCall []struct {
@@ -110,6 +134,61 @@ type FakeContainerManager struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeContainerManager) BundleIDs() ([]string, error) {
+	fake.bundleIDsMutex.Lock()
+	ret, specificReturn := fake.bundleIDsReturnsOnCall[len(fake.bundleIDsArgsForCall)]
+	fake.bundleIDsArgsForCall = append(fake.bundleIDsArgsForCall, struct {
+	}{})
+	fake.recordInvocation("BundleIDs", []interface{}{})
+	fake.bundleIDsMutex.Unlock()
+	if fake.BundleIDsStub != nil {
+		return fake.BundleIDsStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.bundleIDsReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeContainerManager) BundleIDsCallCount() int {
+	fake.bundleIDsMutex.RLock()
+	defer fake.bundleIDsMutex.RUnlock()
+	return len(fake.bundleIDsArgsForCall)
+}
+
+func (fake *FakeContainerManager) BundleIDsCalls(stub func() ([]string, error)) {
+	fake.bundleIDsMutex.Lock()
+	defer fake.bundleIDsMutex.Unlock()
+	fake.BundleIDsStub = stub
+}
+
+func (fake *FakeContainerManager) BundleIDsReturns(result1 []string, result2 error) {
+	fake.bundleIDsMutex.Lock()
+	defer fake.bundleIDsMutex.Unlock()
+	fake.BundleIDsStub = nil
+	fake.bundleIDsReturns = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeContainerManager) BundleIDsReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.bundleIDsMutex.Lock()
+	defer fake.bundleIDsMutex.Unlock()
+	fake.BundleIDsStub = nil
+	if fake.bundleIDsReturnsOnCall == nil {
+		fake.bundleIDsReturnsOnCall = make(map[int]struct {
+			result1 []string
+			result2 error
+		})
+	}
+	fake.bundleIDsReturnsOnCall[i] = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeContainerManager) Create(arg1 lager.Logger, arg2 string, arg3 *specs.Spec, arg4 func() (io.Reader, io.Writer, io.Writer)) error {
@@ -424,6 +503,67 @@ func (fake *FakeContainerManager) OOMEventsReturnsOnCall(i int, result1 <-chan *
 	}{result1}
 }
 
+func (fake *FakeContainerManager) RemoveBundle(arg1 lager.Logger, arg2 string) error {
+	fake.removeBundleMutex.Lock()
+	ret, specificReturn := fake.removeBundleReturnsOnCall[len(fake.removeBundleArgsForCall)]
+	fake.removeBundleArgsForCall = append(fake.removeBundleArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("RemoveBundle", []interface{}{arg1, arg2})
+	fake.removeBundleMutex.Unlock()
+	if fake.RemoveBundleStub != nil {
+		return fake.RemoveBundleStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.removeBundleReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeContainerManager) RemoveBundleCallCount() int {
+	fake.removeBundleMutex.RLock()
+	defer fake.removeBundleMutex.RUnlock()
+	return len(fake.removeBundleArgsForCall)
+}
+
+func (fake *FakeContainerManager) RemoveBundleCalls(stub func(lager.Logger, string) error) {
+	fake.removeBundleMutex.Lock()
+	defer fake.removeBundleMutex.Unlock()
+	fake.RemoveBundleStub = stub
+}
+
+func (fake *FakeContainerManager) RemoveBundleArgsForCall(i int) (lager.Logger, string) {
+	fake.removeBundleMutex.RLock()
+	defer fake.removeBundleMutex.RUnlock()
+	argsForCall := fake.removeBundleArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeContainerManager) RemoveBundleReturns(result1 error) {
+	fake.removeBundleMutex.Lock()
+	defer fake.removeBundleMutex.Unlock()
+	fake.RemoveBundleStub = nil
+	fake.removeBundleReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeContainerManager) RemoveBundleReturnsOnCall(i int, result1 error) {
+	fake.removeBundleMutex.Lock()
+	defer fake.removeBundleMutex.Unlock()
+	fake.RemoveBundleStub = nil
+	if fake.removeBundleReturnsOnCall == nil {
+		fake.removeBundleReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.removeBundleReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeContainerManager) Spec(arg1 lager.Logger, arg2 string) (*specs.Spec, error) {
 	fake.specMutex.Lock()
 	ret, specificReturn := fake.specReturnsOnCall[len(fake.specArgsForCall)]
@@ -558,6 +698,8 @@ func (fake *FakeContainerManager) StateReturnsOnCall(i int, result1 int, result2
 func (fake *FakeContainerManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.bundleIDsMutex.RLock()
+	defer fake.bundleIDsMutex.RUnlock()
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	fake.deleteMutex.RLock()
@@ -568,6 +710,8 @@ func (fake *FakeContainerManager) Invocations() map[string][][]interface{} {
 	defer fake.getContainerPIDMutex.RUnlock()
 	fake.oOMEventsMutex.RLock()
 	defer fake.oOMEventsMutex.RUnlock()
+	fake.removeBundleMutex.RLock()
+	defer fake.removeBundleMutex.RUnlock()
 	fake.specMutex.RLock()
 	defer fake.specMutex.RUnlock()
 	fake.stateMutex.RLock()

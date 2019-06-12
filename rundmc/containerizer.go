@@ -43,7 +43,9 @@ type OCIRuntime interface {
 	State(log lager.Logger, id string) (runrunc.State, error)
 	Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)
 	Events(log lager.Logger) (<-chan event.Event, error)
+	BundleIDs() ([]string, error)
 	BundleInfo(log lager.Logger, id string) (string, goci.Bndl, error)
+	RemoveBundle(log lager.Logger, id string) error
 }
 
 type PeaCreator interface {
@@ -279,8 +281,12 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 }
 
 func (c *Containerizer) RemoveBundle(log lager.Logger, handle string) error {
-	log = log.Session("depot", lager.Data{"handle": handle})
-	return c.depot.Destroy(log, handle)
+	log = log.Session("remove-bundle", lager.Data{"handle": handle})
+	// TODO: this should be removed once containerd processes are on by default
+	if err := c.depot.Destroy(log, handle); err != nil {
+		log.Debug("failed-to-remove-bundle-dir")
+	}
+	return c.runtime.RemoveBundle(log, handle)
 }
 
 func (c *Containerizer) Info(log lager.Logger, handle string) (spec.ActualContainerSpec, error) {
@@ -356,9 +362,8 @@ func isNotFound(err error) bool {
 	return ok
 }
 
-// Handles returns a list of all container handles
 func (c *Containerizer) Handles() ([]string, error) {
-	return c.depot.Handles()
+	return c.runtime.BundleIDs()
 }
 
 func calculateCPUEntitlement(shares uint64, entitlementPerShare float64, containerAge time.Duration) uint64 {

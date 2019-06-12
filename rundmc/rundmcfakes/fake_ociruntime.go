@@ -30,6 +30,18 @@ type FakeOCIRuntime struct {
 		result1 garden.Process
 		result2 error
 	}
+	BundleIDsStub        func() ([]string, error)
+	bundleIDsMutex       sync.RWMutex
+	bundleIDsArgsForCall []struct {
+	}
+	bundleIDsReturns struct {
+		result1 []string
+		result2 error
+	}
+	bundleIDsReturnsOnCall map[int]struct {
+		result1 []string
+		result2 error
+	}
 	BundleInfoStub        func(lager.Logger, string) (string, goci.Bndl, error)
 	bundleInfoMutex       sync.RWMutex
 	bundleInfoArgsForCall []struct {
@@ -100,6 +112,18 @@ type FakeOCIRuntime struct {
 	execReturnsOnCall map[int]struct {
 		result1 garden.Process
 		result2 error
+	}
+	RemoveBundleStub        func(lager.Logger, string) error
+	removeBundleMutex       sync.RWMutex
+	removeBundleArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+	}
+	removeBundleReturns struct {
+		result1 error
+	}
+	removeBundleReturnsOnCall map[int]struct {
+		result1 error
 	}
 	StateStub        func(lager.Logger, string) (runrunc.State, error)
 	stateMutex       sync.RWMutex
@@ -195,6 +219,61 @@ func (fake *FakeOCIRuntime) AttachReturnsOnCall(i int, result1 garden.Process, r
 	}
 	fake.attachReturnsOnCall[i] = struct {
 		result1 garden.Process
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeOCIRuntime) BundleIDs() ([]string, error) {
+	fake.bundleIDsMutex.Lock()
+	ret, specificReturn := fake.bundleIDsReturnsOnCall[len(fake.bundleIDsArgsForCall)]
+	fake.bundleIDsArgsForCall = append(fake.bundleIDsArgsForCall, struct {
+	}{})
+	fake.recordInvocation("BundleIDs", []interface{}{})
+	fake.bundleIDsMutex.Unlock()
+	if fake.BundleIDsStub != nil {
+		return fake.BundleIDsStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.bundleIDsReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeOCIRuntime) BundleIDsCallCount() int {
+	fake.bundleIDsMutex.RLock()
+	defer fake.bundleIDsMutex.RUnlock()
+	return len(fake.bundleIDsArgsForCall)
+}
+
+func (fake *FakeOCIRuntime) BundleIDsCalls(stub func() ([]string, error)) {
+	fake.bundleIDsMutex.Lock()
+	defer fake.bundleIDsMutex.Unlock()
+	fake.BundleIDsStub = stub
+}
+
+func (fake *FakeOCIRuntime) BundleIDsReturns(result1 []string, result2 error) {
+	fake.bundleIDsMutex.Lock()
+	defer fake.bundleIDsMutex.Unlock()
+	fake.BundleIDsStub = nil
+	fake.bundleIDsReturns = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeOCIRuntime) BundleIDsReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.bundleIDsMutex.Lock()
+	defer fake.bundleIDsMutex.Unlock()
+	fake.BundleIDsStub = nil
+	if fake.bundleIDsReturnsOnCall == nil {
+		fake.bundleIDsReturnsOnCall = make(map[int]struct {
+			result1 []string
+			result2 error
+		})
+	}
+	fake.bundleIDsReturnsOnCall[i] = struct {
+		result1 []string
 		result2 error
 	}{result1, result2}
 }
@@ -519,6 +598,67 @@ func (fake *FakeOCIRuntime) ExecReturnsOnCall(i int, result1 garden.Process, res
 	}{result1, result2}
 }
 
+func (fake *FakeOCIRuntime) RemoveBundle(arg1 lager.Logger, arg2 string) error {
+	fake.removeBundleMutex.Lock()
+	ret, specificReturn := fake.removeBundleReturnsOnCall[len(fake.removeBundleArgsForCall)]
+	fake.removeBundleArgsForCall = append(fake.removeBundleArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("RemoveBundle", []interface{}{arg1, arg2})
+	fake.removeBundleMutex.Unlock()
+	if fake.RemoveBundleStub != nil {
+		return fake.RemoveBundleStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.removeBundleReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeOCIRuntime) RemoveBundleCallCount() int {
+	fake.removeBundleMutex.RLock()
+	defer fake.removeBundleMutex.RUnlock()
+	return len(fake.removeBundleArgsForCall)
+}
+
+func (fake *FakeOCIRuntime) RemoveBundleCalls(stub func(lager.Logger, string) error) {
+	fake.removeBundleMutex.Lock()
+	defer fake.removeBundleMutex.Unlock()
+	fake.RemoveBundleStub = stub
+}
+
+func (fake *FakeOCIRuntime) RemoveBundleArgsForCall(i int) (lager.Logger, string) {
+	fake.removeBundleMutex.RLock()
+	defer fake.removeBundleMutex.RUnlock()
+	argsForCall := fake.removeBundleArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeOCIRuntime) RemoveBundleReturns(result1 error) {
+	fake.removeBundleMutex.Lock()
+	defer fake.removeBundleMutex.Unlock()
+	fake.RemoveBundleStub = nil
+	fake.removeBundleReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeOCIRuntime) RemoveBundleReturnsOnCall(i int, result1 error) {
+	fake.removeBundleMutex.Lock()
+	defer fake.removeBundleMutex.Unlock()
+	fake.RemoveBundleStub = nil
+	if fake.removeBundleReturnsOnCall == nil {
+		fake.removeBundleReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.removeBundleReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeOCIRuntime) State(arg1 lager.Logger, arg2 string) (runrunc.State, error) {
 	fake.stateMutex.Lock()
 	ret, specificReturn := fake.stateReturnsOnCall[len(fake.stateArgsForCall)]
@@ -652,6 +792,8 @@ func (fake *FakeOCIRuntime) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.attachMutex.RLock()
 	defer fake.attachMutex.RUnlock()
+	fake.bundleIDsMutex.RLock()
+	defer fake.bundleIDsMutex.RUnlock()
 	fake.bundleInfoMutex.RLock()
 	defer fake.bundleInfoMutex.RUnlock()
 	fake.createMutex.RLock()
@@ -662,6 +804,8 @@ func (fake *FakeOCIRuntime) Invocations() map[string][][]interface{} {
 	defer fake.eventsMutex.RUnlock()
 	fake.execMutex.RLock()
 	defer fake.execMutex.RUnlock()
+	fake.removeBundleMutex.RLock()
+	defer fake.removeBundleMutex.RUnlock()
 	fake.stateMutex.RLock()
 	defer fake.stateMutex.RUnlock()
 	fake.statsMutex.RLock()
