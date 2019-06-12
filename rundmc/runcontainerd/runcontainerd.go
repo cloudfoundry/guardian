@@ -26,7 +26,7 @@ type ContainerManager interface {
 	GetContainerPID(log lager.Logger, containerID string) (uint32, error)
 	OOMEvents(log lager.Logger) <-chan *apievents.TaskOOM
 	Spec(log lager.Logger, containerID string) (*specs.Spec, error)
-	Handles() ([]string, error)
+	BundleIDs() ([]string, error)
 	RemoveBundle(lager.Logger, string) error
 }
 
@@ -207,8 +207,8 @@ func isNotFound(err error) bool {
 	return ok
 }
 
-func (r *RunContainerd) Handles() ([]string, error) {
-	return r.containerManager.Handles()
+func (r *RunContainerd) BundleIDs() ([]string, error) {
+	return r.containerManager.BundleIDs()
 }
 
 func (r *RunContainerd) RemoveBundle(log lager.Logger, handle string) error {

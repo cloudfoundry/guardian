@@ -15,17 +15,17 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 )
 
-var _ = Describe("Infoer", func() {
+var _ = Describe("BundleManager", func() {
 	var (
-		infoer    *Infoer
-		fakeDepot *runruncfakes.FakeDepot
-		logger    *lagertest.TestLogger
+		bundleManager *BundleManager
+		fakeDepot     *runruncfakes.FakeDepot
+		logger        *lagertest.TestLogger
 	)
 
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("test")
 		fakeDepot = new(runruncfakes.FakeDepot)
-		infoer = NewInfoer(fakeDepot)
+		bundleManager = NewBundleManager(fakeDepot)
 	})
 
 	Describe("BundleInfo", func() {
@@ -41,7 +41,7 @@ var _ = Describe("Infoer", func() {
 		})
 
 		JustBeforeEach(func() {
-			bundlePath, bundle, err = infoer.BundleInfo(logger, "my-container")
+			bundlePath, bundle, err = bundleManager.BundleInfo(logger, "my-container")
 		})
 
 		It("returns the bundle for the specified container", func() {
@@ -91,10 +91,10 @@ var _ = Describe("Infoer", func() {
 		})
 	})
 
-	Describe("Handles", func() {
+	Describe("BundleIDs", func() {
 		var (
-			handles []string
-			err     error
+			bundleIDs []string
+			err       error
 		)
 
 		BeforeEach(func() {
@@ -102,15 +102,15 @@ var _ = Describe("Infoer", func() {
 		})
 
 		JustBeforeEach(func() {
-			handles, err = infoer.Handles()
+			bundleIDs, err = bundleManager.BundleIDs()
 		})
 
-		It("returns the list of handles", func() {
+		It("returns the list of bundleIDs", func() {
 			Expect(err).NotTo(HaveOccurred())
-			Expect(handles).To(ConsistOf("banana", "banana2"))
+			Expect(bundleIDs).To(ConsistOf("banana", "banana2"))
 		})
 
-		When("getting the list of handles from the depot fails", func() {
+		When("getting the list of bundleIDs from the depot fails", func() {
 			BeforeEach(func() {
 				fakeDepot.HandlesReturns(nil, errors.New("handles-error"))
 			})
@@ -125,7 +125,7 @@ var _ = Describe("Infoer", func() {
 		var err error
 
 		JustBeforeEach(func() {
-			err = infoer.RemoveBundle(nil, "testHandle")
+			err = bundleManager.RemoveBundle(nil, "testHandle")
 		})
 
 		It("removes the bundle forim the depot", func() {

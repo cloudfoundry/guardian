@@ -633,7 +633,7 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("Handles", func() {
 		BeforeEach(func() {
-			fakeOCIRuntime.HandlesReturns([]string{"banana", "banana2"}, nil)
+			fakeOCIRuntime.BundleIDsReturns([]string{"banana", "banana2"}, nil)
 		})
 
 		It("should return the handles", func() {
@@ -642,7 +642,7 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when the runtime returns an error", func() {
 			BeforeEach(func() {
-				fakeOCIRuntime.HandlesReturns([]string{}, errors.New("handles-error"))
+				fakeOCIRuntime.BundleIDsReturns([]string{}, errors.New("handles-error"))
 			})
 
 			It("should return the error", func() {

@@ -334,7 +334,7 @@ func coerceEvent(event *ctrdevents.Envelope) (*apievents.TaskOOM, error) {
 	return oom, nil
 }
 
-func (n *Nerd) Handles() ([]string, error) {
+func (n *Nerd) BundleIDs() ([]string, error) {
 	containers, err := n.client.Containers(n.context)
 	if err != nil {
 		return nil, err

@@ -461,7 +461,7 @@ var _ = Describe("Nerd", func() {
 		})
 	})
 
-	Describe("Handles", func() {
+	Describe("BundleIDs", func() {
 		AfterEach(func() {
 			cnerd.Delete(testLogger, "banana")
 			cnerd.Delete(testLogger, "banana2")
@@ -473,7 +473,7 @@ var _ = Describe("Nerd", func() {
 			spec = generateSpec(containerdContext, containerdClient, "banana2")
 			Expect(cnerd.Create(testLogger, "banana2", spec, processIO)).To(Succeed())
 
-			handles, err := cnerd.Handles()
+			handles, err := cnerd.BundleIDs()
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(handles).To(ConsistOf("banana", "banana2"))

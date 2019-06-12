@@ -710,28 +710,28 @@ var _ = Describe("Runcontainerd", func() {
 		})
 	})
 
-	Describe("Handles", func() {
+	Describe("BundleIDs", func() {
 		var (
-			handles []string
-			err     error
+			bundleIDs []string
+			err       error
 		)
 
 		BeforeEach(func() {
-			containerManager.HandlesReturns([]string{"banana", "banana2"}, nil)
+			containerManager.BundleIDsReturns([]string{"banana", "banana2"}, nil)
 		})
 
 		JustBeforeEach(func() {
-			handles, err = runContainerd.Handles()
+			bundleIDs, err = runContainerd.BundleIDs()
 		})
 
-		It("returns the list of handles", func() {
+		It("returns the list of bundleIDs", func() {
 			Expect(err).NotTo(HaveOccurred())
-			Expect(handles).To(ConsistOf("banana", "banana2"))
+			Expect(bundleIDs).To(ConsistOf("banana", "banana2"))
 		})
 
-		When("getting the list of handles from the container manager fails", func() {
+		When("getting the list of bundleIDs from the container manager fails", func() {
 			BeforeEach(func() {
-				containerManager.HandlesReturns(nil, errors.New("handles-error"))
+				containerManager.BundleIDsReturns(nil, errors.New("handles-error"))
 			})
 
 			It("returns an error", func() {

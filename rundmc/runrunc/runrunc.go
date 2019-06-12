@@ -17,7 +17,7 @@ type RunRunc struct {
 	*Statser
 	*Stater
 	*Deleter
-	*Infoer
+	*BundleManager
 }
 
 //go:generate counterfeiter . RuncBinary
@@ -42,18 +42,18 @@ type Depot interface {
 func New(
 	runner commandrunner.CommandRunner, runcCmdRunner RuncCmdRunner,
 	runc RuncBinary, runcExtraArgs []string, execer *Execer, statser *Statser,
-	infoer *Infoer,
+	bundleManager *BundleManager,
 ) *RunRunc {
 	stater := NewStater(runcCmdRunner, runc)
 	oomWatcher := NewOomWatcher(runner, runc)
 
 	return &RunRunc{
-		Creator:    NewCreator(runc, runcExtraArgs, runner, oomWatcher),
-		Execer:     execer,
-		OomWatcher: oomWatcher,
-		Statser:    statser,
-		Stater:     stater,
-		Deleter:    NewDeleter(runcCmdRunner, runc, stater),
-		Infoer:     infoer,
+		Creator:       NewCreator(runc, runcExtraArgs, runner, oomWatcher),
+		Execer:        execer,
+		OomWatcher:    oomWatcher,
+		Statser:       statser,
+		Stater:        stater,
+		Deleter:       NewDeleter(runcCmdRunner, runc, stater),
+		BundleManager: bundleManager,
 	}
 }
