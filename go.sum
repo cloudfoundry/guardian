@@ -6,12 +6,6 @@ code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b h1:wkgiiF
 code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b/go.mod h1:m1fP94N1mbq7Myq1Z3W8g5jTk+wgf82AjaH+aU0Fzek=
 code.cloudfoundry.org/debugserver v0.0.0-20170501225606-70715da12ee9 h1:7JUrkUiYiSLraV/Su8X581mfJOsabseYZMDvb+fNeC0=
 code.cloudfoundry.org/debugserver v0.0.0-20170501225606-70715da12ee9/go.mod h1:TotxfVIqTDwSnfxRc2ksk8uFZs5vhIN8Ooy3RdbsQF8=
-code.cloudfoundry.org/garden v0.0.0-20190605151055-e9c503bfdeed h1:rWvMDifEsoq1A7dkjqh1Ir6irkLuu8pfHFzEtfPQcxE=
-code.cloudfoundry.org/garden v0.0.0-20190605151055-e9c503bfdeed/go.mod h1:A8ETcaVdJxZvRjdTkczHAh9GYJjZozwfqX4B641WOGk=
-code.cloudfoundry.org/grootfs v0.30.1-0.20190612153444-d33461f352fe h1:OADzPowzovaWyEP0jG8mzHEx3HS2fe5d3kSrREcgM+o=
-code.cloudfoundry.org/grootfs v0.30.1-0.20190612153444-d33461f352fe/go.mod h1:V+khhEZkVuZU4BWNjAUPLvhQZptGL6iz3uBmhaSqbGw=
-code.cloudfoundry.org/idmapper v0.0.0-20190605151133-eea8522b4bbd h1:5sw9kUrk5HPD18OntQJ5axdkBoE+cIf6Gpi0htvVJO8=
-code.cloudfoundry.org/idmapper v0.0.0-20190605151133-eea8522b4bbd/go.mod h1:n14+qevUQup0WW7HhMJMVWq9OnSjktDlP3tww/eUpMU=
 code.cloudfoundry.org/lager v0.0.0-20181119165122-baf208c4c56b/go.mod h1:O2sS7gKP3HM2iemG+EnwvyNQK7pTSC6Foi4QiMp9sSk=
 code.cloudfoundry.org/lager v2.0.0+incompatible h1:WZwDKDB2PLd/oL+USK4b4aEjUymIej9My2nUQ9oWEwQ=
 code.cloudfoundry.org/lager v2.0.0+incompatible/go.mod h1:O2sS7gKP3HM2iemG+EnwvyNQK7pTSC6Foi4QiMp9sSk=
