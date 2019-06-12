@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"code.cloudfoundry.org/guardian/gqt/containerdrunner"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"github.com/BurntSushi/toml"
 	. "github.com/onsi/ginkgo"
@@ -22,6 +24,10 @@ var (
 	binaries          runner.Binaries
 	config            runner.GdnRunnerConfig
 	defaultTestRootFS string
+
+	containerdConfig  containerdrunner.Config
+	containerdSession *gexec.Session
+	containerdRunDir  string
 )
 
 func TestSetupGqt(t *testing.T) {
@@ -58,9 +64,18 @@ var _ = BeforeEach(func() {
 		Skip("No Garden RootFS")
 	}
 	config = defaultConfig()
+	if isContainerd() {
+		containerdRunDir = tempDir("", "")
+		containerdSession = startContainerd(containerdRunDir)
+	}
 })
 
 var _ = AfterEach(func() {
+	if isContainerd() {
+		Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
+		Expect(os.RemoveAll(containerdRunDir)).To(Succeed())
+	}
+
 	// Windows worker is not containerised and therefore the test needs to take care to delete the temporary folder
 	if runtime.GOOS == "windows" {
 		Expect(os.RemoveAll(config.TmpDir)).To(Succeed())
@@ -185,4 +200,16 @@ func skipIfContainerd() {
 	if isContainerd() {
 		Skip("irrelevant test for containerd mode")
 	}
+}
+
+func startContainerd(runDir string) *gexec.Session {
+	containerdConfig := containerdrunner.ContainerdConfig(runDir)
+	config.ContainerdSocket = containerdConfig.GRPC.Address
+	return containerdrunner.NewSession(runDir, containerdConfig)
+}
+
+func tempDir(dir, prefix string) string {
+	path, err := ioutil.TempDir(dir, prefix)
+	Expect(err).NotTo(HaveOccurred())
+	return path
 }
