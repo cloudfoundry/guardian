@@ -25,6 +25,30 @@ type FakeDepot struct {
 		result1 time.Time
 		result2 error
 	}
+	DestroyStub        func(lager.Logger, string) error
+	destroyMutex       sync.RWMutex
+	destroyArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+	}
+	destroyReturns struct {
+		result1 error
+	}
+	destroyReturnsOnCall map[int]struct {
+		result1 error
+	}
+	HandlesStub        func() ([]string, error)
+	handlesMutex       sync.RWMutex
+	handlesArgsForCall []struct {
+	}
+	handlesReturns struct {
+		result1 []string
+		result2 error
+	}
+	handlesReturnsOnCall map[int]struct {
+		result1 []string
+		result2 error
+	}
 	LoadStub        func(lager.Logger, string) (goci.Bndl, error)
 	loadMutex       sync.RWMutex
 	loadArgsForCall []struct {
@@ -117,6 +141,122 @@ func (fake *FakeDepot) CreatedTimeReturnsOnCall(i int, result1 time.Time, result
 	}
 	fake.createdTimeReturnsOnCall[i] = struct {
 		result1 time.Time
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeDepot) Destroy(arg1 lager.Logger, arg2 string) error {
+	fake.destroyMutex.Lock()
+	ret, specificReturn := fake.destroyReturnsOnCall[len(fake.destroyArgsForCall)]
+	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Destroy", []interface{}{arg1, arg2})
+	fake.destroyMutex.Unlock()
+	if fake.DestroyStub != nil {
+		return fake.DestroyStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.destroyReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeDepot) DestroyCallCount() int {
+	fake.destroyMutex.RLock()
+	defer fake.destroyMutex.RUnlock()
+	return len(fake.destroyArgsForCall)
+}
+
+func (fake *FakeDepot) DestroyCalls(stub func(lager.Logger, string) error) {
+	fake.destroyMutex.Lock()
+	defer fake.destroyMutex.Unlock()
+	fake.DestroyStub = stub
+}
+
+func (fake *FakeDepot) DestroyArgsForCall(i int) (lager.Logger, string) {
+	fake.destroyMutex.RLock()
+	defer fake.destroyMutex.RUnlock()
+	argsForCall := fake.destroyArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeDepot) DestroyReturns(result1 error) {
+	fake.destroyMutex.Lock()
+	defer fake.destroyMutex.Unlock()
+	fake.DestroyStub = nil
+	fake.destroyReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeDepot) DestroyReturnsOnCall(i int, result1 error) {
+	fake.destroyMutex.Lock()
+	defer fake.destroyMutex.Unlock()
+	fake.DestroyStub = nil
+	if fake.destroyReturnsOnCall == nil {
+		fake.destroyReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.destroyReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeDepot) Handles() ([]string, error) {
+	fake.handlesMutex.Lock()
+	ret, specificReturn := fake.handlesReturnsOnCall[len(fake.handlesArgsForCall)]
+	fake.handlesArgsForCall = append(fake.handlesArgsForCall, struct {
+	}{})
+	fake.recordInvocation("Handles", []interface{}{})
+	fake.handlesMutex.Unlock()
+	if fake.HandlesStub != nil {
+		return fake.HandlesStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.handlesReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeDepot) HandlesCallCount() int {
+	fake.handlesMutex.RLock()
+	defer fake.handlesMutex.RUnlock()
+	return len(fake.handlesArgsForCall)
+}
+
+func (fake *FakeDepot) HandlesCalls(stub func() ([]string, error)) {
+	fake.handlesMutex.Lock()
+	defer fake.handlesMutex.Unlock()
+	fake.HandlesStub = stub
+}
+
+func (fake *FakeDepot) HandlesReturns(result1 []string, result2 error) {
+	fake.handlesMutex.Lock()
+	defer fake.handlesMutex.Unlock()
+	fake.HandlesStub = nil
+	fake.handlesReturns = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeDepot) HandlesReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.handlesMutex.Lock()
+	defer fake.handlesMutex.Unlock()
+	fake.HandlesStub = nil
+	if fake.handlesReturnsOnCall == nil {
+		fake.handlesReturnsOnCall = make(map[int]struct {
+			result1 []string
+			result2 error
+		})
+	}
+	fake.handlesReturnsOnCall[i] = struct {
+		result1 []string
 		result2 error
 	}{result1, result2}
 }
@@ -254,6 +394,10 @@ func (fake *FakeDepot) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.createdTimeMutex.RLock()
 	defer fake.createdTimeMutex.RUnlock()
+	fake.destroyMutex.RLock()
+	defer fake.destroyMutex.RUnlock()
+	fake.handlesMutex.RLock()
+	defer fake.handlesMutex.RUnlock()
 	fake.loadMutex.RLock()
 	defer fake.loadMutex.RUnlock()
 	fake.lookupMutex.RLock()

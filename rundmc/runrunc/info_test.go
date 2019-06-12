@@ -90,4 +90,58 @@ var _ = Describe("Infoer", func() {
 			})
 		})
 	})
+
+	Describe("Handles", func() {
+		var (
+			handles []string
+			err     error
+		)
+
+		BeforeEach(func() {
+			fakeDepot.HandlesReturns([]string{"banana", "banana2"}, nil)
+		})
+
+		JustBeforeEach(func() {
+			handles, err = infoer.Handles()
+		})
+
+		It("returns the list of handles", func() {
+			Expect(err).NotTo(HaveOccurred())
+			Expect(handles).To(ConsistOf("banana", "banana2"))
+		})
+
+		When("getting the list of handles from the depot fails", func() {
+			BeforeEach(func() {
+				fakeDepot.HandlesReturns(nil, errors.New("handles-error"))
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("handles-error"))
+			})
+		})
+	})
+
+	Describe("RemoveBundle", func() {
+		var err error
+
+		JustBeforeEach(func() {
+			err = infoer.RemoveBundle(nil, "testHandle")
+		})
+
+		It("removes the bundle forim the depot", func() {
+			Expect(fakeDepot.DestroyCallCount()).To(Equal(1))
+			_, handle := fakeDepot.DestroyArgsForCall(0)
+			Expect(handle).To(Equal("testHandle"))
+		})
+
+		When("destroying the bundle errors", func() {
+			BeforeEach(func() {
+				fakeDepot.DestroyReturns(errors.New("boom"))
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("boom"))
+			})
+		})
+	})
 })

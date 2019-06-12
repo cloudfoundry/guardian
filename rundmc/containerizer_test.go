@@ -386,16 +386,16 @@ var _ = Describe("Rundmc", func() {
 	})
 
 	Describe("RemoveBundle", func() {
-		It("removes the bundle from the depot", func() {
+		It("removes the bundle", func() {
 			Expect(containerizer.RemoveBundle(logger, "some-handle")).To(Succeed())
-			Expect(fakeDepot.DestroyCallCount()).To(Equal(1))
-			_, handle := fakeDepot.DestroyArgsForCall(0)
+			Expect(fakeOCIRuntime.RemoveBundleCallCount()).To(Equal(1))
+			_, handle := fakeOCIRuntime.RemoveBundleArgsForCall(0)
 			Expect(handle).To(Equal("some-handle"))
 		})
 
-		Context("when removing bundle from depot fails", func() {
+		Context("when removing bundle fails", func() {
 			BeforeEach(func() {
-				fakeDepot.DestroyReturns(errors.New("destroy failed"))
+				fakeOCIRuntime.RemoveBundleReturns(errors.New("destroy failed"))
 			})
 
 			It("returns an error", func() {
@@ -631,27 +631,23 @@ var _ = Describe("Rundmc", func() {
 		})
 	})
 
-	Describe("handles", func() {
-		Context("when handles exist", func() {
-			BeforeEach(func() {
-				fakeDepot.HandlesReturns([]string{"banana", "banana2"}, nil)
-			})
-
-			It("should return the handles", func() {
-				Expect(containerizer.Handles()).To(ConsistOf("banana", "banana2"))
-			})
+	Describe("Handles", func() {
+		BeforeEach(func() {
+			fakeOCIRuntime.HandlesReturns([]string{"banana", "banana2"}, nil)
 		})
 
-		Context("when the depot returns an error", func() {
-			testErr := errors.New("spiderman error")
+		It("should return the handles", func() {
+			Expect(containerizer.Handles()).To(ConsistOf("banana", "banana2"))
+		})
 
+		Context("when the runtime returns an error", func() {
 			BeforeEach(func() {
-				fakeDepot.HandlesReturns([]string{}, testErr)
+				fakeOCIRuntime.HandlesReturns([]string{}, errors.New("handles-error"))
 			})
 
 			It("should return the error", func() {
 				_, err := containerizer.Handles()
-				Expect(err).To(MatchError(testErr))
+				Expect(err).To(MatchError("handles-error"))
 			})
 		})
 	})

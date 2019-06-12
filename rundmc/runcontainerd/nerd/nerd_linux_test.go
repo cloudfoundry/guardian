@@ -329,17 +329,32 @@ var _ = Describe("Nerd", func() {
 
 	})
 
+	Describe("RemoveBundle", func() {
+		JustBeforeEach(func() {
+			spec := generateSpec(containerdContext, containerdClient, containerID)
+			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
+			Expect(cnerd.Delete(testLogger, containerID)).To(Succeed())
+		})
+
+		It("deletes the containerd container by id", func() {
+			Expect(cnerd.RemoveBundle(testLogger, containerID)).To(Succeed())
+
+			containers := listContainers(testConfig.CtrBin, testConfig.Socket)
+			Expect(containers).NotTo(ContainSubstring(containerID))
+		})
+	})
+
 	Describe("Delete", func() {
 		JustBeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
 			Expect(cnerd.Create(testLogger, containerID, spec, processIO)).To(Succeed())
 		})
 
-		It("deletes the containerd container by id", func() {
+		It("deletes the containerd task by container id", func() {
 			Expect(cnerd.Delete(testLogger, containerID)).To(Succeed())
 
-			containers := listContainers(testConfig.CtrBin, testConfig.Socket)
-			Expect(containers).NotTo(ContainSubstring(containerID))
+			tasks := listTasks(testConfig.CtrBin, testConfig.Socket)
+			Expect(tasks).NotTo(ContainSubstring(containerID))
 		})
 	})
 
@@ -445,6 +460,25 @@ var _ = Describe("Nerd", func() {
 			Expect(func() { cnerd.State(testLogger, "a-random-id") }).NotTo(Panic())
 		})
 	})
+
+	Describe("Handles", func() {
+		AfterEach(func() {
+			cnerd.Delete(testLogger, "banana")
+			cnerd.Delete(testLogger, "banana2")
+		})
+
+		It("returns the list of container handles", func() {
+			spec := generateSpec(containerdContext, containerdClient, "banana")
+			Expect(cnerd.Create(testLogger, "banana", spec, processIO)).To(Succeed())
+			spec = generateSpec(containerdContext, containerdClient, "banana2")
+			Expect(cnerd.Create(testLogger, "banana2", spec, processIO)).To(Succeed())
+
+			handles, err := cnerd.Handles()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(handles).To(ConsistOf("banana", "banana2"))
+		})
+	})
 })
 
 func createRootfs(modifyRootfs func(string), perm os.FileMode) string {
@@ -479,6 +513,10 @@ func withLinuxResources(resources specs.LinuxResources) func(context.Context, oc
 
 func listContainers(ctr, socket string) string {
 	return runCtr(ctr, socket, []string{"containers", "list"})
+}
+
+func listTasks(ctr, socket string) string {
+	return runCtr(ctr, socket, []string{"tasks", "list"})
 }
 
 func listProcesses(ctr, socket, containerID string) string {

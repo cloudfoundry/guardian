@@ -14,6 +14,7 @@ import (
 type PeaManager interface {
 	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
 	Delete(log lager.Logger, containerID string) error
+	RemoveBundle(log lager.Logger, containerID string) error
 }
 
 //go:generate counterfeiter . BundleLookupper
@@ -48,15 +49,7 @@ func (r *RunContainerPea) RunPea(
 		return &Process{}, err
 	}
 
-	return &PeaProcess{
-		Process: Process{
-			log:            log,
-			containerID:    processID,
-			processID:      processID,
-			processManager: r.ProcessManager,
-		},
-		peaManager: r.PeaManager,
-	}, nil
+	return NewPeaProcess(log, processID, r.ProcessManager, r.PeaManager), nil
 }
 
 func (r *RunContainerPea) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {

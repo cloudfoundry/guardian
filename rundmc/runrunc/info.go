@@ -30,3 +30,11 @@ func (i *Infoer) BundleInfo(log lager.Logger, handle string) (string, goci.Bndl,
 
 	return bundlePath, bundle, err
 }
+
+func (i *Infoer) Handles() ([]string, error) {
+	return i.depot.Handles()
+}
+
+func (i *Infoer) RemoveBundle(log lager.Logger, handle string) error {
+	return i.depot.Destroy(log, handle)
+}

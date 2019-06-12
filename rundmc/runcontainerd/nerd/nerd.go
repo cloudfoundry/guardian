@@ -94,26 +94,22 @@ func withProcessKillLogging(log lager.Logger) func(context.Context, containerd.P
 }
 
 func (n *Nerd) Delete(log lager.Logger, containerID string) error {
-	container, task, err := n.loadContainerAndTask(log, containerID)
+	_, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
 		switch err.(type) {
 		case runcontainerd.ContainerNotFoundError:
 			return nil
 		case runcontainerd.TaskNotFoundError:
-			log.Debug("deleting-container", lager.Data{"containerID": containerID})
-			return container.Delete(n.context)
+			// log.Debug("deleting-container", lager.Data{"containerID": containerID})
+			// return container.Delete(n.context)
+			return nil
 		}
 		return err
 	}
 
 	log.Debug("deleting-task", lager.Data{"containerID": containerID})
 	_, err = task.Delete(n.context, withProcessKillLogging(log))
-	if err != nil {
-		return err
-	}
-
-	log.Debug("deleting-container", lager.Data{"containerID": containerID})
-	return container.Delete(n.context)
+	return err
 }
 
 func (n *Nerd) State(log lager.Logger, containerID string) (int, string, error) {
@@ -336,6 +332,36 @@ func coerceEvent(event *ctrdevents.Envelope) (*apievents.TaskOOM, error) {
 	}
 
 	return oom, nil
+}
+
+func (n *Nerd) Handles() ([]string, error) {
+	containers, err := n.client.Containers(n.context)
+	if err != nil {
+		return nil, err
+	}
+
+	handles := []string{}
+	for _, container := range containers {
+		handles = append(handles, container.ID())
+	}
+
+	return handles, nil
+}
+
+func (n *Nerd) RemoveBundle(log lager.Logger, handle string) error {
+	log.Debug("loading-container", lager.Data{"containerID": handle})
+	container, err := n.client.LoadContainer(n.context, handle)
+	if err != nil {
+		if errdefs.IsNotFound(err) {
+			log.Debug("container-already-deleted", lager.Data{"containerID": handle})
+			return nil
+		}
+		log.Debug("loading-container-failed", lager.Data{"handle": handle})
+		return err
+	}
+
+	log.Debug("deleting-container", lager.Data{"containerID": handle})
+	return container.Delete(n.context)
 }
 
 func WithCurrentUIDAndGID(ctx context.Context, c *containerd.Client, ti *containerd.TaskInfo) error {

@@ -162,19 +162,43 @@ var _ = Describe("Runcontainerd", func() {
 			deleteErr = runContainerd.Delete(nil, "container-id")
 		})
 
-		It("deletes the containerd container with the passed id", func() {
+		It("deletes the containerd task with the passed id", func() {
 			Expect(containerManager.DeleteCallCount()).To(Equal(1))
 			_, actualID := containerManager.DeleteArgsForCall(0)
 			Expect(actualID).To(Equal("container-id"))
 		})
 
-		Context("when deleting a containerd container errors", func() {
+		Context("when deleting a containerd task errors", func() {
 			BeforeEach(func() {
 				containerManager.DeleteReturns(errors.New("could not delete"))
 			})
 
 			It("bubbles up that error", func() {
 				Expect(deleteErr).To(MatchError("could not delete"))
+			})
+		})
+	})
+
+	Describe("RemoveBundle", func() {
+		var removeErr error
+
+		JustBeforeEach(func() {
+			removeErr = runContainerd.RemoveBundle(nil, "container-id")
+		})
+
+		It("deletes the containerd container with the passed id", func() {
+			Expect(containerManager.RemoveBundleCallCount()).To(Equal(1))
+			_, actualID := containerManager.RemoveBundleArgsForCall(0)
+			Expect(actualID).To(Equal("container-id"))
+		})
+
+		Context("when deleting a containerd container errors", func() {
+			BeforeEach(func() {
+				containerManager.RemoveBundleReturns(errors.New("could not delete"))
+			})
+
+			It("bubbles up that error", func() {
+				Expect(removeErr).To(MatchError("could not delete"))
 			})
 		})
 	})
@@ -682,6 +706,36 @@ var _ = Describe("Runcontainerd", func() {
 
 			It("returns an error", func() {
 				Expect(err).To(MatchError("spec-error"))
+			})
+		})
+	})
+
+	Describe("Handles", func() {
+		var (
+			handles []string
+			err     error
+		)
+
+		BeforeEach(func() {
+			containerManager.HandlesReturns([]string{"banana", "banana2"}, nil)
+		})
+
+		JustBeforeEach(func() {
+			handles, err = runContainerd.Handles()
+		})
+
+		It("returns the list of handles", func() {
+			Expect(err).NotTo(HaveOccurred())
+			Expect(handles).To(ConsistOf("banana", "banana2"))
+		})
+
+		When("getting the list of handles from the container manager fails", func() {
+			BeforeEach(func() {
+				containerManager.HandlesReturns(nil, errors.New("handles-error"))
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("handles-error"))
 			})
 		})
 	})
