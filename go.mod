@@ -7,9 +7,9 @@ require (
 	code.cloudfoundry.org/clock v0.0.0-20180518195852-02e53af36e6c
 	code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b
 	code.cloudfoundry.org/debugserver v0.0.0-20170501225606-70715da12ee9
-	code.cloudfoundry.org/garden v0.0.0-20190605151055-e9c503bfdeed
-	code.cloudfoundry.org/grootfs v0.30.1-0.20190612153444-d33461f352fe
-	code.cloudfoundry.org/idmapper v0.0.0-20190605151133-eea8522b4bbd
+	code.cloudfoundry.org/garden v0.0.0-00010101000000-000000000000
+	code.cloudfoundry.org/grootfs v0.0.0-00010101000000-000000000000
+	code.cloudfoundry.org/idmapper v0.0.0-00010101000000-000000000000
 	code.cloudfoundry.org/lager v2.0.0+incompatible
 	code.cloudfoundry.org/localip v0.0.0-20170223024724-b88ad0dea95c
 	github.com/BurntSushi/toml v0.3.1
@@ -66,4 +66,9 @@ require (
 	gopkg.in/yaml.v2 v2.2.2
 )
 
-replace github.com/docker/distribution => github.com/docker/distribution v0.0.0-20190205005809-0d3efadf0154
+replace (
+	code.cloudfoundry.org/garden => ../garden
+	code.cloudfoundry.org/grootfs => ../grootfs
+	code.cloudfoundry.org/idmapper => ../idmapper
+	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20190205005809-0d3efadf0154
+)
