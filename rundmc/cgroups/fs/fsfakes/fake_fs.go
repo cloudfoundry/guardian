@@ -56,7 +56,8 @@ func (fake *FakeFS) Chown(arg1 string, arg2 int, arg3 int) error {
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.chownReturns.result1
+	fakeReturns := fake.chownReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeFS) ChownCallCount() int {
@@ -65,13 +66,22 @@ func (fake *FakeFS) ChownCallCount() int {
 	return len(fake.chownArgsForCall)
 }
 
+func (fake *FakeFS) ChownCalls(stub func(string, int, int) error) {
+	fake.chownMutex.Lock()
+	defer fake.chownMutex.Unlock()
+	fake.ChownStub = stub
+}
+
 func (fake *FakeFS) ChownArgsForCall(i int) (string, int, int) {
 	fake.chownMutex.RLock()
 	defer fake.chownMutex.RUnlock()
-	return fake.chownArgsForCall[i].arg1, fake.chownArgsForCall[i].arg2, fake.chownArgsForCall[i].arg3
+	argsForCall := fake.chownArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeFS) ChownReturns(result1 error) {
+	fake.chownMutex.Lock()
+	defer fake.chownMutex.Unlock()
 	fake.ChownStub = nil
 	fake.chownReturns = struct {
 		result1 error
@@ -79,6 +89,8 @@ func (fake *FakeFS) ChownReturns(result1 error) {
 }
 
 func (fake *FakeFS) ChownReturnsOnCall(i int, result1 error) {
+	fake.chownMutex.Lock()
+	defer fake.chownMutex.Unlock()
 	fake.ChownStub = nil
 	if fake.chownReturnsOnCall == nil {
 		fake.chownReturnsOnCall = make(map[int]struct {
@@ -108,7 +120,8 @@ func (fake *FakeFS) Mount(arg1 string, arg2 string, arg3 string, arg4 uintptr, a
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.mountReturns.result1
+	fakeReturns := fake.mountReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeFS) MountCallCount() int {
@@ -117,13 +130,22 @@ func (fake *FakeFS) MountCallCount() int {
 	return len(fake.mountArgsForCall)
 }
 
+func (fake *FakeFS) MountCalls(stub func(string, string, string, uintptr, string) error) {
+	fake.mountMutex.Lock()
+	defer fake.mountMutex.Unlock()
+	fake.MountStub = stub
+}
+
 func (fake *FakeFS) MountArgsForCall(i int) (string, string, string, uintptr, string) {
 	fake.mountMutex.RLock()
 	defer fake.mountMutex.RUnlock()
-	return fake.mountArgsForCall[i].arg1, fake.mountArgsForCall[i].arg2, fake.mountArgsForCall[i].arg3, fake.mountArgsForCall[i].arg4, fake.mountArgsForCall[i].arg5
+	argsForCall := fake.mountArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
 }
 
 func (fake *FakeFS) MountReturns(result1 error) {
+	fake.mountMutex.Lock()
+	defer fake.mountMutex.Unlock()
 	fake.MountStub = nil
 	fake.mountReturns = struct {
 		result1 error
@@ -131,6 +153,8 @@ func (fake *FakeFS) MountReturns(result1 error) {
 }
 
 func (fake *FakeFS) MountReturnsOnCall(i int, result1 error) {
+	fake.mountMutex.Lock()
+	defer fake.mountMutex.Unlock()
 	fake.MountStub = nil
 	if fake.mountReturnsOnCall == nil {
 		fake.mountReturnsOnCall = make(map[int]struct {
