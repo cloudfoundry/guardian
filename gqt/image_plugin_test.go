@@ -206,18 +206,15 @@ var _ = Describe("Image Plugin", func() {
 				})
 
 				It("ensures that the mounts from the image plugin response are first in config.json", func() {
-					config := readFile(filepath.Join(client.DepotDir, container.Handle(), "config.json"))
-
 					var spec specs.Spec
-					Expect(json.Unmarshal(config, &spec)).To(Succeed())
-
+					unmarshalJSONFromFile(filepath.Join(ociBundlesDir(), handle, "config.json"), &spec)
 					Expect(spec.Mounts[0].Destination).To(Equal("/image-plugin-bind-mount"))
 				})
 			})
 
 			It("adds any returned Windows config to the container bundle", func() {
 				var spec specs.Spec
-				unmarshalJSONFromFile(filepath.Join(client.DepotDir, container.Handle(), "config.json"), &spec)
+				unmarshalJSONFromFile(filepath.Join(ociBundlesDir(), handle, "config.json"), &spec)
 				Expect(spec.Windows.LayerFolders).To(Equal([]string{"layer", "folders"}))
 			})
 

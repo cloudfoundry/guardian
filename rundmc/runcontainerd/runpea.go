@@ -12,22 +12,16 @@ import (
 
 //go:generate counterfeiter . PeaManager
 type PeaManager interface {
-	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
+	Create(log lager.Logger, id string, bundle goci.Bndl, io garden.ProcessIO) error
 	Delete(log lager.Logger, containerID string) error
 	RemoveBundle(log lager.Logger, containerID string) error
 }
 
-//go:generate counterfeiter . BundleLookupper
-type BundleLookupper interface {
-	Lookup(log lager.Logger, handle string) (string, error)
-}
-
 type RunContainerPea struct {
-	PeaManager      PeaManager
-	ProcessManager  ProcessManager
-	BundleLookupper BundleLookupper
-	BundleSaver     depot.BundleSaver
-	ProcessDepot    execrunner.ProcessDepot
+	PeaManager     PeaManager
+	ProcessManager ProcessManager
+	BundleSaver    depot.BundleSaver
+	ProcessDepot   execrunner.ProcessDepot
 }
 
 func (r *RunContainerPea) RunPea(
@@ -45,7 +39,7 @@ func (r *RunContainerPea) RunPea(
 		return nil, err
 	}
 
-	if err := r.PeaManager.Create(log, processBundlePath, processID, pio); err != nil {
+	if err := r.PeaManager.Create(log, processID, processBundle, pio); err != nil {
 		return &Process{}, err
 	}
 

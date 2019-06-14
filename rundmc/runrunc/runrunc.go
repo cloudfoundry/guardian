@@ -4,15 +4,14 @@ import (
 	"os/exec"
 	"time"
 
-	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
 
 // da doo
 type RunRunc struct {
-	*Execer
 	*Creator
+	*Execer
 	*OomWatcher
 	*Statser
 	*Stater
@@ -32,6 +31,7 @@ type RuncBinary interface {
 
 //go:generate counterfeiter . Depot
 type Depot interface {
+	Create(log lager.Logger, handle string, bundle goci.Bndl) (string, error)
 	CreatedTime(log lager.Logger, handle string) (time.Time, error)
 	Lookup(log lager.Logger, handle string) (path string, err error)
 	Load(log lager.Logger, handle string) (bundle goci.Bndl, err error)
@@ -40,20 +40,22 @@ type Depot interface {
 }
 
 func New(
-	runner commandrunner.CommandRunner, runcCmdRunner RuncCmdRunner,
-	runc RuncBinary, runcExtraArgs []string, execer *Execer, statser *Statser,
+	creator *Creator,
+	execer *Execer,
+	oomWatcher *OomWatcher,
+	statser *Statser,
+	stater *Stater,
+	deleter *Deleter,
 	bundleManager *BundleManager,
 ) *RunRunc {
-	stater := NewStater(runcCmdRunner, runc)
-	oomWatcher := NewOomWatcher(runner, runc)
 
 	return &RunRunc{
-		Creator:       NewCreator(runc, runcExtraArgs, runner, oomWatcher),
+		Creator:       creator,
 		Execer:        execer,
 		OomWatcher:    oomWatcher,
 		Statser:       statser,
 		Stater:        stater,
-		Deleter:       NewDeleter(runcCmdRunner, runc, stater),
+		Deleter:       deleter,
 		BundleManager: bundleManager,
 	}
 }

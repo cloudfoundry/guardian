@@ -58,12 +58,12 @@ type FakeOCIRuntime struct {
 		result2 goci.Bndl
 		result3 error
 	}
-	CreateStub        func(lager.Logger, string, string, garden.ProcessIO) error
+	CreateStub        func(lager.Logger, string, goci.Bndl, garden.ProcessIO) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 string
-		arg3 string
+		arg3 goci.Bndl
 		arg4 garden.ProcessIO
 	}
 	createReturns struct {
@@ -345,13 +345,13 @@ func (fake *FakeOCIRuntime) BundleInfoReturnsOnCall(i int, result1 string, resul
 	}{result1, result2, result3}
 }
 
-func (fake *FakeOCIRuntime) Create(arg1 lager.Logger, arg2 string, arg3 string, arg4 garden.ProcessIO) error {
+func (fake *FakeOCIRuntime) Create(arg1 lager.Logger, arg2 string, arg3 goci.Bndl, arg4 garden.ProcessIO) error {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		arg1 lager.Logger
 		arg2 string
-		arg3 string
+		arg3 goci.Bndl
 		arg4 garden.ProcessIO
 	}{arg1, arg2, arg3, arg4})
 	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3, arg4})
@@ -372,13 +372,13 @@ func (fake *FakeOCIRuntime) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeOCIRuntime) CreateCalls(stub func(lager.Logger, string, string, garden.ProcessIO) error) {
+func (fake *FakeOCIRuntime) CreateCalls(stub func(lager.Logger, string, goci.Bndl, garden.ProcessIO) error) {
 	fake.createMutex.Lock()
 	defer fake.createMutex.Unlock()
 	fake.CreateStub = stub
 }
 
-func (fake *FakeOCIRuntime) CreateArgsForCall(i int) (lager.Logger, string, string, garden.ProcessIO) {
+func (fake *FakeOCIRuntime) CreateArgsForCall(i int) (lager.Logger, string, goci.Bndl, garden.ProcessIO) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	argsForCall := fake.createArgsForCall[i]

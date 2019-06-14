@@ -148,6 +148,7 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		It("should create a depot subdirectory based on the container handle", func() {
+			skipIfContainerd()
 			Expect(container.Handle()).NotTo(BeEmpty())
 			Expect(filepath.Join(client.DepotDir, container.Handle())).To(BeADirectory())
 			Expect(filepath.Join(client.DepotDir, container.Handle(), "config.json")).To(BeARegularFile())

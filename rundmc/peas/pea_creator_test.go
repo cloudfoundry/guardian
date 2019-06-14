@@ -29,7 +29,7 @@ var _ = Describe("PeaCreator", func() {
 		runcDeleter      *peasfakes.FakeRuncDeleter
 		pidGetter        *peasfakes.FakePidGetter
 		networkDepot     *peasfakes.FakeNetworkDepot
-		bundleGenerator  *depotfakes.FakeBundleGenerator
+		bundleGenerator  *peasfakes.FakeBundleGenerator
 		bundleSaver      *depotfakes.FakeBundleSaver
 		processBuilder   *runruncfakes.FakeProcessBuilder
 		execRunner       *runruncfakes.FakeExecRunner
@@ -70,7 +70,7 @@ var _ = Describe("PeaCreator", func() {
 		networkDepot = new(peasfakes.FakeNetworkDepot)
 		networkDepot.SetupBindMountsReturns(defaultBindMounts, nil)
 
-		bundleGenerator = new(depotfakes.FakeBundleGenerator)
+		bundleGenerator = new(peasfakes.FakeBundleGenerator)
 		bundleGenerator.GenerateReturns(generatedBundle, nil)
 		bundleSaver = new(depotfakes.FakeBundleSaver)
 

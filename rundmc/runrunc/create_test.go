@@ -19,12 +19,14 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("Create", func() {
 	var (
 		commandRunner  *fake_command_runner.FakeCommandRunner
 		eventsWatcher  *runruncfakes.FakeEventsWatcher
+		fakeDepot      *runruncfakes.FakeDepot
 		bundlePath     string
 		runcExtraArgs  = []string{"--some-arg", "some-value"}
 		logFilePath    string
@@ -42,17 +44,23 @@ var _ = Describe("Create", func() {
 		runcExitStatus = nil
 		commandRunner = fake_command_runner.New()
 		eventsWatcher = new(runruncfakes.FakeEventsWatcher)
+		fakeDepot = new(runruncfakes.FakeDepot)
 		logger = lagertest.NewTestLogger("test")
 
 		var err error
-		bundlePath, err = ioutil.TempDir("", "bundle")
+		bundlePath, err = ioutil.TempDir("", "bundle-path")
 		Expect(err).NotTo(HaveOccurred())
+		fakeDepot.CreateReturns(bundlePath, nil)
 		logFilePath = filepath.Join(bundlePath, "create.log")
 		pidFilePath = filepath.Join(bundlePath, "pidfile")
 	})
 
+	AfterEach(func() {
+		Expect(os.RemoveAll(bundlePath)).To(Succeed())
+	})
+
 	JustBeforeEach(func() {
-		runner = runrunc.NewCreator(goci.RuncBinary{Path: "funC"}, runcExtraArgs, commandRunner, eventsWatcher)
+		runner = runrunc.NewCreator(goci.RuncBinary{Path: "funC"}, runcExtraArgs, commandRunner, eventsWatcher, fakeDepot)
 
 		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: "funC",
@@ -73,12 +81,8 @@ var _ = Describe("Create", func() {
 		})
 	})
 
-	AfterEach(func() {
-		Expect(os.RemoveAll(bundlePath)).To(Succeed())
-	})
-
 	It("creates the container with runC subcommand", func() {
-		Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(Succeed())
+		Expect(runner.Create(logger, "some-id", goci.Bndl{}, garden.ProcessIO{})).To(Succeed())
 
 		Expect(commandRunner.ExecutedCommands()[0].Path).To(Equal("funC"))
 		Expect(commandRunner.ExecutedCommands()[0].Args).To(ConsistOf(
@@ -96,13 +100,23 @@ var _ = Describe("Create", func() {
 		))
 	})
 
+	It("creates a bundle in the depot", func() {
+		bundle := goci.Bndl{Spec: specs.Spec{Version: "version"}}
+		Expect(runner.Create(logger, "some-id", bundle, garden.ProcessIO{})).To(Succeed())
+
+		Expect(fakeDepot.CreateCallCount()).To(Equal(1))
+		_, actualID, actualBundle := fakeDepot.CreateArgsForCall(0)
+		Expect(actualID).To(Equal("some-id"))
+		Expect(actualBundle).To(Equal(bundle))
+	})
+
 	It("attaches the stdout and stderr directly to the runC command", func() {
 		pio := garden.ProcessIO{
 			Stdin:  nil,
 			Stdout: bytes.NewBufferString("some-stdout"),
 			Stderr: bytes.NewBufferString("some-stderr"),
 		}
-		Expect(runner.Create(logger, bundlePath, "some-id", pio)).To(Succeed())
+		Expect(runner.Create(logger, "some-id", goci.Bndl{}, pio)).To(Succeed())
 		Expect(commandRunner.ExecutedCommands()[0].Stdout).To(Equal(pio.Stdout))
 		Expect(commandRunner.ExecutedCommands()[0].Stderr).To(Equal(pio.Stderr))
 	})
@@ -111,15 +125,25 @@ var _ = Describe("Create", func() {
 		pio := garden.ProcessIO{
 			Stdin: bytes.NewBufferString("some-stdin"),
 		}
-		Expect(runner.Create(logger, bundlePath, "some-id", pio)).To(Succeed())
+		Expect(runner.Create(logger, "some-id", goci.Bndl{}, pio)).To(Succeed())
 		Expect(recievedStdin).To(Equal("some-stdin"))
 	})
 
 	It("subscribes for container events", func() {
-		Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(Succeed())
+		Expect(runner.Create(logger, "some-id", goci.Bndl{}, garden.ProcessIO{})).To(Succeed())
 		Eventually(eventsWatcher.WatchEventsCallCount).Should(Equal(1))
 		_, actualHandle := eventsWatcher.WatchEventsArgsForCall(0)
 		Expect(actualHandle).To(Equal("some-id"))
+	})
+
+	Context("when creating in the depot fails", func() {
+		BeforeEach(func() {
+			fakeDepot.CreateReturns("", errors.New("musaka"))
+		})
+
+		It("propagates the errors", func() {
+			Expect(runner.Create(logger, "some-id", goci.Bndl{}, garden.ProcessIO{})).To(MatchError("musaka"))
+		})
 	})
 
 	Context("when running runc fails", func() {
@@ -128,7 +152,7 @@ var _ = Describe("Create", func() {
 		})
 
 		It("returns runc's exit status", func() {
-			Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc run: some-error: "))
+			Expect(runner.Create(logger, "some-id", goci.Bndl{}, garden.ProcessIO{})).To(MatchError("runc run: some-error: "))
 		})
 
 		It("does not subscribe for container events", func() {
@@ -144,7 +168,7 @@ var _ = Describe("Create", func() {
 		})
 
 		It("sends all the logs to the logger", func() {
-			Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(Succeed())
+			Expect(runner.Create(logger, "some-id", goci.Bndl{}, garden.ProcessIO{})).To(Succeed())
 
 			runcLogs := make([]lager.LogFormat, 0)
 			for _, log := range logger.Logs() {
@@ -163,7 +187,7 @@ var _ = Describe("Create", func() {
 			})
 
 			It("return an error including parsed logs when runC fails to start the container", func() {
-				Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc run: boom: Container start failed: [10] System error: fork/exec POTATO: no such file or directory"))
+				Expect(runner.Create(logger, "some-id", goci.Bndl{}, garden.ProcessIO{})).To(MatchError("runc run: boom: Container start failed: [10] System error: fork/exec POTATO: no such file or directory"))
 			})
 
 			Context("when the log messages can't be parsed", func() {
@@ -172,10 +196,9 @@ var _ = Describe("Create", func() {
 				})
 
 				It("returns an error with the last non-empty line", func() {
-					Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc run: boom: garbage"))
+					Expect(runner.Create(logger, "some-id", goci.Bndl{}, garden.ProcessIO{})).To(MatchError("runc run: boom: garbage"))
 				})
 			})
 		})
 	})
-
 })

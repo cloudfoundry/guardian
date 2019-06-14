@@ -50,6 +50,11 @@ type NetworkDepot interface {
 	Destroy(log lager.Logger, handle string) error
 }
 
+//go:generate counterfeiter . BundleGenerator
+type BundleGenerator interface {
+	Generate(desiredContainerSpec spec.DesiredContainerSpec) (goci.Bndl, error)
+}
+
 type ExecRunner interface {
 	RunPea(
 		log lager.Logger, processID string, bundle goci.Bndl, sandboxHandle string,
@@ -62,7 +67,7 @@ type PeaCreator struct {
 	PidGetter        PidGetter
 	PrivilegedGetter PrivilegedGetter
 	NetworkDepot     NetworkDepot
-	BundleGenerator  depot.BundleGenerator
+	BundleGenerator  BundleGenerator
 	BundleSaver      depot.BundleSaver
 	ProcessBuilder   runrunc.ProcessBuilder
 	ExecRunner       ExecRunner

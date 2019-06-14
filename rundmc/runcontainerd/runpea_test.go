@@ -2,9 +2,6 @@ package runcontainerd_test
 
 import (
 	"errors"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"code.cloudfoundry.org/garden"
@@ -22,13 +19,11 @@ import (
 var _ = Describe("RunContainerPea", func() {
 
 	var (
-		fakePeaManager      *runcontainerdfakes.FakePeaManager
-		fakeProcessManager  *runcontainerdfakes.FakeProcessManager
-		fakeBundleSaver     *depotfakes.FakeBundleSaver
-		fakeBundleLookupper *runcontainerdfakes.FakeBundleLookupper
-		fakeProcessDepot    *execrunnerfakes.FakeProcessDepot
+		fakePeaManager     *runcontainerdfakes.FakePeaManager
+		fakeProcessManager *runcontainerdfakes.FakeProcessManager
+		fakeBundleSaver    *depotfakes.FakeBundleSaver
+		fakeProcessDepot   *execrunnerfakes.FakeProcessDepot
 
-		bundlePath  string
 		processID   string
 		processPath string = "test-process-id"
 
@@ -39,36 +34,32 @@ var _ = Describe("RunContainerPea", func() {
 		fakePeaManager = new(runcontainerdfakes.FakePeaManager)
 		fakeProcessManager = new(runcontainerdfakes.FakeProcessManager)
 		fakeBundleSaver = new(depotfakes.FakeBundleSaver)
-		fakeBundleLookupper = new(runcontainerdfakes.FakeBundleLookupper)
 		fakeProcessDepot = new(execrunnerfakes.FakeProcessDepot)
 
 		var err error
-		bundlePath, err = ioutil.TempDir("", "bundle")
 		Expect(err).NotTo(HaveOccurred())
-		fakeBundleLookupper.LookupReturns(bundlePath, nil)
 
-		processPath = filepath.Join(bundlePath, "processes", processID)
-		Expect(os.MkdirAll(processPath, 0700)).To(Succeed())
+		processPath = "processes"
 		fakeProcessDepot.CreateProcessDirReturns(processPath, nil)
 
 		runContainerPea = &runcontainerd.RunContainerPea{
-			PeaManager:      fakePeaManager,
-			ProcessManager:  fakeProcessManager,
-			BundleSaver:     fakeBundleSaver,
-			BundleLookupper: fakeBundleLookupper,
-			ProcessDepot:    fakeProcessDepot,
+			PeaManager:     fakePeaManager,
+			ProcessManager: fakeProcessManager,
+			BundleSaver:    fakeBundleSaver,
+			ProcessDepot:   fakeProcessDepot,
 		}
 	})
 
 	Describe("RunPea", func() {
 		It("creates a container using process args", func() {
-			_, err := runContainerPea.RunPea(lagertest.NewTestLogger("test-logger"), processID, goci.Bndl{}, "sandbox-id", garden.ProcessIO{}, false, strings.NewReader(""), nil)
+			bundle := goci.Bndl{Spec: specs.Spec{Version: "test-version"}}
+			_, err := runContainerPea.RunPea(lagertest.NewTestLogger("test-logger"), processID, bundle, "sandbox-id", garden.ProcessIO{}, false, strings.NewReader(""), nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakePeaManager.CreateCallCount()).To(Equal(1))
-			_, actualProcessPath, actualProcessID, _ := fakePeaManager.CreateArgsForCall(0)
-			Expect(actualProcessPath).To(Equal(processPath))
+			_, actualProcessID, actualBundle, _ := fakePeaManager.CreateArgsForCall(0)
 			Expect(actualProcessID).To(Equal(processID))
+			Expect(actualBundle).To(Equal(bundle))
 		})
 
 		It("creates the process folder in the depot", func() {

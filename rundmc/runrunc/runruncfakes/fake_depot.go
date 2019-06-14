@@ -11,6 +11,21 @@ import (
 )
 
 type FakeDepot struct {
+	CreateStub        func(lager.Logger, string, goci.Bndl) (string, error)
+	createMutex       sync.RWMutex
+	createArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+		arg3 goci.Bndl
+	}
+	createReturns struct {
+		result1 string
+		result2 error
+	}
+	createReturnsOnCall map[int]struct {
+		result1 string
+		result2 error
+	}
 	CreatedTimeStub        func(lager.Logger, string) (time.Time, error)
 	createdTimeMutex       sync.RWMutex
 	createdTimeArgsForCall []struct {
@@ -79,6 +94,71 @@ type FakeDepot struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeDepot) Create(arg1 lager.Logger, arg2 string, arg3 goci.Bndl) (string, error) {
+	fake.createMutex.Lock()
+	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
+	fake.createArgsForCall = append(fake.createArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+		arg3 goci.Bndl
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3})
+	fake.createMutex.Unlock()
+	if fake.CreateStub != nil {
+		return fake.CreateStub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.createReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeDepot) CreateCallCount() int {
+	fake.createMutex.RLock()
+	defer fake.createMutex.RUnlock()
+	return len(fake.createArgsForCall)
+}
+
+func (fake *FakeDepot) CreateCalls(stub func(lager.Logger, string, goci.Bndl) (string, error)) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
+	fake.CreateStub = stub
+}
+
+func (fake *FakeDepot) CreateArgsForCall(i int) (lager.Logger, string, goci.Bndl) {
+	fake.createMutex.RLock()
+	defer fake.createMutex.RUnlock()
+	argsForCall := fake.createArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeDepot) CreateReturns(result1 string, result2 error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
+	fake.CreateStub = nil
+	fake.createReturns = struct {
+		result1 string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeDepot) CreateReturnsOnCall(i int, result1 string, result2 error) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
+	fake.CreateStub = nil
+	if fake.createReturnsOnCall == nil {
+		fake.createReturnsOnCall = make(map[int]struct {
+			result1 string
+			result2 error
+		})
+	}
+	fake.createReturnsOnCall[i] = struct {
+		result1 string
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeDepot) CreatedTime(arg1 lager.Logger, arg2 string) (time.Time, error) {
@@ -392,6 +472,8 @@ func (fake *FakeDepot) LookupReturnsOnCall(i int, result1 string, result2 error)
 func (fake *FakeDepot) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.createMutex.RLock()
+	defer fake.createMutex.RUnlock()
 	fake.createdTimeMutex.RLock()
 	defer fake.createdTimeMutex.RUnlock()
 	fake.destroyMutex.RLock()

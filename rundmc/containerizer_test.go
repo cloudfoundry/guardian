@@ -27,6 +27,7 @@ import (
 var _ = Describe("Rundmc", func() {
 	var (
 		fakeDepot               *fakes.FakeDepot
+		fakeBundleGenerator     *fakes.FakeBundleGenerator
 		fakeOCIRuntime          *fakes.FakeOCIRuntime
 		fakeNstarRunner         *fakes.FakeNstarRunner
 		fakeStopper             *fakes.FakeStopper
@@ -37,10 +38,12 @@ var _ = Describe("Rundmc", func() {
 
 		logger        lager.Logger
 		containerizer *rundmc.Containerizer
+		bundle        goci.Bndl
 	)
 
 	BeforeEach(func() {
 		fakeDepot = new(fakes.FakeDepot)
+		fakeBundleGenerator = new(fakes.FakeBundleGenerator)
 		fakeOCIRuntime = new(fakes.FakeOCIRuntime)
 		fakeNstarRunner = new(fakes.FakeNstarRunner)
 		fakeStopper = new(fakes.FakeStopper)
@@ -50,12 +53,12 @@ var _ = Describe("Rundmc", func() {
 		fakePeaUsernameResolver = new(fakes.FakePeaUsernameResolver)
 		logger = lagertest.NewTestLogger("test")
 
-		fakeDepot.LookupStub = func(_ lager.Logger, handle string) (string, error) {
-			return "/path/to/" + handle, nil
-		}
+		bundle = goci.Bndl{Spec: specs.Spec{Version: "test-version"}}
+		fakeBundleGenerator.GenerateReturns(bundle, nil)
 
 		containerizer = rundmc.New(
 			fakeDepot,
+			fakeBundleGenerator,
 			fakeOCIRuntime,
 			fakeNstarRunner,
 			fakeStopper,
@@ -68,31 +71,20 @@ var _ = Describe("Rundmc", func() {
 	})
 
 	Describe("Create", func() {
-		It("should ask the depot to create a container", func() {
+		It("should generate an oci bundle", func() {
 			spec := specpkg.DesiredContainerSpec{
 				Handle:     "exuberant!",
 				BaseConfig: specs.Spec{Root: &specs.Root{}},
 			}
 			containerizer.Create(logger, spec)
 
-			Expect(fakeDepot.CreateCallCount()).To(Equal(1))
+			Expect(fakeBundleGenerator.GenerateCallCount()).To(Equal(1))
 
-			_, handle, actualSpec := fakeDepot.CreateArgsForCall(0)
-			Expect(handle).To(Equal("exuberant!"))
+			actualSpec := fakeBundleGenerator.GenerateArgsForCall(0)
 			Expect(actualSpec).To(Equal(spec))
 		})
 
-		Context("when creating the depot directory fails", func() {
-			It("returns an error", func() {
-				fakeDepot.CreateReturns(errors.New("blam"))
-				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{
-					Handle:     "exuberant!",
-					BaseConfig: specs.Spec{Root: &specs.Root{}},
-				})).NotTo(Succeed())
-			})
-		})
-
-		It("should create a container in the given directory", func() {
+		It("should create a container with the given id", func() {
 			Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{
 				Handle:     "exuberant!",
 				BaseConfig: specs.Spec{Root: &specs.Root{}},
@@ -100,9 +92,19 @@ var _ = Describe("Rundmc", func() {
 
 			Expect(fakeOCIRuntime.CreateCallCount()).To(Equal(1))
 
-			_, path, id, _ := fakeOCIRuntime.CreateArgsForCall(0)
-			Expect(path).To(Equal("/path/to/exuberant!"))
-			Expect(id).To(Equal("exuberant!"))
+			_, actualId, actualBundle, _ := fakeOCIRuntime.CreateArgsForCall(0)
+			Expect(actualBundle).To(Equal(bundle))
+			Expect(actualId).To(Equal("exuberant!"))
+		})
+
+		Context("when the bundle generation fails", func() {
+			BeforeEach(func() {
+				fakeBundleGenerator.GenerateReturns(goci.Bndl{}, errors.New("banana"))
+			})
+
+			It("should return an error", func() {
+				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{})).To(MatchError("banana"))
+			})
 		})
 
 		Context("when the container creation fails", func() {
@@ -111,9 +113,7 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{
-					BaseConfig: specs.Spec{Root: &specs.Root{}},
-				})).NotTo(Succeed())
+				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{})).To(MatchError("banana"))
 			})
 		})
 	})
@@ -164,7 +164,6 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("creates a pea", func() {
-				fakeDepot.LookupReturns("some-bundle-path", nil)
 				containerizer.Run(logger, "some-handle", processSpec, pio)
 				Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(1))
 				_, actualProcessSpec, actualProcessIO, actualHandle := fakePeaCreator.CreatePeaArgsForCall(0)
@@ -388,8 +387,14 @@ var _ = Describe("Rundmc", func() {
 	Describe("RemoveBundle", func() {
 		It("removes the bundle", func() {
 			Expect(containerizer.RemoveBundle(logger, "some-handle")).To(Succeed())
+
+			// TODO: this should be removed once containerd processes are on by default
+			Expect(fakeDepot.DestroyCallCount()).To(Equal(1))
+			_, handle := fakeDepot.DestroyArgsForCall(0)
+			Expect(handle).To(Equal("some-handle"))
+
 			Expect(fakeOCIRuntime.RemoveBundleCallCount()).To(Equal(1))
-			_, handle := fakeOCIRuntime.RemoveBundleArgsForCall(0)
+			_, handle = fakeOCIRuntime.RemoveBundleArgsForCall(0)
 			Expect(handle).To(Equal("some-handle"))
 		})
 
@@ -579,6 +584,7 @@ var _ = Describe("Rundmc", func() {
 				entitlementPerSharePercent = 0.01
 				containerizer = rundmc.New(
 					fakeDepot,
+					fakeBundleGenerator,
 					fakeOCIRuntime,
 					fakeNstarRunner,
 					fakeStopper,
@@ -608,7 +614,7 @@ var _ = Describe("Rundmc", func() {
 
 			Context("when peas metrics are requested", func() {
 				BeforeEach(func() {
-					fakeDepot.LookupReturns("", depot.ErrDoesNotExist)
+					fakeOCIRuntime.BundleInfoReturns("", goci.Bndl{}, depot.ErrDoesNotExist)
 				})
 
 				It("does not return CPU entitlement", func() {

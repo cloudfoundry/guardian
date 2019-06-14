@@ -30,7 +30,6 @@ var _ = Describe("Runcontainerd", func() {
 		logger           lager.Logger
 		containerManager *runcontainerdfakes.FakeContainerManager
 		processManager   *runcontainerdfakes.FakeProcessManager
-		bundleLoader     *runcontainerdfakes.FakeBundleLoader
 		runContainerd    *runcontainerd.RunContainerd
 		execer           *runcontainerdfakes.FakeExecer
 		statser          *runcontainerdfakes.FakeStatser
@@ -43,21 +42,20 @@ var _ = Describe("Runcontainerd", func() {
 		logger = lagertest.NewTestLogger("test-logger")
 		containerManager = new(runcontainerdfakes.FakeContainerManager)
 		processManager = new(runcontainerdfakes.FakeProcessManager)
-		bundleLoader = new(runcontainerdfakes.FakeBundleLoader)
 		execer = new(runcontainerdfakes.FakeExecer)
 		statser = new(runcontainerdfakes.FakeStatser)
 		processBuilder = new(runcontainerdfakes.FakeProcessBuilder)
 		userLookupper = new(usersfakes.FakeUserLookupper)
 		cgroupManager = new(runcontainerdfakes.FakeCgroupManager)
 
-		runContainerd = runcontainerd.New(containerManager, processManager, bundleLoader, processBuilder, userLookupper, execer, statser, false, cgroupManager)
+		runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager)
 	})
 
 	Describe("Create", func() {
 		var (
-			id         string
-			bundlePath string
-			bundle     goci.Bndl
+			log    lager.Logger
+			id     string
+			bundle goci.Bndl
 
 			stdin  io.Reader
 			stdout io.Writer
@@ -67,18 +65,12 @@ var _ = Describe("Runcontainerd", func() {
 		)
 
 		BeforeEach(func() {
+			log = lagertest.NewTestLogger("test-logger")
 			id = "container-id"
-			bundlePath = "bundle-path"
 			bundle = goci.Bndl{
 				Spec: specs.Spec{
 					Hostname: "test-hostname",
 				},
-			}
-			bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
-				if path == bundlePath {
-					return bundle, nil
-				}
-				return goci.Bndl{}, nil
 			}
 
 			stdin = new(bytes.Buffer)
@@ -87,7 +79,7 @@ var _ = Describe("Runcontainerd", func() {
 		})
 
 		JustBeforeEach(func() {
-			createErr = runContainerd.Create(nil, bundlePath, id, garden.ProcessIO{Stdin: stdin, Stdout: stdout, Stderr: stderr})
+			createErr = runContainerd.Create(log, id, bundle, garden.ProcessIO{Stdin: stdin, Stdout: stdout, Stderr: stderr})
 		})
 
 		It("creates the container with the passed containerID", func() {
@@ -112,16 +104,6 @@ var _ = Describe("Runcontainerd", func() {
 			Expect(actualStderr).To(BeIdenticalTo(stderr))
 		})
 
-		Context("when loading the bundle returns an error", func() {
-			BeforeEach(func() {
-				bundleLoader.LoadReturns(goci.Bndl{}, errors.New("EXPLODE"))
-			})
-
-			It("bubbles up that", func() {
-				Expect(createErr).To(MatchError("EXPLODE"))
-			})
-		})
-
 		Context("when creating the container returns an error", func() {
 			BeforeEach(func() {
 				containerManager.CreateReturns(errors.New("EXPLODE"))
@@ -134,7 +116,7 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("when using containerd for processes", func() {
 			BeforeEach(func() {
-				runContainerd = runcontainerd.New(containerManager, processManager, bundleLoader, processBuilder, userLookupper, execer, statser, true, cgroupManager)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager)
 			})
 
 			It("sets the container to use the memory hierarchy", func() {
@@ -242,7 +224,6 @@ var _ = Describe("Runcontainerd", func() {
 	Describe("Exec", func() {
 		var (
 			containerID string
-			bundlePath  string
 			processSpec garden.ProcessSpec
 			execErr     error
 			bundle      goci.Bndl
@@ -255,7 +236,6 @@ var _ = Describe("Runcontainerd", func() {
 			fakeProcess = new(gardenfakes.FakeProcess)
 			execer.ExecWithBndlReturns(fakeProcess, nil)
 			containerID = "container-id"
-			bundlePath = "bundle-path"
 			processSpec = garden.ProcessSpec{
 				ID:   "test-process-id",
 				User: "alice",
@@ -265,12 +245,6 @@ var _ = Describe("Runcontainerd", func() {
 			})
 			bundle = goci.Bndl{Spec: specs.Spec{Hostname: "test-hostname"}}
 			containerManager.SpecReturns(&bundle.Spec, nil)
-			bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
-				if path == bundlePath {
-					return bundle, nil
-				}
-				return goci.Bndl{}, nil
-			}
 			processIO = garden.ProcessIO{
 				Stdin:  gbytes.NewBuffer(),
 				Stdout: gbytes.NewBuffer(),
@@ -330,7 +304,7 @@ var _ = Describe("Runcontainerd", func() {
 
 				containerManager.GetContainerPIDReturns(1234, nil)
 				containerManager.ExecReturns(nil)
-				runContainerd = runcontainerd.New(containerManager, processManager, bundleLoader, processBuilder, userLookupper, execer, statser, true, cgroupManager)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager)
 			})
 
 			It("passes the logger through", func() {

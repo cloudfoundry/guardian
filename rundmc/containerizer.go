@@ -28,15 +28,16 @@ import (
 //go:generate counterfeiter . PeaUsernameResolver
 
 type Depot interface {
-	Create(log lager.Logger, handle string, desiredContainerSpec spec.DesiredContainerSpec) error
-	Lookup(log lager.Logger, handle string) (path string, err error)
-	Load(log lager.Logger, handle string) (bundle goci.Bndl, err error)
 	Destroy(log lager.Logger, handle string) error
-	Handles() ([]string, error)
+}
+
+//go:generate counterfeiter . BundleGenerator
+type BundleGenerator interface {
+	Generate(desiredContainerSpec spec.DesiredContainerSpec) (goci.Bndl, error)
 }
 
 type OCIRuntime interface {
-	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
+	Create(log lager.Logger, id string, bundle goci.Bndl, io garden.ProcessIO) error
 	Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, id, processId string, io garden.ProcessIO) (garden.Process, error)
 	Delete(log lager.Logger, id string) error
@@ -78,6 +79,7 @@ type PeaUsernameResolver interface {
 // Containerizer knows how to manage a depot of container bundles
 type Containerizer struct {
 	depot                  Depot
+	bundler                BundleGenerator
 	runtime                OCIRuntime
 	stopper                Stopper
 	nstar                  NstarRunner
@@ -90,6 +92,7 @@ type Containerizer struct {
 
 func New(
 	depot Depot,
+	bundler BundleGenerator,
 	runtime OCIRuntime,
 	nstarRunner NstarRunner,
 	stopper Stopper,
@@ -101,6 +104,7 @@ func New(
 ) *Containerizer {
 	containerizer := &Containerizer{
 		depot:                  depot,
+		bundler:                bundler,
 		runtime:                runtime,
 		nstar:                  nstarRunner,
 		stopper:                stopper,
@@ -137,18 +141,13 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 	log.Info("start")
 	defer log.Info("finished")
 
-	if err := c.depot.Create(log, spec.Handle, spec); err != nil {
-		log.Error("depot-create-failed", err)
-		return err
-	}
-
-	path, err := c.depot.Lookup(log, spec.Handle)
+	bundle, err := c.bundler.Generate(spec)
 	if err != nil {
-		log.Error("lookup-failed", err)
+		log.Error("bundle-generate-failed", err)
 		return err
 	}
 
-	if err = c.runtime.Create(log, path, spec.Handle, garden.ProcessIO{}); err != nil {
+	if err := c.runtime.Create(log, spec.Handle, bundle, garden.ProcessIO{}); err != nil {
 		log.Error("runtime-create-failed", err)
 		return err
 	}

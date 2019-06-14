@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"time"
 
-	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
@@ -25,11 +24,6 @@ type BundleLoader interface {
 	Load(path string) (goci.Bndl, error)
 }
 
-//go:generate counterfeiter . BundleGenerator
-type BundleGenerator interface {
-	Generate(desiredContainerSpec spec.DesiredContainerSpec) (goci.Bndl, error)
-}
-
 //go:generate counterfeiter . BundleLookupper
 type BundleLookupper interface {
 	Lookup(log lager.Logger, handle string) (string, error)
@@ -38,21 +32,19 @@ type BundleLookupper interface {
 // a depot which stores containers as subdirs of a depot directory
 type DirectoryDepot struct {
 	dir          string
-	bundler      BundleGenerator
 	bundleSaver  BundleSaver
 	bundleLoader BundleLoader
 }
 
-func New(dir string, bundler BundleGenerator, bundleSaver BundleSaver, bundleLoader BundleLoader) *DirectoryDepot {
+func New(dir string, bundleSaver BundleSaver, bundleLoader BundleLoader) *DirectoryDepot {
 	return &DirectoryDepot{
 		dir:          dir,
-		bundler:      bundler,
 		bundleSaver:  bundleSaver,
 		bundleLoader: bundleLoader,
 	}
 }
 
-func (d *DirectoryDepot) Create(log lager.Logger, handle string, spec spec.DesiredContainerSpec) error {
+func (d *DirectoryDepot) Create(log lager.Logger, handle string, bundle goci.Bndl) (string, error) {
 	log = log.Session("depot-create", lager.Data{"handle": handle})
 
 	log.Info("started")
@@ -61,7 +53,7 @@ func (d *DirectoryDepot) Create(log lager.Logger, handle string, spec spec.Desir
 	containerDir := d.toDir(handle)
 	if err := os.MkdirAll(containerDir, 0755); err != nil {
 		log.Error("mkdir-failed", err, lager.Data{"path": containerDir})
-		return err
+		return "", err
 	}
 
 	errs := func(msg string, err error) error {
@@ -70,16 +62,11 @@ func (d *DirectoryDepot) Create(log lager.Logger, handle string, spec spec.Desir
 		return err
 	}
 
-	bundle, err := d.bundler.Generate(spec)
-	if err != nil {
-		return errs("generate-failed", err)
-	}
-
 	if err := d.bundleSaver.Save(bundle, containerDir); err != nil {
-		return errs("create-failed", err)
+		return "", errs("create-failed", err)
 	}
 
-	return nil
+	return containerDir, nil
 }
 
 func (d *DirectoryDepot) CreatedTime(log lager.Logger, handle string) (time.Time, error) {

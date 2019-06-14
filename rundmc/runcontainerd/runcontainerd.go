@@ -36,11 +36,6 @@ type ProcessManager interface {
 	Signal(log lager.Logger, containerID, processID string, signal syscall.Signal) error
 }
 
-//go:generate counterfeiter . BundleLoader
-type BundleLoader interface {
-	Load(string) (goci.Bndl, error)
-}
-
 //go:generate counterfeiter . ProcessBuilder
 type ProcessBuilder interface {
 	BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, uid, gid int) *specs.Process
@@ -60,7 +55,6 @@ type Statser interface {
 type RunContainerd struct {
 	containerManager          ContainerManager
 	processManager            ProcessManager
-	bundleLoader              BundleLoader
 	processBuilder            ProcessBuilder
 	execer                    Execer
 	statser                   Statser
@@ -69,11 +63,10 @@ type RunContainerd struct {
 	cgroupManager             CgroupManager
 }
 
-func New(containerManager ContainerManager, processManager ProcessManager, bundleLoader BundleLoader, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager) *RunContainerd {
+func New(containerManager ContainerManager, processManager ProcessManager, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager) *RunContainerd {
 	return &RunContainerd{
 		containerManager:          containerManager,
 		processManager:            processManager,
-		bundleLoader:              bundleLoader,
 		processBuilder:            processBuilder,
 		execer:                    execer,
 		statser:                   statser,
@@ -83,13 +76,8 @@ func New(containerManager ContainerManager, processManager ProcessManager, bundl
 	}
 }
 
-func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, pio garden.ProcessIO) error {
-	bundle, err := r.bundleLoader.Load(bundlePath)
-	if err != nil {
-		return err
-	}
-
-	err = r.containerManager.Create(log, id, &bundle.Spec, func() (io.Reader, io.Writer, io.Writer) { return pio.Stdin, pio.Stdout, pio.Stderr })
+func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pio garden.ProcessIO) error {
+	err := r.containerManager.Create(log, id, &bundle.Spec, func() (io.Reader, io.Writer, io.Writer) { return pio.Stdin, pio.Stdout, pio.Stderr })
 	if err != nil {
 		return err
 	}

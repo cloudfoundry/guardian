@@ -512,3 +512,10 @@ func getCmdLine(pid string) string {
 	Expect(err).NotTo(HaveOccurred())
 	return string(cmdBytes)
 }
+
+func ociBundlesDir() string {
+	if isContainerd() {
+		return filepath.Join(containerdRunDir, "state", "io.containerd.runtime.v1.linux", "garden")
+	}
+	return config.DepotDir
+}
