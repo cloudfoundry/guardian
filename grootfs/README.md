@@ -9,7 +9,7 @@ GrootFS is the [Cloud Foundry](https://www.cloudfoundry.org) component
 that provides filesystem isolation for containers
 and deals with container (Docker and OCI) images.
 
-You can find us in the #grootfs channel
+You can find us in the #garden channel
 of the [Cloud Foundry Slack](https://cloudfoundry.slack.com).
 Use [https://slack.cloudfoundry.org](https://slack.cloudfoundry.org)
 to request an invitation.
