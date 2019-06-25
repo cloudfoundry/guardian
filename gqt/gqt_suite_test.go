@@ -80,6 +80,12 @@ func TestGqt(t *testing.T) {
 				GinkgoWriter.Write([]byte(psTreeErr.Error()))
 			}
 			GinkgoWriter.Write(psTreeOut)
+
+			dstatedOut, dstatedErr := exec.Command("sh", "-c", `ps -eLo pid,tid,ppid,user:11,comm,state,wchan | grep "D "`).Output()
+			if dstatedErr != nil {
+				GinkgoWriter.Write([]byte(dstatedErr.Error()))
+			}
+			GinkgoWriter.Write(dstatedOut)
 		}
 
 		Fail(message, callerSkip...)
