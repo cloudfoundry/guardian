@@ -577,8 +577,6 @@ func (cmd *CommonCommand) wireContainerizer(
 		if err != nil {
 			return nil, err
 		}
-		peaRunner.BundleSaver = bundleSaver
-		peaRunner.ProcessDepot = processDepot
 		peasBundleLoader = peaBundleLoader
 
 		if cmd.Containerd.UseContainerdForProcesses {
