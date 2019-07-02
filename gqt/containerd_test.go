@@ -504,6 +504,16 @@ var _ = Describe("Containerd", func() {
 				"<requesting dmesg>",
 			)
 		})
+
+		It("does not leak containerd client sockets", func() {
+			restartContainerd()
+			Eventually(
+				func() string {
+					out, err := exec.Command("/bin/bash", "-c", fmt.Sprintf("ss -xp | grep %s | wc -l", container.Handle())).CombinedOutput()
+					Expect(err).NotTo(HaveOccurred())
+					return strings.TrimSpace(string(out))
+				}).Should(Equal("1"))
+		})
 	})
 })
 

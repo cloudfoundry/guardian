@@ -66,7 +66,7 @@ github.com/cloudfoundry/gosteno/syslog
 github.com/cloudfoundry/sonde-go/events
 # github.com/containerd/console v0.0.0-20181022165439-0650fd9eeb50
 github.com/containerd/console
-# github.com/containerd/containerd v1.2.6
+# github.com/containerd/containerd v1.2.7
 github.com/containerd/containerd
 github.com/containerd/containerd/leases
 github.com/containerd/containerd/namespaces
@@ -115,6 +115,7 @@ github.com/containerd/containerd/api/types/task
 github.com/containerd/containerd/sys
 github.com/containerd/containerd/events/exchange
 github.com/containerd/containerd/reference
+github.com/containerd/containerd/version
 github.com/containerd/containerd/filters
 github.com/containerd/containerd/identifiers
 # github.com/containerd/continuity v0.0.0-20190426062206-aaeac12a7ffc
