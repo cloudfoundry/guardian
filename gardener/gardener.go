@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/lager"
+	multierror "github.com/hashicorp/go-multierror"
 )
 
 //go:generate counterfeiter . SysInfoProvider
@@ -315,19 +316,21 @@ func (g *Gardener) Destroy(handle string) error {
 
 // destroy idempotently destroys any resources associated with the given handle
 func (g *Gardener) destroy(log lager.Logger, handle string) error {
-	if err := g.Containerizer.Destroy(log, handle); err != nil {
-		return err
+	var errs *multierror.Error
+
+	errs = multierror.Append(errs, g.Containerizer.Destroy(log, handle))
+
+	if netErr := g.Networker.Destroy(log, handle); netErr != nil {
+		errs = multierror.Append(errs, netErr)
+	} else {
+		// keep network metadata in case network destruction did not succeed
+		errs = multierror.Append(errs, g.PropertyManager.DestroyKeySpace(handle))
 	}
 
-	if err := g.Networker.Destroy(log, handle); err != nil {
-		return err
-	}
+	errs = multierror.Append(errs, g.Volumizer.Destroy(log.Session(VolumizerSession), handle))
 
-	if err := g.Volumizer.Destroy(log.Session(VolumizerSession), handle); err != nil {
-		return err
-	}
-
-	if err := g.PropertyManager.DestroyKeySpace(handle); err != nil {
+	if err := errs.ErrorOrNil(); err != nil {
+		// keep container metadata in case not all container resources were destroyed
 		return err
 	}
 

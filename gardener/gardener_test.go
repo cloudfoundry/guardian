@@ -94,6 +94,14 @@ var _ = Describe("Gardener", func() {
 				_, handle := containerizer.DestroyArgsForCall(0)
 				Expect(handle).To(Equal("poor-banana"))
 			})
+
+			It("should remove the bundle", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+				Expect(err).To(HaveOccurred())
+				Expect(containerizer.RemoveBundleCallCount()).To(Equal(1))
+				_, handle := containerizer.RemoveBundleArgsForCall(0)
+				Expect(handle).To(Equal("poor-banana"))
+			})
 		}
 
 		It("assigns a random handle to the container", func() {
@@ -271,6 +279,60 @@ var _ = Describe("Gardener", func() {
 				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
 				Expect(err).To(HaveOccurred())
 				Eventually(logger).Should(gbytes.Say("failed to create the banana"))
+			})
+
+			Context("when any of the destroy operations fails", func() {
+				BeforeEach(func() {
+					volumizer.DestroyReturns(errors.New("failed to destroy the banana volume"))
+				})
+
+				It("does not destroy the bundle (so that the container can be looked up)", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+					Expect(err).To(HaveOccurred())
+					Expect(containerizer.RemoveBundleCallCount()).To(BeZero())
+				})
+
+				It("should clean up the networking configuration", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+					Expect(err).To(HaveOccurred())
+					Expect(networker.DestroyCallCount()).To(Equal(1))
+					_, handle := networker.DestroyArgsForCall(0)
+					Expect(handle).To(Equal("poor-banana"))
+				})
+
+				It("should clean up any created volumes", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+					Expect(err).To(HaveOccurred())
+					Expect(volumizer.DestroyCallCount()).To(Equal(1))
+					_, handle := volumizer.DestroyArgsForCall(0)
+					Expect(handle).To(Equal("poor-banana"))
+				})
+
+				It("should destroy any container state", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+					Expect(err).To(HaveOccurred())
+					Expect(containerizer.DestroyCallCount()).To(Equal(1))
+					_, handle := containerizer.DestroyArgsForCall(0)
+					Expect(handle).To(Equal("poor-banana"))
+				})
+			})
+
+			Context("when network destroy operation fails", func() {
+				BeforeEach(func() {
+					networker.DestroyReturns(errors.New("failed to destroy the banana network"))
+				})
+
+				It("should not destroy the network state metadata", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+					Expect(err).To(HaveOccurred())
+					Expect(propertyManager.DestroyKeySpaceCallCount()).To(BeZero())
+				})
+
+				It("does not destroy the bundle (so that the container can be looked up)", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+					Expect(err).To(HaveOccurred())
+					Expect(containerizer.RemoveBundleCallCount()).To(BeZero())
+				})
 			})
 		})
 
@@ -857,7 +919,7 @@ var _ = Describe("Gardener", func() {
 	})
 
 	Describe("Destroy", func() {
-		It("returns garden.ContainreNotFoundError if the container handle isn't in the depot", func() {
+		It("returns garden.ContainerNotFoundError if the container handle isn't in the depot", func() {
 			containerizer.HandlesReturns([]string{}, nil)
 			Expect(gdnr.Destroy("cake!")).To(MatchError(garden.ContainerNotFoundError{Handle: "cake!"}))
 		})
@@ -903,14 +965,14 @@ var _ = Describe("Gardener", func() {
 
 			It("return the error", func() {
 				err := gdnr.Destroy("some-handle")
-				Expect(err).To(MatchError("containerized deletion failed"))
+				Expect(err).To(MatchError(ContainSubstring("containerized deletion failed")))
 			})
 
-			It("should not destroy the network configuration", func() {
+			It("should not destroy the bundle", func() {
 				err := gdnr.Destroy("some-handle")
 				Expect(err).To(HaveOccurred())
 
-				Expect(networker.DestroyCallCount()).To(Equal(0))
+				Expect(containerizer.RemoveBundleCallCount()).To(Equal(0))
 			})
 		})
 
@@ -921,7 +983,7 @@ var _ = Describe("Gardener", func() {
 
 			It("return the error", func() {
 				err := gdnr.Destroy("some-handle")
-				Expect(err).To(MatchError("containerized deletion failed"))
+				Expect(err).To(MatchError(ContainSubstring("containerized deletion failed")))
 			})
 		})
 
@@ -932,7 +994,7 @@ var _ = Describe("Gardener", func() {
 
 			It("returns the error", func() {
 				err := gdnr.Destroy("some-handle")
-				Expect(err).To(MatchError("network deletion failed"))
+				Expect(err).To(MatchError(ContainSubstring("network deletion failed")))
 			})
 
 			It("should not destroy the key space of the property manager", func() {
@@ -950,7 +1012,7 @@ var _ = Describe("Gardener", func() {
 
 			It("returns the error", func() {
 				err := gdnr.Destroy("some-handle")
-				Expect(err).To(MatchError("rootfs deletion failed"))
+				Expect(err).To(MatchError(ContainSubstring("rootfs deletion failed")))
 			})
 		})
 
@@ -961,7 +1023,7 @@ var _ = Describe("Gardener", func() {
 
 			It("returns the error", func() {
 				err := gdnr.Destroy("some-handle")
-				Expect(err).To(MatchError("key space destruction failed"))
+				Expect(err).To(MatchError(ContainSubstring("key space destruction failed")))
 			})
 		})
 
@@ -1086,7 +1148,7 @@ var _ = Describe("Gardener", func() {
 			It("logs the failure and carries on", func() {
 				Expect(cleanupErr).NotTo(HaveOccurred())
 				Expect(containerizer.DestroyCallCount()).To(Equal(2))
-				Expect(logger.Errors[0]).To(MatchError("containerizer-failure"))
+				Expect(logger.Errors[0]).To(MatchError(ContainSubstring("containerizer-failure")))
 			})
 		})
 
@@ -1099,7 +1161,7 @@ var _ = Describe("Gardener", func() {
 			It("logs the failure and carries on", func() {
 				Expect(cleanupErr).NotTo(HaveOccurred())
 				Expect(networker.DestroyCallCount()).To(Equal(2))
-				Expect(logger.Errors[0]).To(MatchError("networker-failure"))
+				Expect(logger.Errors[0]).To(MatchError(ContainSubstring("networker-failure")))
 			})
 		})
 
@@ -1112,7 +1174,7 @@ var _ = Describe("Gardener", func() {
 			It("logs the failure and carries on", func() {
 				Expect(cleanupErr).NotTo(HaveOccurred())
 				Expect(volumizer.DestroyCallCount()).To(Equal(2))
-				Expect(logger.Errors[0]).To(MatchError("volumizer-failure"))
+				Expect(logger.Errors[0]).To(MatchError(ContainSubstring("volumizer-failure")))
 			})
 		})
 
@@ -1125,7 +1187,7 @@ var _ = Describe("Gardener", func() {
 			It("logs the failure and carries on", func() {
 				Expect(cleanupErr).NotTo(HaveOccurred())
 				Expect(propertyManager.DestroyKeySpaceCallCount()).To(Equal(2))
-				Expect(logger.Errors[0]).To(MatchError("property-manager-failure"))
+				Expect(logger.Errors[0]).To(MatchError(ContainSubstring("property-manager-failure")))
 			})
 		})
 
