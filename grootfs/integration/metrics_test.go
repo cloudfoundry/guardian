@@ -260,7 +260,7 @@ var _ = Describe("Metrics", func() {
 			Eventually(func() []events.ValueMetric {
 				metrics = fakeMetron.ValueMetricsFor("ExclusiveLockingTime")
 				return metrics
-			}).Should(HaveLen(1))
+			}).ShouldNot(BeEmpty())
 
 			Expect(*metrics[0].Name).To(Equal("ExclusiveLockingTime"))
 			Expect(*metrics[0].Unit).To(Equal("nanos"))

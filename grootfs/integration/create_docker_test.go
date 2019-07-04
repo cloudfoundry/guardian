@@ -294,9 +294,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				Expect(err).NotTo(HaveOccurred())
 				preLayerTimestamp := stat.ModTime()
 
-				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(3))
+				Expect(getVolumesDirEntries()).To(HaveLen(3))
 
 				runner := runner.WithClean()
 				_, err = runner.Create(groot.CreateSpec{
@@ -306,9 +304,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(afterContents).To(HaveLen(2))
+				Eventually(getVolumesDirEntries).Should(HaveLen(2))
 
 				for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
 					Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
@@ -321,20 +317,16 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 			Context("when no-clean flag is set", func() {
 				It("does not clean up unused layers", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(preContents).To(HaveLen(1))
+					Expect(getVolumesDirEntries()).To(HaveLen(1))
 
-					_, err = runner.WithNoClean().Create(groot.CreateSpec{
+					_, err := runner.WithNoClean().Create(groot.CreateSpec{
 						ID:           randomImageID,
 						BaseImageURL: integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
 						Mount:        mountByDefault(),
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(afterContents).To(HaveLen(3))
+					Consistently(getVolumesDirEntries).Should(HaveLen(3))
 				})
 			})
 		})
@@ -407,9 +399,9 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			Context("when the image is not accounted for in the quota", func() {
 				It("succeeds", func() {
 					containerSpec, err := runner.Create(groot.CreateSpec{
-						BaseImageURL: baseImageURL,
-						ID:           randomImageID,
-						Mount:        mountByDefault(),
+						BaseImageURL:              baseImageURL,
+						ID:                        randomImageID,
+						Mount:                     mountByDefault(),
 						ExcludeBaseImageFromQuota: true,
 						DiskLimit:                 10,
 					})
@@ -451,9 +443,9 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			Context("when the image is not accounted for in the quota", func() {
 				It("succeeds", func() {
 					containerSpec, err := runner.Create(groot.CreateSpec{
-						BaseImageURL: baseImageURL,
-						ID:           randomImageID,
-						Mount:        mountByDefault(),
+						BaseImageURL:              baseImageURL,
+						ID:                        randomImageID,
+						Mount:                     mountByDefault(),
 						ExcludeBaseImageFromQuota: true,
 						DiskLimit:                 diskLimit,
 					})

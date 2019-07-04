@@ -92,8 +92,9 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (info ImageInfo, 
 			logger.Error("failed-to-unlock", err)
 		}
 		if spec.CleanOnCreate {
+			logger.Info("scheduling-cleanup-after-create")
 			if _, err = c.cleaner.Clean(logger, spec.CleanOnCreateThresholdBytes); err != nil {
-				createErr = errorspkg.Wrap(err, "failed-to-cleanup-store")
+				createErr = errorspkg.Wrap(err, "failed-to-schedule-cleanup")
 			}
 		}
 	}()

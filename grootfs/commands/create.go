@@ -87,6 +87,10 @@ var CreateCommand = cli.Command{
 			Name:  "password",
 			Usage: "Password to authenticate in image registry",
 		},
+		cli.StringFlag{
+			Name:  "clean-log-file",
+			Usage: "File to write the clean-on-create logs to. If not specified, stderr is used",
+		},
 	},
 
 	Action: func(ctx *cli.Context) error {
@@ -108,6 +112,7 @@ var CreateCommand = cli.Command{
 				ctx.IsSet("skip-layer-validation")).
 			WithCleanThresholdBytes(ctx.Int64("threshold-bytes"), ctx.IsSet("threshold-bytes")).
 			WithClean(ctx.IsSet("with-clean"), ctx.IsSet("without-clean")).
+			WithCleanLog(ctx.String("clean-log-file")).
 			WithMount(ctx.IsSet("with-mount"), ctx.IsSet("without-mount"))
 
 		cfg, err := configBuilder.Build()
@@ -190,7 +195,7 @@ var CreateCommand = cli.Command{
 
 		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager)
 		sm := storepkg.NewStoreMeasurer(storePath, fsDriver, gc)
-		cleaner := groot.IamCleaner(exclusiveLocksmith, sm, gc, metricsEmitter)
+		cleaner := groot.YouAreCleaner(cfg)
 
 		creator := groot.IamCreator(
 			imageCloner, baseImagePuller, sharedLocksmith,
@@ -241,18 +246,20 @@ var CreateCommand = cli.Command{
 		}
 		fmt.Println(string(jsonBytes))
 
-		emitMetrics(logger, metricsEmitter, sm)
+		emitMetrics(logger, metricsEmitter, sm, cfg.Create.WithClean)
 
 		return nil
 	},
 }
 
-func emitMetrics(logger lager.Logger, metricsEmitter *metrics.Emitter, sm *storepkg.StoreMeasurer) {
-	unusedVolumesSize, err := sm.UnusedVolumesSize(logger)
-	if err != nil {
-		logger.Info(fmt.Sprintf("getting-unused-layers-size: %s", err))
+func emitMetrics(logger lager.Logger, metricsEmitter *metrics.Emitter, sm *storepkg.StoreMeasurer, cleanOnCreate bool) {
+	if !cleanOnCreate {
+		unusedVolumesSize, err := sm.UnusedVolumesSize(logger)
+		if err != nil {
+			logger.Info(fmt.Sprintf("getting-unused-layers-size: %s", err))
+		}
+		metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", unusedVolumesSize, "bytes")
 	}
-	metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", unusedVolumesSize, "bytes")
 
 	totalVolumesSize, err := sm.TotalVolumesSize(logger)
 	if err != nil {

@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
 	"os/user"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -16,6 +18,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/integration/runner"
+	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
 	. "github.com/onsi/ginkgo"
@@ -142,4 +145,8 @@ func runCommand(command *exec.Cmd) (string, string, error) {
 	command.Stderr = io.MultiWriter(GinkgoWriter, stderr)
 	err := command.Run()
 	return string(stdout.Contents()), string(stderr.Contents()), err
+}
+
+func getVolumesDirEntries() ([]os.FileInfo, error) {
+	return ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 }

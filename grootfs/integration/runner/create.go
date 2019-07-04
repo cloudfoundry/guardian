@@ -102,6 +102,9 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 			args = append(args, "--without-clean")
 		}
 	}
+	if r.CleanLogFile != "" {
+		args = append(args, "--clean-log-file", r.CleanLogFile)
+	}
 
 	if spec.CleanOnCreateThresholdBytes > 0 {
 		args = append(args, "--threshold-bytes", strconv.FormatInt(spec.CleanOnCreateThresholdBytes, 10))

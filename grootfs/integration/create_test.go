@@ -241,21 +241,16 @@ var _ = Describe("Create", func() {
 		Context("when the total commit exceeds the threshold", func() {
 			Context("by pulling new base layers", func() {
 				It("cleans the store", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(preContents).To(HaveLen(1))
+					Expect(getVolumesDirEntries()).To(HaveLen(1))
 
-					_, err = Runner.Create(groot.CreateSpec{
+					_, err := Runner.Create(groot.CreateSpec{
 						ID:            "my-empty",
 						BaseImageURL:  integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
 						Mount:         false,
 						CleanOnCreate: true,
 					})
 					Expect(err).NotTo(HaveOccurred())
-
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(afterContents).To(HaveLen(2))
+					Eventually(getVolumesDirEntries).Should(HaveLen(2))
 					for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
 						Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
 					}
@@ -264,11 +259,9 @@ var _ = Describe("Create", func() {
 
 			Context("by virtue of its committed quota", func() {
 				It("cleans the store", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(preContents).To(HaveLen(1))
+					Expect(getVolumesDirEntries()).To(HaveLen(1))
 
-					_, err = Runner.Create(groot.CreateSpec{
+					_, err := Runner.Create(groot.CreateSpec{
 						ID:                          "my-empty",
 						BaseImageURL:                integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
 						Mount:                       false,
@@ -279,9 +272,7 @@ var _ = Describe("Create", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(afterContents).To(HaveLen(2))
+					Eventually(getVolumesDirEntries).Should(HaveLen(2))
 					for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
 						Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
 					}
@@ -291,7 +282,7 @@ var _ = Describe("Create", func() {
 
 		Context("when the total commit doesn't exceed the threshold", func() {
 			It("doesn't clean the store", func() {
-				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+				preContents, err := getVolumesDirEntries()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preContents).To(HaveLen(1))
 
@@ -305,11 +296,11 @@ var _ = Describe("Create", func() {
 					ExcludeBaseImageFromQuota:   true,
 				})
 				Expect(err).NotTo(HaveOccurred())
+				Consistently(getVolumesDirEntries).Should(HaveLen(3))
 
-				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+				volumesDirEntries, err := getVolumesDirEntries()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(afterContents).To(HaveLen(3))
-				Expect(afterContents).To(ContainElement(preContents[0]))
+				Expect(volumesDirEntries).To(ContainElement(preContents[0]))
 			})
 		})
 
@@ -336,7 +327,7 @@ var _ = Describe("Create", func() {
 			})
 
 			It("eventually removes unused local volumes", func() {
-				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+				preContents, err := getVolumesDirEntries()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preContents).To(HaveLen(2)) // Docker image and local tar, from 2 BeforeEachs above
 
@@ -356,7 +347,8 @@ var _ = Describe("Create", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+				Eventually(getVolumesDirEntries).Should(HaveLen(1))
+				afterContents, err := getVolumesDirEntries()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(afterContents).To(HaveLen(1))
 				// We now have 2 groot images, one of which is based on the same base
@@ -383,11 +375,9 @@ var _ = Describe("Create", func() {
 		})
 
 		It("does not clean the store", func() {
-			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(preContents).To(HaveLen(1))
+			Expect(getVolumesDirEntries()).To(HaveLen(1))
 
-			_, err = Runner.Create(groot.CreateSpec{
+			_, err := Runner.Create(groot.CreateSpec{
 				ID:            "my-empty",
 				BaseImageURL:  integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
 				Mount:         mountByDefault(),
@@ -395,9 +385,7 @@ var _ = Describe("Create", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(afterContents).To(HaveLen(3))
+			Consistently(getVolumesDirEntries).Should(HaveLen(3))
 
 			layers := append(testhelpers.EmptyBaseImageV011.Layers, testhelpers.BusyBoxImage.Layers...)
 			for _, layer := range layers {

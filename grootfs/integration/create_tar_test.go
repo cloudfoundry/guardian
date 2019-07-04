@@ -164,9 +164,7 @@ var _ = Describe("Create with local TAR images", func() {
 			Expect(err).NotTo(HaveOccurred())
 			preLayerTimestamp := stat.ModTime()
 
-			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(preContents).To(HaveLen(2))
+			Expect(getVolumesDirEntries()).To(HaveLen(2))
 
 			runner := Runner.WithClean()
 			_, err = runner.Create(groot.CreateSpec{
@@ -176,9 +174,7 @@ var _ = Describe("Create with local TAR images", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(afterContents).To(HaveLen(1))
+			Eventually(getVolumesDirEntries).Should(HaveLen(1))
 
 			stat, err = os.Stat(layerPath)
 			Expect(err).NotTo(HaveOccurred())
@@ -187,22 +183,18 @@ var _ = Describe("Create with local TAR images", func() {
 
 		Context("when no-clean flag is set", func() {
 			It("does not clean up unused layers", func() {
-				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(1))
+				Expect(getVolumesDirEntries()).To(HaveLen(1))
 
 				baseImage2File := integration.CreateBaseImageTar(sourceImagePath)
 				baseImage2Path := baseImage2File.Name()
-				_, err = Runner.WithNoClean().Create(groot.CreateSpec{
+				_, err := Runner.WithNoClean().Create(groot.CreateSpec{
 					ID:           "my-image-3",
 					BaseImageURL: integration.String2URL(baseImage2Path),
 					Mount:        mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(afterContents).To(HaveLen(2))
+				Consistently(getVolumesDirEntries).Should(HaveLen(2))
 			})
 		})
 	})

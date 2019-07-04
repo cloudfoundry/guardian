@@ -25,6 +25,7 @@ type Create struct {
 	ExcludeImageFromQuota             bool     `yaml:"exclude_image_from_quota"`
 	SkipLayerValidation               bool     `yaml:"skip_layer_validation"`
 	WithClean                         bool     `yaml:"with_clean"`
+	CleanLogFile                      string   `yaml:"clean_log_file"`
 	WithoutMount                      bool     `yaml:"without_mount"`
 	DiskLimitSizeBytes                int64    `yaml:"disk_limit_size_bytes"`
 	InsecureRegistries                []string `yaml:"insecure_registries"`
@@ -160,6 +161,13 @@ func (b *Builder) WithLogLevel(level string, isSet bool) *Builder {
 func (b *Builder) WithLogFile(filepath string) *Builder {
 	if filepath != "" {
 		b.config.LogFile = filepath
+	}
+	return b
+}
+
+func (b *Builder) WithCleanLog(filepath string) *Builder {
+	if filepath != "" {
+		b.config.Create.CleanLogFile = filepath
 	}
 	return b
 }

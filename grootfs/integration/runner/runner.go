@@ -31,9 +31,10 @@ type Runner struct {
 	MetronHost net.IP
 	MetronPort uint16
 	// Logging
-	LogLevelSet bool
-	LogLevel    lager.LogLevel
-	LogFile     string
+	LogLevelSet  bool
+	LogLevel     lager.LogLevel
+	LogFile      string
+	CleanLogFile string
 	// Streams
 	Stdout io.Writer
 	Stderr io.Writer

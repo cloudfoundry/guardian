@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -45,7 +44,7 @@ var _ = Describe("Clean", func() {
 				logBuffer := gbytes.NewBuffer()
 				_, err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).Clean(0)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(logBuffer).To(gbytes.Say(`"error":"no store found at /invalid-store"`))
+				Expect(logBuffer).To(gbytes.Say("no store found at /invalid-store"))
 			})
 		})
 
@@ -63,16 +62,12 @@ var _ = Describe("Clean", func() {
 			})
 
 			It("removes them", func() {
-				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(8))
+				Expect(getVolumesDirEntries()).To(HaveLen(8))
 
-				_, err = Runner.Clean(0)
+				_, err := Runner.Clean(0)
 				Expect(err).NotTo(HaveOccurred())
 
-				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(afterContents).To(HaveLen(4))
+				Expect(getVolumesDirEntries()).To(HaveLen(4))
 			})
 
 			Context("and a threshold is set", func() {
@@ -94,13 +89,13 @@ var _ = Describe("Clean", func() {
 					})
 
 					It("does not remove the unused volumes", func() {
-						preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+						preContents, err := getVolumesDirEntries()
 						Expect(err).NotTo(HaveOccurred())
 
 						_, err = Runner.Clean(cleanupThresholdInBytes)
 						Expect(err).NotTo(HaveOccurred())
 
-						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+						afterContents, err := getVolumesDirEntries()
 						Expect(err).NotTo(HaveOccurred())
 						Expect(afterContents).To(HaveLen(len(preContents)))
 					})
@@ -118,16 +113,11 @@ var _ = Describe("Clean", func() {
 					})
 
 					It("removes the unused volumes", func() {
-						preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-						Expect(err).NotTo(HaveOccurred())
-						Expect(preContents).To(HaveLen(8))
+						Expect(getVolumesDirEntries()).To(HaveLen(8))
 
-						_, err = Runner.Clean(cleanupThresholdInBytes)
+						_, err := Runner.Clean(cleanupThresholdInBytes)
 						Expect(err).NotTo(HaveOccurred())
-
-						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-						Expect(err).NotTo(HaveOccurred())
-						Expect(afterContents).To(HaveLen(4))
+						Expect(getVolumesDirEntries()).To(HaveLen(4))
 					})
 				})
 			})
@@ -161,16 +151,12 @@ var _ = Describe("Clean", func() {
 			})
 
 			It("removes unused volumes", func() {
-				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(3))
+				Expect(getVolumesDirEntries()).To(HaveLen(3))
 
-				_, err = Runner.Clean(0)
+				_, err := Runner.Clean(0)
 				Expect(err).NotTo(HaveOccurred())
 
-				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(afterContents).To(HaveLen(2))
+				Expect(getVolumesDirEntries()).To(HaveLen(2))
 				for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
 					Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
 				}

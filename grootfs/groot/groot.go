@@ -11,6 +11,7 @@ import (
 
 const (
 	GlobalLockKey                      = "global-groot-lock"
+	GCLockKey                          = "groot-gc-lock"
 	MetricImageCreationTime            = "ImageCreationTime"
 	MetricImageDeletionTime            = "ImageDeletionTime"
 	MetricImageStatsTime               = "ImageStatsTime"

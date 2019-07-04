@@ -6,6 +6,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
@@ -20,7 +21,7 @@ var _ = Describe("Logging", func() {
 		spec = groot.CreateSpec{
 			ID:           "my-image",
 			BaseImageURL: integration.String2URL("/non/existent/rootfs"),
-			Mount:        true,
+			Mount:        mountByDefault(),
 		}
 	})
 
@@ -63,6 +64,15 @@ var _ = Describe("Logging", func() {
 				logFilePath string
 			)
 
+			getAllTheLogs := func() (string, error) {
+				allTheLogs, err := ioutil.ReadFile(logFilePath)
+				if err != nil {
+					return "", err
+				}
+
+				return string(allTheLogs), nil
+			}
+
 			BeforeEach(func() {
 				logFile, err := ioutil.TempFile("", "log")
 				Expect(err).NotTo(HaveOccurred())
@@ -79,7 +89,7 @@ var _ = Describe("Logging", func() {
 					_, err := Runner.WithLogFile(logFilePath).WithLogLevel(lager.DEBUG).Create(spec)
 					Expect(err).To(HaveOccurred())
 
-					allTheLogs, err := ioutil.ReadFile(logFilePath)
+					allTheLogs, err := getAllTheLogs()
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(allTheLogs)).To(ContainSubstring("\"log_level\":0"))
 				})
@@ -90,7 +100,7 @@ var _ = Describe("Logging", func() {
 					_, err := Runner.WithLogFile(logFilePath).WithoutLogLevel().Create(spec)
 					Expect(err).To(HaveOccurred())
 
-					allTheLogs, err := ioutil.ReadFile(logFilePath)
+					allTheLogs, err := getAllTheLogs()
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(allTheLogs)).NotTo(ContainSubstring("\"log_level\":0"))
 					Expect(string(allTheLogs)).To(ContainSubstring("\"log_level\":1"))
@@ -106,6 +116,67 @@ var _ = Describe("Logging", func() {
 
 					Expect(buffer).To(gbytes.Say("no such file or directory"))
 				})
+			})
+		})
+	})
+
+	Describe("--clean-log-file", func() {
+		var (
+			baseImagePath   string
+			sourceImagePath string
+			cleanLogFile    string
+			stderr          *gbytes.Buffer
+			r               runner.Runner
+		)
+
+		BeforeEach(func() {
+			f, err := ioutil.TempFile("", "cleanlog")
+			Expect(err).NotTo(HaveOccurred())
+			defer f.Close()
+			Expect(os.Chown(f.Name(), GrootfsTestUid, GrootfsTestGid)).To(Succeed())
+
+			cleanLogFile = f.Name()
+			sourceImagePath = integration.CreateBaseImage(rootUID, rootGID, GrootUID, GrootGID)
+			baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
+			baseImagePath = baseImageFile.Name()
+			spec.BaseImageURL = integration.String2URL(baseImagePath)
+			spec.CleanOnCreate = true
+
+			stderr = gbytes.NewBuffer()
+			r = Runner.WithStderr(stderr).WithLogLevel(lager.DEBUG).WithClean().WithCleanLogFile(cleanLogFile)
+		})
+
+		JustBeforeEach(func() {
+			_, err := r.Create(spec)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			Expect(os.Remove(cleanLogFile)).To(Succeed())
+			Expect(os.RemoveAll(sourceImagePath)).To(Succeed())
+			Expect(os.RemoveAll(baseImagePath)).To(Succeed())
+		})
+
+		readCleanLog := func() (string, error) {
+			contents, err := ioutil.ReadFile(cleanLogFile)
+			return string(contents), err
+		}
+
+		It("writes to the clean log file", func() {
+			Eventually(readCleanLog, "10s").Should(ContainSubstring("groot-cleaning"))
+		})
+
+		It("does not log to stderr", func() {
+			Consistently(stderr).ShouldNot(gbytes.Say("groot-cleaning"))
+		})
+
+		Context("when --clean-log-file is not set", func() {
+			BeforeEach(func() {
+				r = Runner.WithStderr(stderr).WithLogLevel(lager.DEBUG)
+			})
+
+			It("writes clean after create entries to stderr", func() {
+				Expect(stderr).To(gbytes.Say("groot-cleaning"))
 			})
 		})
 	})

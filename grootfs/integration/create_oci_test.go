@@ -236,9 +236,7 @@ var _ = Describe("Create with OCI images", func() {
 			Expect(err).NotTo(HaveOccurred())
 			preLayerTimestamp := stat.ModTime()
 
-			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(preContents).To(HaveLen(6))
+			Expect(getVolumesDirEntries()).To(HaveLen(6))
 
 			runner = runner.WithClean()
 			_, err = runner.Create(groot.CreateSpec{
@@ -248,9 +246,7 @@ var _ = Describe("Create with OCI images", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(afterContents).To(HaveLen(2))
+			Eventually(getVolumesDirEntries).Should(HaveLen(2))
 
 			Expect(filepath.Join(StorePath, store.VolumesDirName, "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5")).To(BeADirectory())
 			Expect(filepath.Join(StorePath, store.VolumesDirName, "9242945d3c9c7cf5f127f9352fea38b1d3efe62ee76e25f70a3e6db63a14c233")).To(BeADirectory())
@@ -262,20 +258,16 @@ var _ = Describe("Create with OCI images", func() {
 
 		Context("when no-clean flag is set", func() {
 			It("does not clean up unused layers", func() {
-				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(4))
+				Expect(getVolumesDirEntries()).To(HaveLen(4))
 
-				_, err = runner.WithNoClean().Create(groot.CreateSpec{
+				_, err := runner.WithNoClean().Create(groot.CreateSpec{
 					ID:           randomImageID,
 					BaseImageURL: integration.String2URL(fmt.Sprintf("oci:///%s/assets/oci-test-image/empty:v0.1.1", workDir)),
 					Mount:        mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(afterContents).To(HaveLen(6))
+				Consistently(getVolumesDirEntries).Should(HaveLen(6))
 			})
 		})
 	})

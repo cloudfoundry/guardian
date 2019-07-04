@@ -33,7 +33,7 @@ var CleanCommand = cli.Command{
 		},
 	},
 
-	Action: func(ctx *cli.Context) error {
+	Action: func(ctx *cli.Context) (exitError error) {
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 		logger = logger.Session("clean")
 
@@ -42,27 +42,39 @@ var CleanCommand = cli.Command{
 			ctx.IsSet("threshold-bytes"))
 
 		cfg, err := configBuilder.Build()
-		logger.Debug("clean-config", lager.Data{"currentConfig": cfg})
 		if err != nil {
-			logger.Error("config-builder-failed", err)
+			fmt.Fprintf(os.Stderr, "config-builder-failed: %v", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		storePath := cfg.StorePath
-		if _, err = os.Stat(storePath); os.IsNotExist(err) {
-			err = errorspkg.Errorf("no store found at %s", storePath)
-			logger.Error("store-path-failed", err, nil)
+		if _, err = os.Stat(cfg.StorePath); os.IsNotExist(err) {
+			err = errorspkg.Errorf("no store found at %s", cfg.StorePath)
+			fmt.Fprintf(os.Stderr, "no store found at %s", cfg.StorePath)
 			return cli.NewExitError(err.Error(), 0)
 		}
 
+		metricsEmitter := metrics.NewEmitter(logger, cfg.MetronEndpoint)
+		locksDir := filepath.Join(cfg.StorePath, storepkg.LocksDirName)
+		locksmith := locksmithpkg.NewExclusiveFileSystem(locksDir).WithMetrics(metricsEmitter)
+		lockFile, err := locksmith.Lock(groot.GCLockKey)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to acquire lock %s: %v", groot.GCLockKey, err)
+			return cli.NewExitError(err.Error(), 1)
+		}
+		defer func() {
+			if err := locksmith.Unlock(lockFile); err != nil {
+				logger.Error("release-lock-failed", err, nil)
+				exitError = cli.NewExitError(err.Error(), 1)
+			}
+		}()
+
+		logger.Debug("clean-config", lager.Data{"currentConfig": cfg})
+
 		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin)
 
-		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
-		metricsEmitter := metrics.NewEmitter(logger, cfg.MetronEndpoint)
-		locksDir := filepath.Join(storePath, storepkg.LocksDirName)
-		locksmith := locksmithpkg.NewExclusiveFileSystem(locksDir).WithMetrics(metricsEmitter)
+		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, cfg.StorePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
-			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
+			filepath.Join(cfg.StorePath, storepkg.MetaDirName, "dependencies"),
 		)
 
 		nsFsDriver, err := createImageDriver(logger, cfg, fsDriver)
@@ -71,7 +83,7 @@ var CleanCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager)
-		sm := storepkg.NewStoreMeasurer(storePath, fsDriver, gc)
+		sm := storepkg.NewStoreMeasurer(cfg.StorePath, fsDriver, gc)
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
