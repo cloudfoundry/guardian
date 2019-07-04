@@ -65,7 +65,7 @@ type runnerBinaries struct {
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(func(message string, callerSkip ...int) {
 		if strings.Contains(message, "<requesting dmesg>") {
-			GinkgoWriter.Write([]byte(fmt.Sprintf("Current UTC time is %s\n", time.Now().UTC().Format(time.RFC3339))))
+			GinkgoWriter.Write([]byte(fmt.Sprintf("\n\nCurrent UTC time is %s\n", time.Now().UTC().Format(time.RFC3339))))
 			dmesgOutput, dmesgErr := exec.Command("/bin/dmesg", "-T").Output()
 			if dmesgErr != nil {
 				GinkgoWriter.Write([]byte(dmesgErr.Error()))
@@ -74,22 +74,53 @@ func TestGqt(t *testing.T) {
 		}
 
 		if strings.Contains(message, "container init still running") {
-			GinkgoWriter.Write([]byte(fmt.Sprintf("Current Ginkgo node is %d\n", GinkgoParallelNode())))
-			psTreeOut, psTreeErr := exec.Command("ps", "auxf").Output()
-			if psTreeErr != nil {
-				GinkgoWriter.Write([]byte(psTreeErr.Error()))
-			}
-			GinkgoWriter.Write(psTreeOut)
+			GinkgoWriter.Write([]byte(fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelNode())))
 
-			dstatedOut, dstatedErr := exec.Command("sh", "-c", `ps -eLo pid,tid,ppid,user:11,comm,state,wchan | grep "D "`).Output()
-			if dstatedErr != nil {
-				GinkgoWriter.Write([]byte(dstatedErr.Error()))
+			GinkgoWriter.Write([]byte("\n\nPrinting process forest:\n"))
+			psTreeOut, err := exec.Command("ps", "auxf").Output()
+			if err != nil {
+				GinkgoWriter.Write([]byte(fmt.Sprintf("failed to get processes forest: %v\n", err)))
+			} else {
+				GinkgoWriter.Write(psTreeOut)
 			}
-			GinkgoWriter.Write(dstatedOut)
+
+			GinkgoWriter.Write([]byte("\n\nPrinting processes in D-state:\n"))
+			dstatedOut, err := exec.Command("sh", "-c", `ps -eLo pid,tid,ppid,user:11,comm,state,wchan | grep "D "`).Output()
+			if err != nil {
+				GinkgoWriter.Write([]byte(fmt.Sprintf("failed to get processes in D-state: %v\n", err)))
+			} else {
+				GinkgoWriter.Write(dstatedOut)
+			}
+
+			touchFilePath := filepath.Join(config.StorePath, "testing-xfs")
+			GinkgoWriter.Write([]byte(fmt.Sprintf("\n\nTesting whether groot store XFS is locked up via creating %s...\n", touchFilePath)))
+			touchFile, err := os.Create(touchFilePath)
+			if err != nil {
+				GinkgoWriter.Write([]byte(fmt.Sprintf("failed to create %s: %v\n", touchFilePath, err)))
+			} else {
+				defer touchFile.Close()
+				GinkgoWriter.Write([]byte(fmt.Sprintf("Store XFS looks healthy, creating %s succeeded\n", touchFilePath)))
+			}
+
+			GinkgoWriter.Write([]byte("\n\nPrinting garden-init processes stacks...\n"))
+			gardenInitPids, err := exec.Command("pidof", "garden-init").CombinedOutput()
+			if err != nil {
+				GinkgoWriter.Write([]byte(fmt.Sprintf("failed to get garden-init PIDs: %s: %v\n", string(gardenInitPids), err)))
+			} else {
+				GinkgoWriter.Write([]byte(fmt.Sprintf("garden-init processes PIDs: %s\n", gardenInitPids)))
+				for _, pid := range strings.Split(strings.TrimSpace(string(gardenInitPids)), " ") {
+					stack, err := ioutil.ReadFile(filepath.Join("/proc", pid, "stack"))
+					if err != nil {
+						GinkgoWriter.Write([]byte(fmt.Sprintf("failed to get stack of PID %s: %v\n", pid, err)))
+					} else {
+						GinkgoWriter.Write([]byte(fmt.Sprintf("Stack of PID %s:\n%s\n\n", pid, string(stack))))
+					}
+				}
+			}
 		}
 
 		if strings.Contains(message, "running image plugin destroy: deleting image path") {
-			GinkgoWriter.Write([]byte(fmt.Sprintf("Current Ginkgo node is %d\n", GinkgoParallelNode())))
+			GinkgoWriter.Write([]byte(fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelNode())))
 			GinkgoWriter.Write([]byte("Printing rootfs directories inodes...\n\n"))
 			findOut, findErr := exec.Command("/bin/bash", "-c", fmt.Sprintf("find %s -iname 'rootfs' -printf '%%p %%i\n'", config.StorePath)).Output()
 			if findErr != nil {
