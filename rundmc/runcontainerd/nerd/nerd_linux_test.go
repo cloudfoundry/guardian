@@ -50,6 +50,7 @@ var _ = Describe("Nerd", func() {
 		processID = fmt.Sprintf("test-process-%s", randomString(10))
 		stdout = gbytes.NewBuffer()
 		stderr = gbytes.NewBuffer()
+		stdin = nil
 		processIO = func() (io.Reader, io.Writer, io.Writer) {
 			return stdin, stdout, stderr
 		}
