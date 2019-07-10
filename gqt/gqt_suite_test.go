@@ -85,11 +85,20 @@ func TestGqt(t *testing.T) {
 			}
 
 			GinkgoWriter.Write([]byte("\n\nPrinting processes in D-state:\n"))
-			dstatedOut, err := exec.Command("sh", "-c", `ps -eLo pid,tid,ppid,user:11,comm,state,wchan | grep "D "`).Output()
+			dstatedOut, err := exec.Command("sh", "-c", `ps -eLo pid,tid,ppid,user:11,comm,state,wchan,etime | grep "D "`).Output()
 			if err != nil {
 				GinkgoWriter.Write([]byte(fmt.Sprintf("failed to get processes in D-state: %v\n", err)))
 			} else {
 				GinkgoWriter.Write(dstatedOut)
+				for _, line := range strings.Split(string(dstatedOut), "\n") {
+					pid := strings.Split(strings.TrimSpace(line), " ")[0]
+					stack, err := ioutil.ReadFile(filepath.Join("/proc", pid, "stack"))
+					if err != nil {
+						GinkgoWriter.Write([]byte(fmt.Sprintf("failed to get stack of PID %s: %v\n", pid, err)))
+					} else {
+						GinkgoWriter.Write([]byte(fmt.Sprintf("Stack of PID %s:\n%s\n\n", pid, string(stack))))
+					}
+				}
 			}
 
 			touchFilePath := filepath.Join(config.StorePath, "testing-xfs")
@@ -100,22 +109,6 @@ func TestGqt(t *testing.T) {
 			} else {
 				defer touchFile.Close()
 				GinkgoWriter.Write([]byte(fmt.Sprintf("Store XFS looks healthy, creating %s succeeded\n", touchFilePath)))
-			}
-
-			GinkgoWriter.Write([]byte("\n\nPrinting garden-init processes stacks...\n"))
-			gardenInitPids, err := exec.Command("pidof", "garden-init").CombinedOutput()
-			if err != nil {
-				GinkgoWriter.Write([]byte(fmt.Sprintf("failed to get garden-init PIDs: %s: %v\n", string(gardenInitPids), err)))
-			} else {
-				GinkgoWriter.Write([]byte(fmt.Sprintf("garden-init processes PIDs: %s\n", gardenInitPids)))
-				for _, pid := range strings.Split(strings.TrimSpace(string(gardenInitPids)), " ") {
-					stack, err := ioutil.ReadFile(filepath.Join("/proc", pid, "stack"))
-					if err != nil {
-						GinkgoWriter.Write([]byte(fmt.Sprintf("failed to get stack of PID %s: %v\n", pid, err)))
-					} else {
-						GinkgoWriter.Write([]byte(fmt.Sprintf("Stack of PID %s:\n%s\n\n", pid, string(stack))))
-					}
-				}
 			}
 		}
 
