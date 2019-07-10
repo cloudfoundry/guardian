@@ -50,6 +50,10 @@ func (cc *DefaultCommandCreator) MetricsCommand(log lager.Logger, handle string)
 	return exec.Command(cc.BinPath, append(clone(cc.ExtraArgs), "stats", handle)...)
 }
 
+func (cc *DefaultCommandCreator) CapacityCommand(log lager.Logger) *exec.Cmd {
+	return exec.Command(cc.BinPath, append(clone(cc.ExtraArgs), "capacity")...)
+}
+
 // append is not thread safe when operating on shared memory, such as cc.ExtraArgs. We therefore clone the slice and then append additional valies.
 // See https://medium.com/@cep21/gos-append-is-not-always-thread-safe-a3034db7975
 func clone(values []string) []string {

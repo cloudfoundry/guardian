@@ -28,3 +28,7 @@ func (NoopVolumizer) Metrics(lager.Logger, string, bool) (garden.ContainerDiskSt
 func (NoopVolumizer) GC(lager.Logger) error {
 	return nil
 }
+
+func (NoopVolumizer) Capacity(lager.Logger) (uint64, error) {
+	return 0, nil
+}

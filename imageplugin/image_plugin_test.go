@@ -648,4 +648,93 @@ var _ = Describe("ImagePlugin", func() {
 			})
 		})
 	})
+
+	Describe("Capacity", func() {
+		var (
+			cmd *exec.Cmd
+
+			fakeImagePluginStdout string
+			fakeImagePluginStderr string
+			fakeImagePluginError  error
+
+			capacity    uint64
+			capacityErr error
+		)
+
+		BeforeEach(func() {
+			cmd = exec.Command("unpriv-plugin", "capacity")
+			fakeUnprivilegedCommandCreator.CapacityCommandReturns(cmd)
+
+			fakeImagePluginStdout = `{"capacity": 888}`
+			fakeImagePluginStderr = ""
+			fakeImagePluginError = nil
+
+			capacityErr = nil
+		})
+
+		JustBeforeEach(func() {
+			fakeCommandRunner.WhenRunning(
+				fake_command_runner.CommandSpec{
+					Path: cmd.Path,
+					Args: []string{"capacity"},
+				},
+				func(cmd *exec.Cmd) error {
+					cmd.Stdout.Write([]byte(fakeImagePluginStdout))
+					cmd.Stderr.Write([]byte(fakeImagePluginStderr))
+					return fakeImagePluginError
+				},
+			)
+
+			capacity, capacityErr = imagePlugin.Capacity(fakeLogger)
+		})
+
+		It("runs the plugin command with the command runner", func() {
+			Expect(capacityErr).NotTo(HaveOccurred())
+			Expect(capacity).To(Equal(uint64(888)))
+		})
+
+		Context("when running the image plugin fails", func() {
+			BeforeEach(func() {
+				fakeImagePluginStdout = "image-plugin-exploded-due-to-oom"
+				fakeImagePluginError = errors.New("image-plugin-stats-failed")
+			})
+
+			It("returns the wrapped error and plugin stdout, with context", func() {
+				str := fmt.Sprintf("running image plugin capacity: %s: %s",
+					fakeImagePluginStdout, fakeImagePluginError)
+				Expect(capacityErr).To(MatchError(str))
+			})
+		})
+
+		Context("when the plugin returns nonsense stats", func() {
+			BeforeEach(func() {
+				fakeImagePluginStdout = "NONSENSE_JSON"
+			})
+
+			It("returns a sensible error containing the json", func() {
+				Expect(capacityErr).To(MatchError(ContainSubstring("parsing capacity: NONSENSE_JSON")))
+			})
+		})
+
+		Context("when the image plugin emits logs to stderr", func() {
+			BeforeEach(func() {
+				buffer := gbytes.NewBuffer()
+				externalLogger := lager.NewLogger("external-plugin")
+				externalLogger.RegisterSink(lager.NewWriterSink(buffer, lager.DEBUG))
+				externalLogger.Error("error-message", errors.New("failed!"), lager.Data{"type": "error"})
+
+				fakeImagePluginStderr = string(buffer.Contents())
+			})
+
+			It("relogs the log entries", func() {
+				Expect(fakeLogger).To(glager.ContainSequence(
+					glager.Error(
+						errors.New("failed!"),
+						glager.Message("image-plugin.image-plugin-capacity.external-plugin.error-message"),
+						glager.Data("type", "error"),
+					),
+				))
+			})
+		})
+	})
 })

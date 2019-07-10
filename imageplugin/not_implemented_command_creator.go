@@ -22,3 +22,7 @@ func (cc *NotImplementedCommandCreator) DestroyCommand(log lager.Logger, handle 
 func (cc *NotImplementedCommandCreator) MetricsCommand(log lager.Logger, handle string) *exec.Cmd {
 	return nil
 }
+
+func (cc *NotImplementedCommandCreator) CapacityCommand(log lager.Logger) *exec.Cmd {
+	return nil
+}

@@ -24,6 +24,7 @@ type CommandCreator interface {
 	CreateCommand(log lager.Logger, handle string, spec gardener.RootfsSpec) (*exec.Cmd, error)
 	DestroyCommand(log lager.Logger, handle string) *exec.Cmd
 	MetricsCommand(log lager.Logger, handle string) *exec.Cmd
+	CapacityCommand(log lager.Logger) *exec.Cmd
 }
 
 //go:generate counterfeiter . ImageSpecCreator
@@ -177,4 +178,33 @@ func (p *ImagePlugin) Metrics(log lager.Logger, handle string, namespaced bool) 
 
 func (p *ImagePlugin) GC(log lager.Logger) error {
 	return nil
+}
+
+func (p *ImagePlugin) Capacity(log lager.Logger) (uint64, error) {
+	log = log.Session("image-plugin-capacity")
+	log.Debug("start")
+	defer log.Debug("end")
+
+	var capacityCmd *exec.Cmd
+	capacityCmd = p.UnprivilegedCommandCreator.CapacityCommand(log)
+
+	stdoutBuffer := bytes.NewBuffer([]byte{})
+	capacityCmd.Stdout = stdoutBuffer
+	capacityCmd.Stderr = NewRelogger(log)
+
+	err := p.CommandRunner.Run(capacityCmd)
+	if err != nil {
+		logData := lager.Data{"action": "capacity", "stdout": stdoutBuffer.String()}
+		log.Error("image-plugin-result", err, logData)
+		return 0, errorwrapper.Wrapf(err, "running image plugin capacity: %s", stdoutBuffer.String())
+	}
+
+	var capacityObject map[string]uint64
+	var consumableBuffer = bytes.NewBuffer(stdoutBuffer.Bytes())
+	err = json.NewDecoder(consumableBuffer).Decode(&capacityObject)
+	if err != nil {
+		return 0, errorwrapper.Wrapf(err, "parsing capacity: %s", stdoutBuffer.String())
+	}
+
+	return capacityObject["capacity"], nil
 }

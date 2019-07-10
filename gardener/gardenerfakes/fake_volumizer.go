@@ -11,6 +11,19 @@ import (
 )
 
 type FakeVolumizer struct {
+	CapacityStub        func(lager.Logger) (uint64, error)
+	capacityMutex       sync.RWMutex
+	capacityArgsForCall []struct {
+		arg1 lager.Logger
+	}
+	capacityReturns struct {
+		result1 uint64
+		result2 error
+	}
+	capacityReturnsOnCall map[int]struct {
+		result1 uint64
+		result2 error
+	}
 	CreateStub        func(lager.Logger, garden.ContainerSpec) (specs.Spec, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
@@ -65,6 +78,69 @@ type FakeVolumizer struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeVolumizer) Capacity(arg1 lager.Logger) (uint64, error) {
+	fake.capacityMutex.Lock()
+	ret, specificReturn := fake.capacityReturnsOnCall[len(fake.capacityArgsForCall)]
+	fake.capacityArgsForCall = append(fake.capacityArgsForCall, struct {
+		arg1 lager.Logger
+	}{arg1})
+	fake.recordInvocation("Capacity", []interface{}{arg1})
+	fake.capacityMutex.Unlock()
+	if fake.CapacityStub != nil {
+		return fake.CapacityStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.capacityReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeVolumizer) CapacityCallCount() int {
+	fake.capacityMutex.RLock()
+	defer fake.capacityMutex.RUnlock()
+	return len(fake.capacityArgsForCall)
+}
+
+func (fake *FakeVolumizer) CapacityCalls(stub func(lager.Logger) (uint64, error)) {
+	fake.capacityMutex.Lock()
+	defer fake.capacityMutex.Unlock()
+	fake.CapacityStub = stub
+}
+
+func (fake *FakeVolumizer) CapacityArgsForCall(i int) lager.Logger {
+	fake.capacityMutex.RLock()
+	defer fake.capacityMutex.RUnlock()
+	argsForCall := fake.capacityArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeVolumizer) CapacityReturns(result1 uint64, result2 error) {
+	fake.capacityMutex.Lock()
+	defer fake.capacityMutex.Unlock()
+	fake.CapacityStub = nil
+	fake.capacityReturns = struct {
+		result1 uint64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeVolumizer) CapacityReturnsOnCall(i int, result1 uint64, result2 error) {
+	fake.capacityMutex.Lock()
+	defer fake.capacityMutex.Unlock()
+	fake.CapacityStub = nil
+	if fake.capacityReturnsOnCall == nil {
+		fake.capacityReturnsOnCall = make(map[int]struct {
+			result1 uint64
+			result2 error
+		})
+	}
+	fake.capacityReturnsOnCall[i] = struct {
+		result1 uint64
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeVolumizer) Create(arg1 lager.Logger, arg2 garden.ContainerSpec) (specs.Spec, error) {
@@ -320,6 +396,8 @@ func (fake *FakeVolumizer) MetricsReturnsOnCall(i int, result1 garden.ContainerD
 func (fake *FakeVolumizer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.capacityMutex.RLock()
+	defer fake.capacityMutex.RUnlock()
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	fake.destroyMutex.RLock()

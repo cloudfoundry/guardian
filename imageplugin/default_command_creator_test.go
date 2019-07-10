@@ -251,4 +251,38 @@ var _ = Describe("DefaultCommandCreator", func() {
 			Expect(metricsCmd.SysProcAttr).To(BeNil())
 		})
 	})
+
+	Describe("CapacityCommand", func() {
+		var (
+			capacityCmd *exec.Cmd
+		)
+
+		JustBeforeEach(func() {
+			capacityCmd = commandCreator.CapacityCommand(nil)
+		})
+
+		It("returns a command with the correct image plugin path", func() {
+			Expect(capacityCmd.Path).To(Equal(binPath))
+		})
+
+		It("returns a command with the capacity action", func() {
+			Expect(capacityCmd.Args[1]).To(Equal("capacity"))
+		})
+
+		Context("when extra args are provided", func() {
+			BeforeEach(func() {
+				extraArgs = []string{"foo", "bar"}
+			})
+
+			It("returns a command with the extra args as global args preceeding the action", func() {
+				Expect(capacityCmd.Args[1]).To(Equal("foo"))
+				Expect(capacityCmd.Args[2]).To(Equal("bar"))
+				Expect(capacityCmd.Args[3]).To(Equal("capacity"))
+			})
+		})
+
+		It("returns a command that runs as the current user (SysProcAttr.Credential not set)", func() {
+			Expect(capacityCmd.SysProcAttr).To(BeNil())
+		})
+	})
 })

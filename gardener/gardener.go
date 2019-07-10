@@ -79,6 +79,7 @@ type VolumeDestroyMetricsGC interface {
 	Destroy(log lager.Logger, handle string) error
 	Metrics(log lager.Logger, handle string, namespaced bool) (garden.ContainerDiskStat, error)
 	GC(log lager.Logger) error
+	Capacity(log lager.Logger) (uint64, error)
 }
 
 type UidGenerator interface {
@@ -357,14 +358,19 @@ func (g *Gardener) GraceTime(container garden.Container) time.Duration {
 func (g *Gardener) Ping() error { return nil }
 
 func (g *Gardener) Capacity() (garden.Capacity, error) {
+	log := g.Logger.Session("capacity")
+
 	mem, err := g.SysInfoProvider.TotalMemory()
 	if err != nil {
 		return garden.Capacity{}, err
 	}
 
-	disk, err := g.SysInfoProvider.TotalDisk()
+	disk, err := g.Volumizer.Capacity(log)
 	if err != nil {
-		return garden.Capacity{}, err
+		disk, err = g.SysInfoProvider.TotalDisk()
+		if err != nil {
+			return garden.Capacity{}, err
+		}
 	}
 
 	cap := g.Networker.Capacity()

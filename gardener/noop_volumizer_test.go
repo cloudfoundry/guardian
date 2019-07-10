@@ -44,4 +44,13 @@ var _ = Describe("NoopVolumizer", func() {
 			Expect(volumizer.GC(logger)).To(BeNil())
 		})
 	})
+
+	Describe("Capacity", func() {
+		It("succeeds", func() {
+			capacity, err := volumizer.Capacity(logger)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(capacity).To(BeZero())
+		})
+	})
 })

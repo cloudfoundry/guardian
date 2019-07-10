@@ -11,6 +11,17 @@ import (
 )
 
 type FakeCommandCreator struct {
+	CapacityCommandStub        func(lager.Logger) *exec.Cmd
+	capacityCommandMutex       sync.RWMutex
+	capacityCommandArgsForCall []struct {
+		arg1 lager.Logger
+	}
+	capacityCommandReturns struct {
+		result1 *exec.Cmd
+	}
+	capacityCommandReturnsOnCall map[int]struct {
+		result1 *exec.Cmd
+	}
 	CreateCommandStub        func(lager.Logger, string, gardener.RootfsSpec) (*exec.Cmd, error)
 	createCommandMutex       sync.RWMutex
 	createCommandArgsForCall []struct {
@@ -52,6 +63,66 @@ type FakeCommandCreator struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeCommandCreator) CapacityCommand(arg1 lager.Logger) *exec.Cmd {
+	fake.capacityCommandMutex.Lock()
+	ret, specificReturn := fake.capacityCommandReturnsOnCall[len(fake.capacityCommandArgsForCall)]
+	fake.capacityCommandArgsForCall = append(fake.capacityCommandArgsForCall, struct {
+		arg1 lager.Logger
+	}{arg1})
+	fake.recordInvocation("CapacityCommand", []interface{}{arg1})
+	fake.capacityCommandMutex.Unlock()
+	if fake.CapacityCommandStub != nil {
+		return fake.CapacityCommandStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.capacityCommandReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeCommandCreator) CapacityCommandCallCount() int {
+	fake.capacityCommandMutex.RLock()
+	defer fake.capacityCommandMutex.RUnlock()
+	return len(fake.capacityCommandArgsForCall)
+}
+
+func (fake *FakeCommandCreator) CapacityCommandCalls(stub func(lager.Logger) *exec.Cmd) {
+	fake.capacityCommandMutex.Lock()
+	defer fake.capacityCommandMutex.Unlock()
+	fake.CapacityCommandStub = stub
+}
+
+func (fake *FakeCommandCreator) CapacityCommandArgsForCall(i int) lager.Logger {
+	fake.capacityCommandMutex.RLock()
+	defer fake.capacityCommandMutex.RUnlock()
+	argsForCall := fake.capacityCommandArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeCommandCreator) CapacityCommandReturns(result1 *exec.Cmd) {
+	fake.capacityCommandMutex.Lock()
+	defer fake.capacityCommandMutex.Unlock()
+	fake.CapacityCommandStub = nil
+	fake.capacityCommandReturns = struct {
+		result1 *exec.Cmd
+	}{result1}
+}
+
+func (fake *FakeCommandCreator) CapacityCommandReturnsOnCall(i int, result1 *exec.Cmd) {
+	fake.capacityCommandMutex.Lock()
+	defer fake.capacityCommandMutex.Unlock()
+	fake.CapacityCommandStub = nil
+	if fake.capacityCommandReturnsOnCall == nil {
+		fake.capacityCommandReturnsOnCall = make(map[int]struct {
+			result1 *exec.Cmd
+		})
+	}
+	fake.capacityCommandReturnsOnCall[i] = struct {
+		result1 *exec.Cmd
+	}{result1}
 }
 
 func (fake *FakeCommandCreator) CreateCommand(arg1 lager.Logger, arg2 string, arg3 gardener.RootfsSpec) (*exec.Cmd, error) {
@@ -244,6 +315,8 @@ func (fake *FakeCommandCreator) MetricsCommandReturnsOnCall(i int, result1 *exec
 func (fake *FakeCommandCreator) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.capacityCommandMutex.RLock()
+	defer fake.capacityCommandMutex.RUnlock()
 	fake.createCommandMutex.RLock()
 	defer fake.createCommandMutex.RUnlock()
 	fake.destroyCommandMutex.RLock()

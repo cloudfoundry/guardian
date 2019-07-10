@@ -39,4 +39,10 @@ var _ = Describe("NotImplementedCommandCreator", func() {
 			Expect(notImplementedCommandCreator.MetricsCommand(nil, "")).To(BeNil())
 		})
 	})
+
+	Describe("CapacityCommand", func() {
+		It("returns nil", func() {
+			Expect(notImplementedCommandCreator.CapacityCommand(nil)).To(BeNil())
+		})
+	})
 })

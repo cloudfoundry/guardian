@@ -1210,6 +1210,7 @@ var _ = Describe("Gardener", func() {
 			sysinfoProvider.TotalMemoryReturns(999, nil)
 			sysinfoProvider.TotalDiskReturns(888, nil)
 			networker.CapacityReturns(1000)
+			volumizer.CapacityReturns(777, nil)
 		})
 
 		It("returns capacity", func() {
@@ -1217,8 +1218,33 @@ var _ = Describe("Gardener", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(capacity.MemoryInBytes).To(BeEquivalentTo(999))
-			Expect(capacity.DiskInBytes).To(BeEquivalentTo(888))
+			Expect(capacity.DiskInBytes).To(BeEquivalentTo(777))
 			Expect(capacity.MaxContainers).To(BeEquivalentTo(1000))
+		})
+
+		Context("when the volumizer fails", func() {
+			BeforeEach(func() {
+				volumizer.CapacityReturns(0, errors.New("capacity-error"))
+			})
+
+			It("falls back to the sys info provider", func() {
+				capacity, err := gdnr.Capacity()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(capacity.DiskInBytes).To(BeEquivalentTo(888))
+			})
+
+			Context("when the sys info provider fails too", func() {
+				BeforeEach(func() {
+					sysinfoProvider.TotalDiskReturns(0, errors.New("sysinfo-provider-error"))
+				})
+
+				It("returns an error", func() {
+					_, err := gdnr.Capacity()
+
+					Expect(err).To(MatchError(errors.New("sysinfo-provider-error")))
+				})
+			})
 		})
 
 		Context("when MaxContainers is not set ", func() {
@@ -1268,18 +1294,6 @@ var _ = Describe("Gardener", func() {
 			It("returns the error", func() {
 				_, err := gdnr.Capacity()
 				Expect(sysinfoProvider.TotalMemoryCallCount()).To(Equal(1))
-				Expect(err).To(MatchError(errors.New("whelp")))
-			})
-		})
-
-		Context("when getting the total disk fails", func() {
-			BeforeEach(func() {
-				sysinfoProvider.TotalDiskReturns(0, errors.New("whelp"))
-			})
-
-			It("returns the error", func() {
-				_, err := gdnr.Capacity()
-				Expect(sysinfoProvider.TotalDiskCallCount()).To(Equal(1))
 				Expect(err).To(MatchError(errors.New("whelp")))
 			})
 		})
