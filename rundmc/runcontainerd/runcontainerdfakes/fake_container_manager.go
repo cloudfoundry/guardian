@@ -50,14 +50,14 @@ type FakeContainerManager struct {
 	deleteReturnsOnCall map[int]struct {
 		result1 error
 	}
-	ExecStub        func(lager.Logger, string, string, *specs.Process, func() (io.Reader, io.Writer, io.Writer)) error
+	ExecStub        func(lager.Logger, string, string, *specs.Process, func() (io.Reader, io.Writer, io.Writer, bool)) error
 	execMutex       sync.RWMutex
 	execArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 string
 		arg3 string
 		arg4 *specs.Process
-		arg5 func() (io.Reader, io.Writer, io.Writer)
+		arg5 func() (io.Reader, io.Writer, io.Writer, bool)
 	}
 	execReturns struct {
 		result1 error
@@ -315,7 +315,7 @@ func (fake *FakeContainerManager) DeleteReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeContainerManager) Exec(arg1 lager.Logger, arg2 string, arg3 string, arg4 *specs.Process, arg5 func() (io.Reader, io.Writer, io.Writer)) error {
+func (fake *FakeContainerManager) Exec(arg1 lager.Logger, arg2 string, arg3 string, arg4 *specs.Process, arg5 func() (io.Reader, io.Writer, io.Writer, bool)) error {
 	fake.execMutex.Lock()
 	ret, specificReturn := fake.execReturnsOnCall[len(fake.execArgsForCall)]
 	fake.execArgsForCall = append(fake.execArgsForCall, struct {
@@ -323,7 +323,7 @@ func (fake *FakeContainerManager) Exec(arg1 lager.Logger, arg2 string, arg3 stri
 		arg2 string
 		arg3 string
 		arg4 *specs.Process
-		arg5 func() (io.Reader, io.Writer, io.Writer)
+		arg5 func() (io.Reader, io.Writer, io.Writer, bool)
 	}{arg1, arg2, arg3, arg4, arg5})
 	fake.recordInvocation("Exec", []interface{}{arg1, arg2, arg3, arg4, arg5})
 	fake.execMutex.Unlock()
@@ -343,13 +343,13 @@ func (fake *FakeContainerManager) ExecCallCount() int {
 	return len(fake.execArgsForCall)
 }
 
-func (fake *FakeContainerManager) ExecCalls(stub func(lager.Logger, string, string, *specs.Process, func() (io.Reader, io.Writer, io.Writer)) error) {
+func (fake *FakeContainerManager) ExecCalls(stub func(lager.Logger, string, string, *specs.Process, func() (io.Reader, io.Writer, io.Writer, bool)) error) {
 	fake.execMutex.Lock()
 	defer fake.execMutex.Unlock()
 	fake.ExecStub = stub
 }
 
-func (fake *FakeContainerManager) ExecArgsForCall(i int) (lager.Logger, string, string, *specs.Process, func() (io.Reader, io.Writer, io.Writer)) {
+func (fake *FakeContainerManager) ExecArgsForCall(i int) (lager.Logger, string, string, *specs.Process, func() (io.Reader, io.Writer, io.Writer, bool)) {
 	fake.execMutex.RLock()
 	defer fake.execMutex.RUnlock()
 	argsForCall := fake.execArgsForCall[i]

@@ -316,7 +316,7 @@ var _ = Describe("Runcontainerd", func() {
 			It("passes the io through", func() {
 				Expect(containerManager.ExecCallCount()).To(Equal(1))
 				_, _, _, _, actualIOFunc := containerManager.ExecArgsForCall(0)
-				actualIn, actualOut, actualErr := actualIOFunc()
+				actualIn, actualOut, actualErr, _ := actualIOFunc()
 
 				Expect(actualIn).To(Equal(processIO.Stdin))
 				Expect(actualOut).To(Equal(processIO.Stdout))

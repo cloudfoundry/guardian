@@ -47,7 +47,7 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, pi
 	}
 
 	log.Debug("creating-task", lager.Data{"containerID": containerID})
-	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(pio, n.ioFifoDir)), containerd.WithNoNewKeyring, WithCurrentUIDAndGID)
+	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(noTtyProcessIO(pio), n.ioFifoDir)), containerd.WithNoNewKeyring, WithCurrentUIDAndGID)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func (n *Nerd) State(log lager.Logger, containerID string) (int, string, error) 
 	return int(task.Pid()), string(status.Status), nil
 }
 
-func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer)) error {
+func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer, bool)) error {
 	_, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
 		return err
@@ -165,11 +165,21 @@ func exponentialBackoffCloseIO(process containerd.Process, ctx context.Context, 
 	}
 }
 
-func withProcessIO(processIO func() (io.Reader, io.Writer, io.Writer), ioFifoDir string) cio.Opt {
+func noTtyProcessIO(initProcessIO func() (io.Reader, io.Writer, io.Writer)) func() (io.Reader, io.Writer, io.Writer, bool) {
+	return func() (io.Reader, io.Writer, io.Writer, bool) {
+		stdin, stdout, stderr := initProcessIO()
+		return stdin, stdout, stderr, false
+	}
+}
+
+func withProcessIO(processIO func() (io.Reader, io.Writer, io.Writer, bool), ioFifoDir string) cio.Opt {
 	return func(opt *cio.Streams) {
-		stdin, stdout, stderr := processIO()
+		stdin, stdout, stderr, hasTTY := processIO()
 		cio.WithStreams(orEmpty(stdin), orDiscard(stdout), orDiscard(stderr))(opt)
 		cio.WithFIFODir(ioFifoDir)(opt)
+		if hasTTY {
+			cio.WithTerminal(opt)
+		}
 	}
 }
 

@@ -21,7 +21,7 @@ import (
 type ContainerManager interface {
 	Create(log lager.Logger, containerID string, spec *specs.Spec, processIO func() (io.Reader, io.Writer, io.Writer)) error
 	Delete(log lager.Logger, containerID string) error
-	Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer)) error
+	Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer, bool)) error
 	State(log lager.Logger, containerID string) (int, string, error)
 	GetContainerPID(log lager.Logger, containerID string) (uint32, error)
 	OOMEvents(log lager.Logger) <-chan *apievents.TaskOOM
@@ -122,8 +122,8 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 		gardenProcessSpec.ID = fmt.Sprintf("%s", randomID)
 	}
 
-	processIO := func() (io.Reader, io.Writer, io.Writer) {
-		return gardenIO.Stdin, gardenIO.Stdout, gardenIO.Stderr
+	processIO := func() (io.Reader, io.Writer, io.Writer, bool) {
+		return gardenIO.Stdin, gardenIO.Stdout, gardenIO.Stderr, gardenProcessSpec.TTY != nil
 	}
 
 	ociProcessSpec := r.processBuilder.BuildProcess(bundle, gardenProcessSpec, resolvedUser.Uid, resolvedUser.Gid)
