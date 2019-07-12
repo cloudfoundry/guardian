@@ -3,6 +3,7 @@ package runcontainerd
 import (
 	"fmt"
 	"io"
+	"regexp"
 	"syscall"
 
 	"code.cloudfoundry.org/garden"
@@ -128,10 +129,20 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 
 	ociProcessSpec := r.processBuilder.BuildProcess(bundle, gardenProcessSpec, resolvedUser.Uid, resolvedUser.Gid)
 	if err = r.containerManager.Exec(log, containerID, gardenProcessSpec.ID, ociProcessSpec, processIO); err != nil {
+		if isNoSuchExecutable(err) {
+			return nil, garden.ExecutableNotFoundError{Message: err.Error()}
+		}
 		return nil, err
 	}
 
 	return NewProcess(log, containerID, gardenProcessSpec.ID, r.processManager), nil
+}
+
+func isNoSuchExecutable(err error) bool {
+	noSuchFile := regexp.MustCompile(`starting container process caused \"exec: .*: stat .*: no such file or directory`)
+	executableNotFound := regexp.MustCompile(`starting container process caused \"exec: .*: executable file not found in \$PATH`)
+
+	return noSuchFile.MatchString(err.Error()) || executableNotFound.MatchString(err.Error())
 }
 
 func (r *RunContainerd) getBundle(log lager.Logger, containerID string) (goci.Bndl, error) {

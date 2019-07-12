@@ -376,6 +376,26 @@ var _ = Describe("Runcontainerd", func() {
 				})
 			})
 
+			Context("when the binary does not exist in $PATH", func() {
+				BeforeEach(func() {
+					containerManager.ExecReturns(errors.New("OCI runtime exec failed: exec failed: container_linux.go:345: starting container process caused \"exec: potato: executable file not found in $PATH"))
+				})
+
+				It("returns a garden.ExecutableNotFoundError error", func() {
+					Expect(execErr).To(BeAssignableToTypeOf(garden.ExecutableNotFoundError{}))
+				})
+			})
+
+			Context("when the binary is filly qualified and does not exist", func() {
+				BeforeEach(func() {
+					containerManager.ExecReturns(errors.New("OCI runtime exec failed: exec failed: container_linux.go:345: starting container process caused \"exec: potato: stat potato: no such file or directory"))
+				})
+
+				It("returns a garden.ExecutableNotFoundError error", func() {
+					Expect(execErr).To(BeAssignableToTypeOf(garden.ExecutableNotFoundError{}))
+				})
+			})
+
 			Describe("the process itself", func() {
 				BeforeEach(func() {
 					processManager.WaitReturns(17, nil)
