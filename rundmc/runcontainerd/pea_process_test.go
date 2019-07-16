@@ -16,6 +16,7 @@ var _ = Describe("PeaProcess", func() {
 		logger             lager.Logger
 		fakeProcessManager *runcontainerdfakes.FakeProcessManager
 		fakePeaManager     *runcontainerdfakes.FakePeaManager
+		fakeVolumizer      *runcontainerdfakes.FakeVolumizer
 
 		peaProcess *runcontainerd.PeaProcess
 	)
@@ -24,7 +25,8 @@ var _ = Describe("PeaProcess", func() {
 		logger = lagertest.NewTestLogger("test-logger")
 		fakeProcessManager = new(runcontainerdfakes.FakeProcessManager)
 		fakePeaManager = new(runcontainerdfakes.FakePeaManager)
-		peaProcess = runcontainerd.NewPeaProcess(logger, "pea-test", fakeProcessManager, fakePeaManager)
+		fakeVolumizer = new(runcontainerdfakes.FakeVolumizer)
+		peaProcess = runcontainerd.NewPeaProcess(logger, "pea-test", fakeProcessManager, fakePeaManager, fakeVolumizer)
 	})
 
 	Describe("Wait", func() {
@@ -69,6 +71,23 @@ var _ = Describe("PeaProcess", func() {
 				Expect(err).To(MatchError("boom"))
 			})
 		})
-	})
 
+		It("destroys the pea image", func() {
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeVolumizer.DestroyCallCount()).To(Equal(1))
+			_, containerId := fakeVolumizer.DestroyArgsForCall(0)
+			Expect(containerId).To(Equal("pea-test"))
+		})
+
+		When("destroying the pea image fails", func() {
+			BeforeEach(func() {
+				fakeVolumizer.DestroyReturns(errors.New("destroy-err"))
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("destroy-err"))
+			})
+		})
+	})
 })

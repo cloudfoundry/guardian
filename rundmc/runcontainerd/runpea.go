@@ -15,9 +15,15 @@ type PeaManager interface {
 	RemoveBundle(log lager.Logger, containerID string) error
 }
 
+//go:generate counterfeiter . Volumizer
+type Volumizer interface {
+	Destroy(log lager.Logger, handle string) error
+}
+
 type RunContainerPea struct {
 	PeaManager     PeaManager
 	ProcessManager ProcessManager
+	Volumizer      Volumizer
 }
 
 func (r *RunContainerPea) RunPea(
@@ -29,7 +35,7 @@ func (r *RunContainerPea) RunPea(
 		return &Process{}, err
 	}
 
-	return NewPeaProcess(log, processID, r.ProcessManager, r.PeaManager), nil
+	return NewPeaProcess(log, processID, r.ProcessManager, r.PeaManager, r.Volumizer), nil
 }
 
 func (r *RunContainerPea) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {

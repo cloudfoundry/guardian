@@ -146,7 +146,7 @@ func (f *LinuxFactory) WireRootfsFileCreator() depot.RootfsFileCreator {
 	return preparerootfs.SymlinkRefusingFileCreator{}
 }
 
-func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, peas.BundleLoader, error) {
+func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger, volumizer peas.Volumizer) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, peas.BundleLoader, error) {
 	containerdClient, err := containerd.New(f.config.Containerd.Socket)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
@@ -163,6 +163,7 @@ func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, use
 	peaRunner := &runcontainerd.RunContainerPea{
 		PeaManager:     containerdManager,
 		ProcessManager: nerd,
+		Volumizer:      volumizer,
 	}
 
 	privilegeChecker := &privchecker.PrivilegeChecker{ContainerManager: nerd, Log: log}
