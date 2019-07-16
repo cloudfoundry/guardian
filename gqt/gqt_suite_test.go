@@ -440,9 +440,19 @@ func isContainerd() bool {
 	return os.Getenv("CONTAINERD_ENABLED") == "true"
 }
 
+func isContainerdWithProcesses() bool {
+	return os.Getenv("CONTAINERD_WITH_PROCESSES_ENABLED") == "true"
+}
+
 func skipIfContainerd() {
 	if isContainerd() {
 		Skip("irrelevant test for containerd mode")
+	}
+}
+
+func skipIfContainerdWithProcesses(reason string) {
+	if isContainerdWithProcesses() {
+		Skip(reason)
 	}
 }
 
@@ -469,6 +479,7 @@ func getRuncRoot() string {
 func startContainerd(runDir string) *gexec.Session {
 	containerdConfig := containerdrunner.ContainerdConfig(runDir)
 	config.ContainerdSocket = containerdConfig.GRPC.Address
+	config.UseContainerdForProcesses = boolptr(isContainerdWithProcesses())
 	return containerdrunner.NewSession(runDir, containerdConfig)
 }
 
