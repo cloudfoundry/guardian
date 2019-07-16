@@ -546,6 +546,29 @@ func pidFromProcessesOutput(processesOutput, id string) string {
 	return "0"
 }
 
+func getContainerPids(ctr, socket, containerID string) []string {
+	// processesOutput expected to be of the form:
+	// PID      INFO
+	// 23296    -
+	// 23437    &ProcessDetails{ExecID:ctrd-pea-id,}
+
+	processesOutput := runCtr(ctr, socket, []string{"tasks", "ps", containerID})
+	processesOutputLines := strings.Split(strings.TrimSpace(processesOutput), "\n")
+
+	var pids []string
+	// Here we exclude the first header line
+	for _, processesOutputLine := range processesOutputLines[1:] {
+		pids = append(pids, strings.Split(processesOutputLine, " ")[0])
+	}
+
+	return pids
+}
+
+func getContainerdProcessPid(ctr, socket, containerID, processID string) string {
+	processesOutput := runCtr(ctr, socket, []string{"tasks", "ps", containerID})
+	return pidFromProcessesOutput(processesOutput, processID)
+}
+
 func runCtr(ctr, socket string, args []string) string {
 	defaultArgs := []string{"--address", socket, "--namespace", "garden"}
 	cmd := exec.Command(ctr, append(defaultArgs, args...)...)

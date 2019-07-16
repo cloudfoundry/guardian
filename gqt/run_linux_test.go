@@ -634,15 +634,19 @@ var _ = Describe("Attach", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			processID = process.ID()
-			hostProcessDir := filepath.Join(client.DepotDir, container.Handle(), "processes", processID)
-			hostPidFilePath := filepath.Join(hostProcessDir, "pidfile")
 
-			// Finds the pid on the host.
-			pidFileContent := readFileString(hostPidFilePath)
+			var pidString string
+			if isContainerdWithProcesses() {
+				pidString = getContainerdProcessPid("ctr", config.ContainerdSocket, container.Handle(), process.ID())
+			} else {
+				hostProcessDir := filepath.Join(client.DepotDir, container.Handle(), "processes", processID)
+				hostPidFilePath := filepath.Join(hostProcessDir, "pidfile")
+				pidString = readFileString(hostPidFilePath)
+			}
 
 			Expect(client.Stop()).To(Succeed())
 
-			pid, err := strconv.Atoi(pidFileContent)
+			pid, err := strconv.Atoi(pidString)
 			Expect(err).NotTo(HaveOccurred())
 
 			hostProcess, err := os.FindProcess(pid)

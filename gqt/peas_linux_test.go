@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"code.cloudfoundry.org/garden"
@@ -313,10 +314,32 @@ var _ = Describe("Partially shared containers (peas)", func() {
 })
 
 func collectPeaPids(handle string) []string {
+	if isContainerdWithProcesses() {
+		return collectContainerdPeaPids(handle)
+	}
+
+	return collectRuncPeaPids(handle)
+}
+
+func collectContainerdPeaPids(handle string) []string {
+	allPids := getContainerPids("ctr", config.ContainerdSocket, handle)
+	if len(allPids) == 0 {
+		return []string{}
+	}
+	sort.Strings(allPids)
+	// Filter out the init process PID (the init process pid is the lowest among all container pids)
+	return allPids[1:]
+}
+
+func collectRuncPeaPids(handle string) []string {
 	peaPids := []string{}
 	processesDir := filepath.Join(config.DepotDir, handle, "processes")
 
 	err := filepath.Walk(processesDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
 		if info.IsDir() {
 			return nil
 		}
