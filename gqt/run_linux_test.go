@@ -100,7 +100,7 @@ var _ = Describe("Run", func() {
 
 		Context("when --cleanup-process-dirs-on-wait is not set (default)", func() {
 			It("does not delete the process directory", func() {
-				skipIfContainerdWithProcesses("There is no processes directory in the depot when running processes with containerd")
+				skipIfContainerdForProcesses("There is no processes directory in the depot when running processes with containerd")
 				Expect(processPath).To(BeADirectory())
 			})
 
@@ -128,7 +128,7 @@ var _ = Describe("Run", func() {
 	})
 
 	It("creates process files with the right permisssion and ownership", func() {
-		skipIfContainerdWithProcesses("There is no processes directory in the depot when running processes with containerd")
+		skipIfContainerdForProcesses("There is no processes directory in the depot when running processes with containerd")
 		client = runner.Start(config)
 		container, err := client.Create(garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())
@@ -393,7 +393,7 @@ var _ = Describe("Run", func() {
 
 			BeforeEach(func() {
 				//TODO: maybe we can make containerd use a different runc and make it work?
-				skipIfContainerdWithProcesses("When running processes with containerd we are not calling runc directly. We could probably consider making containerd use a fake runc binary if we believe this test has any value")
+				skipIfContainerdForProcesses("When running processes with containerd we are not calling runc directly. We could probably consider making containerd use a fake runc binary if we believe this test has any value")
 				propertiesDir = tempDir("", "props")
 
 				config.PropertiesPath = path.Join(propertiesDir, "props.json")
@@ -636,7 +636,7 @@ var _ = Describe("Attach", func() {
 			processID = process.ID()
 
 			var pidString string
-			if isContainerdWithProcesses() {
+			if isContainerdForProcesses() {
 				pidString = getContainerdProcessPid("ctr", config.ContainerdSocket, container.Handle(), process.ID())
 			} else {
 				hostProcessDir := filepath.Join(client.DepotDir, container.Handle(), "processes", processID)

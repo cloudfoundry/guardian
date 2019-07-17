@@ -74,7 +74,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		})
 
 		It("should not leak process dirs", func() {
-			skipIfContainerdWithProcesses("processes direcotry in the depot is not created for peas run via containerd")
+			skipIfContainerdForProcesses("processes direcotry in the depot is not created for peas run via containerd")
 			numProcessDirsBefore := numProcessDirs(ctr.Handle())
 
 			process, err := ctr.Run(garden.ProcessSpec{
@@ -208,7 +208,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		var processPath string
 
 		BeforeEach(func() {
-			skipIfContainerdWithProcesses("There is no process directory in the depot when processes are run via containerd")
+			skipIfContainerdForProcesses("There is no process directory in the depot when processes are run via containerd")
 		})
 
 		JustBeforeEach(func() {
@@ -314,7 +314,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 })
 
 func collectPeaPids(handle string) []string {
-	if isContainerdWithProcesses() {
+	if isContainerdForProcesses() {
 		return collectContainerdPeaPids(handle)
 	}
 
