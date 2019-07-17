@@ -3,7 +3,10 @@ package runcontainerd
 import (
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"regexp"
+	"strconv"
 	"syscall"
 
 	"code.cloudfoundry.org/garden"
@@ -12,6 +15,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/users"
+	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	apievents "github.com/containerd/containerd/api/events"
 	uuid "github.com/nu7hatch/gouuid"
@@ -53,6 +57,11 @@ type Statser interface {
 	Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)
 }
 
+//go:generate counterfeiter . Mkdirer
+type Mkdirer interface {
+	MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
+}
+
 type RunContainerd struct {
 	containerManager          ContainerManager
 	processManager            ProcessManager
@@ -62,9 +71,10 @@ type RunContainerd struct {
 	useContainerdForProcesses bool
 	userLookupper             users.UserLookupper
 	cgroupManager             CgroupManager
+	mkdirer                   Mkdirer
 }
 
-func New(containerManager ContainerManager, processManager ProcessManager, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager) *RunContainerd {
+func New(containerManager ContainerManager, processManager ProcessManager, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager, mkdirer Mkdirer) *RunContainerd {
 	return &RunContainerd{
 		containerManager:          containerManager,
 		processManager:            processManager,
@@ -74,6 +84,7 @@ func New(containerManager ContainerManager, processManager ProcessManager, proce
 		useContainerdForProcesses: useContainerdForProcesses,
 		userLookupper:             userLookupper,
 		cgroupManager:             cgroupManager,
+		mkdirer:                   mkdirer,
 	}
 }
 
@@ -110,11 +121,21 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 		return nil, err
 	}
 
+	rootfsPath := filepath.Join("/proc", strconv.FormatInt(int64(containerPid), 10), "root")
+
+	hostUID := idmapper.MappingList(bundle.Spec.Linux.UIDMappings).Map(resolvedUser.Uid)
+	hostGID := idmapper.MappingList(bundle.Spec.Linux.GIDMappings).Map(resolvedUser.Gid)
+
 	if gardenProcessSpec.Dir == "" {
 		gardenProcessSpec.Dir = resolvedUser.Home
 	}
 
-	// TODO: use the uidgenerator
+	err = r.mkdirer.MkdirAs(rootfsPath, hostUID, hostGID, 0755, false, gardenProcessSpec.Dir)
+	if err != nil {
+		log.Error("create-workdir-failed", err)
+		return nil, err
+	}
+
 	if gardenProcessSpec.ID == "" {
 		randomID, err := uuid.NewV4()
 		if err != nil {

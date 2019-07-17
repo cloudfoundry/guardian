@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"syscall"
 
 	"code.cloudfoundry.org/garden"
@@ -36,6 +38,7 @@ var _ = Describe("Runcontainerd", func() {
 		processBuilder   *runcontainerdfakes.FakeProcessBuilder
 		userLookupper    *usersfakes.FakeUserLookupper
 		cgroupManager    *runcontainerdfakes.FakeCgroupManager
+		mkdirer          *runcontainerdfakes.FakeMkdirer
 	)
 
 	BeforeEach(func() {
@@ -47,8 +50,9 @@ var _ = Describe("Runcontainerd", func() {
 		processBuilder = new(runcontainerdfakes.FakeProcessBuilder)
 		userLookupper = new(usersfakes.FakeUserLookupper)
 		cgroupManager = new(runcontainerdfakes.FakeCgroupManager)
+		mkdirer = new(runcontainerdfakes.FakeMkdirer)
 
-		runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager)
+		runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer)
 	})
 
 	Describe("Create", func() {
@@ -116,7 +120,7 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("when using containerd for processes", func() {
 			BeforeEach(func() {
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer)
 			})
 
 			It("sets the container to use the memory hierarchy", func() {
@@ -239,11 +243,24 @@ var _ = Describe("Runcontainerd", func() {
 			processSpec = garden.ProcessSpec{
 				ID:   "test-process-id",
 				User: "alice",
+				Dir:  "process-dir",
 			}
 			processBuilder.BuildProcessReturns(&specs.Process{
 				Args: []string{"test-binary"},
 			})
-			bundle = goci.Bndl{Spec: specs.Spec{Hostname: "test-hostname"}}
+			bundle = goci.Bndl{
+				Spec: specs.Spec{
+					Hostname: "test-hostname",
+					Linux:    &specs.Linux{},
+				}}.WithUIDMappings(specs.LinuxIDMapping{
+				ContainerID: 1000,
+				HostID:      2000,
+				Size:        10,
+			}).WithGIDMappings(specs.LinuxIDMapping{
+				ContainerID: 1000,
+				HostID:      2000,
+				Size:        10,
+			})
 			containerManager.SpecReturns(&bundle.Spec, nil)
 			processIO = garden.ProcessIO{
 				Stdin:  gbytes.NewBuffer(),
@@ -304,7 +321,7 @@ var _ = Describe("Runcontainerd", func() {
 
 				containerManager.GetContainerPIDReturns(1234, nil)
 				containerManager.ExecReturns(nil)
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer)
 			})
 
 			It("passes the logger through", func() {
@@ -364,6 +381,17 @@ var _ = Describe("Runcontainerd", func() {
 				Expect(ociProcessGid).To(Equal(1001))
 			})
 
+			It("sets up the working directory", func() {
+				Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
+				rootfsPath, hostUID, hostGID, mode, shouldRecreate, workDir := mkdirer.MkdirAsArgsForCall(0)
+				Expect(rootfsPath).To(Equal(filepath.Join("/proc", "1234", "root")))
+				Expect(hostUID).To(Equal(2000))
+				Expect(hostGID).To(Equal(2001))
+				Expect(mode).To(Equal(os.FileMode(0755)))
+				Expect(shouldRecreate).To(BeFalse())
+				Expect(workDir).To(ConsistOf(processSpec.Dir))
+			})
+
 			Context("when processSpec.ID is not set", func() {
 				BeforeEach(func() {
 					processSpec.ID = ""
@@ -393,6 +421,16 @@ var _ = Describe("Runcontainerd", func() {
 
 				It("returns a garden.ExecutableNotFoundError error", func() {
 					Expect(execErr).To(BeAssignableToTypeOf(garden.ExecutableNotFoundError{}))
+				})
+			})
+
+			Context("when creating the work dir fails", func() {
+				BeforeEach(func() {
+					mkdirer.MkdirAsReturns(errors.New("HUBABUBA"))
+				})
+
+				It("propagates the error", func() {
+					Expect(execErr).To(MatchError("HUBABUBA"))
 				})
 			})
 
