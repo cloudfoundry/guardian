@@ -106,6 +106,7 @@ var _ = Describe("Run", func() {
 
 			Context("when we reattach", func() {
 				It("can be Waited for again", func() {
+					skipIfContainerdForProcesses("Attach is not implemented for pure containerd")
 					reattachedProcess, err := container.Attach(process.ID(), garden.ProcessIO{})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -578,6 +579,7 @@ var _ = Describe("Attach", func() {
 	)
 
 	BeforeEach(func() {
+		skipIfContainerdForProcesses("Attach is not implemented yet")
 		// we need to pass --properties-path to prevent guardian from deleting containers
 		// after restarting the server
 		config.PropertiesPath = path.Join(tempDir("", "props"), "props.json")

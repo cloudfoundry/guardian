@@ -259,6 +259,7 @@ var _ = Describe("Surviving Restarts", func() {
 				})
 
 				It("can reattach to processes that are still running", func() {
+					skipIfContainerdForProcesses("Attach is not implemented for pure containerd")
 					out := gbytes.NewBuffer()
 					process, err := container.Attach(existingProc.ID(), garden.ProcessIO{
 						Stdout: io.MultiWriter(GinkgoWriter, out),
