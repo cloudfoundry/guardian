@@ -1,7 +1,6 @@
 package runrunc_test
 
 import (
-	"errors"
 	"os/exec"
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
@@ -14,15 +13,14 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Delete", func() {
+var _ = Describe("RuncDeleter", func() {
 	var (
 		commandRunner *fake_command_runner.FakeCommandRunner
 		runner        *fakes.FakeRuncCmdRunner
 		runcBinary    *fakes.FakeRuncBinary
-		stater        *fakes.FakeRuncStater
 		logger        *lagertest.TestLogger
 
-		deleter *runrunc.Deleter
+		deleter *runrunc.RuncDeleter
 	)
 
 	BeforeEach(func() {
@@ -31,13 +29,10 @@ var _ = Describe("Delete", func() {
 		runner = new(fakes.FakeRuncCmdRunner)
 		logger = lagertest.NewTestLogger("test")
 
-		stater = new(fakes.FakeRuncStater)
-		stater.StateReturns(runrunc.State{Status: runrunc.CreatedStatus}, nil)
-
 	})
 
 	JustBeforeEach(func() {
-		deleter = runrunc.NewDeleter(runner, runcBinary, stater)
+		deleter = runrunc.NewDeleter(runner, runcBinary)
 
 		runcBinary.DeleteCommandStub = func(id string, force bool, logFile string) *exec.Cmd {
 			if force {
@@ -53,74 +48,20 @@ var _ = Describe("Delete", func() {
 	})
 
 	It("runs 'runc delete' in the container directory using the logging runner", func() {
-		Expect(deleter.Delete(logger, "some-container")).To(Succeed())
+		Expect(deleter.Delete(logger, "some-container", false)).To(Succeed())
 		Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
 			Path: "funC",
 			Args: []string{"--log", "potato.log", "delete", "some-container"},
 		}))
 	})
 
-	Context("when getting the state fails", func() {
-		BeforeEach(func() {
-			stater.StateReturns(runrunc.State{}, errors.New("poptato"))
-		})
-
-		It("propagates the error", func() {
-			Expect(deleter.Delete(logger, "some-container")).To(Succeed())
-			Expect(runner.RunAndLogCallCount()).To(Equal(0))
-		})
-	})
-
-	Context("when state is running", func() {
-		BeforeEach(func() {
-			stater.StateReturns(runrunc.State{Status: runrunc.RunningStatus}, nil)
-		})
-
+	Context("when delete with force", func() {
 		It("calls the delete command with force", func() {
-			Expect(deleter.Delete(logger, "some-container")).To(Succeed())
+			Expect(deleter.Delete(logger, "some-container", true)).To(Succeed())
 			Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
 				Path: "funC",
 				Args: []string{"--log", "potato.log", "delete", "some-container", "--force"},
 			}))
-		})
-	})
-
-	Context("when state is created", func() {
-		BeforeEach(func() {
-			stater.StateReturns(runrunc.State{Status: runrunc.CreatedStatus}, nil)
-		})
-
-		It("calls the delete command", func() {
-			Expect(deleter.Delete(logger, "some-container")).To(Succeed())
-			Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-				Path: "funC",
-				Args: []string{"--log", "potato.log", "delete", "some-container"},
-			}))
-		})
-	})
-
-	Context("when state is stopped", func() {
-		BeforeEach(func() {
-			stater.StateReturns(runrunc.State{Status: runrunc.StoppedStatus}, nil)
-		})
-
-		It("calls the delete command", func() {
-			Expect(deleter.Delete(logger, "some-container")).To(Succeed())
-			Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-				Path: "funC",
-				Args: []string{"--log", "potato.log", "delete", "some-container"},
-			}))
-		})
-	})
-
-	Context("when state is such that it should not result in a delete", func() {
-		BeforeEach(func() {
-			stater.StateReturns(runrunc.State{Status: "random-state"}, nil)
-		})
-
-		It("calls the delete command with force", func() {
-			Expect(deleter.Delete(logger, "some-container")).To(Succeed())
-			Expect(runner.RunAndLogCallCount()).To(Equal(0))
 		})
 	})
 })

@@ -204,15 +204,15 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		})
 	})
 
-	Describe("Process dir cleanup", func() {
-		var processPath string
-
-		BeforeEach(func() {
-			skipIfContainerdForProcesses("There is no process directory in the depot when processes are run via containerd")
-		})
+	Describe("Pea process cleanup", func() {
+		var (
+			process     garden.Process
+			processPath string
+		)
 
 		JustBeforeEach(func() {
-			process, err := ctr.Run(garden.ProcessSpec{
+			var err error
+			process, err = ctr.Run(garden.ProcessSpec{
 				Path:  "echo",
 				Args:  []string{"hello"},
 				Image: garden.ImageRef{URI: "raw://" + peaRootfs},
@@ -222,17 +222,33 @@ var _ = Describe("Partially shared containers (peas)", func() {
 			processPath = filepath.Join(gdn.DepotDir, ctr.Handle(), "processes", process.ID())
 		})
 
-		It("should not delete pea process dir", func() {
-			Expect(processPath).To(BeADirectory())
-		})
-
-		Context("when --cleanup-process-dirs-on-wait is set", func() {
+		Context("when using containerd for processes", func() {
 			BeforeEach(func() {
-				config.CleanupProcessDirsOnWait = boolptr(true)
+				skipIfRunDmcForProcesses("There is no containers in containerd when processes are run via rundmc")
 			})
 
-			It("should delete pea process dir", func() {
-				Expect(processPath).NotTo(BeADirectory())
+			It("should delete the backing containerd container", func() {
+				Expect(runCtr("ctr", config.ContainerdSocket, []string{"containers", "ls"})).NotTo(ContainSubstring(process.ID()))
+			})
+		})
+
+		Context("when using rundmc for processes", func() {
+			BeforeEach(func() {
+				skipIfContainerdForProcesses("There is no process directory in the depot when processes are run via containerd")
+			})
+
+			It("should not delete pea process dir", func() {
+				Expect(processPath).To(BeADirectory())
+			})
+
+			Context("when --cleanup-process-dirs-on-wait is set", func() {
+				BeforeEach(func() {
+					config.CleanupProcessDirsOnWait = boolptr(true)
+				})
+
+				It("should delete pea process dir", func() {
+					Expect(processPath).NotTo(BeADirectory())
+				})
 			})
 		})
 	})

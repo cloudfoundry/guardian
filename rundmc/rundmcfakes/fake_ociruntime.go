@@ -9,7 +9,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -30,18 +29,6 @@ type FakeOCIRuntime struct {
 		result1 garden.Process
 		result2 error
 	}
-	BundleIDsStub        func() ([]string, error)
-	bundleIDsMutex       sync.RWMutex
-	bundleIDsArgsForCall []struct {
-	}
-	bundleIDsReturns struct {
-		result1 []string
-		result2 error
-	}
-	bundleIDsReturnsOnCall map[int]struct {
-		result1 []string
-		result2 error
-	}
 	BundleInfoStub        func(lager.Logger, string) (string, goci.Bndl, error)
 	bundleInfoMutex       sync.RWMutex
 	bundleInfoArgsForCall []struct {
@@ -57,6 +44,32 @@ type FakeOCIRuntime struct {
 		result1 string
 		result2 goci.Bndl
 		result3 error
+	}
+	ContainerHandlesStub        func() ([]string, error)
+	containerHandlesMutex       sync.RWMutex
+	containerHandlesArgsForCall []struct {
+	}
+	containerHandlesReturns struct {
+		result1 []string
+		result2 error
+	}
+	containerHandlesReturnsOnCall map[int]struct {
+		result1 []string
+		result2 error
+	}
+	ContainerPeaHandlesStub        func(lager.Logger, string) ([]string, error)
+	containerPeaHandlesMutex       sync.RWMutex
+	containerPeaHandlesArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+	}
+	containerPeaHandlesReturns struct {
+		result1 []string
+		result2 error
+	}
+	containerPeaHandlesReturnsOnCall map[int]struct {
+		result1 []string
+		result2 error
 	}
 	CreateStub        func(lager.Logger, string, goci.Bndl, garden.ProcessIO) error
 	createMutex       sync.RWMutex
@@ -125,18 +138,18 @@ type FakeOCIRuntime struct {
 	removeBundleReturnsOnCall map[int]struct {
 		result1 error
 	}
-	StateStub        func(lager.Logger, string) (runrunc.State, error)
+	StateStub        func(lager.Logger, string) (rundmc.State, error)
 	stateMutex       sync.RWMutex
 	stateArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 string
 	}
 	stateReturns struct {
-		result1 runrunc.State
+		result1 rundmc.State
 		result2 error
 	}
 	stateReturnsOnCall map[int]struct {
-		result1 runrunc.State
+		result1 rundmc.State
 		result2 error
 	}
 	StatsStub        func(lager.Logger, string) (gardener.StatsContainerMetrics, error)
@@ -223,61 +236,6 @@ func (fake *FakeOCIRuntime) AttachReturnsOnCall(i int, result1 garden.Process, r
 	}{result1, result2}
 }
 
-func (fake *FakeOCIRuntime) BundleIDs() ([]string, error) {
-	fake.bundleIDsMutex.Lock()
-	ret, specificReturn := fake.bundleIDsReturnsOnCall[len(fake.bundleIDsArgsForCall)]
-	fake.bundleIDsArgsForCall = append(fake.bundleIDsArgsForCall, struct {
-	}{})
-	fake.recordInvocation("BundleIDs", []interface{}{})
-	fake.bundleIDsMutex.Unlock()
-	if fake.BundleIDsStub != nil {
-		return fake.BundleIDsStub()
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	fakeReturns := fake.bundleIDsReturns
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakeOCIRuntime) BundleIDsCallCount() int {
-	fake.bundleIDsMutex.RLock()
-	defer fake.bundleIDsMutex.RUnlock()
-	return len(fake.bundleIDsArgsForCall)
-}
-
-func (fake *FakeOCIRuntime) BundleIDsCalls(stub func() ([]string, error)) {
-	fake.bundleIDsMutex.Lock()
-	defer fake.bundleIDsMutex.Unlock()
-	fake.BundleIDsStub = stub
-}
-
-func (fake *FakeOCIRuntime) BundleIDsReturns(result1 []string, result2 error) {
-	fake.bundleIDsMutex.Lock()
-	defer fake.bundleIDsMutex.Unlock()
-	fake.BundleIDsStub = nil
-	fake.bundleIDsReturns = struct {
-		result1 []string
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeOCIRuntime) BundleIDsReturnsOnCall(i int, result1 []string, result2 error) {
-	fake.bundleIDsMutex.Lock()
-	defer fake.bundleIDsMutex.Unlock()
-	fake.BundleIDsStub = nil
-	if fake.bundleIDsReturnsOnCall == nil {
-		fake.bundleIDsReturnsOnCall = make(map[int]struct {
-			result1 []string
-			result2 error
-		})
-	}
-	fake.bundleIDsReturnsOnCall[i] = struct {
-		result1 []string
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *FakeOCIRuntime) BundleInfo(arg1 lager.Logger, arg2 string) (string, goci.Bndl, error) {
 	fake.bundleInfoMutex.Lock()
 	ret, specificReturn := fake.bundleInfoReturnsOnCall[len(fake.bundleInfoArgsForCall)]
@@ -343,6 +301,125 @@ func (fake *FakeOCIRuntime) BundleInfoReturnsOnCall(i int, result1 string, resul
 		result2 goci.Bndl
 		result3 error
 	}{result1, result2, result3}
+}
+
+func (fake *FakeOCIRuntime) ContainerHandles() ([]string, error) {
+	fake.containerHandlesMutex.Lock()
+	ret, specificReturn := fake.containerHandlesReturnsOnCall[len(fake.containerHandlesArgsForCall)]
+	fake.containerHandlesArgsForCall = append(fake.containerHandlesArgsForCall, struct {
+	}{})
+	fake.recordInvocation("ContainerHandles", []interface{}{})
+	fake.containerHandlesMutex.Unlock()
+	if fake.ContainerHandlesStub != nil {
+		return fake.ContainerHandlesStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.containerHandlesReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeOCIRuntime) ContainerHandlesCallCount() int {
+	fake.containerHandlesMutex.RLock()
+	defer fake.containerHandlesMutex.RUnlock()
+	return len(fake.containerHandlesArgsForCall)
+}
+
+func (fake *FakeOCIRuntime) ContainerHandlesCalls(stub func() ([]string, error)) {
+	fake.containerHandlesMutex.Lock()
+	defer fake.containerHandlesMutex.Unlock()
+	fake.ContainerHandlesStub = stub
+}
+
+func (fake *FakeOCIRuntime) ContainerHandlesReturns(result1 []string, result2 error) {
+	fake.containerHandlesMutex.Lock()
+	defer fake.containerHandlesMutex.Unlock()
+	fake.ContainerHandlesStub = nil
+	fake.containerHandlesReturns = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeOCIRuntime) ContainerHandlesReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.containerHandlesMutex.Lock()
+	defer fake.containerHandlesMutex.Unlock()
+	fake.ContainerHandlesStub = nil
+	if fake.containerHandlesReturnsOnCall == nil {
+		fake.containerHandlesReturnsOnCall = make(map[int]struct {
+			result1 []string
+			result2 error
+		})
+	}
+	fake.containerHandlesReturnsOnCall[i] = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeOCIRuntime) ContainerPeaHandles(arg1 lager.Logger, arg2 string) ([]string, error) {
+	fake.containerPeaHandlesMutex.Lock()
+	ret, specificReturn := fake.containerPeaHandlesReturnsOnCall[len(fake.containerPeaHandlesArgsForCall)]
+	fake.containerPeaHandlesArgsForCall = append(fake.containerPeaHandlesArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("ContainerPeaHandles", []interface{}{arg1, arg2})
+	fake.containerPeaHandlesMutex.Unlock()
+	if fake.ContainerPeaHandlesStub != nil {
+		return fake.ContainerPeaHandlesStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.containerPeaHandlesReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeOCIRuntime) ContainerPeaHandlesCallCount() int {
+	fake.containerPeaHandlesMutex.RLock()
+	defer fake.containerPeaHandlesMutex.RUnlock()
+	return len(fake.containerPeaHandlesArgsForCall)
+}
+
+func (fake *FakeOCIRuntime) ContainerPeaHandlesCalls(stub func(lager.Logger, string) ([]string, error)) {
+	fake.containerPeaHandlesMutex.Lock()
+	defer fake.containerPeaHandlesMutex.Unlock()
+	fake.ContainerPeaHandlesStub = stub
+}
+
+func (fake *FakeOCIRuntime) ContainerPeaHandlesArgsForCall(i int) (lager.Logger, string) {
+	fake.containerPeaHandlesMutex.RLock()
+	defer fake.containerPeaHandlesMutex.RUnlock()
+	argsForCall := fake.containerPeaHandlesArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeOCIRuntime) ContainerPeaHandlesReturns(result1 []string, result2 error) {
+	fake.containerPeaHandlesMutex.Lock()
+	defer fake.containerPeaHandlesMutex.Unlock()
+	fake.ContainerPeaHandlesStub = nil
+	fake.containerPeaHandlesReturns = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeOCIRuntime) ContainerPeaHandlesReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.containerPeaHandlesMutex.Lock()
+	defer fake.containerPeaHandlesMutex.Unlock()
+	fake.ContainerPeaHandlesStub = nil
+	if fake.containerPeaHandlesReturnsOnCall == nil {
+		fake.containerPeaHandlesReturnsOnCall = make(map[int]struct {
+			result1 []string
+			result2 error
+		})
+	}
+	fake.containerPeaHandlesReturnsOnCall[i] = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeOCIRuntime) Create(arg1 lager.Logger, arg2 string, arg3 goci.Bndl, arg4 garden.ProcessIO) error {
@@ -659,7 +736,7 @@ func (fake *FakeOCIRuntime) RemoveBundleReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeOCIRuntime) State(arg1 lager.Logger, arg2 string) (runrunc.State, error) {
+func (fake *FakeOCIRuntime) State(arg1 lager.Logger, arg2 string) (rundmc.State, error) {
 	fake.stateMutex.Lock()
 	ret, specificReturn := fake.stateReturnsOnCall[len(fake.stateArgsForCall)]
 	fake.stateArgsForCall = append(fake.stateArgsForCall, struct {
@@ -684,7 +761,7 @@ func (fake *FakeOCIRuntime) StateCallCount() int {
 	return len(fake.stateArgsForCall)
 }
 
-func (fake *FakeOCIRuntime) StateCalls(stub func(lager.Logger, string) (runrunc.State, error)) {
+func (fake *FakeOCIRuntime) StateCalls(stub func(lager.Logger, string) (rundmc.State, error)) {
 	fake.stateMutex.Lock()
 	defer fake.stateMutex.Unlock()
 	fake.StateStub = stub
@@ -697,28 +774,28 @@ func (fake *FakeOCIRuntime) StateArgsForCall(i int) (lager.Logger, string) {
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeOCIRuntime) StateReturns(result1 runrunc.State, result2 error) {
+func (fake *FakeOCIRuntime) StateReturns(result1 rundmc.State, result2 error) {
 	fake.stateMutex.Lock()
 	defer fake.stateMutex.Unlock()
 	fake.StateStub = nil
 	fake.stateReturns = struct {
-		result1 runrunc.State
+		result1 rundmc.State
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeOCIRuntime) StateReturnsOnCall(i int, result1 runrunc.State, result2 error) {
+func (fake *FakeOCIRuntime) StateReturnsOnCall(i int, result1 rundmc.State, result2 error) {
 	fake.stateMutex.Lock()
 	defer fake.stateMutex.Unlock()
 	fake.StateStub = nil
 	if fake.stateReturnsOnCall == nil {
 		fake.stateReturnsOnCall = make(map[int]struct {
-			result1 runrunc.State
+			result1 rundmc.State
 			result2 error
 		})
 	}
 	fake.stateReturnsOnCall[i] = struct {
-		result1 runrunc.State
+		result1 rundmc.State
 		result2 error
 	}{result1, result2}
 }
@@ -792,10 +869,12 @@ func (fake *FakeOCIRuntime) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.attachMutex.RLock()
 	defer fake.attachMutex.RUnlock()
-	fake.bundleIDsMutex.RLock()
-	defer fake.bundleIDsMutex.RUnlock()
 	fake.bundleInfoMutex.RLock()
 	defer fake.bundleInfoMutex.RUnlock()
+	fake.containerHandlesMutex.RLock()
+	defer fake.containerHandlesMutex.RUnlock()
+	fake.containerPeaHandlesMutex.RLock()
+	defer fake.containerPeaHandlesMutex.RUnlock()
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	fake.deleteMutex.RLock()

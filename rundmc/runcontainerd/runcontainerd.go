@@ -1,6 +1,7 @@
 package runcontainerd
 
 import (
+	"code.cloudfoundry.org/guardian/rundmc"
 	"fmt"
 	"io"
 	"os"
@@ -13,7 +14,6 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
@@ -31,7 +31,7 @@ type ContainerManager interface {
 	GetContainerPID(log lager.Logger, containerID string) (uint32, error)
 	OOMEvents(log lager.Logger) <-chan *apievents.TaskOOM
 	Spec(log lager.Logger, containerID string) (*specs.Spec, error)
-	BundleIDs() ([]string, error)
+	BundleIDs(filterLabels map[string]string) ([]string, error)
 	RemoveBundle(lager.Logger, string) error
 }
 
@@ -62,6 +62,11 @@ type Mkdirer interface {
 	MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
 }
 
+//go:generate counterfeiter . PeaHandlesGetter
+type PeaHandlesGetter interface {
+	ContainerPeaHandles(log lager.Logger, sandboxHandle string) ([]string, error)
+}
+
 type RunContainerd struct {
 	containerManager          ContainerManager
 	processManager            ProcessManager
@@ -72,9 +77,10 @@ type RunContainerd struct {
 	userLookupper             users.UserLookupper
 	cgroupManager             CgroupManager
 	mkdirer                   Mkdirer
+	peaHandlesGetter          PeaHandlesGetter
 }
 
-func New(containerManager ContainerManager, processManager ProcessManager, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager, mkdirer Mkdirer) *RunContainerd {
+func New(containerManager ContainerManager, processManager ProcessManager, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager, mkdirer Mkdirer, peaHandlesGetter PeaHandlesGetter) *RunContainerd {
 	return &RunContainerd{
 		containerManager:          containerManager,
 		processManager:            processManager,
@@ -85,10 +91,15 @@ func New(containerManager ContainerManager, processManager ProcessManager, proce
 		userLookupper:             userLookupper,
 		cgroupManager:             cgroupManager,
 		mkdirer:                   mkdirer,
+		peaHandlesGetter:          peaHandlesGetter,
 	}
 }
 
 func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pio garden.ProcessIO) error {
+	log.Info("Annotations before update", lager.Data{"id": id, "Annotations": bundle.Spec.Annotations})
+	updateAnnotationsIfNeeded(&bundle)
+	log.Info("Annotations after update", lager.Data{"id": id, "Annotations": bundle.Spec.Annotations})
+
 	err := r.containerManager.Create(log, id, &bundle.Spec, func() (io.Reader, io.Writer, io.Writer) { return pio.Stdin, pio.Stdout, pio.Stderr })
 	if err != nil {
 		return err
@@ -99,6 +110,15 @@ func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pi
 	}
 
 	return nil
+}
+
+func updateAnnotationsIfNeeded(bundle *goci.Bndl) {
+	if _, ok := bundle.Spec.Annotations["container-type"]; !ok {
+		if bundle.Spec.Annotations == nil {
+			bundle.Spec.Annotations = make(map[string]string)
+		}
+		bundle.Spec.Annotations["container-type"] = "garden-init"
+	}
 }
 
 func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcessSpec garden.ProcessSpec, gardenIO garden.ProcessIO) (garden.Process, error) {
@@ -183,13 +203,13 @@ func (r *RunContainerd) Delete(log lager.Logger, id string) error {
 	return r.containerManager.Delete(log, id)
 }
 
-func (r *RunContainerd) State(log lager.Logger, id string) (runrunc.State, error) {
+func (r *RunContainerd) State(log lager.Logger, id string) (rundmc.State, error) {
 	pid, status, err := r.containerManager.State(log, id)
 	if err != nil {
-		return runrunc.State{}, err
+		return rundmc.State{}, err
 	}
 
-	return runrunc.State{Pid: pid, Status: runrunc.Status(status)}, nil
+	return rundmc.State{Pid: pid, Status: rundmc.Status(status)}, nil
 }
 
 func (r *RunContainerd) Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error) {
@@ -227,8 +247,15 @@ func isNotFound(err error) bool {
 	return ok
 }
 
-func (r *RunContainerd) BundleIDs() ([]string, error) {
-	return r.containerManager.BundleIDs()
+func (r *RunContainerd) ContainerHandles() ([]string, error) {
+	return r.containerManager.BundleIDs(map[string]string{"container-type": "garden-init"})
+}
+
+func (r *RunContainerd) ContainerPeaHandles(log lager.Logger, sandboxHandle string) ([]string, error) {
+	if r.peaHandlesGetter != nil {
+		return r.peaHandlesGetter.ContainerPeaHandles(log, sandboxHandle)
+	}
+	return r.containerManager.BundleIDs(map[string]string{"container-type": "pea", "sandbox-container": sandboxHandle})
 }
 
 func (r *RunContainerd) RemoveBundle(log lager.Logger, handle string) error {

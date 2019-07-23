@@ -25,6 +25,7 @@ import (
 	"code.cloudfoundry.org/guardian/properties"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
+	"code.cloudfoundry.org/guardian/rundmc/deleter"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
@@ -57,7 +58,12 @@ type GardenFactory interface {
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
 	WireExecRunner(runcRoot string, containerRootUID, containerRootGID uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot execrunner.ProcessDepot) runrunc.ExecRunner
 	WireRootfsFileCreator() depot.RootfsFileCreator
-	WireContainerd(*processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser, lager.Logger, peas.Volumizer) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *containerdprivchecker.PrivilegeChecker, peas.BundleLoader, error)
+	WireContainerd(*processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser, lager.Logger, peas.Volumizer, runcontainerd.PeaHandlesGetter) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *containerdprivchecker.PrivilegeChecker, peas.BundleLoader, error)
+}
+
+type PidGetter interface {
+	GetPid(logger lager.Logger, containerID string) (int, error)
+	GetPeaPid(logger lager.Logger, _, peaID string) (int, error)
 }
 
 type GdnCommand struct {
@@ -251,7 +257,6 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 	}
 
 	var bulkStarter gardener.BulkStarter = gardener.NewBulkStarter(starters)
-	peaCleaner := cmd.wirePeaCleaner(factory, volumizer)
 	sysInfoProvider := sysinfo.NewResourcesProvider(cmd.Containers.Dir)
 
 	cpuEntitlementPerShare := cmd.Metrics.CPUEntitlementPerShare
@@ -264,7 +269,7 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 		}
 	}
 
-	containerizer, err := cmd.wireContainerizer(logger, factory, propManager, volumizer, peaCleaner, cpuEntitlementPerShare, networkDepot)
+	containerizer, peaCleaner, err := cmd.wireContainerizer(logger, factory, propManager, volumizer, cpuEntitlementPerShare, networkDepot)
 	if err != nil {
 		logger.Error("failed-to-wire-containerizer", err)
 		return nil, err
@@ -285,14 +290,19 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 	}, nil
 }
 
-func (cmd *CommonCommand) wirePeaCleaner(factory GardenFactory, volumizer gardener.Volumizer) gardener.PeaCleaner {
+func (cmd *CommonCommand) wirePeaCleaner(factory GardenFactory, volumizer gardener.Volumizer, runtime rundmc.OCIRuntime, pidGetter peas.ProcessPidGetter) gardener.PeaCleaner {
+	if cmd.Containerd.UseContainerdForProcesses {
+		nerdDeleter := runcontainerd.NewDeleter(runtime)
+		return peas.NewPeaCleaner(deleter.NewDeleter(runtime, nerdDeleter), volumizer, runtime, pidGetter)
+	}
+
 	cmdRunner := factory.CommandRunner()
 	runcLogRunner := runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile)
 	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin, Root: cmd.computeRuncRoot()}
 
 	runcStater := runrunc.NewStater(runcLogRunner, runcBinary)
-	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary, runcStater)
-	return peas.NewPeaCleaner(runcDeleter, volumizer, cmd.Containers.Dir)
+	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary)
+	return peas.NewPeaCleaner(deleter.NewDeleter(runcStater, runcDeleter), volumizer, runtime, pidGetter)
 }
 
 func (cmd *CommonCommand) loadProperties(logger lager.Logger, propertiesPath string) (*properties.Manager, error) {
@@ -449,11 +459,10 @@ func (cmd *CommonCommand) wireContainerizer(
 	log lager.Logger,
 	factory GardenFactory,
 	properties gardener.PropertyManager,
-	volumizer peas.Volumizer,
-	peaCleaner gardener.PeaCleaner,
+	volumizer gardener.Volumizer,
 	cpuEntitlementPerShare float64,
 	networkDepot depot.NetworkDepot,
-) (*rundmc.Containerizer, error) {
+) (*rundmc.Containerizer, gardener.PeaCleaner, error) {
 	initMount, initPath := initBindMountAndPath(cmd.Bin.Init.Path())
 
 	defaultMounts := append(defaultBindMounts(), initMount)
@@ -545,12 +554,8 @@ func (cmd *CommonCommand) wireContainerizer(
 	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin, Root: runcRoot}
 
 	pidFileReader := wirePidfileReader()
-	runcStater := runrunc.NewStater(runcLogRunner, runcBinary)
-	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary, runcStater)
 
 	var ociRuntime rundmc.OCIRuntime
-	var pidGetter peas.ProcessPidGetter
-	var peaPidGetter peas.ProcessPidGetter = &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}
 	var peaCreator *peas.PeaCreator
 	var privilegeChecker peas.PrivilegedGetter
 
@@ -564,38 +569,52 @@ func (cmd *CommonCommand) wireContainerizer(
 	}
 
 	statser := runrunc.NewStatser(runcLogRunner, runcBinary, depot)
-	bundleManager := runrunc.NewBundleManager(depot)
+	bundleManager := runrunc.NewBundleManager(depot, processDepot)
 
 	var useNestedCgroups bool
 	var peasExecRunner peas.ExecRunner = execRunner
 	var peasBundleLoader peas.BundleLoader = depot
+
+	var depotPidGetter PidGetter = &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}
+	containersPidGetter := depotPidGetter
+	peaPidGetter := depotPidGetter
+
 	if cmd.useContainerd() {
 		var err error
 		var peaRunner *runcontainerd.RunContainerPea
 		var peaBundleLoader peas.BundleLoader
-		ociRuntime, peaRunner, pidGetter, privilegeChecker, peaBundleLoader, err = factory.WireContainerd(processBuilder, userLookupper, wireExecerFunc, statser, log, volumizer)
+		var peaHandlesGetter runcontainerd.PeaHandlesGetter
+
+		if !cmd.Containerd.UseContainerdForProcesses {
+			peaHandlesGetter = bundleManager
+		}
+
+		var nerdPidGetter PidGetter
+		ociRuntime, peaRunner, nerdPidGetter, privilegeChecker, peaBundleLoader, err = factory.WireContainerd(processBuilder, userLookupper, wireExecerFunc, statser, log, volumizer, peaHandlesGetter)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		peasBundleLoader = peaBundleLoader
+		containersPidGetter = nerdPidGetter
 
 		if cmd.Containerd.UseContainerdForProcesses {
-			peaPidGetter = pidGetter
+			peaPidGetter = nerdPidGetter
 			peasExecRunner = peaRunner
 			useNestedCgroups = true
 		}
+
 	} else {
-		pidGetter = &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}
 		oomWatcher := runrunc.NewOomWatcher(cmdRunner, runcBinary)
-		stater := runrunc.NewStater(runcLogRunner, runcBinary)
-		deleter := runrunc.NewDeleter(runcLogRunner, runcBinary, stater)
+		runcStater := runrunc.NewStater(runcLogRunner, runcBinary)
+		containerRuntimeDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary)
+		containerDeleter := deleter.NewDeleter(runcStater, containerRuntimeDeleter)
 		ociRuntime = runrunc.New(
 			runrunc.NewCreator(runcBinary, cmd.Runtime.PluginExtraArgs, cmdRunner, oomWatcher, depot),
-			wireExecerFunc(pidGetter),
+			wireExecerFunc(depotPidGetter),
 			oomWatcher,
 			statser,
-			stater,
-			deleter,
+			runcStater,
+			containerDeleter,
 			bundleManager,
 		)
 		privilegeChecker = &runcprivchecker.PrivilegeChecker{BundleLoader: depot, Log: log}
@@ -604,16 +623,16 @@ func (cmd *CommonCommand) wireContainerizer(
 	eventStore := rundmc.NewEventStore(properties)
 	stateStore := rundmc.NewStateStore(properties)
 
+	peaCleaner := cmd.wirePeaCleaner(factory, volumizer, ociRuntime, peaPidGetter)
 	peaCreator = &peas.PeaCreator{
 		Volumizer:        volumizer,
-		PidGetter:        pidGetter,
+		PidGetter:        containersPidGetter,
 		PrivilegedGetter: privilegeChecker,
 		NetworkDepot:     networkDepot,
 		BundleGenerator:  template,
 		ProcessBuilder:   processBuilder,
 		BundleSaver:      bundleSaver,
 		ExecRunner:       peasExecRunner,
-		RuncDeleter:      runcDeleter,
 		PeaCleaner:       peaCleaner,
 		NestedCgroups:    useNestedCgroups,
 	}
@@ -627,7 +646,7 @@ func (cmd *CommonCommand) wireContainerizer(
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
-	return rundmc.New(depot, template, ociRuntime, nstar, stopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare), nil
+	return rundmc.New(depot, template, ociRuntime, nstar, stopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare), peaCleaner, nil
 }
 
 func (cmd *CommonCommand) useContainerd() bool {

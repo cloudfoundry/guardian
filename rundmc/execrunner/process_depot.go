@@ -3,6 +3,7 @@ package execrunner
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -57,4 +58,29 @@ func (d ProcessDirDepot) LookupProcessDir(log lager.Logger, sandboxHandle, proce
 	}
 
 	return processPath, nil
+}
+
+func (d ProcessDirDepot) ListProcessDirs(log lager.Logger, sandboxHandle string) ([]string, error) {
+	bundlePath, err := d.bundleLookupper.Lookup(log, sandboxHandle)
+	if err != nil {
+		return []string{}, err
+	}
+
+	processesDirContents, err := ioutil.ReadDir(filepath.Join(bundlePath, "processes"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []string{}, nil
+		}
+
+		return []string{}, err
+	}
+
+	var processDirs []string
+	for _, fileInfo := range processesDirContents {
+		if fileInfo.IsDir() {
+			processDirs = append(processDirs, filepath.Join(bundlePath, "processes", fileInfo.Name()))
+		}
+	}
+
+	return processDirs, nil
 }

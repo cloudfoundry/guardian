@@ -31,6 +31,14 @@ func (r *RunContainerPea) RunPea(
 	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 ) (garden.Process, error) {
 
+	if processBundle.Spec.Annotations == nil {
+		processBundle.Spec.Annotations = make(map[string]string)
+	}
+	processBundle.Spec.Annotations["container-type"] = "pea"
+	processBundle.Spec.Annotations["sandbox-container"] = sandboxHandle
+
+	log.Info("using runcontainerd.RunPea")
+
 	if err := r.PeaManager.Create(log, processID, processBundle, pio); err != nil {
 		return &Process{}, err
 	}

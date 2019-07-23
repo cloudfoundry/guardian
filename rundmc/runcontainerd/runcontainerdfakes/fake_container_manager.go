@@ -12,9 +12,10 @@ import (
 )
 
 type FakeContainerManager struct {
-	BundleIDsStub        func() ([]string, error)
+	BundleIDsStub        func(map[string]string) ([]string, error)
 	bundleIDsMutex       sync.RWMutex
 	bundleIDsArgsForCall []struct {
+		arg1 map[string]string
 	}
 	bundleIDsReturns struct {
 		result1 []string
@@ -136,15 +137,16 @@ type FakeContainerManager struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeContainerManager) BundleIDs() ([]string, error) {
+func (fake *FakeContainerManager) BundleIDs(arg1 map[string]string) ([]string, error) {
 	fake.bundleIDsMutex.Lock()
 	ret, specificReturn := fake.bundleIDsReturnsOnCall[len(fake.bundleIDsArgsForCall)]
 	fake.bundleIDsArgsForCall = append(fake.bundleIDsArgsForCall, struct {
-	}{})
-	fake.recordInvocation("BundleIDs", []interface{}{})
+		arg1 map[string]string
+	}{arg1})
+	fake.recordInvocation("BundleIDs", []interface{}{arg1})
 	fake.bundleIDsMutex.Unlock()
 	if fake.BundleIDsStub != nil {
-		return fake.BundleIDsStub()
+		return fake.BundleIDsStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -159,10 +161,17 @@ func (fake *FakeContainerManager) BundleIDsCallCount() int {
 	return len(fake.bundleIDsArgsForCall)
 }
 
-func (fake *FakeContainerManager) BundleIDsCalls(stub func() ([]string, error)) {
+func (fake *FakeContainerManager) BundleIDsCalls(stub func(map[string]string) ([]string, error)) {
 	fake.bundleIDsMutex.Lock()
 	defer fake.bundleIDsMutex.Unlock()
 	fake.BundleIDsStub = stub
+}
+
+func (fake *FakeContainerManager) BundleIDsArgsForCall(i int) map[string]string {
+	fake.bundleIDsMutex.RLock()
+	defer fake.bundleIDsMutex.RUnlock()
+	argsForCall := fake.bundleIDsArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeContainerManager) BundleIDsReturns(result1 []string, result2 error) {

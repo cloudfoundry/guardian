@@ -26,7 +26,6 @@ var _ = Describe("PeaCreator", func() {
 	var (
 		volumizer        *peasfakes.FakeVolumizer
 		peaCleaner       *gardenerfakes.FakePeaCleaner
-		runcDeleter      *peasfakes.FakeRuncDeleter
 		pidGetter        *peasfakes.FakePidGetter
 		networkDepot     *peasfakes.FakeNetworkDepot
 		bundleGenerator  *peasfakes.FakeBundleGenerator
@@ -64,7 +63,6 @@ var _ = Describe("PeaCreator", func() {
 			Version: "some-spec-version",
 			Root:    &specs.Root{Path: "/rootfs/path"},
 		}, nil)
-		runcDeleter = new(peasfakes.FakeRuncDeleter)
 		pidGetter = new(peasfakes.FakePidGetter)
 		pidGetter.GetPidReturns(123, nil)
 		networkDepot = new(peasfakes.FakeNetworkDepot)
@@ -92,7 +90,6 @@ var _ = Describe("PeaCreator", func() {
 			ProcessBuilder:   processBuilder,
 			ExecRunner:       execRunner,
 			PrivilegedGetter: privilegedGetter,
-			RuncDeleter:      runcDeleter,
 			PeaCleaner:       peaCleaner,
 		}
 

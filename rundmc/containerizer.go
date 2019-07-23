@@ -13,7 +13,6 @@ import (
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/dropsonde/metrics"
 )
@@ -36,15 +35,27 @@ type BundleGenerator interface {
 	Generate(desiredContainerSpec spec.DesiredContainerSpec) (goci.Bndl, error)
 }
 
+type Status string
+
+const RunningStatus Status = "running"
+const CreatedStatus Status = "created"
+const StoppedStatus Status = "stopped"
+
+type State struct {
+	Pid    int
+	Status Status
+}
+
 type OCIRuntime interface {
 	Create(log lager.Logger, id string, bundle goci.Bndl, io garden.ProcessIO) error
 	Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, id, processId string, io garden.ProcessIO) (garden.Process, error)
 	Delete(log lager.Logger, id string) error
-	State(log lager.Logger, id string) (runrunc.State, error)
+	State(log lager.Logger, id string) (State, error)
 	Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)
 	Events(log lager.Logger) (<-chan event.Event, error)
-	BundleIDs() ([]string, error)
+	ContainerHandles() ([]string, error)
+	ContainerPeaHandles(log lager.Logger, id string) ([]string, error)
 	BundleInfo(log lager.Logger, id string) (string, goci.Bndl, error)
 	RemoveBundle(log lager.Logger, id string) error
 }
@@ -362,7 +373,7 @@ func isNotFound(err error) bool {
 }
 
 func (c *Containerizer) Handles() ([]string, error) {
-	return c.runtime.BundleIDs()
+	return c.runtime.ContainerHandles()
 }
 
 func calculateCPUEntitlement(shares uint64, entitlementPerShare float64, containerAge time.Duration) uint64 {

@@ -2,6 +2,7 @@ package runcontainerd_test
 
 import (
 	"bytes"
+	"code.cloudfoundry.org/guardian/rundmc"
 	"errors"
 	"io"
 	"os"
@@ -15,7 +16,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/runcontainerdfakes"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/guardian/rundmc/users/usersfakes"
 	"code.cloudfoundry.org/lager"
@@ -39,6 +39,7 @@ var _ = Describe("Runcontainerd", func() {
 		userLookupper    *usersfakes.FakeUserLookupper
 		cgroupManager    *runcontainerdfakes.FakeCgroupManager
 		mkdirer          *runcontainerdfakes.FakeMkdirer
+		peaHandlesGetter *runcontainerdfakes.FakePeaHandlesGetter
 	)
 
 	BeforeEach(func() {
@@ -52,7 +53,7 @@ var _ = Describe("Runcontainerd", func() {
 		cgroupManager = new(runcontainerdfakes.FakeCgroupManager)
 		mkdirer = new(runcontainerdfakes.FakeMkdirer)
 
-		runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer)
+		runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, nil)
 	})
 
 	Describe("Create", func() {
@@ -73,7 +74,8 @@ var _ = Describe("Runcontainerd", func() {
 			id = "container-id"
 			bundle = goci.Bndl{
 				Spec: specs.Spec{
-					Hostname: "test-hostname",
+					Hostname:    "test-hostname",
+					Annotations: map[string]string{"container-type": "random"},
 				},
 			}
 
@@ -118,9 +120,34 @@ var _ = Describe("Runcontainerd", func() {
 			})
 		})
 
+		Context("when there is no container type in the annotations", func() {
+			BeforeEach(func() {
+				bundle.Spec.Annotations = nil
+			})
+
+			It("sets garden-init as container-type in annotations if not set", func() {
+				Expect(containerManager.CreateCallCount()).To(Equal(1))
+				_, _, actualSpec, _ := containerManager.CreateArgsForCall(0)
+				Expect(actualSpec.Annotations["container-type"]).To(Equal("garden-init"))
+			})
+		})
+
+		Context("when there already is a container type in the annotations", func() {
+			BeforeEach(func() {
+				bundle.Spec.Annotations = map[string]string{"container-type": "something"}
+			})
+
+			It("does not change it", func() {
+				Expect(containerManager.CreateCallCount()).To(Equal(1))
+				_, _, actualSpec, _ := containerManager.CreateArgsForCall(0)
+				Expect(actualSpec.Annotations["container-type"]).To(Equal("something"))
+
+			})
+		})
+
 		Context("when using containerd for processes", func() {
 			BeforeEach(func() {
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil)
 			})
 
 			It("sets the container to use the memory hierarchy", func() {
@@ -191,7 +218,7 @@ var _ = Describe("Runcontainerd", func() {
 
 	Describe("State", func() {
 		var (
-			state runrunc.State
+			state rundmc.State
 
 			stateErr error
 		)
@@ -211,7 +238,7 @@ var _ = Describe("Runcontainerd", func() {
 			Expect(actualID).To(Equal("some-id"))
 
 			Expect(state.Pid).To(Equal(1))
-			Expect(state.Status).To(Equal(runrunc.RunningStatus))
+			Expect(state.Status).To(Equal(rundmc.RunningStatus))
 		})
 
 		Context("when getting the state fails", func() {
@@ -321,7 +348,7 @@ var _ = Describe("Runcontainerd", func() {
 
 				containerManager.GetContainerPIDReturns(1234, nil)
 				containerManager.ExecReturns(nil)
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil)
 			})
 
 			It("passes the logger through", func() {
@@ -742,7 +769,7 @@ var _ = Describe("Runcontainerd", func() {
 		})
 	})
 
-	Describe("BundleIDs", func() {
+	Describe("ContainerHandles", func() {
 		var (
 			bundleIDs []string
 			err       error
@@ -753,7 +780,12 @@ var _ = Describe("Runcontainerd", func() {
 		})
 
 		JustBeforeEach(func() {
-			bundleIDs, err = runContainerd.BundleIDs()
+			bundleIDs, err = runContainerd.ContainerHandles()
+		})
+
+		It("only gets the BundleIDs of garden init containers", func() {
+			Expect(containerManager.BundleIDsCallCount()).To(Equal(1))
+			Expect(containerManager.BundleIDsArgsForCall(0)).To(Equal(map[string]string{"container-type": "garden-init"}))
 		})
 
 		It("returns the list of bundleIDs", func() {
@@ -768,6 +800,69 @@ var _ = Describe("Runcontainerd", func() {
 
 			It("returns an error", func() {
 				Expect(err).To(MatchError("handles-error"))
+			})
+		})
+	})
+
+	Describe("ContainerPeaHandles", func() {
+		var (
+			peaIDs []string
+			err    error
+		)
+
+		BeforeEach(func() {
+			containerManager.BundleIDsReturns([]string{"banana", "banana2"}, nil)
+		})
+
+		JustBeforeEach(func() {
+			peaIDs, err = runContainerd.ContainerPeaHandles(logger, "sandboxy")
+		})
+
+		It("only gets the BundleIDs of peas", func() {
+			Expect(containerManager.BundleIDsCallCount()).To(Equal(1))
+			Expect(containerManager.BundleIDsArgsForCall(0)).To(Equal(map[string]string{"container-type": "pea", "sandbox-container": "sandboxy"}))
+		})
+
+		It("returns the list of bundleIDs", func() {
+			Expect(err).NotTo(HaveOccurred())
+			Expect(peaIDs).To(ConsistOf("banana", "banana2"))
+		})
+
+		When("getting the list of bundleIDs from the container manager fails", func() {
+			BeforeEach(func() {
+				containerManager.BundleIDsReturns(nil, errors.New("handles-error"))
+			})
+
+			It("returns an error", func() {
+				Expect(err).To(MatchError("handles-error"))
+			})
+		})
+
+		When("a peaHandlesGetter is supplied", func() {
+			BeforeEach(func() {
+				peaHandlesGetter = new(runcontainerdfakes.FakePeaHandlesGetter)
+				peaHandlesGetter.ContainerPeaHandlesReturns([]string{"apple", "apple2"}, nil)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, peaHandlesGetter)
+			})
+
+			It("returns the list of bundleIDs", func() {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(peaIDs).To(ConsistOf("apple", "apple2"))
+			})
+
+			It("does not use the container manager", func() {
+				Expect(containerManager.BundleIDsCallCount()).To(Equal(0))
+			})
+
+			When("getting the list of bundleIDs fails", func() {
+				BeforeEach(func() {
+					containerManager.BundleIDsReturns(nil, errors.New("handles-error"))
+					peaHandlesGetter.ContainerPeaHandlesReturns(nil, errors.New("boom"))
+				})
+
+				It("returns an error", func() {
+					Expect(err).To(MatchError("boom"))
+				})
 			})
 		})
 	})

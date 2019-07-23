@@ -39,11 +39,6 @@ type PrivilegedGetter interface {
 	Privileged(handle string) (bool, error)
 }
 
-//go:generate counterfeiter . RuncDeleter
-type RuncDeleter interface {
-	Delete(log lager.Logger, handle string) error
-}
-
 //go:generate counterfeiter . NetworkDepot
 type NetworkDepot interface {
 	SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error)
@@ -71,7 +66,6 @@ type PeaCreator struct {
 	BundleSaver      depot.BundleSaver
 	ProcessBuilder   runrunc.ProcessBuilder
 	ExecRunner       ExecRunner
-	RuncDeleter      RuncDeleter
 	PeaCleaner       gardener.PeaCleaner
 	NestedCgroups    bool
 }

@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -44,6 +45,13 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, pi
 	container, err := n.client.NewContainer(n.context, containerID, containerd.WithSpec(spec))
 	if err != nil {
 		return err
+	}
+
+	for key, value := range spec.Annotations {
+		log.Debug("setting-label", lager.Data{"containerID": containerID, "label-key": key, "label-value": value})
+		if _, err := container.SetLabels(n.context, map[string]string{key: value}); err != nil {
+			return err
+		}
 	}
 
 	log.Debug("creating-task", lager.Data{"containerID": containerID})
@@ -350,8 +358,13 @@ func coerceEvent(event *ctrdevents.Envelope) (*apievents.TaskOOM, error) {
 	return oom, nil
 }
 
-func (n *Nerd) BundleIDs() ([]string, error) {
-	containers, err := n.client.Containers(n.context)
+func (n *Nerd) BundleIDs(labels map[string]string) ([]string, error) {
+	var flattenedLabels []string
+	for key, value := range labels {
+		flattenedLabels = append(flattenedLabels, fmt.Sprintf("labels.\"%s\"==%s", key, value))
+	}
+
+	containers, err := n.client.Containers(n.context, strings.Join(flattenedLabels, ","))
 	if err != nil {
 		return nil, err
 	}

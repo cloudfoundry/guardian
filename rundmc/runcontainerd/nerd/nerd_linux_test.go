@@ -3,6 +3,7 @@ package nerd_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -93,6 +94,15 @@ var _ = Describe("Nerd", func() {
 
 			containers := listProcesses(testConfig.CtrBin, testConfig.Socket, containerID)
 			Expect(containers).To(ContainSubstring(containerID))
+		})
+
+		It("adds the annotations as labels", func() {
+			spec := generateSpec(containerdContext, containerdClient, containerID)
+			spec.Annotations = map[string]string{"hello": "world", "goodbye": "potato"}
+
+			Expect(cnerd.Create(testLogger, containerID, spec, initProcessIO)).To(Succeed())
+			Expect(containerLabels(testConfig.CtrBin, testConfig.Socket, containerID)).To(HaveKeyWithValue("hello", "world"))
+			Expect(containerLabels(testConfig.CtrBin, testConfig.Socket, containerID)).To(HaveKeyWithValue("goodbye", "potato"))
 		})
 
 		It("writes stdout", func() {
@@ -490,16 +500,18 @@ var _ = Describe("Nerd", func() {
 			cnerd.Delete(testLogger, "banana2")
 		})
 
-		It("returns the list of container handles", func() {
+		It("returns a filtered list of container handles", func() {
 			spec := generateSpec(containerdContext, containerdClient, "banana")
+			spec.Annotations = map[string]string{"hello": "potato", "abc": "boohoo"}
 			Expect(cnerd.Create(testLogger, "banana", spec, initProcessIO)).To(Succeed())
 			spec = generateSpec(containerdContext, containerdClient, "banana2")
+			spec.Annotations = map[string]string{"abc": "boohoo"}
 			Expect(cnerd.Create(testLogger, "banana2", spec, initProcessIO)).To(Succeed())
 
-			handles, err := cnerd.BundleIDs()
+			handles, err := cnerd.BundleIDs(map[string]string{"hello": "potato", "abc": "boohoo"})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(handles).To(ConsistOf("banana", "banana2"))
+			Expect(handles).To(ConsistOf("banana"))
 		})
 	})
 })
@@ -523,6 +535,7 @@ func generateSpec(context context.Context, client *containerd.Client, containerI
 	spec.Root = &specs.Root{
 		Path: createRootfs(func(_ string) {}, 0755),
 	}
+	spec.Annotations = map[string]string{"container-type": "some-container-type"}
 
 	return spec
 }
@@ -544,6 +557,14 @@ func listTasks(ctr, socket string) string {
 
 func listProcesses(ctr, socket, containerID string) string {
 	return runCtr(ctr, socket, []string{"tasks", "ps", containerID})
+}
+
+func containerLabels(ctr, socket, handle string) map[string]interface{} {
+	output := runCtr(ctr, socket, []string{"containers", "info", handle})
+
+	var result map[string]interface{}
+	Expect(json.Unmarshal([]byte(output), &result)).To(Succeed())
+	return result["Labels"].(map[string]interface{})
 }
 
 func runCtr(ctr, socket string, args []string) string {

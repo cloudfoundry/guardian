@@ -15,7 +15,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	fakes "code.cloudfoundry.org/guardian/rundmc/rundmcfakes"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -237,7 +236,7 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("StreamIn", func() {
 		It("should execute the NSTar command with the container PID", func() {
-			fakeOCIRuntime.StateReturns(runrunc.State{
+			fakeOCIRuntime.StateReturns(rundmc.State{
 				Pid: 12,
 			}, nil)
 
@@ -256,7 +255,7 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("returns an error if the PID cannot be found", func() {
-			fakeOCIRuntime.StateReturns(runrunc.State{}, errors.New("pid not found"))
+			fakeOCIRuntime.StateReturns(rundmc.State{}, errors.New("pid not found"))
 			Expect(containerizer.StreamIn(logger, "some-handle", garden.StreamInSpec{})).To(MatchError("stream-in: pid not found for container"))
 		})
 
@@ -268,7 +267,7 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("StreamOut", func() {
 		It("should execute the NSTar command with the container PID", func() {
-			fakeOCIRuntime.StateReturns(runrunc.State{
+			fakeOCIRuntime.StateReturns(rundmc.State{
 				Pid: 12,
 			}, nil)
 
@@ -289,7 +288,7 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("returns an error if the PID cannot be found", func() {
-			fakeOCIRuntime.StateReturns(runrunc.State{}, errors.New("pid not found"))
+			fakeOCIRuntime.StateReturns(rundmc.State{}, errors.New("pid not found"))
 			tarStream, err := containerizer.StreamOut(logger, "some-handle", garden.StreamOutSpec{})
 
 			Expect(tarStream).To(BeNil())
@@ -314,7 +313,7 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when the stop succeeds", func() {
 			BeforeEach(func() {
-				fakeOCIRuntime.StateReturns(runrunc.State{
+				fakeOCIRuntime.StateReturns(rundmc.State{
 					Pid: 1234,
 				}, nil)
 
@@ -353,7 +352,7 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when getting runc's state fails", func() {
 			BeforeEach(func() {
-				fakeOCIRuntime.StateReturns(runrunc.State{}, errors.New("boom"))
+				fakeOCIRuntime.StateReturns(rundmc.State{}, errors.New("boom"))
 			})
 
 			It("does not stop the processes", func() {
@@ -415,7 +414,7 @@ var _ = Describe("Rundmc", func() {
 
 		BeforeEach(func() {
 			namespaces = []specs.LinuxNamespace{}
-			fakeOCIRuntime.StateReturns(runrunc.State{Pid: 42}, nil)
+			fakeOCIRuntime.StateReturns(rundmc.State{Pid: 42}, nil)
 
 			var limit int64 = 10
 			var shares uint64 = 20
@@ -535,7 +534,7 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when retrieving the State from the runtime errors", func() {
 			BeforeEach(func() {
-				fakeOCIRuntime.StateReturns(runrunc.State{}, errors.New("error-fetching-state"))
+				fakeOCIRuntime.StateReturns(rundmc.State{}, errors.New("error-fetching-state"))
 			})
 
 			It("returns the error", func() {
@@ -639,7 +638,7 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("Handles", func() {
 		BeforeEach(func() {
-			fakeOCIRuntime.BundleIDsReturns([]string{"banana", "banana2"}, nil)
+			fakeOCIRuntime.ContainerHandlesReturns([]string{"banana", "banana2"}, nil)
 		})
 
 		It("should return the handles", func() {
@@ -648,7 +647,7 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when the runtime returns an error", func() {
 			BeforeEach(func() {
-				fakeOCIRuntime.BundleIDsReturns([]string{}, errors.New("handles-error"))
+				fakeOCIRuntime.ContainerHandlesReturns([]string{}, errors.New("handles-error"))
 			})
 
 			It("should return the error", func() {

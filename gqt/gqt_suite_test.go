@@ -456,6 +456,12 @@ func skipIfContainerdForProcesses(reason string) {
 	}
 }
 
+func skipIfRunDmcForProcesses(reason string) {
+	if !isContainerdForProcesses() {
+		Skip(reason)
+	}
+}
+
 func skipIfNotContainerd() {
 	if !isContainerd() {
 		Skip("containerd not enabled")

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
@@ -17,39 +16,49 @@ import (
 
 var _ = Describe("PeaCleaner", func() {
 	var (
-		fakeRuncDeleter *peasfakes.FakeRuncDeleter
-		fakeVolumizer   *peasfakes.FakeVolumizer
-		cleaner         gardener.PeaCleaner
-		logger          *lagertest.TestLogger
-		processID       string = "proccess-id"
-		cleanErr        error
+		fakeDeleter      *peasfakes.FakeDeleter
+		fakeVolumizer    *peasfakes.FakeVolumizer
+		fakeProcWaiter   *processwaiterfakes.FakeProcessWaiter
+		fakeRuntime      *peasfakes.FakeRuntime
+		fakePeaPidGetter *peasfakes.FakePeaPidGetter
+		cleaner          gardener.PeaCleaner
+		logger           *lagertest.TestLogger
+		processID        string = "proccess-id"
+		cleanErr         error
 	)
 
 	BeforeEach(func() {
-		fakeRuncDeleter = new(peasfakes.FakeRuncDeleter)
+		fakeDeleter = new(peasfakes.FakeDeleter)
 		fakeVolumizer = new(peasfakes.FakeVolumizer)
+		fakeProcWaiter = new(processwaiterfakes.FakeProcessWaiter)
+		fakeRuntime = new(peasfakes.FakeRuntime)
+		fakePeaPidGetter = new(peasfakes.FakePeaPidGetter)
+
+		cleaner = &peas.PeaCleaner{
+			Deleter:      fakeDeleter,
+			Volumizer:    fakeVolumizer,
+			Waiter:       fakeProcWaiter.Spy,
+			Runtime:      fakeRuntime,
+			PeaPidGetter: fakePeaPidGetter,
+		}
 		logger = lagertest.NewTestLogger("peas-unit-tests")
 	})
 
 	Describe("Clean", func() {
 
 		JustBeforeEach(func() {
-			cleaner = &peas.PeaCleaner{
-				RuncDeleter: fakeRuncDeleter,
-				Volumizer:   fakeVolumizer,
-			}
 			cleanErr = cleaner.Clean(logger, processID)
 		})
 
 		It("deletes the container", func() {
-			Expect(fakeRuncDeleter.DeleteCallCount()).To(Equal(1))
-			_, id := fakeRuncDeleter.DeleteArgsForCall(0)
+			Expect(fakeDeleter.DeleteCallCount()).To(Equal(1))
+			_, id := fakeDeleter.DeleteArgsForCall(0)
 			Expect(id).To(Equal(processID))
 		})
 
 		Context("when deleting container fails", func() {
 			BeforeEach(func() {
-				fakeRuncDeleter.DeleteReturns(errors.New("failky"))
+				fakeDeleter.DeleteReturns(errors.New("failky"))
 			})
 
 			It("returns an error", func() {
@@ -81,114 +90,119 @@ var _ = Describe("PeaCleaner", func() {
 
 	Describe("CleanAll", func() {
 
-		var (
-			tmpDir         string
-			depotDir       string
-			fakeProcWaiter *processwaiterfakes.FakeProcessWaiter
-		)
-
 		BeforeEach(func() {
-			tmpDir = tempDir()
-			depotDir = tmpDir
-			mkdirAll(filepath.Join(depotDir, "cake"))
-			fakeProcWaiter = new(processwaiterfakes.FakeProcessWaiter)
+			fakeRuntime.ContainerHandlesReturns([]string{"container-handle"}, nil)
+			fakeRuntime.ContainerPeaHandlesReturns([]string{"pea-00"}, nil)
+			fakePeaPidGetter.GetPeaPidReturns(17, nil)
 		})
 
 		JustBeforeEach(func() {
-			cleaner = &peas.PeaCleaner{
-				RuncDeleter:    fakeRuncDeleter,
-				Volumizer:      fakeVolumizer,
-				Waiter:         fakeProcWaiter.Spy,
-				DepotDirectory: depotDir,
-			}
 			cleanErr = cleaner.CleanAll(logger)
 		})
 
-		AfterEach(func() {
-			Expect(os.RemoveAll(tmpDir)).To(Succeed())
+		It("gets all container handles", func() {
+			Expect(fakeRuntime.ContainerHandlesCallCount()).To(Equal(1))
 		})
 
-		It("does not return an error", func() {
-			Expect(cleanErr).NotTo(HaveOccurred())
+		It("gets the peas for the container", func() {
+			Expect(fakeRuntime.ContainerPeaHandlesCallCount()).To(Equal(1))
+
+			_, actualSandboxHandle := fakeRuntime.ContainerPeaHandlesArgsForCall(0)
+			Expect(actualSandboxHandle).To(Equal("container-handle"))
 		})
 
-		It("does not perform cleanup", func() {
-			Consistently(fakeRuncDeleter.DeleteCallCount).Should(BeZero())
+		It("waits for the pea to complete", func() {
+			Eventually(fakeProcWaiter.CallCount).Should(Equal(1))
+			Expect(fakeProcWaiter.ArgsForCall(0)).To(Equal(17))
 		})
 
-		Context("when we have an existing pea", func() {
-			var (
-				peaPath string
-			)
+		It("cleans up the pea", func() {
+			Eventually(fakeVolumizer.DestroyCallCount).Should(Equal(1))
+			_, actualID := fakeVolumizer.DestroyArgsForCall(0)
+			Expect(actualID).To(Equal("pea-00"))
+		})
 
+		Context("when there is more than one container", func() {
 			BeforeEach(func() {
-				peaPath = filepath.Join(depotDir, "cake", "processes", processID)
-				mkdirAll(peaPath)
-				writeFile(filepath.Join(peaPath, "config.json"), "")
-				writeFile(filepath.Join(peaPath, "pidfile"), "7\n")
+				fakeRuntime.ContainerHandlesReturns([]string{"first", "second"}, nil)
 			})
 
-			It("does not return an error", func() {
-				Expect(cleanErr).NotTo(HaveOccurred())
+			It("gets the peas for each of the containers", func() {
+				Expect(fakeRuntime.ContainerPeaHandlesCallCount()).To(Equal(2))
+
+				_, actualSandboxHandle := fakeRuntime.ContainerPeaHandlesArgsForCall(0)
+				Expect(actualSandboxHandle).To(Equal("first"))
+
+				_, actualSandboxHandle = fakeRuntime.ContainerPeaHandlesArgsForCall(1)
+				Expect(actualSandboxHandle).To(Equal("second"))
 			})
 
-			Context("when getting the peas fails", func() {
-				Context("when the depot dir does not exist", func() {
-					BeforeEach(func() {
-						Expect(os.RemoveAll(depotDir)).To(Succeed())
-					})
-
-					It("returns an error", func() {
-						Expect(os.IsNotExist(cleanErr)).To(BeTrue())
-					})
-				})
-			})
-
-			Context("when the pid file does not exist", func() {
+			Context("when getting the peas for a container fails", func() {
 				BeforeEach(func() {
-					pidFilePath := filepath.Join(depotDir, "cake", "processes", processID, "pidfile")
-					Expect(os.RemoveAll(pidFilePath)).To(Succeed())
+					fakeRuntime.ContainerPeaHandlesReturnsOnCall(0, nil, errors.New("BOOM"))
 				})
 
-				It("does not return an error", func() {
+				It("proceeds with the next container", func() {
 					Expect(cleanErr).NotTo(HaveOccurred())
+					Expect(fakeRuntime.ContainerPeaHandlesCallCount()).To(Equal(2))
 				})
 			})
+		})
 
-			It("waits for the pea to complete", func() {
-				Eventually(fakeProcWaiter.CallCount).Should(Equal(1))
-				Expect(fakeProcWaiter.ArgsForCall(0)).To(Equal(7))
+		Context("when there are more than one pea", func() {
+			BeforeEach(func() {
+				fakeRuntime.ContainerPeaHandlesReturnsOnCall(0, []string{"pea-11", "pea-12"}, nil)
 			})
 
-			It("cleans up the pea", func() {
-				Eventually(fakeVolumizer.DestroyCallCount).Should(Equal(1))
-				_, id := fakeVolumizer.DestroyArgsForCall(0)
-				Expect(id).To(Equal(processID))
+			It("gets the PID of each pea", func() {
+				Expect(fakePeaPidGetter.GetPeaPidCallCount()).To(Equal(2))
+
+				_, actualSandboxHandle, actualPeaHandle := fakePeaPidGetter.GetPeaPidArgsForCall(0)
+				Expect(actualSandboxHandle).To(Equal("container-handle"))
+				Expect(actualPeaHandle).To(Equal("pea-11"))
+
+				_, actualSandboxHandle, actualPeaHandle = fakePeaPidGetter.GetPeaPidArgsForCall(1)
+				Expect(actualSandboxHandle).To(Equal("container-handle"))
+				Expect(actualPeaHandle).To(Equal("pea-12"))
 			})
 
-			Context("when we have multiple containers", func() {
+			Context("when getting the pea pid fails", func() {
 				BeforeEach(func() {
-					mkdirAll(filepath.Join(depotDir, "potato", "processes", "non-pea"))
+					fakePeaPidGetter.GetPeaPidReturnsOnCall(0, -1, errors.New("nopid"))
+					fakePeaPidGetter.GetPeaPidReturnsOnCall(1, 43, nil)
 				})
 
-				It("does not perform cleanup for non-peas", func() {
-					Eventually(fakeRuncDeleter.DeleteCallCount).Should(Equal(1))
-					Consistently(fakeRuncDeleter.DeleteCallCount).Should(Equal(1))
+				It("proceeds with the next pea", func() {
+					Expect(cleanErr).NotTo(HaveOccurred())
+					Expect(fakePeaPidGetter.GetPeaPidCallCount()).To(Equal(2))
+				})
+
+				It("does not try to clean the pea", func() {
+					Eventually(fakeProcWaiter.CallCount).Should(Equal(1))
+					Expect(fakeProcWaiter.ArgsForCall(0)).To(Equal(43))
+					Consistently(fakeProcWaiter.CallCount).Should(Equal(1))
 				})
 			})
+		})
 
-			Context("and the second one is also a pea", func() {
-				BeforeEach(func() {
-					secondPeaPath := filepath.Join(depotDir, "cake", "processes", "pea2")
-					mkdirAll(secondPeaPath)
-					writeFile(filepath.Join(secondPeaPath, "config.json"), "")
-					writeFile(filepath.Join(secondPeaPath, "pidfile"), "26\n")
-
-				})
-				It("performs cleanup for all peas", func() {
-					Eventually(fakeRuncDeleter.DeleteCallCount).Should(Equal(2))
-				})
+		Context("when getting the container handles fails", func() {
+			BeforeEach(func() {
+				fakeRuntime.ContainerHandlesReturns(nil, errors.New("faily"))
 			})
+
+			It("propagates the error", func() {
+				Expect(cleanErr).To(MatchError("faily"))
+			})
+		})
+	})
+
+	Context("when waiting on the pea fails", func() {
+		BeforeEach(func() {
+			fakeProcWaiter.Returns(errors.New("NOPE"))
+		})
+
+		It("doesn't clean it up", func() {
+			Consistently(fakeVolumizer.DestroyCallCount).Should(Equal(0))
 		})
 	})
 })

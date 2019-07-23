@@ -1,6 +1,7 @@
 package runrunc_test
 
 import (
+	"code.cloudfoundry.org/guardian/rundmc"
 	"errors"
 	"os/exec"
 
@@ -63,7 +64,7 @@ var _ = Describe("State", func() {
 	It("gets the bundle state", func() {
 		state, err := stater.State(logger, "some-container")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(state).To(Equal(runrunc.State{Pid: 4, Status: "quite-a-status"}))
+		Expect(state).To(Equal(rundmc.State{Pid: 4, Status: "quite-a-status"}))
 	})
 
 	It("forwards runc logs", func() {

@@ -15,6 +15,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	uuid "github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -151,11 +152,27 @@ var _ = Describe("Surviving Restarts", func() {
 			Context("when running a pea", func() {
 				BeforeEach(func() {
 					processImage = garden.ImageRef{URI: defaultTestRootFS}
-					processID = "unique-potato"
+					id, err := uuid.NewV4()
+					Expect(err).NotTo(HaveOccurred())
+					processID = fmt.Sprintf("unique-potato-%s-%d", id, GinkgoParallelNode())
 				})
 
 				It("destroys the pea container", func() {
-					Expect(filepath.Join(getRuncRoot(), processID)).NotTo(BeADirectory())
+					skipIfContainerdForProcesses("not relevant to runrunc peas")
+					Eventually(filepath.Join(getRuncRoot(), processID), "10s").ShouldNot(BeADirectory())
+				})
+
+				Context("with containerd", func() {
+					BeforeEach(func() {
+						skipIfRunDmcForProcesses("not relevant to containerd peas")
+					})
+
+					It("destroys the peacontainer", func() {
+						ctrOutput := func() string {
+							return runCtr("ctr", config.ContainerdSocket, []string{"containers", "ls"})
+						}
+						Eventually(ctrOutput, "20s").ShouldNot(ContainSubstring(processID))
+					})
 				})
 			})
 

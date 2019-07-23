@@ -2,10 +2,12 @@ package runrunc_test
 
 import (
 	"errors"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
@@ -13,19 +15,22 @@ import (
 	. "code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
 	"code.cloudfoundry.org/lager/lagertest"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("BundleManager", func() {
 	var (
-		bundleManager *BundleManager
-		fakeDepot     *runruncfakes.FakeDepot
-		logger        *lagertest.TestLogger
+		bundleManager    *BundleManager
+		fakeDepot        *runruncfakes.FakeDepot
+		fakeProcessDepot *runruncfakes.FakeProcessDepot
+		logger           *lagertest.TestLogger
 	)
 
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("test")
 		fakeDepot = new(runruncfakes.FakeDepot)
-		bundleManager = NewBundleManager(fakeDepot)
+		fakeProcessDepot = new(runruncfakes.FakeProcessDepot)
+		bundleManager = NewBundleManager(fakeDepot, fakeProcessDepot)
 	})
 
 	Describe("BundleInfo", func() {
@@ -91,7 +96,7 @@ var _ = Describe("BundleManager", func() {
 		})
 	})
 
-	Describe("BundleIDs", func() {
+	Describe("ContainerHandles", func() {
 		var (
 			bundleIDs []string
 			err       error
@@ -102,7 +107,7 @@ var _ = Describe("BundleManager", func() {
 		})
 
 		JustBeforeEach(func() {
-			bundleIDs, err = bundleManager.BundleIDs()
+			bundleIDs, err = bundleManager.ContainerHandles()
 		})
 
 		It("returns the list of bundleIDs", func() {
@@ -117,6 +122,73 @@ var _ = Describe("BundleManager", func() {
 
 			It("returns an error", func() {
 				Expect(err).To(MatchError("handles-error"))
+			})
+		})
+	})
+
+	Describe("ContainerPeaHandles", func() {
+		var (
+			processesDir string
+			peasErr      error
+			peas         []string
+		)
+
+		BeforeEach(func() {
+			var err error
+			processesDir, err = ioutil.TempDir("", "processesDir")
+			Expect(err).NotTo(HaveOccurred())
+
+			peaDir := filepath.Join(processesDir, "pea-handle")
+			Expect(os.MkdirAll(peaDir, 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(peaDir, "config.json"), []byte("don't care"), 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(peaDir, "pidfile"), []byte("9988"), 0755)).To(Succeed())
+
+			nonPeaDir := filepath.Join(processesDir, "non-pea-handle")
+			Expect(os.MkdirAll(nonPeaDir, 0755)).To(Succeed())
+
+			fakeProcessDepot.ListProcessDirsReturns([]string{peaDir, nonPeaDir}, nil)
+		})
+
+		JustBeforeEach(func() {
+			peas, peasErr = bundleManager.ContainerPeaHandles(logger, "some-handle")
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(processesDir)).To(Succeed())
+		})
+
+		It("returns the pea handles", func() {
+			Expect(peasErr).NotTo(HaveOccurred())
+			Expect(peas).To(ConsistOf("pea-handle"))
+		})
+
+		Context("when listing process dirs fails", func() {
+			BeforeEach(func() {
+				fakeProcessDepot.ListProcessDirsReturns([]string{}, errors.New("boohoo"))
+			})
+
+			It("propagates the error", func() {
+				Expect(peasErr).To(MatchError("boohoo"))
+			})
+		})
+
+		Context("when the pidfile does not exist in the process directory", func() {
+			BeforeEach(func() {
+				Expect(os.RemoveAll(filepath.Join(processesDir, "pea-handle", "pidfile"))).To(Succeed())
+			})
+
+			It("does not return the pea handle", func() {
+				Expect(peas).To(BeEmpty())
+			})
+		})
+
+		Context("when config.json does not exist in the process directory", func() {
+			BeforeEach(func() {
+				Expect(os.RemoveAll(filepath.Join(processesDir, "pea-handle", "config.json"))).To(Succeed())
+			})
+
+			It("does not return the pea handle", func() {
+				Expect(peas).To(BeEmpty())
 			})
 		})
 	})

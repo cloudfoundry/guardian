@@ -47,7 +47,9 @@ var _ = Describe("RunContainerPea", func() {
 			Expect(fakePeaManager.CreateCallCount()).To(Equal(1))
 			_, actualProcessID, actualBundle, _ := fakePeaManager.CreateArgsForCall(0)
 			Expect(actualProcessID).To(Equal(processID))
-			Expect(actualBundle).To(Equal(bundle))
+			Expect(actualBundle.Spec.Version).To(Equal("test-version"))
+			Expect(actualBundle.Spec.Annotations["container-type"]).To(Equal("pea"))
+			Expect(actualBundle.Spec.Annotations["sandbox-container"]).To(Equal("sandbox-id"))
 		})
 
 		When("the creator returns an error", func() {

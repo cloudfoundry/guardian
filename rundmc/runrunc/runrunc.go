@@ -4,6 +4,7 @@ import (
 	"os/exec"
 	"time"
 
+	"code.cloudfoundry.org/guardian/rundmc/deleter"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
@@ -15,7 +16,7 @@ type RunRunc struct {
 	*OomWatcher
 	*Statser
 	*Stater
-	*Deleter
+	*deleter.Deleter
 	*BundleManager
 }
 
@@ -45,7 +46,7 @@ func New(
 	oomWatcher *OomWatcher,
 	statser *Statser,
 	stater *Stater,
-	deleter *Deleter,
+	deleter *deleter.Deleter,
 	bundleManager *BundleManager,
 ) *RunRunc {
 

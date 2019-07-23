@@ -1,12 +1,6 @@
 package peas
 
 import (
-	"bytes"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strconv"
-
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/peas/processwaiter"
 	"code.cloudfoundry.org/lager"
@@ -14,18 +8,36 @@ import (
 )
 
 type PeaCleaner struct {
-	RuncDeleter    RuncDeleter
-	Volumizer      Volumizer
-	Waiter         processwaiter.ProcessWaiter
-	DepotDirectory string
+	Deleter      Deleter
+	Volumizer    Volumizer
+	Waiter       processwaiter.ProcessWaiter
+	Runtime      Runtime
+	PeaPidGetter PeaPidGetter
 }
 
-func NewPeaCleaner(runcDeleter RuncDeleter, volumizer Volumizer, depotDir string) gardener.PeaCleaner {
+//go:generate counterfeiter . Runtime
+type Runtime interface {
+	ContainerHandles() ([]string, error)
+	ContainerPeaHandles(log lager.Logger, id string) ([]string, error)
+}
+
+//go:generate counterfeiter . PeaPidGetter
+type PeaPidGetter interface {
+	GetPeaPid(logger lager.Logger, _, peaID string) (int, error)
+}
+
+//go:generate counterfeiter . Deleter
+type Deleter interface {
+	Delete(log lager.Logger, handle string) error
+}
+
+func NewPeaCleaner(deleter Deleter, volumizer Volumizer, runtime Runtime, peaPidGetter PeaPidGetter) gardener.PeaCleaner {
 	return &PeaCleaner{
-		RuncDeleter:    runcDeleter,
-		Volumizer:      volumizer,
-		Waiter:         processwaiter.WaitOnProcess,
-		DepotDirectory: depotDir,
+		Deleter:      deleter,
+		Volumizer:    volumizer,
+		Waiter:       processwaiter.WaitOnProcess,
+		Runtime:      runtime,
+		PeaPidGetter: peaPidGetter,
 	}
 }
 
@@ -35,7 +47,7 @@ func (p *PeaCleaner) Clean(log lager.Logger, handle string) error {
 	defer log.Info("end")
 
 	var result *multierror.Error
-	err := p.RuncDeleter.Delete(log, handle)
+	err := p.Deleter.Delete(log, handle)
 	if err != nil {
 		result = multierror.Append(result, err)
 	}
@@ -52,145 +64,41 @@ func (p *PeaCleaner) CleanAll(log lager.Logger) error {
 	log.Info("start")
 	defer log.Info("end")
 
-	peas, err := p.getPeas(log)
+	sandboxHandles, err := p.Runtime.ContainerHandles()
 	if err != nil {
 		return err
 	}
 
-	for _, pea := range peas {
-		go func(pea Pea) {
-			log.Info("pea-cleaner-goroutine-started", lager.Data{"pea": pea})
-			defer log.Info("pea-cleaner-goroutine-ended", lager.Data{"pea": pea})
-			if err := p.Waiter.Wait(pea.Pid); err != nil {
-				log.Error("error-waiting-on-pea", err, lager.Data{"pea": pea})
+	for _, sandboxHandle := range sandboxHandles {
+		peaHandles, err := p.Runtime.ContainerPeaHandles(log, sandboxHandle)
+		if err != nil {
+			log.Error("error-getting-peas", err, lager.Data{"sandboxHandle": sandboxHandle})
+			continue
+		}
+
+		for _, peaHandle := range peaHandles {
+			peaPID, err := p.PeaPidGetter.GetPeaPid(log, sandboxHandle, peaHandle)
+			if err != nil {
+				log.Error("error-getting-pea-pid", err, lager.Data{"sandboxHandle": sandboxHandle, "peaHandle": peaHandle})
+				continue
 			}
 
-			if err := p.Clean(log, pea.Handle); err != nil {
-				log.Error("error-cleaning-up-pea", err, lager.Data{"pea": pea})
-				return
-			}
-		}(pea)
+			go func(peaHandle string, peaPID int) {
+				log.Info("pea-cleaner-goroutine-started", lager.Data{"peaHandle": peaHandle, "peaPID": peaPID})
+				defer log.Info("pea-cleaner-goroutine-ended", lager.Data{"peaHandle": peaHandle, "peaPID": peaPID})
+				if err := p.Waiter.Wait(peaPID); err != nil {
+					log.Error("error-waiting-on-pea", err, lager.Data{"peaHandle": peaHandle, "peaPID": peaPID})
+					return
+				}
+
+				if err := p.Clean(log, peaHandle); err != nil {
+					log.Error("error-cleaning-up-pea", err, lager.Data{"peaHandle": peaHandle, "peaPID": peaPID})
+					return
+				}
+			}(peaHandle, peaPID)
+
+		}
 	}
 
 	return nil
-}
-
-func (p *PeaCleaner) getPeas(log lager.Logger) ([]Pea, error) {
-	peas := []Pea{}
-
-	processDirs, err := getProcessDirs(p.DepotDirectory)
-	if err != nil {
-		return nil, err
-	}
-
-	peaDirs, err := filterStringSlice(processDirs, isPeaDir(log))
-	if err != nil {
-		return nil, err
-	}
-
-	for _, dir := range peaDirs {
-		pid, err := readPidfile(filepath.Join(dir, "pidfile"))
-		if err != nil {
-			return nil, err
-		}
-		peas = append(peas, Pea{filepath.Base(dir), pid})
-	}
-	return peas, nil
-}
-
-type Pea struct {
-	Handle string
-	Pid    int
-}
-
-func isPeaDir(log lager.Logger) func(string) (bool, error) {
-	return func(path string) (bool, error) {
-		if configJSONExists, err := fileExists(filepath.Join(path, "config.json")); !configJSONExists {
-			return false, err
-		}
-
-		if pidfileExists, err := fileExists(filepath.Join(path, "pidfile")); !pidfileExists {
-			log.Error("error-pea-pidfile-does-not-exist", err, lager.Data{"path": path})
-			return false, err
-		}
-		return true, nil
-	}
-}
-
-func getProcessDirs(depotDirectory string) ([]string, error) {
-	var processes []string
-
-	paths, err := readDirPaths(depotDirectory)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, path := range paths {
-		processDirs, err := getProcessDirsForBundle(path)
-		if err != nil {
-			return nil, err
-		}
-
-		processes = append(processes, processDirs...)
-	}
-	return processes, nil
-}
-
-func getProcessDirsForBundle(bundlePath string) ([]string, error) {
-	paths, err := readDirPaths(filepath.Join(bundlePath, "processes"))
-	if err != nil && !os.IsNotExist(err) {
-		return nil, err
-	}
-	if os.IsNotExist(err) {
-		return []string{}, nil
-	}
-
-	return paths, nil
-}
-
-func fileExists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
-}
-
-func readDirPaths(path string) ([]string, error) {
-	names := []string{}
-	infos, err := ioutil.ReadDir(path)
-	if err != nil {
-		return nil, err
-	}
-	for _, info := range infos {
-		names = append(names, filepath.Join(path, info.Name()))
-	}
-	return names, nil
-}
-
-func filterStringSlice(slice []string, filter func(string) (bool, error)) ([]string, error) {
-	var filtered []string
-
-	for _, item := range slice {
-		include, err := filter(item)
-		if err != nil {
-			return nil, err
-		}
-		if include {
-			filtered = append(filtered, item)
-		}
-	}
-	return filtered, nil
-}
-
-func readPidfile(path string) (int, error) {
-	content, err := ioutil.ReadFile(path)
-	if err != nil {
-		return 0, err
-	}
-
-	return strconv.Atoi(string(bytes.TrimSpace(content)))
 }
