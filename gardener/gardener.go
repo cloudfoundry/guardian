@@ -365,12 +365,15 @@ func (g *Gardener) Capacity() (garden.Capacity, error) {
 		return garden.Capacity{}, err
 	}
 
-	disk, err := g.Volumizer.Capacity(log)
+	disk, err := g.SysInfoProvider.TotalDisk()
 	if err != nil {
-		disk, err = g.SysInfoProvider.TotalDisk()
-		if err != nil {
-			return garden.Capacity{}, err
-		}
+		return garden.Capacity{}, err
+	}
+
+	schedulableDisk, err := g.Volumizer.Capacity(log)
+	if err != nil {
+		log.Info("failed to retrieve schedulable disk capacity, falling back to total disk size", lager.Data{"err": err})
+		schedulableDisk = disk
 	}
 
 	cap := g.Networker.Capacity()
@@ -379,9 +382,10 @@ func (g *Gardener) Capacity() (garden.Capacity, error) {
 	}
 
 	return garden.Capacity{
-		MemoryInBytes: mem,
-		DiskInBytes:   disk,
-		MaxContainers: cap,
+		MemoryInBytes:          mem,
+		DiskInBytes:            disk,
+		SchedulableDiskInBytes: schedulableDisk,
+		MaxContainers:          cap,
 	}, nil
 }
 

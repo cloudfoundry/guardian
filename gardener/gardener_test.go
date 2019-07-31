@@ -1218,32 +1218,33 @@ var _ = Describe("Gardener", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(capacity.MemoryInBytes).To(BeEquivalentTo(999))
-			Expect(capacity.DiskInBytes).To(BeEquivalentTo(777))
+			Expect(capacity.DiskInBytes).To(BeEquivalentTo(888))
+			Expect(capacity.SchedulableDiskInBytes).To(BeEquivalentTo(777))
 			Expect(capacity.MaxContainers).To(BeEquivalentTo(1000))
 		})
 
-		Context("when the volumizer fails", func() {
+		Context("when getting the total disk size fails", func() {
+			BeforeEach(func() {
+				sysinfoProvider.TotalDiskReturns(0, errors.New("sysinfo-provider-error"))
+			})
+
+			It("returns an error", func() {
+				_, err := gdnr.Capacity()
+
+				Expect(err).To(MatchError(errors.New("sysinfo-provider-error")))
+			})
+		})
+
+		Context("getting the schedulable disk capacity", func() {
 			BeforeEach(func() {
 				volumizer.CapacityReturns(0, errors.New("capacity-error"))
 			})
 
-			It("falls back to the sys info provider", func() {
+			It("returns the total disk size as the schedulable disk capacity", func() {
 				capacity, err := gdnr.Capacity()
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(capacity.DiskInBytes).To(BeEquivalentTo(888))
-			})
-
-			Context("when the sys info provider fails too", func() {
-				BeforeEach(func() {
-					sysinfoProvider.TotalDiskReturns(0, errors.New("sysinfo-provider-error"))
-				})
-
-				It("returns an error", func() {
-					_, err := gdnr.Capacity()
-
-					Expect(err).To(MatchError(errors.New("sysinfo-provider-error")))
-				})
+				Expect(capacity.SchedulableDiskInBytes).To(BeEquivalentTo(888))
 			})
 		})
 
