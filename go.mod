@@ -28,7 +28,7 @@ require (
 	github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
 	github.com/docker/go-events v0.0.0-20170721190031-9461782956ad // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/eapache/go-resiliency v1.1.0
+	github.com/eapache/go-resiliency v1.2.0
 	github.com/godbus/dbus v4.1.0+incompatible // indirect
 	github.com/gogo/googleapis v1.0.0 // indirect
 	github.com/gogo/protobuf v1.2.1 // indirect
