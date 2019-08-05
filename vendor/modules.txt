@@ -137,7 +137,7 @@ github.com/docker/docker/pkg/reexec
 github.com/docker/go-events
 # github.com/docker/go-units v0.4.0
 github.com/docker/go-units
-# github.com/eapache/go-resiliency v1.1.0
+# github.com/eapache/go-resiliency v1.2.0
 github.com/eapache/go-resiliency/retrier
 # github.com/gogo/googleapis v1.0.0
 github.com/gogo/googleapis/google/rpc
@@ -223,7 +223,7 @@ github.com/opencontainers/go-digest
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
 github.com/opencontainers/image-spec/identity
-# github.com/opencontainers/runc v1.0.0-rc7
+# github.com/opencontainers/runc v1.0.0-rc8
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/utils
 github.com/opencontainers/runc/libcontainer/cgroups
