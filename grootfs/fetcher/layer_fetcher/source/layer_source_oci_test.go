@@ -186,7 +186,7 @@ var _ = Describe("Layer source: OCI", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(blobErr).To(MatchError(ContainSubstring("invalid checksum digest format")))
+				Expect(blobErr).To(MatchError(ContainSubstring("invalid checksum digest length")))
 			})
 		})
 
