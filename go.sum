@@ -221,6 +221,8 @@ github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861/go.mod h1:Bk47
 github.com/urfave/cli v0.0.0-20161006035353-55f715e28c46/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
 github.com/urfave/cli v1.20.0 h1:fDqGv3UG/4jbVl/QkFwEdddtEDjh/5Ov6X+0B/3bPaw=
 github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
+github.com/urfave/cli v1.21.0 h1:wYSSj06510qPIzGSua9ZqsncMmWE3Zr55KBERygyrxE=
+github.com/urfave/cli v1.21.0/go.mod h1:lxDj6qX9Q6lWQxIrbrT0nwecwUtRnhVZAJjJZrVUZZQ=
 github.com/vbatts/tar-split v0.11.1/go.mod h1:LEuURwDEiWjRjwu46yU3KVGuUdVv/dcnpcEPSzR8z6g=
 github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c h1:5v/4YnGPv0eHaqzlkPwEN+Ch0BV1RcnIHjy19xKqSYA=
 github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c/go.mod h1:6rZqAOk/eYX5FJyjQJ6Z3RBSN389IXX2ijwW4FcggaM=

@@ -50,7 +50,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/st3v/glager v0.3.0
 	github.com/tedsuo/ifrit v0.0.0-20180410193936-e89a512c3162
-	github.com/urfave/cli v1.20.0
+	github.com/urfave/cli v1.21.0
 	github.com/vishvananda/netlink v1.0.0
 	github.com/vishvananda/netns v0.0.0-20171111001504-be1fbeda1936
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
