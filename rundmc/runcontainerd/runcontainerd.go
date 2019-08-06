@@ -1,7 +1,6 @@
 package runcontainerd
 
 import (
-	"code.cloudfoundry.org/guardian/rundmc"
 	"fmt"
 	"io"
 	"os"
@@ -9,6 +8,8 @@ import (
 	"regexp"
 	"strconv"
 	"syscall"
+
+	"code.cloudfoundry.org/guardian/rundmc"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -196,7 +197,11 @@ func (r *RunContainerd) getBundle(log lager.Logger, containerID string) (goci.Bn
 }
 
 func (r *RunContainerd) Attach(log lager.Logger, id, processId string, io garden.ProcessIO) (garden.Process, error) {
-	return r.execer.Attach(log, id, processId, io)
+	if !r.useContainerdForProcesses {
+		return r.execer.Attach(log, id, processId, io)
+	}
+
+	return NewProcess(log, id, processId, r.processManager), nil
 }
 
 func (r *RunContainerd) Delete(log lager.Logger, id string) error {
