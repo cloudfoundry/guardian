@@ -579,7 +579,6 @@ var _ = Describe("Attach", func() {
 	)
 
 	BeforeEach(func() {
-		skipIfContainerdForProcesses("Attach is not implemented yet")
 		// we need to pass --properties-path to prevent guardian from deleting containers
 		// after restarting the server
 		config.PropertiesPath = path.Join(tempDir("", "props"), "props.json")
@@ -619,6 +618,7 @@ var _ = Describe("Attach", func() {
 
 	Context("when the process exits before calling .Attach", func() {
 		BeforeEach(func() {
+			skipIfContainerdForProcesses("Attach is not implemented yet")
 			var err error
 			container, err = client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())

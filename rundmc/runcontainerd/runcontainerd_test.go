@@ -2,12 +2,13 @@ package runcontainerd_test
 
 import (
 	"bytes"
-	"code.cloudfoundry.org/guardian/rundmc"
 	"errors"
 	"io"
 	"os"
 	"path/filepath"
 	"syscall"
+
+	"code.cloudfoundry.org/guardian/rundmc"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden/gardenfakes"
@@ -613,6 +614,24 @@ var _ = Describe("Runcontainerd", func() {
 
 			It("returns the execer error", func() {
 				Expect(attachError).To(MatchError("execer-failed"))
+			})
+		})
+
+		Context("when using containerd for processes", func() {
+			BeforeEach(func() {
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil)
+			})
+
+			It("returns a process wired to the process manager", func() {
+				Expect(attachError).NotTo(HaveOccurred())
+
+				attachProcess.Wait()
+
+				Expect(processManager.WaitCallCount()).To(Equal(1))
+				actualLogger, actualContainerId, actualProcessId := processManager.WaitArgsForCall(0)
+				Expect(actualLogger).To(Equal(logger))
+				Expect(actualContainerId).To(Equal("some-id"))
+				Expect(actualProcessId).To(Equal("some-proc-id"))
 			})
 		})
 	})
