@@ -3,170 +3,172 @@ package runcontainerdfakes
 
 import (
 	"sync"
-	"syscall"
 
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/lager"
 )
 
 type FakeProcessManager struct {
-	SignalStub        func(lager.Logger, string, string, syscall.Signal) error
-	signalMutex       sync.RWMutex
-	signalArgsForCall []struct {
-		arg1 lager.Logger
-		arg2 string
-		arg3 string
-		arg4 syscall.Signal
-	}
-	signalReturns struct {
-		result1 error
-	}
-	signalReturnsOnCall map[int]struct {
-		result1 error
-	}
-	WaitStub        func(lager.Logger, string, string) (int, error)
-	waitMutex       sync.RWMutex
-	waitArgsForCall []struct {
+	GetProcessStub        func(lager.Logger, string, string) (runcontainerd.BackingProcess, error)
+	getProcessMutex       sync.RWMutex
+	getProcessArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 string
 		arg3 string
 	}
-	waitReturns struct {
-		result1 int
+	getProcessReturns struct {
+		result1 runcontainerd.BackingProcess
 		result2 error
 	}
-	waitReturnsOnCall map[int]struct {
-		result1 int
+	getProcessReturnsOnCall map[int]struct {
+		result1 runcontainerd.BackingProcess
+		result2 error
+	}
+	GetTaskStub        func(lager.Logger, map[string]string, string) (runcontainerd.BackingProcess, error)
+	getTaskMutex       sync.RWMutex
+	getTaskArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 map[string]string
+		arg3 string
+	}
+	getTaskReturns struct {
+		result1 runcontainerd.BackingProcess
+		result2 error
+	}
+	getTaskReturnsOnCall map[int]struct {
+		result1 runcontainerd.BackingProcess
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeProcessManager) Signal(arg1 lager.Logger, arg2 string, arg3 string, arg4 syscall.Signal) error {
-	fake.signalMutex.Lock()
-	ret, specificReturn := fake.signalReturnsOnCall[len(fake.signalArgsForCall)]
-	fake.signalArgsForCall = append(fake.signalArgsForCall, struct {
-		arg1 lager.Logger
-		arg2 string
-		arg3 string
-		arg4 syscall.Signal
-	}{arg1, arg2, arg3, arg4})
-	fake.recordInvocation("Signal", []interface{}{arg1, arg2, arg3, arg4})
-	fake.signalMutex.Unlock()
-	if fake.SignalStub != nil {
-		return fake.SignalStub(arg1, arg2, arg3, arg4)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	fakeReturns := fake.signalReturns
-	return fakeReturns.result1
-}
-
-func (fake *FakeProcessManager) SignalCallCount() int {
-	fake.signalMutex.RLock()
-	defer fake.signalMutex.RUnlock()
-	return len(fake.signalArgsForCall)
-}
-
-func (fake *FakeProcessManager) SignalCalls(stub func(lager.Logger, string, string, syscall.Signal) error) {
-	fake.signalMutex.Lock()
-	defer fake.signalMutex.Unlock()
-	fake.SignalStub = stub
-}
-
-func (fake *FakeProcessManager) SignalArgsForCall(i int) (lager.Logger, string, string, syscall.Signal) {
-	fake.signalMutex.RLock()
-	defer fake.signalMutex.RUnlock()
-	argsForCall := fake.signalArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
-}
-
-func (fake *FakeProcessManager) SignalReturns(result1 error) {
-	fake.signalMutex.Lock()
-	defer fake.signalMutex.Unlock()
-	fake.SignalStub = nil
-	fake.signalReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeProcessManager) SignalReturnsOnCall(i int, result1 error) {
-	fake.signalMutex.Lock()
-	defer fake.signalMutex.Unlock()
-	fake.SignalStub = nil
-	if fake.signalReturnsOnCall == nil {
-		fake.signalReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.signalReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeProcessManager) Wait(arg1 lager.Logger, arg2 string, arg3 string) (int, error) {
-	fake.waitMutex.Lock()
-	ret, specificReturn := fake.waitReturnsOnCall[len(fake.waitArgsForCall)]
-	fake.waitArgsForCall = append(fake.waitArgsForCall, struct {
+func (fake *FakeProcessManager) GetProcess(arg1 lager.Logger, arg2 string, arg3 string) (runcontainerd.BackingProcess, error) {
+	fake.getProcessMutex.Lock()
+	ret, specificReturn := fake.getProcessReturnsOnCall[len(fake.getProcessArgsForCall)]
+	fake.getProcessArgsForCall = append(fake.getProcessArgsForCall, struct {
 		arg1 lager.Logger
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
-	fake.recordInvocation("Wait", []interface{}{arg1, arg2, arg3})
-	fake.waitMutex.Unlock()
-	if fake.WaitStub != nil {
-		return fake.WaitStub(arg1, arg2, arg3)
+	fake.recordInvocation("GetProcess", []interface{}{arg1, arg2, arg3})
+	fake.getProcessMutex.Unlock()
+	if fake.GetProcessStub != nil {
+		return fake.GetProcessStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.waitReturns
+	fakeReturns := fake.getProcessReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeProcessManager) WaitCallCount() int {
-	fake.waitMutex.RLock()
-	defer fake.waitMutex.RUnlock()
-	return len(fake.waitArgsForCall)
+func (fake *FakeProcessManager) GetProcessCallCount() int {
+	fake.getProcessMutex.RLock()
+	defer fake.getProcessMutex.RUnlock()
+	return len(fake.getProcessArgsForCall)
 }
 
-func (fake *FakeProcessManager) WaitCalls(stub func(lager.Logger, string, string) (int, error)) {
-	fake.waitMutex.Lock()
-	defer fake.waitMutex.Unlock()
-	fake.WaitStub = stub
+func (fake *FakeProcessManager) GetProcessCalls(stub func(lager.Logger, string, string) (runcontainerd.BackingProcess, error)) {
+	fake.getProcessMutex.Lock()
+	defer fake.getProcessMutex.Unlock()
+	fake.GetProcessStub = stub
 }
 
-func (fake *FakeProcessManager) WaitArgsForCall(i int) (lager.Logger, string, string) {
-	fake.waitMutex.RLock()
-	defer fake.waitMutex.RUnlock()
-	argsForCall := fake.waitArgsForCall[i]
+func (fake *FakeProcessManager) GetProcessArgsForCall(i int) (lager.Logger, string, string) {
+	fake.getProcessMutex.RLock()
+	defer fake.getProcessMutex.RUnlock()
+	argsForCall := fake.getProcessArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *FakeProcessManager) WaitReturns(result1 int, result2 error) {
-	fake.waitMutex.Lock()
-	defer fake.waitMutex.Unlock()
-	fake.WaitStub = nil
-	fake.waitReturns = struct {
-		result1 int
+func (fake *FakeProcessManager) GetProcessReturns(result1 runcontainerd.BackingProcess, result2 error) {
+	fake.getProcessMutex.Lock()
+	defer fake.getProcessMutex.Unlock()
+	fake.GetProcessStub = nil
+	fake.getProcessReturns = struct {
+		result1 runcontainerd.BackingProcess
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeProcessManager) WaitReturnsOnCall(i int, result1 int, result2 error) {
-	fake.waitMutex.Lock()
-	defer fake.waitMutex.Unlock()
-	fake.WaitStub = nil
-	if fake.waitReturnsOnCall == nil {
-		fake.waitReturnsOnCall = make(map[int]struct {
-			result1 int
+func (fake *FakeProcessManager) GetProcessReturnsOnCall(i int, result1 runcontainerd.BackingProcess, result2 error) {
+	fake.getProcessMutex.Lock()
+	defer fake.getProcessMutex.Unlock()
+	fake.GetProcessStub = nil
+	if fake.getProcessReturnsOnCall == nil {
+		fake.getProcessReturnsOnCall = make(map[int]struct {
+			result1 runcontainerd.BackingProcess
 			result2 error
 		})
 	}
-	fake.waitReturnsOnCall[i] = struct {
-		result1 int
+	fake.getProcessReturnsOnCall[i] = struct {
+		result1 runcontainerd.BackingProcess
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeProcessManager) GetTask(arg1 lager.Logger, arg2 map[string]string, arg3 string) (runcontainerd.BackingProcess, error) {
+	fake.getTaskMutex.Lock()
+	ret, specificReturn := fake.getTaskReturnsOnCall[len(fake.getTaskArgsForCall)]
+	fake.getTaskArgsForCall = append(fake.getTaskArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 map[string]string
+		arg3 string
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("GetTask", []interface{}{arg1, arg2, arg3})
+	fake.getTaskMutex.Unlock()
+	if fake.GetTaskStub != nil {
+		return fake.GetTaskStub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.getTaskReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeProcessManager) GetTaskCallCount() int {
+	fake.getTaskMutex.RLock()
+	defer fake.getTaskMutex.RUnlock()
+	return len(fake.getTaskArgsForCall)
+}
+
+func (fake *FakeProcessManager) GetTaskCalls(stub func(lager.Logger, map[string]string, string) (runcontainerd.BackingProcess, error)) {
+	fake.getTaskMutex.Lock()
+	defer fake.getTaskMutex.Unlock()
+	fake.GetTaskStub = stub
+}
+
+func (fake *FakeProcessManager) GetTaskArgsForCall(i int) (lager.Logger, map[string]string, string) {
+	fake.getTaskMutex.RLock()
+	defer fake.getTaskMutex.RUnlock()
+	argsForCall := fake.getTaskArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeProcessManager) GetTaskReturns(result1 runcontainerd.BackingProcess, result2 error) {
+	fake.getTaskMutex.Lock()
+	defer fake.getTaskMutex.Unlock()
+	fake.GetTaskStub = nil
+	fake.getTaskReturns = struct {
+		result1 runcontainerd.BackingProcess
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeProcessManager) GetTaskReturnsOnCall(i int, result1 runcontainerd.BackingProcess, result2 error) {
+	fake.getTaskMutex.Lock()
+	defer fake.getTaskMutex.Unlock()
+	fake.GetTaskStub = nil
+	if fake.getTaskReturnsOnCall == nil {
+		fake.getTaskReturnsOnCall = make(map[int]struct {
+			result1 runcontainerd.BackingProcess
+			result2 error
+		})
+	}
+	fake.getTaskReturnsOnCall[i] = struct {
+		result1 runcontainerd.BackingProcess
 		result2 error
 	}{result1, result2}
 }
@@ -174,10 +176,10 @@ func (fake *FakeProcessManager) WaitReturnsOnCall(i int, result1 int, result2 er
 func (fake *FakeProcessManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.signalMutex.RLock()
-	defer fake.signalMutex.RUnlock()
-	fake.waitMutex.RLock()
-	defer fake.waitMutex.RUnlock()
+	fake.getProcessMutex.RLock()
+	defer fake.getProcessMutex.RUnlock()
+	fake.getTaskMutex.RLock()
+	defer fake.getTaskMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

@@ -159,6 +159,45 @@ func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs
 	return nil
 }
 
+func (n *Nerd) GetProcess(log lager.Logger, containerID, processID string) (runcontainerd.BackingProcess, error) {
+	log.Debug("get-process", lager.Data{"containerID": containerID, "processID": processID})
+	_, task, err := n.loadContainerAndTask(log, containerID)
+	if err != nil {
+		return nil, err
+	}
+
+	process, err := task.LoadProcess(n.context, processID, cio.Load)
+	if err != nil {
+		return nil, err
+	}
+
+	return runcontainerd.NewBackingProcess(log, process, n.context, n.cleanupProcessDirsOnWait), nil
+}
+
+func (n *Nerd) GetTask(log lager.Logger, labels map[string]string, id string) (runcontainerd.BackingProcess, error) {
+	log.Debug("get-task", lager.Data{"labels": labels, "id": id})
+	containers, err := n.loadContainers(labels)
+	if err != nil {
+		return nil, err
+	}
+	log.Debug("get-task.containers", lager.Data{"labels": labels, "id": id, "containers": containers})
+
+	for _, container := range containers {
+		task, err := container.Task(n.context, cio.Load)
+		if err != nil {
+			log.Debug("get-task.task-not-found", lager.Data{"labels": labels, "id": id})
+			if errdefs.IsNotFound(err) {
+				continue
+			}
+		}
+		log.Debug("get-task.task-id", lager.Data{"labels": labels, "id": id, "task-id": task.ID()})
+		if task.ID() == id {
+			return runcontainerd.NewBackingProcess(log, task, n.context, n.cleanupProcessDirsOnWait), nil
+		}
+	}
+	return nil, errors.New("task not found")
+}
+
 func exponentialBackoffCloseIO(process containerd.Process, ctx context.Context, log lager.Logger, containerID string) {
 	duration := 3 * time.Second
 	retries := 10
@@ -226,6 +265,15 @@ func (n *Nerd) loadContainer(log lager.Logger, containerID string) (containerd.C
 		return nil, err
 	}
 	return container, nil
+}
+
+func (n *Nerd) loadContainers(labels map[string]string) ([]containerd.Container, error) {
+	var flattenedLabels []string
+	for key, value := range labels {
+		flattenedLabels = append(flattenedLabels, fmt.Sprintf("labels.\"%s\"==%s", key, value))
+	}
+
+	return n.client.Containers(n.context, strings.Join(flattenedLabels, ","))
 }
 
 func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (containerd.Container, containerd.Task, error) {
@@ -359,12 +407,7 @@ func coerceEvent(event *ctrdevents.Envelope) (*apievents.TaskOOM, error) {
 }
 
 func (n *Nerd) BundleIDs(labels map[string]string) ([]string, error) {
-	var flattenedLabels []string
-	for key, value := range labels {
-		flattenedLabels = append(flattenedLabels, fmt.Sprintf("labels.\"%s\"==%s", key, value))
-	}
-
-	containers, err := n.client.Containers(n.context, strings.Join(flattenedLabels, ","))
+	containers, err := n.loadContainers(labels)
 	if err != nil {
 		return nil, err
 	}

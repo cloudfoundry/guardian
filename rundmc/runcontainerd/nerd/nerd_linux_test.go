@@ -362,6 +362,32 @@ var _ = Describe("Nerd", func() {
 
 	})
 
+	Describe("GetProcess", func() {
+		JustBeforeEach(func() {
+			spec := generateSpec(containerdContext, containerdClient, containerID)
+			Expect(cnerd.Create(testLogger, containerID, spec, initProcessIO)).To(Succeed())
+
+			processSpec := &specs.Process{
+				Args: []string{"/bin/sleep", "30"},
+				Cwd:  "/",
+			}
+
+			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			cnerd.Delete(testLogger, containerID)
+		})
+
+		It("execs a process in the container", func() {
+			proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(proc.ID()).To(Equal(processID))
+		})
+	})
+
 	Describe("RemoveBundle", func() {
 		JustBeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)

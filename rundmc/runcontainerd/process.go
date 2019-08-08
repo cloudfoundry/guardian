@@ -8,25 +8,30 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type Process struct {
-	log         lager.Logger
-	containerID string
-	processID   string
+//go:generate counterfeiter . BackingProcess
 
-	processManager ProcessManager
+type BackingProcess interface {
+	ID() string
+	Signal(syscall.Signal) error
+	Wait() (int, error)
 }
 
-func NewProcess(log lager.Logger, containerID, processID string, processManager ProcessManager) *Process {
-	return &Process{log: log, containerID: containerID, processID: processID, processManager: processManager}
+type Process struct {
+	log     lager.Logger
+	process BackingProcess
+}
+
+func NewProcess(log lager.Logger, backingProcess BackingProcess) *Process {
+	return &Process{log: log, process: backingProcess}
+}
+
+func (p *Process) ID() string {
+	return p.process.ID()
 }
 
 func (p *Process) Wait() (int, error) {
-	exitCode, err := p.processManager.Wait(p.log, p.containerID, p.processID)
-	if err != nil {
-		return -1, err
-	}
-
-	return exitCode, nil
+	p.log.Info("AAAAAAAAAAA", lager.Data{"backingProcess": p.process, "id": p.process.ID()})
+	return p.process.Wait()
 }
 
 func (p *Process) Signal(gardenSignal garden.Signal) error {
@@ -35,11 +40,7 @@ func (p *Process) Signal(gardenSignal garden.Signal) error {
 		return err
 	}
 
-	return p.processManager.Signal(p.log, p.containerID, p.processID, signal)
-}
-
-func (p *Process) ID() string {
-	return p.processID
+	return p.process.Signal(signal)
 }
 
 func (p *Process) SetTTY(garden.TTYSpec) error {

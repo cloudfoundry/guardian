@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
-	"syscall"
+	"strings"
 
 	"code.cloudfoundry.org/guardian/rundmc"
 
@@ -41,8 +41,8 @@ type ContainerManager interface {
 
 //go:generate counterfeiter . ProcessManager
 type ProcessManager interface {
-	Wait(log lager.Logger, containerID, processID string) (int, error)
-	Signal(log lager.Logger, containerID, processID string, signal syscall.Signal) error
+	GetProcess(log lager.Logger, containerID, processID string) (BackingProcess, error)
+	GetTask(log lager.Logger, labels map[string]string, id string) (BackingProcess, error)
 }
 
 //go:generate counterfeiter . ProcessBuilder
@@ -82,9 +82,11 @@ type RunContainerd struct {
 	cgroupManager             CgroupManager
 	mkdirer                   Mkdirer
 	peaHandlesGetter          PeaHandlesGetter
+	// TODO: should this be here?
+	volumizer Volumizer
 }
 
-func New(containerManager ContainerManager, processManager ProcessManager, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager, mkdirer Mkdirer, peaHandlesGetter PeaHandlesGetter) *RunContainerd {
+func New(containerManager ContainerManager, processManager ProcessManager, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager, mkdirer Mkdirer, peaHandlesGetter PeaHandlesGetter, volumizer Volumizer) *RunContainerd {
 	return &RunContainerd{
 		containerManager:          containerManager,
 		processManager:            processManager,
@@ -96,6 +98,7 @@ func New(containerManager ContainerManager, processManager ProcessManager, proce
 		cgroupManager:             cgroupManager,
 		mkdirer:                   mkdirer,
 		peaHandlesGetter:          peaHandlesGetter,
+		volumizer:                 volumizer,
 	}
 }
 
@@ -180,7 +183,12 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 		return nil, err
 	}
 
-	return NewProcess(log, containerID, gardenProcessSpec.ID, r.processManager), nil
+	process, err := r.processManager.GetProcess(log, containerID, gardenProcessSpec.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewProcess(log, process), nil
 }
 
 func isNoSuchExecutable(err error) bool {
@@ -199,17 +207,34 @@ func (r *RunContainerd) getBundle(log lager.Logger, containerID string) (goci.Bn
 	return goci.Bndl{Spec: *spec}, nil
 }
 
-func (r *RunContainerd) Attach(log lager.Logger, id, processId string, io garden.ProcessIO) (garden.Process, error) {
+func (r *RunContainerd) Attach(log lager.Logger, sandboxID, processID string, io garden.ProcessIO) (garden.Process, error) {
 	if !r.useContainerdForProcesses {
-		return r.execer.Attach(log, id, processId, io)
+		return r.execer.Attach(log, sandboxID, processID, io)
 	}
 
-	p := NewProcess(log, id, processId, r.processManager)
-	if err := r.processManager.Signal(log, id, processId, syscall.Signal(0)); err == ProcessNotFoundError {
-		return nil, garden.ProcessNotFoundError{ProcessID: processId}
-	}
+	var process BackingProcess
+	var err error
+	process, err = r.processManager.GetProcess(log, sandboxID, processID)
+	if err != nil {
+		log.Error("attach.process-error", err, lager.Data{"id": processID, "Error()": err.Error()})
+		if isProcessNotExist(err) {
+			process, err = r.processManager.GetTask(log, map[string]string{"container-type": "pea", "sandbox-container": sandboxID}, processID)
+			if err != nil {
+				return nil, garden.ProcessNotFoundError{ProcessID: processID}
+			}
 
-	return p, nil
+			return NewPeaProcess(log, process, r, r.volumizer), nil
+		} else {
+			return nil, err
+		}
+	}
+	return NewProcess(log, process), nil
+}
+
+func isProcessNotExist(err error) bool {
+	// TODO: implement
+	return strings.Contains(err.Error(), "no running process found")
+	// return false
 }
 
 func (r *RunContainerd) Delete(log lager.Logger, id string) error {

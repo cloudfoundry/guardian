@@ -43,9 +43,16 @@ func (r *RunContainerPea) RunPea(
 		return &Process{}, err
 	}
 
-	return NewPeaProcess(log, processID, r.ProcessManager, r.PeaManager, r.Volumizer), nil
+	// TODO fix
+	process, err := r.ProcessManager.GetTask(log, map[string]string{"container-type": "pea", "sandbox-container": sandboxHandle}, processID)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewPeaProcess(log, process, r.PeaManager, r.Volumizer), nil
 }
 
-func (r *RunContainerPea) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
-	return &Process{}, nil
-}
+// Is this still needed??
+// func (r *RunContainerPea) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
+// 	return &Process{}, nil
+// }
