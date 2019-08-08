@@ -95,7 +95,6 @@ var _ = Describe("Containerd", func() {
 		})
 
 		It("can attach to a process", func() {
-			skipIfContainerdForProcesses("Attach is not implemented for pure containerd")
 			process, err := container.Run(garden.ProcessSpec{
 				Path: "/bin/sh",
 				Args: []string{"-c", "exit 13"},

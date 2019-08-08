@@ -618,7 +618,6 @@ var _ = Describe("Attach", func() {
 
 	Context("when the process exits before calling .Attach", func() {
 		BeforeEach(func() {
-			skipIfContainerdForProcesses("Attach is not implemented yet")
 			var err error
 			container, err = client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
