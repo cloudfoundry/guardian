@@ -19,6 +19,7 @@ import (
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	apievents "github.com/containerd/containerd/api/events"
+	"github.com/containerd/containerd/errdefs"
 	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -201,7 +202,12 @@ func (r *RunContainerd) Attach(log lager.Logger, id, processId string, io garden
 		return r.execer.Attach(log, id, processId, io)
 	}
 
-	return NewProcess(log, id, processId, r.processManager), nil
+	p := NewProcess(log, id, processId, r.processManager)
+	if err := r.processManager.Signal(log, id, processId, syscall.Signal(0)); err != nil && err == errdefs.ErrNotFound {
+		return nil, garden.ProcessNotFoundError{ProcessID: processId}
+	}
+
+	return p, nil
 }
 
 func (r *RunContainerd) Delete(log lager.Logger, id string) error {
