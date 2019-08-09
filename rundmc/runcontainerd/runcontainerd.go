@@ -1,6 +1,7 @@
 package runcontainerd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -19,10 +20,11 @@ import (
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	apievents "github.com/containerd/containerd/api/events"
-	"github.com/containerd/containerd/errdefs"
 	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
+
+var ProcessNotFoundError = errors.New("Process not found")
 
 //go:generate counterfeiter . ContainerManager
 type ContainerManager interface {
@@ -203,7 +205,7 @@ func (r *RunContainerd) Attach(log lager.Logger, id, processId string, io garden
 	}
 
 	p := NewProcess(log, id, processId, r.processManager)
-	if err := r.processManager.Signal(log, id, processId, syscall.Signal(0)); err != nil && err == errdefs.ErrNotFound {
+	if err := r.processManager.Signal(log, id, processId, syscall.Signal(0)); err == ProcessNotFoundError {
 		return nil, garden.ProcessNotFoundError{ProcessID: processId}
 	}
 

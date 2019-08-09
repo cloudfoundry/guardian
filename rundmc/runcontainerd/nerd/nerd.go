@@ -289,7 +289,7 @@ func (n *Nerd) Signal(log lager.Logger, containerID, processID string, signal sy
 
 	process, err := task.LoadProcess(n.context, processID, cio.Load)
 	if err != nil {
-		return err
+		return runcontainerd.ProcessNotFoundError
 	}
 
 	return process.Kill(n.context, signal)
