@@ -41,7 +41,6 @@ var _ = Describe("Runcontainerd", func() {
 		cgroupManager    *runcontainerdfakes.FakeCgroupManager
 		mkdirer          *runcontainerdfakes.FakeMkdirer
 		peaHandlesGetter *runcontainerdfakes.FakePeaHandlesGetter
-		volumizer        *runcontainerdfakes.FakeVolumizer
 	)
 
 	BeforeEach(func() {
@@ -55,11 +54,10 @@ var _ = Describe("Runcontainerd", func() {
 		userLookupper = new(usersfakes.FakeUserLookupper)
 		cgroupManager = new(runcontainerdfakes.FakeCgroupManager)
 		mkdirer = new(runcontainerdfakes.FakeMkdirer)
-		volumizer = new(runcontainerdfakes.FakeVolumizer)
 
 		processManager.GetProcessReturns(backingProcess, nil)
 
-		runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, nil, volumizer)
+		runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, nil)
 	})
 
 	Describe("Create", func() {
@@ -153,7 +151,7 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("when using containerd for processes", func() {
 			BeforeEach(func() {
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, volumizer)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil)
 			})
 
 			It("sets the container to use the memory hierarchy", func() {
@@ -354,7 +352,7 @@ var _ = Describe("Runcontainerd", func() {
 
 				containerManager.GetContainerPIDReturns(1234, nil)
 				containerManager.ExecReturns(nil)
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, volumizer)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil)
 			})
 
 			It("passes the logger through", func() {
@@ -572,7 +570,7 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("when using containerd for processes", func() {
 			BeforeEach(func() {
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, volumizer)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil)
 			})
 
 			//TODO: errors, peas, stuff.
@@ -810,7 +808,7 @@ var _ = Describe("Runcontainerd", func() {
 			BeforeEach(func() {
 				peaHandlesGetter = new(runcontainerdfakes.FakePeaHandlesGetter)
 				peaHandlesGetter.ContainerPeaHandlesReturns([]string{"apple", "apple2"}, nil)
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, peaHandlesGetter, volumizer)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, peaHandlesGetter)
 			})
 
 			It("returns the list of bundleIDs", func() {

@@ -295,54 +295,6 @@ func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (conta
 	return container, task, nil
 }
 
-func (n *Nerd) Wait(log lager.Logger, containerID, processID string) (int, error) {
-	log.Debug("waiting-on-process", lager.Data{"containerID": containerID, "processID": processID})
-	_, task, err := n.loadContainerAndTask(log, containerID)
-	if err != nil {
-		return 0, err
-	}
-
-	process, err := task.LoadProcess(n.context, processID, cio.Load)
-	if err != nil {
-		return 0, err
-	}
-
-	exitCh, err := process.Wait(n.context)
-	if err != nil {
-		return 0, err
-	}
-
-	// Containerd might fail to retrieve the ExitCode for non-process related reasons
-	exitStatus := <-exitCh
-	if exitStatus.Error() != nil {
-		return 0, exitStatus.Error()
-	}
-
-	if n.cleanupProcessDirsOnWait {
-		_, err = process.Delete(n.context)
-		if err != nil {
-			log.Error("cleanup-failed-deleting-process", err)
-		}
-	}
-
-	return int(exitStatus.ExitCode()), nil
-}
-
-func (n *Nerd) Signal(log lager.Logger, containerID, processID string, signal syscall.Signal) error {
-	log.Debug("signalling-process", lager.Data{"containerID": containerID, "processID": processID, "signal": signal})
-	_, task, err := n.loadContainerAndTask(log, containerID)
-	if err != nil {
-		return err
-	}
-
-	process, err := task.LoadProcess(n.context, processID, cio.Load)
-	if err != nil {
-		return runcontainerd.ProcessNotFoundError
-	}
-
-	return process.Kill(n.context, signal)
-}
-
 func (n *Nerd) OOMEvents(log lager.Logger) <-chan *apievents.TaskOOM {
 	events, errs := n.client.Subscribe(n.context, `topic=="/tasks/oom"`)
 	oomEvents := make(chan *apievents.TaskOOM)

@@ -30,7 +30,6 @@ func (p *Process) ID() string {
 }
 
 func (p *Process) Wait() (int, error) {
-	p.log.Info("AAAAAAAAAAA", lager.Data{"backingProcess": p.process, "id": p.process.ID()})
 	return p.process.Wait()
 }
 

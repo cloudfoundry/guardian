@@ -51,8 +51,3 @@ func (r *RunContainerPea) RunPea(
 
 	return NewPeaProcess(log, process, r.PeaManager, r.Volumizer), nil
 }
-
-// Is this still needed??
-// func (r *RunContainerPea) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
-// 	return &Process{}, nil
-// }

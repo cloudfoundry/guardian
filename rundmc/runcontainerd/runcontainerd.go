@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"code.cloudfoundry.org/guardian/rundmc"
 
@@ -82,11 +81,9 @@ type RunContainerd struct {
 	cgroupManager             CgroupManager
 	mkdirer                   Mkdirer
 	peaHandlesGetter          PeaHandlesGetter
-	// TODO: should this be here?
-	volumizer Volumizer
 }
 
-func New(containerManager ContainerManager, processManager ProcessManager, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager, mkdirer Mkdirer, peaHandlesGetter PeaHandlesGetter, volumizer Volumizer) *RunContainerd {
+func New(containerManager ContainerManager, processManager ProcessManager, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager, mkdirer Mkdirer, peaHandlesGetter PeaHandlesGetter) *RunContainerd {
 	return &RunContainerd{
 		containerManager:          containerManager,
 		processManager:            processManager,
@@ -98,7 +95,6 @@ func New(containerManager ContainerManager, processManager ProcessManager, proce
 		cgroupManager:             cgroupManager,
 		mkdirer:                   mkdirer,
 		peaHandlesGetter:          peaHandlesGetter,
-		volumizer:                 volumizer,
 	}
 }
 
@@ -214,27 +210,10 @@ func (r *RunContainerd) Attach(log lager.Logger, sandboxID, processID string, io
 
 	var process BackingProcess
 	var err error
-	process, err = r.processManager.GetProcess(log, sandboxID, processID)
-	if err != nil {
-		log.Error("attach.process-error", err, lager.Data{"id": processID, "Error()": err.Error()})
-		if isProcessNotExist(err) {
-			process, err = r.processManager.GetTask(log, map[string]string{"container-type": "pea", "sandbox-container": sandboxID}, processID)
-			if err != nil {
-				return nil, garden.ProcessNotFoundError{ProcessID: processID}
-			}
-
-			return NewPeaProcess(log, process, r, r.volumizer), nil
-		} else {
-			return nil, err
-		}
+	if process, err = r.processManager.GetProcess(log, sandboxID, processID); err != nil {
+		return nil, err
 	}
 	return NewProcess(log, process), nil
-}
-
-func isProcessNotExist(err error) bool {
-	// TODO: implement
-	return strings.Contains(err.Error(), "no running process found")
-	// return false
 }
 
 func (r *RunContainerd) Delete(log lager.Logger, id string) error {

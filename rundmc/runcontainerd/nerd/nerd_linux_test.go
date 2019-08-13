@@ -239,7 +239,9 @@ var _ = Describe("Nerd", func() {
 				err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 				Expect(err).NotTo(HaveOccurred())
 
-				exitCode, err := cnerd.Wait(testLogger, containerID, processID)
+				proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+				Expect(err).NotTo(HaveOccurred())
+				exitCode, err := proc.Wait()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exitCode).To(BeZero())
 			})
@@ -265,21 +267,27 @@ var _ = Describe("Nerd", func() {
 		})
 
 		It("succeeds", func() {
-			_, err := cnerd.Wait(testLogger, containerID, processID)
+			proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = proc.Wait()
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns the exit code", func() {
-			exitCode, err := cnerd.Wait(testLogger, containerID, processID)
+			proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+			exitCode, err := proc.Wait()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCode).To(Equal(17))
 		})
 
 		It("allows you to call Wait more than once", func() {
-			_, err := cnerd.Wait(testLogger, containerID, processID)
+			proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = proc.Wait()
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = cnerd.Wait(testLogger, containerID, processID)
+			_, err = proc.Wait()
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -289,15 +297,19 @@ var _ = Describe("Nerd", func() {
 			})
 
 			It("removes process metadata", func() {
-				_, err := cnerd.Wait(testLogger, containerID, processID)
+				proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = proc.Wait()
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = cnerd.Wait(testLogger, containerID, processID)
+				_, err = proc.Wait()
 				Expect(err).To(MatchError(ContainSubstring("not found")))
 			})
 
 			It("removes all process state files", func() {
-				_, err := cnerd.Wait(testLogger, containerID, processID)
+				proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = proc.Wait()
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(findFilesContaining(processID)).To(BeFalse())
@@ -309,7 +321,7 @@ var _ = Describe("Nerd", func() {
 				})
 
 				It("fails", func() {
-					_, err := cnerd.Wait(testLogger, "i-should-not-exist", processID)
+					_, err := cnerd.GetProcess(testLogger, "i-should-not-exist", processID)
 					Expect(err).To(MatchError(ContainSubstring("not found")))
 				})
 			})
@@ -348,11 +360,14 @@ var _ = Describe("Nerd", func() {
 		})
 
 		It("should forward signals to the process", func() {
-			Expect(cnerd.Signal(testLogger, containerID, processID, syscall.SIGTERM)).To(Succeed())
+			proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(proc.Signal(syscall.SIGTERM)).To(Succeed())
 
 			status := make(chan int)
 			go func() {
-				exit, err := cnerd.Wait(testLogger, containerID, processID)
+				exit, err := proc.Wait()
 				Expect(err).NotTo(HaveOccurred())
 				status <- exit
 			}()
@@ -473,7 +488,9 @@ var _ = Describe("Nerd", func() {
 
 			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 			Expect(err).NotTo(HaveOccurred())
-			_, err = cnerd.Wait(testLogger, containerID, processID)
+			proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = proc.Wait()
 			Expect(err).NotTo(HaveOccurred())
 		})
 
