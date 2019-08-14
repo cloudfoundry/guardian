@@ -620,7 +620,7 @@ var _ = Describe("Attach", func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
-	Context("when the process exits after calling .Attach", func() {
+	Context("when attaching to a running process", func() {
 		BeforeEach(func() {
 			var err error
 			container, err = client.Create(garden.ContainerSpec{})
@@ -645,9 +645,51 @@ var _ = Describe("Attach", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCode).To(Equal(13))
 		})
+
+		Context("when signalling the process we attached to", func() {
+			var (
+				attachedProcess garden.Process
+				signal          garden.Signal
+			)
+
+			BeforeEach(func() {
+				var err error
+				attachedProcess, err = container.Attach(processID, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			JustBeforeEach(func() {
+				err := attachedProcess.Signal(signal)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Context("when signalling with SIGTERM", func() {
+				BeforeEach(func() {
+					signal = garden.SignalTerminate
+				})
+
+				It("returns signal number + 128", func() {
+					exitCode, err := attachedProcess.Wait()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(exitCode).To(Equal(128 + 15))
+				})
+			})
+
+			Context("when signalling with SIGKILL", func() {
+				BeforeEach(func() {
+					signal = garden.SignalKill
+				})
+
+				It("returns signal number + 128", func() {
+					exitCode, err := attachedProcess.Wait()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(exitCode).To(Equal(128 + 9))
+				})
+			})
+		})
 	})
 
-	Context("when the process exits before calling .Attach", func() {
+	Context("when attaching to an exited process", func() {
 		BeforeEach(func() {
 			var err error
 			container, err = client.Create(garden.ContainerSpec{})
