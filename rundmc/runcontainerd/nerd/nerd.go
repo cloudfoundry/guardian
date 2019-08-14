@@ -25,18 +25,16 @@ import (
 )
 
 type Nerd struct {
-	client                   *containerd.Client
-	context                  context.Context
-	cleanupProcessDirsOnWait bool
-	ioFifoDir                string
+	client    *containerd.Client
+	context   context.Context
+	ioFifoDir string
 }
 
-func New(client *containerd.Client, context context.Context, cleanupProcessDirsOnWait bool, ioFifoDir string) *Nerd {
+func New(client *containerd.Client, context context.Context, ioFifoDir string) *Nerd {
 	return &Nerd{
-		client:                   client,
-		context:                  context,
-		cleanupProcessDirsOnWait: cleanupProcessDirsOnWait,
-		ioFifoDir:                ioFifoDir,
+		client:    client,
+		context:   context,
+		ioFifoDir: ioFifoDir,
 	}
 }
 
@@ -159,6 +157,48 @@ func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs
 	return nil
 }
 
+func (n *Nerd) GetProcess(log lager.Logger, containerID, processID string) (runcontainerd.BackingProcess, error) {
+	log.Debug("get-process", lager.Data{"containerID": containerID, "processID": processID})
+	_, task, err := n.loadContainerAndTask(log, containerID)
+	if err != nil {
+		return nil, err
+	}
+
+	process, err := task.LoadProcess(n.context, processID, cio.Load)
+	if err != nil {
+		if errdefs.IsNotFound(err) {
+			return nil, runcontainerd.ProcessNotFoundError{Handle: containerID, ID: processID}
+		}
+		return nil, err
+	}
+
+	return runcontainerd.NewBackingProcess(log, process, n.context), nil
+}
+
+func (n *Nerd) GetTask(log lager.Logger, labels map[string]string, id string) (runcontainerd.BackingProcess, error) {
+	log.Debug("get-task", lager.Data{"labels": labels, "id": id})
+	containers, err := n.loadContainers(labels)
+	if err != nil {
+		return nil, err
+	}
+	log.Debug("get-task.containers", lager.Data{"labels": labels, "id": id, "containers": containers})
+
+	for _, container := range containers {
+		task, err := container.Task(n.context, cio.Load)
+		if err != nil {
+			log.Debug("get-task.task-not-found", lager.Data{"labels": labels, "id": id})
+			if errdefs.IsNotFound(err) {
+				continue
+			}
+		}
+		log.Debug("get-task.task-id", lager.Data{"labels": labels, "id": id, "task-id": task.ID()})
+		if task.ID() == id {
+			return runcontainerd.NewBackingProcess(log, task, n.context), nil
+		}
+	}
+	return nil, errors.New("task not found")
+}
+
 func exponentialBackoffCloseIO(process containerd.Process, ctx context.Context, log lager.Logger, containerID string) {
 	duration := 3 * time.Second
 	retries := 10
@@ -228,6 +268,15 @@ func (n *Nerd) loadContainer(log lager.Logger, containerID string) (containerd.C
 	return container, nil
 }
 
+func (n *Nerd) loadContainers(labels map[string]string) ([]containerd.Container, error) {
+	var flattenedLabels []string
+	for key, value := range labels {
+		flattenedLabels = append(flattenedLabels, fmt.Sprintf("labels.\"%s\"==%s", key, value))
+	}
+
+	return n.client.Containers(n.context, strings.Join(flattenedLabels, ","))
+}
+
 func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (containerd.Container, containerd.Task, error) {
 	container, err := n.loadContainer(log, containerID)
 	if err != nil {
@@ -245,54 +294,6 @@ func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (conta
 		return nil, nil, err
 	}
 	return container, task, nil
-}
-
-func (n *Nerd) Wait(log lager.Logger, containerID, processID string) (int, error) {
-	log.Debug("waiting-on-process", lager.Data{"containerID": containerID, "processID": processID})
-	_, task, err := n.loadContainerAndTask(log, containerID)
-	if err != nil {
-		return 0, err
-	}
-
-	process, err := task.LoadProcess(n.context, processID, cio.Load)
-	if err != nil {
-		return 0, err
-	}
-
-	exitCh, err := process.Wait(n.context)
-	if err != nil {
-		return 0, err
-	}
-
-	// Containerd might fail to retrieve the ExitCode for non-process related reasons
-	exitStatus := <-exitCh
-	if exitStatus.Error() != nil {
-		return 0, exitStatus.Error()
-	}
-
-	if n.cleanupProcessDirsOnWait {
-		_, err = process.Delete(n.context)
-		if err != nil {
-			log.Error("cleanup-failed-deleting-process", err)
-		}
-	}
-
-	return int(exitStatus.ExitCode()), nil
-}
-
-func (n *Nerd) Signal(log lager.Logger, containerID, processID string, signal syscall.Signal) error {
-	log.Debug("signalling-process", lager.Data{"containerID": containerID, "processID": processID, "signal": signal})
-	_, task, err := n.loadContainerAndTask(log, containerID)
-	if err != nil {
-		return err
-	}
-
-	process, err := task.LoadProcess(n.context, processID, cio.Load)
-	if err != nil {
-		return runcontainerd.ProcessNotFoundError
-	}
-
-	return process.Kill(n.context, signal)
 }
 
 func (n *Nerd) OOMEvents(log lager.Logger) <-chan *apievents.TaskOOM {
@@ -359,12 +360,7 @@ func coerceEvent(event *ctrdevents.Envelope) (*apievents.TaskOOM, error) {
 }
 
 func (n *Nerd) BundleIDs(labels map[string]string) ([]string, error) {
-	var flattenedLabels []string
-	for key, value := range labels {
-		flattenedLabels = append(flattenedLabels, fmt.Sprintf("labels.\"%s\"==%s", key, value))
-	}
-
-	containers, err := n.client.Containers(n.context, strings.Join(flattenedLabels, ","))
+	containers, err := n.loadContainers(labels)
 	if err != nil {
 		return nil, err
 	}

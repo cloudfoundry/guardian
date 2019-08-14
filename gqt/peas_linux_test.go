@@ -73,20 +73,44 @@ var _ = Describe("Partially shared containers (peas)", func() {
 			}
 		})
 
-		It("should not leak process dirs", func() {
-			skipIfContainerdForProcesses("processes direcotry in the depot is not created for peas run via containerd")
-			numProcessDirsBefore := numProcessDirs(ctr.Handle())
+		Context("when using runc for peas", func() {
+			BeforeEach(func() {
+				skipIfContainerdForProcesses("processes directory in the depot is not created for peas run via containerd")
+			})
 
-			process, err := ctr.Run(garden.ProcessSpec{
-				User:  "alice",
-				Path:  "echo",
-				Args:  []string{"hello"},
-				Image: garden.ImageRef{URI: "raw://" + peaRootfs},
-			}, garden.ProcessIO{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(process.Wait()).To(Equal(0))
+			It("should not leak process dirs", func() {
+				numProcessDirsBefore := numProcessDirs(ctr.Handle())
 
-			Expect(numProcessDirs(ctr.Handle())).To(Equal(numProcessDirsBefore))
+				process, err := ctr.Run(garden.ProcessSpec{
+					User:  "alice",
+					Path:  "echo",
+					Args:  []string{"hello"},
+					Image: garden.ImageRef{URI: "raw://" + peaRootfs},
+				}, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(process.Wait()).To(Equal(0))
+
+				Expect(numProcessDirs(ctr.Handle())).To(Equal(numProcessDirsBefore))
+			})
+		})
+
+		Context("when using containerd for peas", func() {
+			BeforeEach(func() {
+				skipIfRunDmcForProcesses("no containerd in the runc for processes world")
+			})
+
+			It("should delete the username resolving pea container", func() {
+				containersLsBefore := listContainers("ctr", config.ContainerdSocket)
+				process, err := ctr.Run(garden.ProcessSpec{
+					User:  "alice",
+					Path:  "echo",
+					Args:  []string{"hello"},
+					Image: garden.ImageRef{URI: "raw://" + peaRootfs},
+				}, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(process.Wait()).To(Equal(0))
+				Expect(listContainers("ctr", config.ContainerdSocket)).To(Equal(containersLsBefore))
+			})
 		})
 
 		It("should not leak image dirs", func() {
@@ -232,7 +256,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 			})
 		})
 
-		Context("when using rundmc for processes", func() {
+		Context("when using runc for processes", func() {
 			BeforeEach(func() {
 				skipIfContainerdForProcesses("There is no process directory in the depot when processes are run via containerd")
 			})

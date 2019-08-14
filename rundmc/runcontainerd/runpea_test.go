@@ -19,6 +19,7 @@ var _ = Describe("RunContainerPea", func() {
 	var (
 		fakePeaManager     *runcontainerdfakes.FakePeaManager
 		fakeProcessManager *runcontainerdfakes.FakeProcessManager
+		fakeVolumizer      *runcontainerdfakes.FakeVolumizer
 
 		processID string
 
@@ -28,14 +29,12 @@ var _ = Describe("RunContainerPea", func() {
 	BeforeEach(func() {
 		fakePeaManager = new(runcontainerdfakes.FakePeaManager)
 		fakeProcessManager = new(runcontainerdfakes.FakeProcessManager)
+		fakeVolumizer = new(runcontainerdfakes.FakeVolumizer)
 
 		var err error
 		Expect(err).NotTo(HaveOccurred())
 
-		runContainerPea = &runcontainerd.RunContainerPea{
-			PeaManager:     fakePeaManager,
-			ProcessManager: fakeProcessManager,
-		}
+		runContainerPea = runcontainerd.NewRunContainerPea(fakePeaManager, fakeProcessManager, fakeVolumizer, false)
 	})
 
 	Describe("RunPea", func() {

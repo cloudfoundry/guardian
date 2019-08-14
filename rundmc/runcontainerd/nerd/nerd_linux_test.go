@@ -33,17 +33,16 @@ import (
 
 var _ = Describe("Nerd", func() {
 	var (
-		testLogger               lager.Logger
-		cnerd                    *nerd.Nerd
-		cleanupProcessDirsOnWait bool
-		containerID              string
-		processID                string
-		fifoDir                  string
-		initProcessIO            func() (io.Reader, io.Writer, io.Writer)
-		processIO                func() (io.Reader, io.Writer, io.Writer, bool)
-		stdin                    io.Reader
-		stdout                   io.Writer
-		stderr                   io.Writer
+		testLogger    lager.Logger
+		cnerd         *nerd.Nerd
+		containerID   string
+		processID     string
+		fifoDir       string
+		initProcessIO func() (io.Reader, io.Writer, io.Writer)
+		processIO     func() (io.Reader, io.Writer, io.Writer, bool)
+		stdin         io.Reader
+		stdout        io.Writer
+		stderr        io.Writer
 	)
 
 	BeforeEach(func() {
@@ -59,7 +58,6 @@ var _ = Describe("Nerd", func() {
 		processIO = func() (io.Reader, io.Writer, io.Writer, bool) {
 			return stdin, stdout, stderr, false
 		}
-		cleanupProcessDirsOnWait = false
 		testLogger = lagertest.NewTestLogger("nerd-test")
 
 		var err error
@@ -68,7 +66,7 @@ var _ = Describe("Nerd", func() {
 	})
 
 	JustBeforeEach(func() {
-		cnerd = nerd.New(containerdClient, containerdContext, cleanupProcessDirsOnWait, fifoDir)
+		cnerd = nerd.New(containerdClient, containerdContext, fifoDir)
 	})
 
 	AfterEach(func() {
@@ -239,7 +237,9 @@ var _ = Describe("Nerd", func() {
 				err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 				Expect(err).NotTo(HaveOccurred())
 
-				exitCode, err := cnerd.Wait(testLogger, containerID, processID)
+				proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+				Expect(err).NotTo(HaveOccurred())
+				exitCode, err := proc.Wait()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exitCode).To(BeZero())
 			})
@@ -265,55 +265,30 @@ var _ = Describe("Nerd", func() {
 		})
 
 		It("succeeds", func() {
-			_, err := cnerd.Wait(testLogger, containerID, processID)
+			proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = proc.Wait()
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns the exit code", func() {
-			exitCode, err := cnerd.Wait(testLogger, containerID, processID)
+			proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+			exitCode, err := proc.Wait()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCode).To(Equal(17))
 		})
 
 		It("allows you to call Wait more than once", func() {
-			_, err := cnerd.Wait(testLogger, containerID, processID)
+			proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = proc.Wait()
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = cnerd.Wait(testLogger, containerID, processID)
+			_, err = proc.Wait()
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		Context("when CleanupProcessDirsOnWait=true", func() {
-			BeforeEach(func() {
-				cleanupProcessDirsOnWait = true
-			})
-
-			It("removes process metadata", func() {
-				_, err := cnerd.Wait(testLogger, containerID, processID)
-				Expect(err).NotTo(HaveOccurred())
-
-				_, err = cnerd.Wait(testLogger, containerID, processID)
-				Expect(err).To(MatchError(ContainSubstring("not found")))
-			})
-
-			It("removes all process state files", func() {
-				_, err := cnerd.Wait(testLogger, containerID, processID)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(findFilesContaining(processID)).To(BeFalse())
-			})
-
-			Context("when the container does not exist", func() {
-				JustBeforeEach(func() {
-					cnerd.Delete(testLogger, containerID)
-				})
-
-				It("fails", func() {
-					_, err := cnerd.Wait(testLogger, "i-should-not-exist", processID)
-					Expect(err).To(MatchError(ContainSubstring("not found")))
-				})
-			})
-		})
 	})
 
 	Describe("Signal", func() {
@@ -348,11 +323,14 @@ var _ = Describe("Nerd", func() {
 		})
 
 		It("should forward signals to the process", func() {
-			Expect(cnerd.Signal(testLogger, containerID, processID, syscall.SIGTERM)).To(Succeed())
+			proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(proc.Signal(syscall.SIGTERM)).To(Succeed())
 
 			status := make(chan int)
 			go func() {
-				exit, err := cnerd.Wait(testLogger, containerID, processID)
+				exit, err := proc.Wait()
 				Expect(err).NotTo(HaveOccurred())
 				status <- exit
 			}()
@@ -360,6 +338,43 @@ var _ = Describe("Nerd", func() {
 			Eventually(status, 5*time.Second).Should(Receive(BeEquivalentTo(42)))
 		})
 
+	})
+
+	Describe("GetProcess", func() {
+		JustBeforeEach(func() {
+			spec := generateSpec(containerdContext, containerdClient, containerID)
+			Expect(cnerd.Create(testLogger, containerID, spec, initProcessIO)).To(Succeed())
+
+			processSpec := &specs.Process{
+				Args: []string{"/bin/sleep", "30"},
+				Cwd:  "/",
+			}
+
+			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			cnerd.Delete(testLogger, containerID)
+		})
+
+		It("execs a process in the container", func() {
+			proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(proc.ID()).To(Equal(processID))
+		})
+
+		Context("when the container does not exist", func() {
+			JustBeforeEach(func() {
+				cnerd.Delete(testLogger, containerID)
+			})
+
+			It("fails", func() {
+				_, err := cnerd.GetProcess(testLogger, containerID, processID)
+				Expect(err).To(MatchError(ContainSubstring("not found")))
+			})
+		})
 	})
 
 	Describe("RemoveBundle", func() {
@@ -447,7 +462,9 @@ var _ = Describe("Nerd", func() {
 
 			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 			Expect(err).NotTo(HaveOccurred())
-			_, err = cnerd.Wait(testLogger, containerID, processID)
+			proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = proc.Wait()
 			Expect(err).NotTo(HaveOccurred())
 		})
 

@@ -8,25 +8,48 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type Process struct {
-	log         lager.Logger
-	containerID string
-	processID   string
+//go:generate counterfeiter . BackingProcess
 
-	processManager ProcessManager
+type BackingProcess interface {
+	ID() string
+	Signal(syscall.Signal) error
+	Wait() (int, error)
+	Delete() error
 }
 
-func NewProcess(log lager.Logger, containerID, processID string, processManager ProcessManager) *Process {
-	return &Process{log: log, containerID: containerID, processID: processID, processManager: processManager}
+type Process struct {
+	log                      lager.Logger
+	nerdProcess              BackingProcess
+	cleanupProcessDirsOnWait bool
+}
+
+func NewProcess(log lager.Logger, nerdProcess BackingProcess, cleanupProcessDirsOnWait bool) *Process {
+	return &Process{
+		log:                      log,
+		nerdProcess:              nerdProcess,
+		cleanupProcessDirsOnWait: cleanupProcessDirsOnWait,
+	}
+}
+
+func (p *Process) ID() string {
+	return p.nerdProcess.ID()
 }
 
 func (p *Process) Wait() (int, error) {
-	exitCode, err := p.processManager.Wait(p.log, p.containerID, p.processID)
+	exitStatus, err := p.nerdProcess.Wait()
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
-	return exitCode, nil
+	if p.cleanupProcessDirsOnWait {
+		p.log.Debug("wait.cleanup-process", lager.Data{"processID": p.nerdProcess.ID()})
+		err = p.nerdProcess.Delete()
+		if err != nil {
+			p.log.Error("cleanup-failed-deleting-process", err)
+		}
+	}
+
+	return exitStatus, nil
 }
 
 func (p *Process) Signal(gardenSignal garden.Signal) error {
@@ -35,11 +58,7 @@ func (p *Process) Signal(gardenSignal garden.Signal) error {
 		return err
 	}
 
-	return p.processManager.Signal(p.log, p.containerID, p.processID, signal)
-}
-
-func (p *Process) ID() string {
-	return p.processID
+	return p.nerdProcess.Signal(signal)
 }
 
 func (p *Process) SetTTY(garden.TTYSpec) error {

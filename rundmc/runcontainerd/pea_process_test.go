@@ -14,7 +14,7 @@ import (
 var _ = Describe("PeaProcess", func() {
 	var (
 		logger             lager.Logger
-		fakeProcessManager *runcontainerdfakes.FakeProcessManager
+		fakeBackingProcess *runcontainerdfakes.FakeBackingProcess
 		fakePeaManager     *runcontainerdfakes.FakePeaManager
 		fakeVolumizer      *runcontainerdfakes.FakeVolumizer
 
@@ -23,10 +23,14 @@ var _ = Describe("PeaProcess", func() {
 
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("test-logger")
-		fakeProcessManager = new(runcontainerdfakes.FakeProcessManager)
 		fakePeaManager = new(runcontainerdfakes.FakePeaManager)
 		fakeVolumizer = new(runcontainerdfakes.FakeVolumizer)
-		peaProcess = runcontainerd.NewPeaProcess(logger, "pea-test", fakeProcessManager, fakePeaManager, fakeVolumizer)
+		fakeBackingProcess = new(runcontainerdfakes.FakeBackingProcess)
+		fakeBackingProcess.IDReturns("pea-test")
+		proc := runcontainerd.NewProcess(logger, fakeBackingProcess, false)
+		peaProcess = runcontainerd.NewPeaProcess(logger, *proc, fakePeaManager, fakeVolumizer)
+
+		fakeBackingProcess.IDReturns("pea-test")
 	})
 
 	Describe("Wait", func() {

@@ -99,14 +99,29 @@ var _ = Describe("Run", func() {
 		})
 
 		Context("when --cleanup-process-dirs-on-wait is not set (default)", func() {
-			It("does not delete the process directory", func() {
-				skipIfContainerdForProcesses("There is no processes directory in the depot when running processes with containerd")
-				Expect(processPath).To(BeADirectory())
+			Context("not using containerd for processes", func() {
+				BeforeEach(func() {
+					skipIfContainerdForProcesses("There is no processes directory in the depot when running processes with containerd")
+				})
+
+				It("does not delete the process directory", func() {
+					Expect(processPath).To(BeADirectory())
+				})
+			})
+
+			Context("using containerd for processes", func() {
+				BeforeEach(func() {
+					skipIfRunDmcForProcesses("Processes not managed by containerd")
+				})
+
+				It("can re-attach to the process", func() {
+					_, err := container.Attach(process.ID(), garden.ProcessIO{})
+					Expect(err).ToNot(HaveOccurred())
+				})
 			})
 
 			Context("when we reattach", func() {
 				It("can be Waited for again", func() {
-					skipIfContainerdForProcesses("Attach is not implemented for pure containerd")
 					reattachedProcess, err := container.Attach(process.ID(), garden.ProcessIO{})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -122,8 +137,25 @@ var _ = Describe("Run", func() {
 				config.CleanupProcessDirsOnWait = boolptr(true)
 			})
 
-			It("deletes the proccess directory", func() {
-				Expect(processPath).NotTo(BeAnExistingFile())
+			Context("not using containerd for processes", func() {
+				BeforeEach(func() {
+					skipIfContainerdForProcesses("There is no processes directory in the depot when running processes with containerd")
+				})
+				It("deletes the process directory", func() {
+					Expect(processPath).NotTo(BeAnExistingFile())
+				})
+			})
+
+			Context("using containerd for processes", func() {
+				BeforeEach(func() {
+					skipIfRunDmcForProcesses("Processes not managed by containerd")
+				})
+
+				It("deletes the process metadata", func() {
+					_, err := container.Attach(process.ID(), garden.ProcessIO{})
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(BeAssignableToTypeOf(garden.ProcessNotFoundError{}))
+				})
 			})
 		})
 	})
@@ -393,8 +425,7 @@ var _ = Describe("Run", func() {
 			)
 
 			BeforeEach(func() {
-				//TODO: maybe we can make containerd use a different runc and make it work?
-				skipIfContainerdForProcesses("When running processes with containerd we are not calling runc directly. We could probably consider making containerd use a fake runc binary if we believe this test has any value")
+				skipIfContainerdForProcesses("When running processes with containerd we are not calling runc directly.")
 				propertiesDir = tempDir("", "props")
 
 				config.PropertiesPath = path.Join(propertiesDir, "props.json")

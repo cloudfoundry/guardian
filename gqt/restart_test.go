@@ -157,19 +157,24 @@ var _ = Describe("Surviving Restarts", func() {
 					processID = fmt.Sprintf("unique-potato-%s-%d", id, GinkgoParallelNode())
 				})
 
-				It("destroys the pea container", func() {
-					skipIfContainerdForProcesses("not relevant to runrunc peas")
-					Eventually(filepath.Join(getRuncRoot(), processID), "10s").ShouldNot(BeADirectory())
+				Context("with runc", func() {
+					BeforeEach(func() {
+						skipIfContainerdForProcesses("not relevant to containerd peas")
+					})
+
+					It("destroys the pea container", func() {
+						Eventually(filepath.Join(getRuncRoot(), processID), "10s").ShouldNot(BeADirectory())
+					})
 				})
 
 				Context("with containerd", func() {
 					BeforeEach(func() {
-						skipIfRunDmcForProcesses("not relevant to containerd peas")
+						skipIfRunDmcForProcesses("not relevant to runc peas")
 					})
 
 					It("destroys the peacontainer", func() {
 						ctrOutput := func() string {
-							return runCtr("ctr", config.ContainerdSocket, []string{"containers", "ls"})
+							return listContainers("ctr", config.ContainerdSocket)
 						}
 						Eventually(ctrOutput, "20s").ShouldNot(ContainSubstring(processID))
 					})
@@ -276,7 +281,7 @@ var _ = Describe("Surviving Restarts", func() {
 				})
 
 				It("can reattach to processes that are still running", func() {
-					skipIfContainerdForProcesses("Attach is not implemented for pure containerd")
+					skipIfContainerdForProcesses("Attach with IO is not implemented for pure containerd")
 					out := gbytes.NewBuffer()
 					process, err := container.Attach(existingProc.ID(), garden.ProcessIO{
 						Stdout: io.MultiWriter(GinkgoWriter, out),

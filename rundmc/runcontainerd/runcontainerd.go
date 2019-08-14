@@ -1,14 +1,12 @@
 package runcontainerd
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
-	"syscall"
 
 	"code.cloudfoundry.org/guardian/rundmc"
 
@@ -23,8 +21,6 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
-
-var ProcessNotFoundError = errors.New("Process not found")
 
 //go:generate counterfeiter . ContainerManager
 type ContainerManager interface {
@@ -41,8 +37,8 @@ type ContainerManager interface {
 
 //go:generate counterfeiter . ProcessManager
 type ProcessManager interface {
-	Wait(log lager.Logger, containerID, processID string) (int, error)
-	Signal(log lager.Logger, containerID, processID string, signal syscall.Signal) error
+	GetProcess(log lager.Logger, containerID, processID string) (BackingProcess, error)
+	GetTask(log lager.Logger, labels map[string]string, id string) (BackingProcess, error)
 }
 
 //go:generate counterfeiter . ProcessBuilder
@@ -82,9 +78,10 @@ type RunContainerd struct {
 	cgroupManager             CgroupManager
 	mkdirer                   Mkdirer
 	peaHandlesGetter          PeaHandlesGetter
+	cleanupProcessDirsOnWait  bool
 }
 
-func New(containerManager ContainerManager, processManager ProcessManager, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager, mkdirer Mkdirer, peaHandlesGetter PeaHandlesGetter) *RunContainerd {
+func New(containerManager ContainerManager, processManager ProcessManager, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager, mkdirer Mkdirer, peaHandlesGetter PeaHandlesGetter, cleanupProcessDirsOnWait bool) *RunContainerd {
 	return &RunContainerd{
 		containerManager:          containerManager,
 		processManager:            processManager,
@@ -96,6 +93,7 @@ func New(containerManager ContainerManager, processManager ProcessManager, proce
 		cgroupManager:             cgroupManager,
 		mkdirer:                   mkdirer,
 		peaHandlesGetter:          peaHandlesGetter,
+		cleanupProcessDirsOnWait:  cleanupProcessDirsOnWait,
 	}
 }
 
@@ -180,7 +178,12 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 		return nil, err
 	}
 
-	return NewProcess(log, containerID, gardenProcessSpec.ID, r.processManager), nil
+	process, err := r.processManager.GetProcess(log, containerID, gardenProcessSpec.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewProcess(log, process, r.cleanupProcessDirsOnWait), nil
 }
 
 func isNoSuchExecutable(err error) bool {
@@ -199,17 +202,20 @@ func (r *RunContainerd) getBundle(log lager.Logger, containerID string) (goci.Bn
 	return goci.Bndl{Spec: *spec}, nil
 }
 
-func (r *RunContainerd) Attach(log lager.Logger, id, processId string, io garden.ProcessIO) (garden.Process, error) {
+func (r *RunContainerd) Attach(log lager.Logger, sandboxID, processID string, io garden.ProcessIO) (garden.Process, error) {
 	if !r.useContainerdForProcesses {
-		return r.execer.Attach(log, id, processId, io)
+		return r.execer.Attach(log, sandboxID, processID, io)
 	}
 
-	p := NewProcess(log, id, processId, r.processManager)
-	if err := r.processManager.Signal(log, id, processId, syscall.Signal(0)); err == ProcessNotFoundError {
-		return nil, garden.ProcessNotFoundError{ProcessID: processId}
+	var process BackingProcess
+	var err error
+	if process, err = r.processManager.GetProcess(log, sandboxID, processID); err != nil {
+		if isNotFound(err) {
+			return nil, garden.ProcessNotFoundError{ProcessID: processID}
+		}
+		return nil, err
 	}
-
-	return p, nil
+	return NewProcess(log, process, r.cleanupProcessDirsOnWait), nil
 }
 
 func (r *RunContainerd) Delete(log lager.Logger, id string) error {
@@ -256,8 +262,9 @@ func (r *RunContainerd) BundleInfo(log lager.Logger, handle string) (string, goc
 }
 
 func isNotFound(err error) bool {
-	_, ok := err.(ContainerNotFoundError)
-	return ok
+	_, cok := err.(ContainerNotFoundError)
+	_, pok := err.(ProcessNotFoundError)
+	return cok || pok
 }
 
 func (r *RunContainerd) ContainerHandles() ([]string, error) {

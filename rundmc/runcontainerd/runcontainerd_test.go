@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"syscall"
 
 	"code.cloudfoundry.org/guardian/rundmc"
 
@@ -32,6 +31,7 @@ var _ = Describe("Runcontainerd", func() {
 	var (
 		logger           lager.Logger
 		containerManager *runcontainerdfakes.FakeContainerManager
+		backingProcess   *runcontainerdfakes.FakeBackingProcess
 		processManager   *runcontainerdfakes.FakeProcessManager
 		runContainerd    *runcontainerd.RunContainerd
 		execer           *runcontainerdfakes.FakeExecer
@@ -46,6 +46,7 @@ var _ = Describe("Runcontainerd", func() {
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("test-logger")
 		containerManager = new(runcontainerdfakes.FakeContainerManager)
+		backingProcess = new(runcontainerdfakes.FakeBackingProcess)
 		processManager = new(runcontainerdfakes.FakeProcessManager)
 		execer = new(runcontainerdfakes.FakeExecer)
 		statser = new(runcontainerdfakes.FakeStatser)
@@ -54,7 +55,9 @@ var _ = Describe("Runcontainerd", func() {
 		cgroupManager = new(runcontainerdfakes.FakeCgroupManager)
 		mkdirer = new(runcontainerdfakes.FakeMkdirer)
 
-		runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, nil)
+		processManager.GetProcessReturns(backingProcess, nil)
+
+		runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, nil, false)
 	})
 
 	Describe("Create", func() {
@@ -148,7 +151,7 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("when using containerd for processes", func() {
 			BeforeEach(func() {
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, false)
 			})
 
 			It("sets the container to use the memory hierarchy", func() {
@@ -349,7 +352,7 @@ var _ = Describe("Runcontainerd", func() {
 
 				containerManager.GetContainerPIDReturns(1234, nil)
 				containerManager.ExecReturns(nil)
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, false)
 			})
 
 			It("passes the logger through", func() {
@@ -420,6 +423,13 @@ var _ = Describe("Runcontainerd", func() {
 				Expect(workDir).To(ConsistOf(processSpec.Dir))
 			})
 
+			It("gets the backing process", func() {
+				Expect(processManager.GetProcessCallCount()).To(Equal(1))
+				_, actualContainerID, actualProcessID := processManager.GetProcessArgsForCall(0)
+				Expect(actualContainerID).To(Equal(containerID))
+				Expect(actualProcessID).To(Equal(processSpec.ID))
+			})
+
 			Context("when processSpec.ID is not set", func() {
 				BeforeEach(func() {
 					processSpec.ID = ""
@@ -459,76 +469,6 @@ var _ = Describe("Runcontainerd", func() {
 
 				It("propagates the error", func() {
 					Expect(execErr).To(MatchError("HUBABUBA"))
-				})
-			})
-
-			Describe("the process itself", func() {
-				BeforeEach(func() {
-					processManager.WaitReturns(17, nil)
-				})
-
-				It("collects the exit code from the process manager", func() {
-					exitStatus, err := execProcess.Wait()
-					Expect(err).NotTo(HaveOccurred())
-					Expect(exitStatus).To(Equal(17))
-
-					Expect(processManager.WaitCallCount()).NotTo(BeZero())
-					_, actualContainerID, actualProcessID := processManager.WaitArgsForCall(0)
-					Expect(actualContainerID).To(Equal("container-id"))
-					Expect(actualProcessID).To(Equal("test-process-id"))
-				})
-
-				It("converts and forwards signals to the process manager", func() {
-					Expect(execProcess.Signal(garden.SignalTerminate)).To(Succeed())
-					Expect(execProcess.Signal(garden.SignalKill)).To(Succeed())
-
-					Expect(processManager.SignalCallCount()).To(Equal(2))
-					_, firstActualContainerID, firstActualProcessID, firstActualSignal := processManager.SignalArgsForCall(0)
-					Expect(firstActualContainerID).To(Equal("container-id"))
-					Expect(firstActualProcessID).To(Equal("test-process-id"))
-					Expect(firstActualSignal).To(Equal(syscall.SIGTERM))
-
-					_, _, _, secondActualSignal := processManager.SignalArgsForCall(1)
-					Expect(secondActualSignal).To(Equal(syscall.SIGKILL))
-				})
-
-				Context("when getting the bundle fails", func() {
-					BeforeEach(func() {
-						containerManager.SpecReturns(nil, errors.New("you-are-a-failure"))
-					})
-
-					It("propagates the error", func() {
-						Expect(execErr).To(MatchError("you-are-a-failure"))
-					})
-				})
-
-				Context("when waiting on the process fails", func() {
-					BeforeEach(func() {
-						processManager.WaitReturns(17, errors.New("Oh no."))
-					})
-
-					It("propogates the error", func() {
-						_, err := execProcess.Wait()
-						Expect(err).To(MatchError("Oh no."))
-					})
-				})
-
-				Context("when sending a signal that doesn't exist", func() {
-					It("returns an appropriate error", func() {
-						err := execProcess.Signal(-1)
-						Expect(err).To(MatchError("Cannot convert garden signal -1 to syscall.Signal"))
-					})
-				})
-
-				Context("when signalling the process fails", func() {
-					BeforeEach(func() {
-						processManager.SignalReturns(errors.New("EXPLODE"))
-					})
-
-					It("propagates error", func() {
-						err := execProcess.Signal(garden.SignalTerminate)
-						Expect(err).To(MatchError("EXPLODE"))
-					})
 				})
 			})
 
@@ -572,6 +512,17 @@ var _ = Describe("Runcontainerd", func() {
 					_, actualProcessSpec, _, _ := processBuilder.BuildProcessArgsForCall(0)
 					Expect(actualProcessSpec.Dir).To(Equal("/home/alice"))
 				})
+			})
+
+			Context("when getting backing process errors", func() {
+				BeforeEach(func() {
+					processManager.GetProcessReturns(nil, errors.New("process-problem"))
+				})
+
+				It("returns the error", func() {
+					Expect(execErr).To(MatchError("process-problem"))
+				})
+
 			})
 		})
 	})
@@ -619,19 +570,33 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("when using containerd for processes", func() {
 			BeforeEach(func() {
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, false)
 			})
 
 			It("returns a process wired to the process manager", func() {
 				Expect(attachError).NotTo(HaveOccurred())
-
 				attachProcess.Wait()
+				Expect(backingProcess.WaitCallCount()).To(Equal(1))
+			})
 
-				Expect(processManager.WaitCallCount()).To(Equal(1))
-				actualLogger, actualContainerId, actualProcessId := processManager.WaitArgsForCall(0)
-				Expect(actualLogger).To(Equal(logger))
-				Expect(actualContainerId).To(Equal("some-id"))
-				Expect(actualProcessId).To(Equal("some-proc-id"))
+			Context("process manager returns not found error", func() {
+				BeforeEach(func() {
+					processManager.GetProcessReturns(nil, runcontainerd.ProcessNotFoundError{Handle: "bob", ID: "jim"})
+				})
+
+				It("returns a garden not found error", func() {
+					Expect(attachError).To(MatchError(garden.ProcessNotFoundError{ProcessID: "some-proc-id"}))
+				})
+			})
+
+			Context("process manager returns a general error", func() {
+				BeforeEach(func() {
+					processManager.GetProcessReturns(nil, errors.New("Some error"))
+				})
+
+				It("returns the error", func() {
+					Expect(attachError).To(MatchError(errors.New("Some error")))
+				})
 			})
 		})
 	})
@@ -861,7 +826,7 @@ var _ = Describe("Runcontainerd", func() {
 			BeforeEach(func() {
 				peaHandlesGetter = new(runcontainerdfakes.FakePeaHandlesGetter)
 				peaHandlesGetter.ContainerPeaHandlesReturns([]string{"apple", "apple2"}, nil)
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, peaHandlesGetter)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, peaHandlesGetter, false)
 			})
 
 			It("returns the list of bundleIDs", func() {

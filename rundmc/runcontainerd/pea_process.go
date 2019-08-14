@@ -10,9 +10,9 @@ type PeaProcess struct {
 	volumizer  Volumizer
 }
 
-func NewPeaProcess(log lager.Logger, processID string, processManager ProcessManager, peaManager PeaManager, volumizer Volumizer) *PeaProcess {
+func NewPeaProcess(log lager.Logger, process Process, peaManager PeaManager, volumizer Volumizer) *PeaProcess {
 	return &PeaProcess{
-		Process:    *NewProcess(log, processID, processID, processManager),
+		Process:    process,
 		peaManager: peaManager,
 		volumizer:  volumizer,
 	}
@@ -24,15 +24,15 @@ func (p *PeaProcess) Wait() (int, error) {
 		return 0, err
 	}
 
-	if err := p.peaManager.Delete(p.log, p.containerID); err != nil {
+	if err := p.peaManager.Delete(p.log, p.ID()); err != nil {
 		return 0, err
 	}
 
-	if err := p.peaManager.RemoveBundle(p.log, p.containerID); err != nil {
+	if err := p.peaManager.RemoveBundle(p.log, p.ID()); err != nil {
 		return 0, err
 	}
 
-	if err := p.volumizer.Destroy(p.log, p.containerID); err != nil {
+	if err := p.volumizer.Destroy(p.log, p.ID()); err != nil {
 		return 0, err
 	}
 
