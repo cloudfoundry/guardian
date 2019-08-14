@@ -10,9 +10,9 @@ type PeaProcess struct {
 	volumizer  Volumizer
 }
 
-func NewPeaProcess(log lager.Logger, backingProcess BackingProcess, peaManager PeaManager, volumizer Volumizer) *PeaProcess {
+func NewPeaProcess(log lager.Logger, process Process, peaManager PeaManager, volumizer Volumizer) *PeaProcess {
 	return &PeaProcess{
-		Process:    *NewProcess(log, backingProcess),
+		Process:    process,
 		peaManager: peaManager,
 		volumizer:  volumizer,
 	}

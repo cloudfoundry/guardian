@@ -9,18 +9,16 @@ import (
 )
 
 type backingProcess struct {
-	log                      lager.Logger
-	context                  context.Context
-	containerdProcess        containerd.Process
-	cleanupProcessDirsOnWait bool
+	log               lager.Logger
+	context           context.Context
+	containerdProcess containerd.Process
 }
 
-func NewBackingProcess(log lager.Logger, p containerd.Process, ctx context.Context, cleanupProcessDirsOnWait bool) *backingProcess {
+func NewBackingProcess(log lager.Logger, p containerd.Process, ctx context.Context) *backingProcess {
 	return &backingProcess{
-		log:                      log,
-		context:                  ctx,
-		containerdProcess:        p,
-		cleanupProcessDirsOnWait: cleanupProcessDirsOnWait,
+		log:               log,
+		context:           ctx,
+		containerdProcess: p,
 	}
 }
 
@@ -40,17 +38,14 @@ func (p *backingProcess) Wait() (int, error) {
 		return 0, exitStatus.Error()
 	}
 
-	if p.cleanupProcessDirsOnWait {
-		p.log.Debug("wait.cleanup-process", lager.Data{"processID": p.containerdProcess.ID()})
-		_, err = p.containerdProcess.Delete(p.context)
-		if err != nil {
-			p.log.Error("cleanup-failed-deleting-process", err)
-		}
-	}
-
 	return int(exitStatus.ExitCode()), nil
 }
 
 func (p *backingProcess) Signal(signal syscall.Signal) error {
 	return p.containerdProcess.Kill(p.context, signal)
+}
+
+func (p *backingProcess) Delete() error {
+	_, err := p.containerdProcess.Delete(p.context)
+	return err
 }

@@ -81,9 +81,10 @@ type RunContainerd struct {
 	cgroupManager             CgroupManager
 	mkdirer                   Mkdirer
 	peaHandlesGetter          PeaHandlesGetter
+	cleanupProcessDirsOnWait  bool
 }
 
-func New(containerManager ContainerManager, processManager ProcessManager, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager, mkdirer Mkdirer, peaHandlesGetter PeaHandlesGetter) *RunContainerd {
+func New(containerManager ContainerManager, processManager ProcessManager, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager, mkdirer Mkdirer, peaHandlesGetter PeaHandlesGetter, cleanupProcessDirsOnWait bool) *RunContainerd {
 	return &RunContainerd{
 		containerManager:          containerManager,
 		processManager:            processManager,
@@ -95,6 +96,7 @@ func New(containerManager ContainerManager, processManager ProcessManager, proce
 		cgroupManager:             cgroupManager,
 		mkdirer:                   mkdirer,
 		peaHandlesGetter:          peaHandlesGetter,
+		cleanupProcessDirsOnWait:  cleanupProcessDirsOnWait,
 	}
 }
 
@@ -184,7 +186,7 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 		return nil, err
 	}
 
-	return NewProcess(log, process), nil
+	return NewProcess(log, process, r.cleanupProcessDirsOnWait), nil
 }
 
 func isNoSuchExecutable(err error) bool {
@@ -213,7 +215,7 @@ func (r *RunContainerd) Attach(log lager.Logger, sandboxID, processID string, io
 	if process, err = r.processManager.GetProcess(log, sandboxID, processID); err != nil {
 		return nil, err
 	}
-	return NewProcess(log, process), nil
+	return NewProcess(log, process, r.cleanupProcessDirsOnWait), nil
 }
 
 func (r *RunContainerd) Delete(log lager.Logger, id string) error {

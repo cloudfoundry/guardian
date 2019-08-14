@@ -153,18 +153,14 @@ func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, use
 	}
 	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
 	ctx = leases.WithLease(ctx, "lease-is-off")
-	nerd := nerd.New(containerdClient, ctx, f.config.Containers.CleanupProcessDirsOnWait, filepath.Join(containerdRuncRoot(), "fifo"))
+	nerd := nerd.New(containerdClient, ctx, filepath.Join(containerdRuncRoot(), "fifo"))
 	pidGetter := &runcontainerd.PidGetter{Nerd: nerd}
 
 	cgroupManager := runcontainerd.NewCgroupManager(containerdRuncRoot(), containerdNamespace)
 
-	containerdManager := runcontainerd.New(nerd, nerd, processBuilder, userLookupper, wireExecer(pidGetter), statser, f.config.Containerd.UseContainerdForProcesses, cgroupManager, f.WireMkdirer(), peaHandlesGetter)
+	containerdManager := runcontainerd.New(nerd, nerd, processBuilder, userLookupper, wireExecer(pidGetter), statser, f.config.Containerd.UseContainerdForProcesses, cgroupManager, f.WireMkdirer(), peaHandlesGetter, f.config.Containers.CleanupProcessDirsOnWait)
 
-	peaRunner := &runcontainerd.RunContainerPea{
-		PeaManager:     containerdManager,
-		ProcessManager: nerd,
-		Volumizer:      volumizer,
-	}
+	peaRunner := runcontainerd.NewRunContainerPea(containerdManager, nerd, volumizer, f.config.Containers.CleanupProcessDirsOnWait)
 
 	privilegeChecker := &privchecker.PrivilegeChecker{ContainerManager: nerd, Log: log}
 	peaBundleLoader := runcontainerd.NewBndlLoader(nerd)

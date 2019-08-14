@@ -14,23 +14,42 @@ type BackingProcess interface {
 	ID() string
 	Signal(syscall.Signal) error
 	Wait() (int, error)
+	Delete() error
 }
 
 type Process struct {
-	log     lager.Logger
-	process BackingProcess
+	log                      lager.Logger
+	nerdProcess              BackingProcess
+	cleanupProcessDirsOnWait bool
 }
 
-func NewProcess(log lager.Logger, backingProcess BackingProcess) *Process {
-	return &Process{log: log, process: backingProcess}
+func NewProcess(log lager.Logger, nerdProcess BackingProcess, cleanupProcessDirsOnWait bool) *Process {
+	return &Process{
+		log:                      log,
+		nerdProcess:              nerdProcess,
+		cleanupProcessDirsOnWait: cleanupProcessDirsOnWait,
+	}
 }
 
 func (p *Process) ID() string {
-	return p.process.ID()
+	return p.nerdProcess.ID()
 }
 
 func (p *Process) Wait() (int, error) {
-	return p.process.Wait()
+	exitStatus, err := p.nerdProcess.Wait()
+	if err != nil {
+		return 0, err
+	}
+
+	if p.cleanupProcessDirsOnWait {
+		p.log.Debug("wait.cleanup-process", lager.Data{"processID": p.nerdProcess.ID()})
+		err = p.nerdProcess.Delete()
+		if err != nil {
+			p.log.Error("cleanup-failed-deleting-process", err)
+		}
+	}
+
+	return exitStatus, nil
 }
 
 func (p *Process) Signal(gardenSignal garden.Signal) error {
@@ -39,7 +58,7 @@ func (p *Process) Signal(gardenSignal garden.Signal) error {
 		return err
 	}
 
-	return p.process.Signal(signal)
+	return p.nerdProcess.Signal(signal)
 }
 
 func (p *Process) SetTTY(garden.TTYSpec) error {

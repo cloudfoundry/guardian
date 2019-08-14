@@ -25,18 +25,16 @@ import (
 )
 
 type Nerd struct {
-	client                   *containerd.Client
-	context                  context.Context
-	cleanupProcessDirsOnWait bool
-	ioFifoDir                string
+	client    *containerd.Client
+	context   context.Context
+	ioFifoDir string
 }
 
-func New(client *containerd.Client, context context.Context, cleanupProcessDirsOnWait bool, ioFifoDir string) *Nerd {
+func New(client *containerd.Client, context context.Context, ioFifoDir string) *Nerd {
 	return &Nerd{
-		client:                   client,
-		context:                  context,
-		cleanupProcessDirsOnWait: cleanupProcessDirsOnWait,
-		ioFifoDir:                ioFifoDir,
+		client:    client,
+		context:   context,
+		ioFifoDir: ioFifoDir,
 	}
 }
 

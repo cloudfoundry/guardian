@@ -21,9 +21,19 @@ type Volumizer interface {
 }
 
 type RunContainerPea struct {
-	PeaManager     PeaManager
-	ProcessManager ProcessManager
-	Volumizer      Volumizer
+	peaManager               PeaManager
+	processManager           ProcessManager
+	volumizer                Volumizer
+	cleanupProcessDirsOnWait bool
+}
+
+func NewRunContainerPea(peaManager PeaManager, processManager ProcessManager, volumizer Volumizer, cleanupProcessDirsOnWait bool) *RunContainerPea {
+	return &RunContainerPea{
+		peaManager:               peaManager,
+		processManager:           processManager,
+		volumizer:                volumizer,
+		cleanupProcessDirsOnWait: cleanupProcessDirsOnWait,
+	}
 }
 
 func (r *RunContainerPea) RunPea(
@@ -39,15 +49,16 @@ func (r *RunContainerPea) RunPea(
 
 	log.Info("using runcontainerd.RunPea")
 
-	if err := r.PeaManager.Create(log, processID, processBundle, pio); err != nil {
+	if err := r.peaManager.Create(log, processID, processBundle, pio); err != nil {
 		return &Process{}, err
 	}
 
 	// TODO fix
-	process, err := r.ProcessManager.GetTask(log, map[string]string{"container-type": "pea", "sandbox-container": sandboxHandle}, processID)
+	process, err := r.processManager.GetTask(log, map[string]string{"container-type": "pea", "sandbox-container": sandboxHandle}, processID)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewPeaProcess(log, process, r.PeaManager, r.Volumizer), nil
+	proc := *NewProcess(log, process, r.cleanupProcessDirsOnWait)
+	return NewPeaProcess(log, proc, r.peaManager, r.volumizer), nil
 }
