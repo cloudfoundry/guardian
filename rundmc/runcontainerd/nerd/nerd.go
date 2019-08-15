@@ -161,25 +161,25 @@ func (n *Nerd) GetProcess(log lager.Logger, containerID, processID string) (runc
 	log.Debug("get-process", lager.Data{"containerID": containerID, "processID": processID})
 	_, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
-		return nil, err
+		return BackingProcess{}, err
 	}
 
 	process, err := task.LoadProcess(n.context, processID, cio.Load)
 	if err != nil {
 		if errdefs.IsNotFound(err) {
-			return nil, runcontainerd.ProcessNotFoundError{Handle: containerID, ID: processID}
+			return BackingProcess{}, runcontainerd.ProcessNotFoundError{Handle: containerID, ID: processID}
 		}
-		return nil, err
+		return BackingProcess{}, err
 	}
 
-	return runcontainerd.NewBackingProcess(log, process, n.context), nil
+	return NewBackingProcess(log, process, n.context), nil
 }
 
 func (n *Nerd) GetTask(log lager.Logger, labels map[string]string, id string) (runcontainerd.BackingProcess, error) {
 	log.Debug("get-task", lager.Data{"labels": labels, "id": id})
 	containers, err := n.loadContainers(labels)
 	if err != nil {
-		return nil, err
+		return BackingProcess{}, err
 	}
 	log.Debug("get-task.containers", lager.Data{"labels": labels, "id": id, "containers": containers})
 
@@ -193,10 +193,10 @@ func (n *Nerd) GetTask(log lager.Logger, labels map[string]string, id string) (r
 		}
 		log.Debug("get-task.task-id", lager.Data{"labels": labels, "id": id, "task-id": task.ID()})
 		if task.ID() == id {
-			return runcontainerd.NewBackingProcess(log, task, n.context), nil
+			return NewBackingProcess(log, task, n.context), nil
 		}
 	}
-	return nil, errors.New("task not found")
+	return BackingProcess{}, errors.New("task not found")
 }
 
 func exponentialBackoffCloseIO(process containerd.Process, ctx context.Context, log lager.Logger, containerID string) {

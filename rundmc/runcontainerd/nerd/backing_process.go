@@ -1,4 +1,4 @@
-package runcontainerd
+package nerd
 
 import (
 	"context"
@@ -8,25 +8,25 @@ import (
 	"github.com/containerd/containerd"
 )
 
-type backingProcess struct {
+type BackingProcess struct {
 	log               lager.Logger
 	context           context.Context
 	containerdProcess containerd.Process
 }
 
-func NewBackingProcess(log lager.Logger, p containerd.Process, ctx context.Context) *backingProcess {
-	return &backingProcess{
+func NewBackingProcess(log lager.Logger, p containerd.Process, ctx context.Context) BackingProcess {
+	return BackingProcess{
 		log:               log,
 		context:           ctx,
 		containerdProcess: p,
 	}
 }
 
-func (p *backingProcess) ID() string {
+func (p BackingProcess) ID() string {
 	return p.containerdProcess.ID()
 }
 
-func (p *backingProcess) Wait() (int, error) {
+func (p BackingProcess) Wait() (int, error) {
 	exitCh, err := p.containerdProcess.Wait(p.context)
 	if err != nil {
 		return 0, err
@@ -40,11 +40,11 @@ func (p *backingProcess) Wait() (int, error) {
 	return int(exitStatus.ExitCode()), nil
 }
 
-func (p *backingProcess) Signal(signal syscall.Signal) error {
+func (p BackingProcess) Signal(signal syscall.Signal) error {
 	return p.containerdProcess.Kill(p.context, signal)
 }
 
-func (p *backingProcess) Delete() error {
+func (p BackingProcess) Delete() error {
 	_, err := p.containerdProcess.Delete(p.context)
 	return err
 }
