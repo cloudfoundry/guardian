@@ -13,6 +13,7 @@ import (
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	. "code.cloudfoundry.org/commandrunner/fake_command_runner/matchers"
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	fakes "code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
 )
@@ -26,6 +27,10 @@ var _ = Describe("Stats", func() {
 		logger        *lagertest.TestLogger
 
 		statser *runrunc.Statser
+
+		stats  gardener.StatsContainerMetrics
+		err    error
+		handle = "some-handle"
 	)
 
 	BeforeEach(func() {
@@ -48,6 +53,10 @@ var _ = Describe("Stats", func() {
 		runner.RunAndLogStub = func(_ lager.Logger, fn runrunc.LoggingCmd) error {
 			return commandRunner.Run(fn("potato.log"))
 		}
+	})
+
+	JustBeforeEach(func() {
+		stats, err = statser.Stats(logger, handle)
 	})
 
 	Context("when runC reports valid JSON", func() {
@@ -120,10 +129,11 @@ var _ = Describe("Stats", func() {
 			})
 		})
 
-		It("parses the CPU stats", func() {
-			stats, err := statser.Stats(logger, "some-handle")
+		It("succeeds", func() {
 			Expect(err).NotTo(HaveOccurred())
+		})
 
+		It("parses the CPU stats", func() {
 			Expect(stats.CPU).To(Equal(garden.ContainerCPUStat{
 				Usage:  1,
 				System: 2,
@@ -132,21 +142,15 @@ var _ = Describe("Stats", func() {
 		})
 
 		It("shows container's age", func() {
-			initialStats, err := statser.Stats(logger, "some-handle")
-			Expect(err).NotTo(HaveOccurred())
-
 			time.Sleep(5 * time.Millisecond)
 
-			subsequentStats, err := statser.Stats(logger, "some-handle")
+			subsequentStats, err := statser.Stats(logger, handle)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(subsequentStats.Age).To(BeNumerically(">", initialStats.Age))
+			Expect(subsequentStats.Age).To(BeNumerically(">", stats.Age))
 		})
 
 		It("parses the memory stats", func() {
-			stats, err := statser.Stats(logger, "some-handle")
-			Expect(err).NotTo(HaveOccurred())
-
 			Expect(stats.Memory).To(Equal(garden.ContainerMemoryStat{
 				ActiveAnon:              1,
 				ActiveFile:              2,
@@ -181,9 +185,6 @@ var _ = Describe("Stats", func() {
 		})
 
 		It("parses the Pid stats", func() {
-			stats, err := statser.Stats(logger, "some-handle")
-			Expect(err).NotTo(HaveOccurred())
-
 			Expect(stats.Pid).To(Equal(garden.ContainerPidStat{
 				Current: 33,
 				Max:     34,
@@ -191,17 +192,14 @@ var _ = Describe("Stats", func() {
 		})
 
 		It("forwards logs from runc", func() {
-			_, err := statser.Stats(logger, "some-container")
-			Expect(err).NotTo(HaveOccurred())
-
 			Expect(commandRunner).To(HaveExecutedSerially(
 				fake_command_runner.CommandSpec{
 					Path: "funC-stats",
-					Args: []string{"--log", "potato.log", "some-container"},
+					Args: []string{"--log", "potato.log", handle},
 				},
 				fake_command_runner.CommandSpec{
 					Path: "funC-state",
-					Args: []string{"--log", "potato.log", "some-container"},
+					Args: []string{"--log", "potato.log", handle},
 				},
 			))
 		})
@@ -222,13 +220,11 @@ var _ = Describe("Stats", func() {
 				cmd.Stdout.Write([]byte(`{}`))
 				return nil
 			})
+
+			depot.CreatedTimeReturns(time.Now().Add(-time.Hour), nil)
 		})
 
 		It("fetches the container age from the depot", func() {
-			depot.CreatedTimeReturns(time.Now().Add(-time.Hour), nil)
-
-			stats, err := statser.Stats(logger, "some-handle")
-			Expect(err).NotTo(HaveOccurred())
 			Expect(depot.CreatedTimeCallCount()).To(Equal(1))
 
 			Expect(stats.Age).To(BeNumerically(">=", time.Hour))
@@ -236,10 +232,11 @@ var _ = Describe("Stats", func() {
 		})
 
 		Context("when the depot cannot return the container created time", func() {
-			It("forwards the error", func() {
+			BeforeEach(func() {
 				depot.CreatedTimeReturns(time.Time{}, errors.New("Bad depot"))
+			})
 
-				_, err := statser.Stats(logger, "some-handle")
+			It("forwards the error", func() {
 				Expect(err).To(MatchError("Bad depot"))
 			})
 		})
@@ -257,7 +254,6 @@ var _ = Describe("Stats", func() {
 		})
 
 		It("should return an error", func() {
-			_, err := statser.Stats(logger, "some-container")
 			Expect(err).To(MatchError(ContainSubstring("decode stats")))
 		})
 	})
@@ -280,7 +276,6 @@ var _ = Describe("Stats", func() {
 		})
 
 		It("should return an error", func() {
-			_, err := statser.Stats(logger, "some-container")
 			Expect(err).To(MatchError(ContainSubstring("decode state")))
 		})
 	})
@@ -295,7 +290,6 @@ var _ = Describe("Stats", func() {
 		})
 
 		It("returns an error", func() {
-			_, err := statser.Stats(logger, "some-container")
 			Expect(err).To(MatchError(ContainSubstring("runC stats: banana")))
 		})
 	})
@@ -316,7 +310,6 @@ var _ = Describe("Stats", func() {
 		})
 
 		It("returns an error", func() {
-			_, err := statser.Stats(logger, "some-container")
 			Expect(err).To(MatchError(ContainSubstring("runC state: banana")))
 		})
 	})
