@@ -5,12 +5,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"code.cloudfoundry.org/guardian/rundmc/depot/depotfakes"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
+	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 )
 
@@ -150,6 +152,97 @@ var _ = Describe("ProcessDirDepot", func() {
 			It("returns an empty list", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(processDirs).To(BeEmpty())
+			})
+		})
+	})
+
+	Describe("CreatedTime", func() {
+		var (
+			processID        string
+			pidFile          *os.File
+			pidModTime       time.Time
+			createdTime      time.Time
+			err              error
+			firstBundlePath  string
+			secondBundlePath string
+			thirdBundlePath  string
+		)
+
+		BeforeEach(func() {
+			processID = "process-id"
+			pidModTime = time.Date(2019, 8, 15, 14, 27, 32, 0, time.UTC)
+
+			var err error
+			firstBundlePath, err = ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+			secondBundlePath, err = ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+			thirdBundlePath, err = ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+
+			bundleLookupper.LookupStub = func(_ lager.Logger, sandboxHandle string) (string, error) {
+				switch sandboxHandle {
+				case "first":
+					return firstBundlePath, nil
+				case "second":
+					return secondBundlePath, nil
+				case "third":
+					return thirdBundlePath, nil
+				default:
+					return "", errors.New("not found")
+				}
+			}
+
+			bundleLookupper.HandlesReturns([]string{"first", "second", "third"}, nil)
+
+			err = os.MkdirAll(filepath.Join(secondBundlePath, "processes", "process-id"), 0755)
+			Expect(err).NotTo(HaveOccurred())
+			pidFile, err = os.Create(filepath.Join(secondBundlePath, "processes", "process-id", "pidfile"))
+			Expect(err).NotTo(HaveOccurred())
+			err = os.Chtimes(pidFile.Name(), pidModTime, pidModTime)
+			Expect(err).NotTo(HaveOccurred())
+			err = os.MkdirAll(filepath.Join(thirdBundlePath, "processes", "another-process-id"), 0755)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			Expect(pidFile.Close()).To(Succeed())
+			Expect(os.RemoveAll(firstBundlePath)).To(Succeed())
+			Expect(os.RemoveAll(secondBundlePath)).To(Succeed())
+			Expect(os.RemoveAll(thirdBundlePath)).To(Succeed())
+		})
+
+		JustBeforeEach(func() {
+			createdTime, err = processDepot.CreatedTime(log, processID)
+		})
+
+		It("succeeds", func() {
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns the approximate creation time of the pea", func() {
+			Expect(createdTime).To(BeTemporally("==", pidModTime))
+		})
+
+		Context("when the bundle is not there", func() {
+			BeforeEach(func() {
+				processID = "unexistant-process-id"
+			})
+
+			It("fails", func() {
+				_, err := processDepot.CreatedTime(log, "unexistant-process-id")
+				Expect(err).To(MatchError("process unexistant-process-id not found"))
+			})
+		})
+
+		Context("when the process pidfile is not there", func() {
+			BeforeEach(func() {
+				processID = "another-process-id"
+			})
+
+			It("fails", func() {
+				_, err = processDepot.CreatedTime(log, "another-process-id")
+				Expect(err).To(MatchError(ContainSubstring("process pidfile does not exist")))
 			})
 		})
 	})

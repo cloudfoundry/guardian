@@ -351,6 +351,30 @@ var _ = Describe("Partially shared containers (peas)", func() {
 			Expect(filepath.Join(config.DepotDir, ctr.Handle(), "processes", "failingPea")).NotTo(BeADirectory())
 		})
 	})
+
+	Context("Metrics", func() {
+		When("the runtime plugin does not return created time", func() {
+			BeforeEach(func() {
+				config.RuntimePluginBin = binaries.RuntimePlugin
+				config.NetworkPluginBin = binaries.NetworkPlugin
+				config.ImagePluginBin = binaries.NoopPlugin
+			})
+
+			It("returns the age of the pea", func() {
+				process, err := ctr.Run(garden.ProcessSpec{
+					Path:  "echo",
+					Image: garden.ImageRef{URI: "fake-rootfs"},
+				}, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+
+				metrics, err := gdn.BulkMetrics([]string{process.ID()})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(metrics).To(HaveKey(process.ID()))
+				Expect(metrics[process.ID()].Err).To(BeNil())
+				Expect(metrics[process.ID()].Metrics.Age).NotTo(BeZero())
+			})
+		})
+	})
 })
 
 func collectPeaPids(handle string) []string {

@@ -27,6 +27,7 @@ type BundleLoader interface {
 //go:generate counterfeiter . BundleLookupper
 type BundleLookupper interface {
 	Lookup(log lager.Logger, handle string) (string, error)
+	Handles() ([]string, error)
 }
 
 // a depot which stores containers as subdirs of a depot directory

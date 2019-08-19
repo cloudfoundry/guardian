@@ -14,6 +14,7 @@ import (
 	. "code.cloudfoundry.org/commandrunner/fake_command_runner/matchers"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	fakes "code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
 )
@@ -23,7 +24,8 @@ var _ = Describe("Stats", func() {
 		commandRunner *fake_command_runner.FakeCommandRunner
 		runner        *fakes.FakeRuncCmdRunner
 		runcBinary    *fakes.FakeRuncBinary
-		depot         *fakes.FakeDepot
+		theDepot      *fakes.FakeDepot
+		processDepot  *fakes.FakeProcessDepot
 		logger        *lagertest.TestLogger
 
 		statser *runrunc.Statser
@@ -35,12 +37,13 @@ var _ = Describe("Stats", func() {
 
 	BeforeEach(func() {
 		runcBinary = new(fakes.FakeRuncBinary)
-		depot = new(fakes.FakeDepot)
+		theDepot = new(fakes.FakeDepot)
+		processDepot = new(fakes.FakeProcessDepot)
 		commandRunner = fake_command_runner.New()
 		runner = new(fakes.FakeRuncCmdRunner)
 		logger = lagertest.NewTestLogger("test")
 
-		statser = runrunc.NewStatser(runner, runcBinary, depot)
+		statser = runrunc.NewStatser(runner, runcBinary, theDepot, processDepot)
 
 		runcBinary.StatsCommandStub = func(id string, logFile string) *exec.Cmd {
 			return exec.Command("funC-stats", "--log", logFile, id)
@@ -221,19 +224,43 @@ var _ = Describe("Stats", func() {
 				return nil
 			})
 
-			depot.CreatedTimeReturns(time.Now().Add(-time.Hour), nil)
+			theDepot.CreatedTimeReturns(time.Now().Add(-time.Hour), nil)
 		})
 
 		It("fetches the container age from the depot", func() {
-			Expect(depot.CreatedTimeCallCount()).To(Equal(1))
+			Expect(theDepot.CreatedTimeCallCount()).To(Equal(1))
 
 			Expect(stats.Age).To(BeNumerically(">=", time.Hour))
 			Expect(stats.Age).To(BeNumerically("<", time.Second*3601))
 		})
 
-		Context("when the depot cannot return the container created time", func() {
+		Context("when the container can't be found in the depot", func() {
 			BeforeEach(func() {
-				depot.CreatedTimeReturns(time.Time{}, errors.New("Bad depot"))
+				theDepot.CreatedTimeReturns(time.Time{}, depot.ErrDoesNotExist)
+				processDepot.CreatedTimeReturns(time.Now().Add(-time.Hour), nil)
+			})
+
+			It("tries with the process depot", func() {
+				Expect(processDepot.CreatedTimeCallCount()).To(Equal(1))
+
+				Expect(stats.Age).To(BeNumerically(">=", time.Hour))
+				Expect(stats.Age).To(BeNumerically("<", time.Second*3601))
+			})
+
+			Context("when the process depot fails too", func() {
+				BeforeEach(func() {
+					processDepot.CreatedTimeReturns(time.Time{}, errors.New("process-depot-error"))
+				})
+
+				It("forwards the error", func() {
+					Expect(err).To(MatchError("process-depot-error"))
+				})
+			})
+		})
+
+		Context("when the depot fails", func() {
+			BeforeEach(func() {
+				theDepot.CreatedTimeReturns(time.Time{}, errors.New("Bad depot"))
 			})
 
 			It("forwards the error", func() {

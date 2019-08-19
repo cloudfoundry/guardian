@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/lager"
@@ -83,4 +84,30 @@ func (d ProcessDirDepot) ListProcessDirs(log lager.Logger, sandboxHandle string)
 	}
 
 	return processDirs, nil
+}
+
+func (d ProcessDirDepot) CreatedTime(log lager.Logger, processID string) (time.Time, error) {
+	processPath, err := d.findProcessPath(log, processID)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	info, err := os.Stat(filepath.Join(processPath, "pidfile"))
+	if err != nil {
+		return time.Time{}, fmt.Errorf("process pidfile does not exist: %#v", err)
+	}
+
+	return info.ModTime(), nil
+}
+
+func (d ProcessDirDepot) findProcessPath(log lager.Logger, processID string) (string, error) {
+	sandboxHandles, _ := d.bundleLookupper.Handles()
+	for _, sandboxHandle := range sandboxHandles {
+		processPath, err := d.LookupProcessDir(log, sandboxHandle, processID)
+		if err == nil {
+			return processPath, nil
+		}
+	}
+
+	return "", fmt.Errorf("process %s not found", processID)
 }

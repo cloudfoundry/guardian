@@ -9,6 +9,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -41,14 +42,18 @@ type runcState struct {
 }
 
 type Statser struct {
-	runner RuncCmdRunner
-	runc   RuncBinary
-	depot  Depot
+	runner       RuncCmdRunner
+	runc         RuncBinary
+	depot        Depot
+	processDepot ProcessDepot
 }
 
-func NewStatser(runner RuncCmdRunner, runc RuncBinary, depot Depot) *Statser {
+func NewStatser(runner RuncCmdRunner, runc RuncBinary, depot Depot, processDepot ProcessDepot) *Statser {
 	return &Statser{
-		runner, runc, depot,
+		runner:       runner,
+		runc:         runc,
+		depot:        depot,
+		processDepot: processDepot,
 	}
 }
 
@@ -67,6 +72,9 @@ func (r *Statser) Stats(log lager.Logger, id string) (gardener.StatsContainerMet
 	if ctime.IsZero() {
 		var err error
 		ctime, err = r.depot.CreatedTime(log, id)
+		if err == depot.ErrDoesNotExist {
+			ctime, err = r.processDepot.CreatedTime(log, id)
+		}
 		if err != nil {
 			return gardener.StatsContainerMetrics{}, err
 		}

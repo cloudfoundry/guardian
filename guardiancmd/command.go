@@ -568,7 +568,7 @@ func (cmd *CommonCommand) wireContainerizer(
 		return runrunc.NewExecer(depot, processBuilder, factory.WireMkdirer(), userLookupper, execRunner, pidGetter)
 	}
 
-	statser := runrunc.NewStatser(runcLogRunner, runcBinary, depot)
+	statser := runrunc.NewStatser(runcLogRunner, runcBinary, depot, processDepot)
 	bundleManager := runrunc.NewBundleManager(depot, processDepot)
 
 	var useNestedCgroups bool
