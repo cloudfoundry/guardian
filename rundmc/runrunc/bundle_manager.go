@@ -3,6 +3,7 @@ package runrunc
 import (
 	"os"
 	"path/filepath"
+	"time"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
@@ -13,6 +14,7 @@ import (
 //go:generate counterfeiter . ProcessDepot
 type ProcessDepot interface {
 	ListProcessDirs(log lager.Logger, sandboxHandle string) ([]string, error)
+	CreatedTime(log lager.Logger, processID string) (time.Time, error)
 }
 
 type BundleManager struct {

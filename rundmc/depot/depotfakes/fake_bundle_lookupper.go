@@ -9,6 +9,18 @@ import (
 )
 
 type FakeBundleLookupper struct {
+	HandlesStub        func() ([]string, error)
+	handlesMutex       sync.RWMutex
+	handlesArgsForCall []struct {
+	}
+	handlesReturns struct {
+		result1 []string
+		result2 error
+	}
+	handlesReturnsOnCall map[int]struct {
+		result1 []string
+		result2 error
+	}
 	LookupStub        func(lager.Logger, string) (string, error)
 	lookupMutex       sync.RWMutex
 	lookupArgsForCall []struct {
@@ -25,6 +37,61 @@ type FakeBundleLookupper struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeBundleLookupper) Handles() ([]string, error) {
+	fake.handlesMutex.Lock()
+	ret, specificReturn := fake.handlesReturnsOnCall[len(fake.handlesArgsForCall)]
+	fake.handlesArgsForCall = append(fake.handlesArgsForCall, struct {
+	}{})
+	fake.recordInvocation("Handles", []interface{}{})
+	fake.handlesMutex.Unlock()
+	if fake.HandlesStub != nil {
+		return fake.HandlesStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.handlesReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeBundleLookupper) HandlesCallCount() int {
+	fake.handlesMutex.RLock()
+	defer fake.handlesMutex.RUnlock()
+	return len(fake.handlesArgsForCall)
+}
+
+func (fake *FakeBundleLookupper) HandlesCalls(stub func() ([]string, error)) {
+	fake.handlesMutex.Lock()
+	defer fake.handlesMutex.Unlock()
+	fake.HandlesStub = stub
+}
+
+func (fake *FakeBundleLookupper) HandlesReturns(result1 []string, result2 error) {
+	fake.handlesMutex.Lock()
+	defer fake.handlesMutex.Unlock()
+	fake.HandlesStub = nil
+	fake.handlesReturns = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeBundleLookupper) HandlesReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.handlesMutex.Lock()
+	defer fake.handlesMutex.Unlock()
+	fake.HandlesStub = nil
+	if fake.handlesReturnsOnCall == nil {
+		fake.handlesReturnsOnCall = make(map[int]struct {
+			result1 []string
+			result2 error
+		})
+	}
+	fake.handlesReturnsOnCall[i] = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeBundleLookupper) Lookup(arg1 lager.Logger, arg2 string) (string, error) {
@@ -94,6 +161,8 @@ func (fake *FakeBundleLookupper) LookupReturnsOnCall(i int, result1 string, resu
 func (fake *FakeBundleLookupper) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.handlesMutex.RLock()
+	defer fake.handlesMutex.RUnlock()
 	fake.lookupMutex.RLock()
 	defer fake.lookupMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

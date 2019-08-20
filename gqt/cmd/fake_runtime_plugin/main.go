@@ -155,8 +155,12 @@ var StateCommand = cli.Command{
 }
 
 var EventsCommand = cli.Command{
-	Name:  "events",
-	Flags: []cli.Flag{},
+	Name: "events",
+	Flags: []cli.Flag{
+		cli.BoolFlag{
+			Name: "stats",
+		},
+	},
 
 	Action: func(ctx *cli.Context) error {
 		fmt.Printf("{}")
