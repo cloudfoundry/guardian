@@ -622,7 +622,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(blobErr).To(MatchError(ContainSubstring("fetching blob 400")))
+				Expect(blobErr).To(MatchError(ContainSubstring("fetching blob 404")))
 			})
 		})
 
