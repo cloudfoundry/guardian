@@ -974,6 +974,13 @@ var _ = Describe("Gardener", func() {
 
 				Expect(containerizer.RemoveBundleCallCount()).To(Equal(0))
 			})
+
+			It("should not destroy the container keyspace in the propertyManager", func() {
+				err := gdnr.Destroy("some-handle")
+				Expect(err).To(HaveOccurred())
+
+				Expect(propertyManager.DestroyKeySpaceCallCount()).To(Equal(0))
+			})
 		})
 
 		Context("when containerizer fails to remove the bundle from the depot", func() {
@@ -997,6 +1004,13 @@ var _ = Describe("Gardener", func() {
 				Expect(err).To(MatchError(ContainSubstring("network deletion failed")))
 			})
 
+			It("should not destroy the bundle", func() {
+				err := gdnr.Destroy("some-handle")
+				Expect(err).To(HaveOccurred())
+
+				Expect(containerizer.RemoveBundleCallCount()).To(Equal(0))
+			})
+
 			It("should not destroy the key space of the property manager", func() {
 				err := gdnr.Destroy("some-handle")
 				Expect(err).To(HaveOccurred())
@@ -1013,6 +1027,20 @@ var _ = Describe("Gardener", func() {
 			It("returns the error", func() {
 				err := gdnr.Destroy("some-handle")
 				Expect(err).To(MatchError(ContainSubstring("rootfs deletion failed")))
+			})
+
+			It("should not destroy the bundle", func() {
+				err := gdnr.Destroy("some-handle")
+				Expect(err).To(HaveOccurred())
+
+				Expect(containerizer.RemoveBundleCallCount()).To(Equal(0))
+			})
+
+			It("should not destroy the key space of the property manager", func() {
+				err := gdnr.Destroy("some-handle")
+				Expect(err).To(HaveOccurred())
+
+				Expect(propertyManager.DestroyKeySpaceCallCount()).To(Equal(0))
 			})
 		})
 

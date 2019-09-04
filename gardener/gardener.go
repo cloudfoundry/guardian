@@ -321,21 +321,25 @@ func (g *Gardener) destroy(log lager.Logger, handle string) error {
 
 	errs = multierror.Append(errs, g.Containerizer.Destroy(log, handle))
 
-	if netErr := g.Networker.Destroy(log, handle); netErr != nil {
-		errs = multierror.Append(errs, netErr)
-	} else {
-		// keep network metadata in case network destruction did not succeed
-		errs = multierror.Append(errs, g.PropertyManager.DestroyKeySpace(handle))
-	}
+	errs = multierror.Append(errs, g.Networker.Destroy(log, handle))
 
 	errs = multierror.Append(errs, g.Volumizer.Destroy(log.Session(VolumizerSession), handle))
 
 	if err := errs.ErrorOrNil(); err != nil {
-		// keep container metadata in case not all container resources were destroyed
+		// keep container metadata so that destroy can be retried
+		// in case not all container resources were destroyed
 		return err
 	}
 
-	return g.Containerizer.RemoveBundle(log, handle)
+	// after metadata is deleted the container can no longer be listed by the client
+	return g.deleteContainerMetadata(log, handle)
+}
+
+func (g *Gardener) deleteContainerMetadata(log lager.Logger, handle string) error {
+	if err := g.Containerizer.RemoveBundle(log, handle); err != nil {
+		return err
+	}
+	return g.PropertyManager.DestroyKeySpace(handle)
 }
 
 func (g *Gardener) Stop() {}
