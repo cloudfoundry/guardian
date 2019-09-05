@@ -2,8 +2,8 @@ package gqt_test
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -96,53 +96,38 @@ var _ = Describe("Destroying a Container", func() {
 		Eventually(killExitCode).Should(Equal(1))
 	})
 
-	Context("when container destroy is interrupted half way through", func() {
-		var originalConfig runner.GdnRunnerConfig
+	Context("when container destroy fails half way through", func() {
+		var (
+			container  garden.Container
+			mountInUse string
+		)
 
-		BeforeEach(func() {
-			tmpDir := tempDir("", "netplugtest")
-
-			argsFile := path.Join(tmpDir, "args.log")
-			stdinFile := path.Join(tmpDir, "stdin.log")
-
-			pluginReturn := `{"properties":{
-					"garden.network.container-ip":"10.255.10.10",
-					"garden.network.host-ip":"255.255.255.255"
-				}}`
-
-			config.PropertiesPath = path.Join(tmpDir, "props.json")
-			config.NetworkPluginBin = binaries.NetworkPlugin
-			// simulate this scenario by starting guardian with a network plugin which
-			// kill -9s <guardian pid> on 'down' (i.e. half way through a container delete)
-			// then, start the guardian server backup without the plugin, and ensuring that
-			// --destroy-containers-on-startup=false
-			config.NetworkPluginExtraArgs = []string{argsFile, stdinFile, pluginReturn}
-			originalConfig = config
-			config.NetworkPluginExtraArgs = append(config.NetworkPluginExtraArgs, "kill-garden-server")
-		})
-
-		It("leaves the bundle dir in the depot", func() {
-			container, err := client.Create(garden.ContainerSpec{})
+		JustBeforeEach(func() {
+			var err error
+			container, err = client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
+			// make image deletion fail (because device or resource busy)
+			mountInUse = filepath.Join(config.StorePath, "images", container.Handle(), "mount")
+			Expect(os.MkdirAll(mountInUse, 0755)).To(Succeed())
+			Expect(exec.Command("mount", "--bind", ".", mountInUse).Run()).To(Succeed())
+		})
+
+		It("is still able to list the container so that destroy can be retried", func() {
 			Expect(client.Destroy(container.Handle())).NotTo(Succeed())
-			Eventually(client).Should(gexec.Exit())
-			// This sleep is here because it helps avoid what looks like a race condition in cgroup removal vs
-			// writing to the devices.deny file on startup. Without it, we frequently hit a condition where
-			// listing directories under the `garden` cgroup returns nothing, but writing to `devices.deny`
-			// returns with an EINVAL (indicative of there being cgroup children). Possibly a kernel race?
-			time.Sleep(time.Second)
 
-			// start guardian back up with the 'kill -9 <gdn pid> on down' behaviour disabled
-			client = runner.Start(originalConfig)
+			containers, err := client.Containers(garden.Properties{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(containers).To(HaveLen(1))
+			Expect(containers[0].Handle()).To(Equal(container.Handle()))
 
-			bundleDir := filepath.Join(client.DepotDir, container.Handle())
-			Expect(bundleDir).To(BeADirectory())
-
+			// unmount so that destroy is successful
+			Expect(exec.Command("umount", mountInUse).Run()).To(Succeed())
 			Expect(client.Destroy(container.Handle())).To(Succeed())
 
-			bundleDir = filepath.Join(client.DepotDir, container.Handle())
-			Expect(bundleDir).NotTo(BeADirectory())
+			containers, err = client.Containers(garden.Properties{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(containers).To(BeEmpty())
 		})
 	})
 
