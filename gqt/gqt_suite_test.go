@@ -73,45 +73,6 @@ func TestGqt(t *testing.T) {
 			GinkgoWriter.Write(dmesgOutput)
 		}
 
-		if strings.Contains(message, "container init still running") {
-			GinkgoWriter.Write([]byte(fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelNode())))
-
-			GinkgoWriter.Write([]byte("\n\nPrinting process forest:\n"))
-			psTreeOut, err := exec.Command("ps", "auxf").Output()
-			if err != nil {
-				GinkgoWriter.Write([]byte(fmt.Sprintf("failed to get processes forest: %v\n", err)))
-			} else {
-				GinkgoWriter.Write(psTreeOut)
-			}
-
-			GinkgoWriter.Write([]byte("\n\nPrinting processes in D-state:\n"))
-			dstatedOut, err := exec.Command("sh", "-c", `ps -eLo pid,tid,ppid,user:11,comm,state,wchan,etime | grep "D "`).Output()
-			if err != nil {
-				GinkgoWriter.Write([]byte(fmt.Sprintf("failed to get processes in D-state: %v\n", err)))
-			} else {
-				GinkgoWriter.Write(dstatedOut)
-				for _, line := range strings.Split(string(dstatedOut), "\n") {
-					pid := strings.Split(strings.TrimSpace(line), " ")[0]
-					stack, err := ioutil.ReadFile(filepath.Join("/proc", pid, "stack"))
-					if err != nil {
-						GinkgoWriter.Write([]byte(fmt.Sprintf("failed to get stack of PID %s: %v\n", pid, err)))
-					} else {
-						GinkgoWriter.Write([]byte(fmt.Sprintf("Stack of PID %s:\n%s\n\n", pid, string(stack))))
-					}
-				}
-			}
-
-			touchFilePath := filepath.Join(config.StorePath, "testing-xfs")
-			GinkgoWriter.Write([]byte(fmt.Sprintf("\n\nTesting whether groot store XFS is locked up via creating %s...\n", touchFilePath)))
-			touchFile, err := os.Create(touchFilePath)
-			if err != nil {
-				GinkgoWriter.Write([]byte(fmt.Sprintf("failed to create %s: %v\n", touchFilePath, err)))
-			} else {
-				defer touchFile.Close()
-				GinkgoWriter.Write([]byte(fmt.Sprintf("Store XFS looks healthy, creating %s succeeded\n", touchFilePath)))
-			}
-		}
-
 		if strings.Contains(message, "running image plugin destroy: deleting image path") {
 			GinkgoWriter.Write([]byte(fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelNode())))
 			GinkgoWriter.Write([]byte("Printing rootfs directories inodes...\n\n"))
