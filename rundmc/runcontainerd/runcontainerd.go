@@ -31,14 +31,14 @@ type ContainerManager interface {
 	GetContainerPID(log lager.Logger, containerID string) (uint32, error)
 	OOMEvents(log lager.Logger) <-chan *apievents.TaskOOM
 	Spec(log lager.Logger, containerID string) (*specs.Spec, error)
-	BundleIDs(filterLabels map[string]string) ([]string, error)
+	BundleIDs(filterLabels ...ContainerFilter) ([]string, error)
 	RemoveBundle(lager.Logger, string) error
 }
 
 //go:generate counterfeiter . ProcessManager
 type ProcessManager interface {
 	GetProcess(log lager.Logger, containerID, processID string) (BackingProcess, error)
-	GetTask(log lager.Logger, labels map[string]string, id string) (BackingProcess, error)
+	GetTask(log lager.Logger, id string) (BackingProcess, error)
 }
 
 //go:generate counterfeiter . ProcessBuilder
@@ -65,6 +65,12 @@ type Mkdirer interface {
 //go:generate counterfeiter . PeaHandlesGetter
 type PeaHandlesGetter interface {
 	ContainerPeaHandles(log lager.Logger, sandboxHandle string) ([]string, error)
+}
+
+type ContainerFilter struct {
+	Label        string
+	Value        string
+	ComparisonOp string
 }
 
 type RunContainerd struct {
@@ -98,9 +104,9 @@ func New(containerManager ContainerManager, processManager ProcessManager, proce
 }
 
 func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pio garden.ProcessIO) error {
-	log.Info("Annotations before update", lager.Data{"id": id, "Annotations": bundle.Spec.Annotations})
+	log.Debug("Annotations before update", lager.Data{"id": id, "Annotations": bundle.Spec.Annotations})
 	updateAnnotationsIfNeeded(&bundle)
-	log.Info("Annotations after update", lager.Data{"id": id, "Annotations": bundle.Spec.Annotations})
+	log.Debug("Annotations after update", lager.Data{"id": id, "Annotations": bundle.Spec.Annotations})
 
 	err := r.containerManager.Create(log, id, &bundle.Spec, func() (io.Reader, io.Writer, io.Writer) { return pio.Stdin, pio.Stdout, pio.Stderr })
 	if err != nil {
@@ -268,14 +274,32 @@ func isNotFound(err error) bool {
 }
 
 func (r *RunContainerd) ContainerHandles() ([]string, error) {
-	return r.containerManager.BundleIDs(map[string]string{"container-type": "garden-init"})
+	// We couldn't find a way to make containerd only give us the containers with no container-type label.
+	// So we just get all the non-pea ones. This should be OK because even if people want to create
+	// containers using containerd, but not garden, they should not use the garden namespace.
+	return r.containerManager.BundleIDs(ContainerFilter{
+		Label:        "container-type",
+		Value:        "pea",
+		ComparisonOp: "!=",
+	})
 }
 
 func (r *RunContainerd) ContainerPeaHandles(log lager.Logger, sandboxHandle string) ([]string, error) {
 	if r.peaHandlesGetter != nil {
 		return r.peaHandlesGetter.ContainerPeaHandles(log, sandboxHandle)
 	}
-	return r.containerManager.BundleIDs(map[string]string{"container-type": "pea", "sandbox-container": sandboxHandle})
+	return r.containerManager.BundleIDs(
+		ContainerFilter{
+			Label:        "container-type",
+			Value:        "pea",
+			ComparisonOp: "==",
+		},
+		ContainerFilter{
+			Label:        "sandbox-container",
+			Value:        sandboxHandle,
+			ComparisonOp: "==",
+		},
+	)
 }
 
 func (r *RunContainerd) RemoveBundle(log lager.Logger, handle string) error {

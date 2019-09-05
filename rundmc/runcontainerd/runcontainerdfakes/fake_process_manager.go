@@ -24,12 +24,11 @@ type FakeProcessManager struct {
 		result1 runcontainerd.BackingProcess
 		result2 error
 	}
-	GetTaskStub        func(lager.Logger, map[string]string, string) (runcontainerd.BackingProcess, error)
+	GetTaskStub        func(lager.Logger, string) (runcontainerd.BackingProcess, error)
 	getTaskMutex       sync.RWMutex
 	getTaskArgsForCall []struct {
 		arg1 lager.Logger
-		arg2 map[string]string
-		arg3 string
+		arg2 string
 	}
 	getTaskReturns struct {
 		result1 runcontainerd.BackingProcess
@@ -108,18 +107,17 @@ func (fake *FakeProcessManager) GetProcessReturnsOnCall(i int, result1 runcontai
 	}{result1, result2}
 }
 
-func (fake *FakeProcessManager) GetTask(arg1 lager.Logger, arg2 map[string]string, arg3 string) (runcontainerd.BackingProcess, error) {
+func (fake *FakeProcessManager) GetTask(arg1 lager.Logger, arg2 string) (runcontainerd.BackingProcess, error) {
 	fake.getTaskMutex.Lock()
 	ret, specificReturn := fake.getTaskReturnsOnCall[len(fake.getTaskArgsForCall)]
 	fake.getTaskArgsForCall = append(fake.getTaskArgsForCall, struct {
 		arg1 lager.Logger
-		arg2 map[string]string
-		arg3 string
-	}{arg1, arg2, arg3})
-	fake.recordInvocation("GetTask", []interface{}{arg1, arg2, arg3})
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("GetTask", []interface{}{arg1, arg2})
 	fake.getTaskMutex.Unlock()
 	if fake.GetTaskStub != nil {
-		return fake.GetTaskStub(arg1, arg2, arg3)
+		return fake.GetTaskStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -134,17 +132,17 @@ func (fake *FakeProcessManager) GetTaskCallCount() int {
 	return len(fake.getTaskArgsForCall)
 }
 
-func (fake *FakeProcessManager) GetTaskCalls(stub func(lager.Logger, map[string]string, string) (runcontainerd.BackingProcess, error)) {
+func (fake *FakeProcessManager) GetTaskCalls(stub func(lager.Logger, string) (runcontainerd.BackingProcess, error)) {
 	fake.getTaskMutex.Lock()
 	defer fake.getTaskMutex.Unlock()
 	fake.GetTaskStub = stub
 }
 
-func (fake *FakeProcessManager) GetTaskArgsForCall(i int) (lager.Logger, map[string]string, string) {
+func (fake *FakeProcessManager) GetTaskArgsForCall(i int) (lager.Logger, string) {
 	fake.getTaskMutex.RLock()
 	defer fake.getTaskMutex.RUnlock()
 	argsForCall := fake.getTaskArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeProcessManager) GetTaskReturns(result1 runcontainerd.BackingProcess, result2 error) {

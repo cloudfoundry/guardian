@@ -38,6 +38,7 @@ var _ = Describe("Surviving Restarts", func() {
 			gracefulShutdown    bool
 			processImage        garden.ImageRef
 			processID           string
+			updateContainerFunc func(c garden.Container) error
 		)
 
 		BeforeEach(func() {
@@ -60,6 +61,7 @@ var _ = Describe("Surviving Restarts", func() {
 			gracefulShutdown = true
 			processImage = garden.ImageRef{}
 			processID = ""
+			updateContainerFunc = nil
 		})
 
 		JustBeforeEach(func() {
@@ -84,6 +86,10 @@ var _ = Describe("Surviving Restarts", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(container.BulkNetOut(netOutRules)).To(Succeed())
+
+			if updateContainerFunc != nil {
+				Expect(updateContainerFunc(container)).To(Succeed())
+			}
 
 			out := gbytes.NewBuffer()
 			existingProc, err = container.Run(
@@ -232,6 +238,20 @@ var _ = Describe("Surviving Restarts", func() {
 
 				It("starts up successfully", func() {
 					Expect(client.Ping()).To(Succeed())
+				})
+			})
+
+			Context("when the container is missing the container-type label", func() {
+				BeforeEach(func() {
+					skipIfNotContainerd()
+					updateContainerFunc = func(c garden.Container) error {
+						removeContainerLabel(config.ContainerdSocket, c.Handle(), "container-type")
+						return nil
+					}
+				})
+
+				It("deletes the container", func() {
+					Expect(listContainers("ctr", config.ContainerdSocket)).NotTo(ContainSubstring(container.Handle()))
 				})
 			})
 		})
@@ -425,4 +445,8 @@ func gexecStart(cmd *exec.Cmd) *gexec.Session {
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	return session
+}
+
+func removeContainerLabel(socket, handle, label string) {
+	runCtr("ctr", socket, []string{"containers", "label", handle, fmt.Sprintf("%s=\"\"", label)})
 }

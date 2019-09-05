@@ -767,9 +767,9 @@ var _ = Describe("Runcontainerd", func() {
 			bundleIDs, err = runContainerd.ContainerHandles()
 		})
 
-		It("only gets the BundleIDs of garden init containers", func() {
+		It("gets the BundleIDs of garden init containers + containers with no labels", func() {
 			Expect(containerManager.BundleIDsCallCount()).To(Equal(1))
-			Expect(containerManager.BundleIDsArgsForCall(0)).To(Equal(map[string]string{"container-type": "garden-init"}))
+			Expect(containerManager.BundleIDsArgsForCall(0)).To(ConsistOf(runcontainerd.ContainerFilter{"container-type", "pea", "!="}))
 		})
 
 		It("returns the list of bundleIDs", func() {
@@ -804,7 +804,10 @@ var _ = Describe("Runcontainerd", func() {
 
 		It("only gets the BundleIDs of peas", func() {
 			Expect(containerManager.BundleIDsCallCount()).To(Equal(1))
-			Expect(containerManager.BundleIDsArgsForCall(0)).To(Equal(map[string]string{"container-type": "pea", "sandbox-container": "sandboxy"}))
+			Expect(containerManager.BundleIDsArgsForCall(0)).To(ConsistOf(
+				runcontainerd.ContainerFilter{"container-type", "pea", "=="},
+				runcontainerd.ContainerFilter{"sandbox-container", "sandboxy", "=="},
+			))
 		})
 
 		It("returns the list of bundleIDs", func() {

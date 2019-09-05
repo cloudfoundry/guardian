@@ -26,6 +26,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
+	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -377,6 +378,29 @@ var _ = Describe("Nerd", func() {
 		})
 	})
 
+	Describe("GetTask", func() {
+
+		JustBeforeEach(func() {
+			spec := generateSpec(containerdContext, containerdClient, containerID)
+			Expect(cnerd.Create(testLogger, containerID, spec, initProcessIO)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			cnerd.Delete(testLogger, containerID)
+		})
+
+		It("gets a backing process object containing the task for a given container ID", func() {
+			task, err := cnerd.GetTask(testLogger, containerID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(task.ID()).To(Equal(containerID))
+		})
+
+		It("returns an error when the container doesn't exist", func() {
+			_, err := cnerd.GetTask(testLogger, "does-not-exist")
+			Expect(err).To(MatchError(runcontainerd.ContainerNotFoundError{Handle: "does-not-exist"}))
+		})
+	})
+
 	Describe("RemoveBundle", func() {
 		JustBeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, containerID)
@@ -525,7 +549,16 @@ var _ = Describe("Nerd", func() {
 			spec.Annotations = map[string]string{"abc": "boohoo"}
 			Expect(cnerd.Create(testLogger, "banana2", spec, initProcessIO)).To(Succeed())
 
-			handles, err := cnerd.BundleIDs(map[string]string{"hello": "potato", "abc": "boohoo"})
+			handles, err := cnerd.BundleIDs(
+				runcontainerd.ContainerFilter{
+					Label:        "hello",
+					Value:        "potato",
+					ComparisonOp: "==",
+				}, runcontainerd.ContainerFilter{
+					Label:        "abc",
+					Value:        "boohoo",
+					ComparisonOp: "==",
+				})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(handles).To(ConsistOf("banana"))

@@ -175,28 +175,15 @@ func (n *Nerd) GetProcess(log lager.Logger, containerID, processID string) (runc
 	return NewBackingProcess(log, process, n.context), nil
 }
 
-func (n *Nerd) GetTask(log lager.Logger, labels map[string]string, id string) (runcontainerd.BackingProcess, error) {
-	log.Debug("get-task", lager.Data{"labels": labels, "id": id})
-	containers, err := n.loadContainers(labels)
+func (n *Nerd) GetTask(log lager.Logger, id string) (runcontainerd.BackingProcess, error) {
+	log.Debug("get-task", lager.Data{"id": id})
+	_, task, err := n.loadContainerAndTask(log, id)
+
 	if err != nil {
 		return BackingProcess{}, err
 	}
-	log.Debug("get-task.containers", lager.Data{"labels": labels, "id": id, "containers": containers})
 
-	for _, container := range containers {
-		task, err := container.Task(n.context, cio.Load)
-		if err != nil {
-			log.Debug("get-task.task-not-found", lager.Data{"labels": labels, "id": id})
-			if errdefs.IsNotFound(err) {
-				continue
-			}
-		}
-		log.Debug("get-task.task-id", lager.Data{"labels": labels, "id": id, "task-id": task.ID()})
-		if task.ID() == id {
-			return NewBackingProcess(log, task, n.context), nil
-		}
-	}
-	return BackingProcess{}, errors.New("task not found")
+	return NewBackingProcess(log, task, n.context), nil
 }
 
 func exponentialBackoffCloseIO(process containerd.Process, ctx context.Context, log lager.Logger, containerID string) {
@@ -268,10 +255,10 @@ func (n *Nerd) loadContainer(log lager.Logger, containerID string) (containerd.C
 	return container, nil
 }
 
-func (n *Nerd) loadContainers(labels map[string]string) ([]containerd.Container, error) {
+func (n *Nerd) loadContainers(labels ...runcontainerd.ContainerFilter) ([]containerd.Container, error) {
 	var flattenedLabels []string
-	for key, value := range labels {
-		flattenedLabels = append(flattenedLabels, fmt.Sprintf("labels.\"%s\"==%s", key, value))
+	for _, label := range labels {
+		flattenedLabels = append(flattenedLabels, fmt.Sprintf("labels.\"%s\"%s%s", label.Label, label.ComparisonOp, label.Value))
 	}
 
 	return n.client.Containers(n.context, strings.Join(flattenedLabels, ","))
@@ -359,8 +346,8 @@ func coerceEvent(event *ctrdevents.Envelope) (*apievents.TaskOOM, error) {
 	return oom, nil
 }
 
-func (n *Nerd) BundleIDs(labels map[string]string) ([]string, error) {
-	containers, err := n.loadContainers(labels)
+func (n *Nerd) BundleIDs(labels ...runcontainerd.ContainerFilter) ([]string, error) {
+	containers, err := n.loadContainers(labels...)
 	if err != nil {
 		return nil, err
 	}

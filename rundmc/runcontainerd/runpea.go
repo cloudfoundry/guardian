@@ -53,7 +53,7 @@ func (r *RunContainerPea) RunPea(
 		return &Process{}, err
 	}
 
-	process, err := r.processManager.GetTask(log, map[string]string{"container-type": "pea", "sandbox-container": sandboxHandle}, processID)
+	process, err := r.processManager.GetTask(log, processID)
 	if err != nil {
 		return nil, err
 	}
