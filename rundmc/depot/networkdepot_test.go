@@ -88,28 +88,46 @@ var _ = Describe("NetworkDepot", func() {
 
 		Context("when creating the network bind mounts fails", func() {
 			BeforeEach(func() {
-				bindMountSourceCreator.CreateReturns(nil, errors.New("failed"))
+				bindMountSourceCreator.CreateStub = func(containerDir string, _ bool) ([]garden.BindMount, error) {
+					Expect(ioutil.WriteFile(filepath.Join(containerDir, "hosts"), nil, 0755)).To(Succeed())
+					Expect(ioutil.WriteFile(filepath.Join(containerDir, "resolv.conf"), nil, 0755)).To(Succeed())
+					return nil, errors.New("failed")
+				}
 			})
 
 			It("returns the error", func() {
 				Expect(setupErr).To(MatchError("failed"))
 			})
 
-			It("deletes the container depot directory", func() {
+			It("deletes the bind mounts from the depot", func() {
 				containerDir := filepath.Join(dir, "my-container")
-				Expect(containerDir).NotTo(BeADirectory())
+				Expect(containerDir).To(BeADirectory())
+				Expect(filepath.Join(containerDir, "hosts")).NotTo(BeARegularFile())
+				Expect(filepath.Join(containerDir, "resolv.conf")).NotTo(BeARegularFile())
 			})
 		})
 	})
 
 	Describe("Destroy", func() {
-		It("deletes the depot directory", func() {
+		BeforeEach(func() {
+			bindMountSourceCreator.CreateStub = func(containerDir string, _ bool) ([]garden.BindMount, error) {
+				Expect(ioutil.WriteFile(filepath.Join(containerDir, "hosts"), nil, 0755)).To(Succeed())
+				Expect(ioutil.WriteFile(filepath.Join(containerDir, "resolv.conf"), nil, 0755)).To(Succeed())
+				return nil, nil
+			}
 			_, err := networkDepot.SetupBindMounts(logger, "my-container", true, "/path/to/rootfs")
 			Expect(err).NotTo(HaveOccurred())
+		})
 
+		JustBeforeEach(func() {
 			Expect(networkDepot.Destroy(logger, "my-container")).To(Succeed())
+		})
+
+		It("deletes the bind mounts from the depot", func() {
 			containerDir := filepath.Join(dir, "my-container")
-			Expect(containerDir).NotTo(BeADirectory())
+			Expect(containerDir).To(BeADirectory())
+			Expect(filepath.Join(containerDir, "hosts")).NotTo(BeARegularFile())
+			Expect(filepath.Join(containerDir, "resolv.conf")).NotTo(BeARegularFile())
 		})
 	})
 })

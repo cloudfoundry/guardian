@@ -233,7 +233,11 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 	}
 
 	uidMappings, gidMappings := cmd.idMappings()
-	networkDepot := depot.NewNetworkDepot(cmd.Containers.Dir, factory.WireRootfsFileCreator(), wireBindMountSourceCreator(uidMappings, gidMappings))
+	networkDepot := depot.NewNetworkDepot(
+		cmd.Containers.Dir,
+		factory.WireRootfsFileCreator(),
+		wireBindMountSourceCreator(uidMappings, gidMappings),
+	)
 
 	networker, iptablesStarter, err := cmd.wireNetworker(logger, factory, propManager, portPool, networkDepot)
 	if err != nil {

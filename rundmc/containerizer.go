@@ -292,7 +292,8 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 
 func (c *Containerizer) RemoveBundle(log lager.Logger, handle string) error {
 	log = log.Session("remove-bundle", lager.Data{"handle": handle})
-	// TODO: this should be removed once containerd processes are on by default
+	// TODO: this should be removed once containerd processes are the only code path
+	// and this should be managed by the network depot
 	if err := c.depot.Destroy(log, handle); err != nil {
 		log.Debug("failed-to-remove-bundle-dir")
 	}

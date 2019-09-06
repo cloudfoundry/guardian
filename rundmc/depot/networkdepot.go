@@ -54,7 +54,7 @@ func (d NetworkDepot) SetupBindMounts(log lager.Logger, handle string, privilege
 	}
 
 	errs := func(msg string, err error) error {
-		removeOrLog(log, containerDir)
+		d.cleanupOrLog(log, handle)
 		log.Error(msg, err, lager.Data{"path": containerDir})
 		return err
 	}
@@ -73,9 +73,27 @@ func (d NetworkDepot) Destroy(log lager.Logger, handle string) error {
 	log.Info("start")
 	defer log.Info("finished")
 
-	return os.RemoveAll(d.toDir(handle))
+	return d.cleanup(handle)
 }
 
 func (d NetworkDepot) toDir(handle string) string {
 	return filepath.Join(d.dir, handle)
+}
+
+func (d NetworkDepot) cleanup(handle string) error {
+	containerDir := d.toDir(handle)
+
+	for _, f := range []string{"hosts", "resolv.conf"} {
+		if err := os.RemoveAll(filepath.Join(containerDir, f)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (d NetworkDepot) cleanupOrLog(log lager.Logger, handle string) {
+	if err := d.cleanup(handle); err != nil {
+		log.Error("cleanup-failed", err, lager.Data{"handle": handle})
+	}
 }
