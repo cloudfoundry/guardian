@@ -12,7 +12,6 @@ func main() {
 	var argsFilePath *string = flag.String("args-file", "", "")
 	var stdinFilePath *string = flag.String("stdin-file", "", "")
 	var output *string = flag.String("output", "", "")
-	var killGardenServer *bool = flag.Bool("kill-garden-server", false, "")
 	var action *string = flag.String("action", "", "")
 	var handle *string = flag.String("handle", "", "")
 
@@ -36,17 +35,6 @@ func main() {
 		}
 
 		if err := ioutil.WriteFile(*stdinFilePath, input, 0600); err != nil {
-			panic(err)
-		}
-	}
-
-	if *killGardenServer && *action == "down" {
-		proc, err := os.FindProcess(os.Getppid())
-		if err != nil {
-			panic(err)
-		}
-
-		if err := proc.Kill(); err != nil {
 			panic(err)
 		}
 	}
