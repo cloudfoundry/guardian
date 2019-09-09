@@ -481,16 +481,13 @@ var _ = Describe("Creating a Container", func() {
 	Context("when running with an external network plugin", func() {
 		var pluginOutput string
 		BeforeEach(func() {
-			tmpFile := path.Join(tempDir("", "netplugtest"), "iwasrun.log")
-
 			config.NetworkPluginBin = binaries.NetworkPlugin
-			config.NetworkPluginExtraArgs = []string{tmpFile, "/dev/null"}
 		})
 
 		Context("when the plugin returns a properties key", func() {
 			BeforeEach(func() {
 				pluginOutput = `{"properties": {"key":"value", "garden.network.container-ip":"10.10.24.3"}}`
-				config.NetworkPluginExtraArgs = append(config.NetworkPluginExtraArgs, pluginOutput)
+				config.NetworkPluginExtraArgs = append(config.NetworkPluginExtraArgs, "--output", pluginOutput)
 			})
 
 			It("does not run kawasaki", func() {
@@ -526,7 +523,7 @@ var _ = Describe("Creating a Container", func() {
 		Context("when the external network plugin returns invalid JSON", func() {
 			BeforeEach(func() {
 				pluginOutput = "invalid-json"
-				config.NetworkPluginExtraArgs = append(config.NetworkPluginExtraArgs, pluginOutput)
+				config.NetworkPluginExtraArgs = append(config.NetworkPluginExtraArgs, "--output", pluginOutput)
 			})
 
 			It("returns a useful error message", func() {

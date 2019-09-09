@@ -41,7 +41,7 @@ var _ = Describe("Network plugin", func() {
 		stdinFile = path.Join(tmpDir, "stdin.log")
 
 		config.NetworkPluginBin = binaries.NetworkPlugin
-		config.NetworkPluginExtraArgs = []string{argsFile, stdinFile}
+		config.NetworkPluginExtraArgs = []string{"--args-file", argsFile, "--stdin-file", stdinFile}
 
 		pluginReturn = `{"properties":{"garden.network.container-ip":"10.255.10.10"}}`
 
@@ -54,7 +54,7 @@ var _ = Describe("Network plugin", func() {
 
 		config.NetworkPluginExtraArgs = append(
 			config.NetworkPluginExtraArgs,
-			pluginReturn,
+			"--output", pluginReturn,
 		)
 		client = runner.Start(config)
 
@@ -73,7 +73,7 @@ var _ = Describe("Network plugin", func() {
 
 		Eventually(getContent(argsFile)).Should(
 			ContainSubstring(
-				fmt.Sprintf("%s %s %s --action up --handle %s", argsFile, stdinFile, pluginReturn, containerHandle),
+				fmt.Sprintf("--action up --handle %s", containerHandle),
 			),
 		)
 	})
@@ -84,7 +84,6 @@ var _ = Describe("Network plugin", func() {
 		Expect(client.Destroy(containerHandle)).To(Succeed())
 		Expect(argsFile).To(BeAnExistingFile())
 
-		Eventually(getContent(argsFile)).Should(ContainSubstring(fmt.Sprintf("%s %s", argsFile, stdinFile)))
 		Eventually(getContent(argsFile)).Should(ContainSubstring(fmt.Sprintf("--action down --handle %s", containerHandle)))
 	})
 

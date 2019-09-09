@@ -504,7 +504,7 @@ var _ = Describe("Networking", func() {
 			stdinFile = path.Join(tmpDir, "stdin.log")
 
 			config.NetworkPluginBin = binaries.NetworkPlugin
-			config.NetworkPluginExtraArgs = []string{argsFile, stdinFile}
+			config.NetworkPluginExtraArgs = []string{"--args-file", argsFile, "--stdin-file", stdinFile}
 		})
 
 		Context("and the plugin is essentially a noop", func() {
@@ -536,7 +536,7 @@ var _ = Describe("Networking", func() {
 			  }`
 				config.NetworkPluginExtraArgs = append(
 					config.NetworkPluginExtraArgs,
-					pluginReturn,
+					"--output", pluginReturn,
 				)
 				extraProperties = garden.Properties{
 					"some-property-on-the-spec": "some-value",
@@ -581,7 +581,6 @@ var _ = Describe("Networking", func() {
 				Expect(client.Destroy(containerHandle)).To(Succeed())
 				Expect(argsFile).To(BeAnExistingFile())
 
-				Eventually(getContent(argsFile)).Should(ContainSubstring(fmt.Sprintf("%s %s", argsFile, stdinFile)))
 				Eventually(getContent(argsFile)).Should(ContainSubstring(fmt.Sprintf("--action down --handle %s", containerHandle)))
 			})
 
@@ -596,7 +595,7 @@ var _ = Describe("Networking", func() {
 
 				Eventually(getContent(argsFile)).Should(
 					ContainSubstring(
-						fmt.Sprintf("%s %s %s --action up --handle %s", argsFile, stdinFile, pluginReturn, containerHandle),
+						fmt.Sprintf("--action up --handle %s", containerHandle),
 					),
 				)
 			})
@@ -716,7 +715,7 @@ var _ = Describe("Networking", func() {
 			  }`
 				config.NetworkPluginExtraArgs = append(
 					config.NetworkPluginExtraArgs,
-					pluginReturn,
+					"--output", pluginReturn,
 				)
 			})
 

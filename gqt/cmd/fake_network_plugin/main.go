@@ -4,50 +4,54 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
+
+	flag "github.com/spf13/pflag"
 )
 
 func main() {
-	if len(os.Args) < 4 {
-		panic("network test plugin requires at least 4 arguments")
-	}
+	var argsFilePath *string = flag.String("args-file", "", "")
+	var stdinFilePath *string = flag.String("stdin-file", "", "")
+	var output *string = flag.String("output", "", "")
+	var killGardenServer *bool = flag.Bool("kill-garden-server", false, "")
+	var action *string = flag.String("action", "", "")
+	var handle *string = flag.String("handle", "", "")
 
-	argsFile, err := os.OpenFile(os.Args[1], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
-	if err != nil {
-		panic(err)
-	}
-	defer argsFile.Close()
-	args := strings.Join(os.Args, " ")
-	if _, err := fmt.Fprintln(argsFile, args); err != nil {
-		panic(err)
-	}
+	flag.Parse()
 
-	input, err := ioutil.ReadAll(os.Stdin)
-	if err != nil {
-		panic(err)
-	}
-	if err := ioutil.WriteFile(os.Args[2], input, 0600); err != nil {
-		panic(err)
-	}
-
-	if os.Args[4] == "kill-garden-server" {
-		if os.Args[6] == "down" {
-			proc, err := os.FindProcess(os.Getppid())
-			if err != nil {
-				panic(err)
-			}
-
-			if err := proc.Kill(); err != nil {
-				panic(err)
-			}
+	if *argsFilePath != "" {
+		argsFile, err := os.OpenFile(*argsFilePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
+		if err != nil {
+			panic(err)
+		}
+		defer argsFile.Close()
+		if _, err := fmt.Fprintf(argsFile, "--action %s --handle %s\n", *action, *handle); err != nil {
+			panic(err)
 		}
 	}
 
-	if strings.HasPrefix(os.Args[3], "--") {
-		return
+	if *stdinFilePath != "" {
+		input, err := ioutil.ReadAll(os.Stdin)
+		if err != nil {
+			panic(err)
+		}
+
+		if err := ioutil.WriteFile(*stdinFilePath, input, 0600); err != nil {
+			panic(err)
+		}
 	}
 
-	if os.Args[3] != "" {
-		fmt.Println(os.Args[3])
+	if *killGardenServer && *action == "down" {
+		proc, err := os.FindProcess(os.Getppid())
+		if err != nil {
+			panic(err)
+		}
+
+		if err := proc.Kill(); err != nil {
+			panic(err)
+		}
+	}
+
+	if *output != "" {
+		fmt.Println(*output)
 	}
 }

@@ -152,9 +152,7 @@ var _ = Describe("Runtime Plugin", func() {
 					]
 			  }`
 			config.NetworkPluginExtraArgs = []string{
-				os.DevNull,
-				os.DevNull,
-				pluginReturn,
+				"--output", pluginReturn,
 			}
 		})
 
@@ -169,7 +167,7 @@ var _ = Describe("Runtime Plugin", func() {
 
 		BeforeEach(func() {
 			networkPluginArgsFile = filepath.Join(config.TmpDir, fmt.Sprintf("network-a-%d", GinkgoParallelNode()))
-			config.NetworkPluginExtraArgs = []string{networkPluginArgsFile, os.DevNull, "unused"}
+			config.NetworkPluginExtraArgs = []string{"--args-file", networkPluginArgsFile}
 		})
 
 		AfterEach(func() {

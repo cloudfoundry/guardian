@@ -250,6 +250,8 @@ github.com/opencontainers/runtime-spec/specs-go
 github.com/pkg/errors
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
+# github.com/spf13/pflag v1.0.3
+github.com/spf13/pflag
 # github.com/st3v/glager v0.3.0
 github.com/st3v/glager
 # github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2

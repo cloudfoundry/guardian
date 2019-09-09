@@ -149,7 +149,7 @@ func (c GdnRunnerConfig) toServerFlags() []string {
 			}
 		case []string:
 			for _, val := range v {
-				gardenArgs = append(gardenArgs, "--"+flagName, val)
+				gardenArgs = append(gardenArgs, "--"+flagName+"="+val)
 			}
 		case float64:
 			gardenArgs = append(gardenArgs, "--"+flagName, fmt.Sprintf("%f", v))
