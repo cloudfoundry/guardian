@@ -254,6 +254,33 @@ var _ = Describe("Surviving Restarts", func() {
 					Expect(listContainers("ctr", config.ContainerdSocket)).NotTo(ContainSubstring(container.Handle()))
 				})
 			})
+
+		})
+
+		FContext("when the destroy-containers-on-startup is true and the networker is temporarily down", func() {
+			var failFile *os.File
+
+			BeforeEach(func() {
+				restartConfig.NetworkPluginBin = binaries.NetworkPlugin
+				restartConfig.DestroyContainersOnStartup = boolptr(true)
+				failFile = tempFile("", "fail")
+				restartConfig.NetworkPluginExtraArgs = []string{"--fail-if-exists", failFile.Name()}
+			})
+
+			AfterEach(func() {
+				os.Remove(failFile.Name())
+			})
+
+			It("works", func() {
+				go func() {
+					time.Sleep(5 * time.Second)
+					os.Remove(failFile.Name())
+				}()
+
+				// Eventually(client, time.Second*10).Should(gbytes.Say("networker.*exit status 1"))
+				Eventually(client, time.Second*10).Should(gbytes.Say("guardian.start.clean-up-container.cleaned-up"))
+				Expect(true).To(BeFalse())
+			})
 		})
 
 		Context("when the destroy-containers-on-startup flag is not passed", func() {

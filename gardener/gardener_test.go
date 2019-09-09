@@ -29,6 +29,7 @@ var _ = Describe("Gardener", func() {
 		sysinfoProvider *fakes.FakeSysInfoProvider
 		propertyManager *fakes.FakePropertyManager
 		restorer        *fakes.FakeRestorer
+		sleeper         *fakes.FakeSleeper
 
 		logger *lagertest.TestLogger
 
@@ -46,6 +47,7 @@ var _ = Describe("Gardener", func() {
 		sysinfoProvider = new(fakes.FakeSysInfoProvider)
 		propertyManager = new(fakes.FakePropertyManager)
 		restorer = new(fakes.FakeRestorer)
+		sleeper = new(fakes.FakeSleeper)
 
 		propertyManager.GetReturns("", true)
 		networker.SetupBindMountsReturns([]garden.BindMount{}, nil)
@@ -53,20 +55,21 @@ var _ = Describe("Gardener", func() {
 		containerizer.HandlesReturns([]string{"some-handle"}, nil)
 		containerizer.InfoReturns(spec.ActualContainerSpec{Pid: 470, RootFSPath: "rootfs"}, nil)
 
-		gdnr = &gardener.Gardener{
-			SysInfoProvider:          sysinfoProvider,
-			Containerizer:            containerizer,
-			UidGenerator:             uidGenerator,
-			BulkStarter:              bulkStarter,
-			Networker:                networker,
-			Volumizer:                volumizer,
-			Logger:                   logger,
-			PropertyManager:          propertyManager,
-			Restorer:                 restorer,
-			PeaCleaner:               peaCleaner,
-			MaxContainers:            0,
-			AllowPrivilgedContainers: false,
-		}
+		gdnr = gardener.New(
+			uidGenerator,
+			bulkStarter,
+			sysinfoProvider,
+			networker,
+			volumizer,
+			containerizer,
+			propertyManager,
+			restorer,
+			peaCleaner,
+			logger,
+			0,
+			false,
+		)
+		gdnr.Sleep = sleeper.Spy
 	})
 
 	Describe("creating a container", func() {
@@ -1099,34 +1102,44 @@ var _ = Describe("Gardener", func() {
 			handles := []string{"unrestorable-handle-1", "unrestorable-handle-2"}
 
 			Expect(containerizer.DestroyCallCount()).To(Equal(len(handles)))
-			for i, handle := range handles {
+			actualHandles := []string{}
+			for i, _ := range handles {
 				_, actualHandle := containerizer.DestroyArgsForCall(i)
-				Expect(actualHandle).To(Equal(handle))
+				actualHandles = append(actualHandles, actualHandle)
 			}
+			Expect(actualHandles).To(ConsistOf(handles))
 
+			actualHandles = []string{}
 			Expect(networker.DestroyCallCount()).To(Equal(len(handles)))
-			for i, handle := range handles {
+			for i, _ := range handles {
 				_, actualHandle := networker.DestroyArgsForCall(i)
-				Expect(actualHandle).To(Equal(handle))
+				actualHandles = append(actualHandles, actualHandle)
 			}
+			Expect(actualHandles).To(ConsistOf(handles))
 
+			actualHandles = []string{}
 			Expect(volumizer.DestroyCallCount()).To(Equal(len(handles)))
-			for i, handle := range handles {
-				_, actualhandle := volumizer.DestroyArgsForCall(i)
-				Expect(actualhandle).To(Equal(handle))
+			for i, _ := range handles {
+				_, actualHandle := volumizer.DestroyArgsForCall(i)
+				actualHandles = append(actualHandles, actualHandle)
 			}
+			Expect(actualHandles).To(ConsistOf(handles))
 
+			actualHandles = []string{}
 			Expect(propertyManager.DestroyKeySpaceCallCount()).To(Equal(len(handles)))
-			for i, handle := range handles {
-				actualhandle := propertyManager.DestroyKeySpaceArgsForCall(i)
-				Expect(actualhandle).To(Equal(handle))
+			for i, _ := range handles {
+				actualHandle := propertyManager.DestroyKeySpaceArgsForCall(i)
+				actualHandles = append(actualHandles, actualHandle)
 			}
+			Expect(actualHandles).To(ConsistOf(handles))
 
+			actualHandles = []string{}
 			Expect(containerizer.RemoveBundleCallCount()).To(Equal(len(handles)))
-			for i, handle := range handles {
+			for i, _ := range handles {
 				_, actualHandle := containerizer.RemoveBundleArgsForCall(i)
-				Expect(actualHandle).To(Equal(handle))
+				actualHandles = append(actualHandles, actualHandle)
 			}
+			Expect(actualHandles).To(ConsistOf(handles))
 		})
 
 		Context("when pea cleanup fails", func() {
@@ -1167,67 +1180,91 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
-		Context("when destroying one of the unrestorable containers fails", func() {
+		Context("retrying on failure", func() {
+			When("destroying one of the containers fails consistently", func() {
+				BeforeEach(func() {
+					networker.DestroyReturns(errors.New("networker-failure"))
+				})
+
+				It("retries for a total of cleanup retry limit attempts", func() {
+					Expect(networker.DestroyCallCount()).To(Equal(2 * gardener.CleanupRetryLimit))
+				})
+
+				It("waits for cleanup retry sleep seconds before retrying", func() {
+					Expect(sleeper.CallCount()).ToNot(BeZero())
+					Expect(sleeper.ArgsForCall(0)).To(Equal(gardener.CleanupRetrySleep))
+				})
+			})
+
+			When("destroying network fails and then starts working", func() {
+				BeforeEach(func() {
+					networker.DestroyReturns(nil)
+					networker.DestroyReturnsOnCall(0, errors.New("networker-failure"))
+				})
+
+				It("stops retrying after a success", func() {
+					Expect(sleeper.CallCount()).To(Equal(1))
+					Expect(networker.DestroyCallCount()).To(Equal(3))
+				})
+			})
+		})
+
+		Context("when destroying one of the unrestorable containers consistently fails", func() {
 			BeforeEach(func() {
-				containerizer.DestroyReturnsOnCall(0, errors.New("containerizer-failure"))
-				containerizer.DestroyReturnsOnCall(1, nil)
+				containerizer.DestroyReturns(errors.New("containerizer-failure"))
 			})
 
 			It("logs the failure and carries on", func() {
 				Expect(cleanupErr).NotTo(HaveOccurred())
-				Expect(containerizer.DestroyCallCount()).To(Equal(2))
+				Expect(containerizer.DestroyCallCount()).To(Equal(2 * gardener.CleanupRetryLimit))
 				Expect(logger.Errors[0]).To(MatchError(ContainSubstring("containerizer-failure")))
 			})
 		})
 
-		Context("when destroying one of the networks", func() {
+		Context("when destroying one of the networks consistently fails", func() {
 			BeforeEach(func() {
-				networker.DestroyReturnsOnCall(0, errors.New("networker-failure"))
-				networker.DestroyReturnsOnCall(1, nil)
+				networker.DestroyReturns(errors.New("networker-failure"))
 			})
 
 			It("logs the failure and carries on", func() {
 				Expect(cleanupErr).NotTo(HaveOccurred())
-				Expect(networker.DestroyCallCount()).To(Equal(2))
+				Expect(networker.DestroyCallCount()).To(Equal(2 * gardener.CleanupRetryLimit))
 				Expect(logger.Errors[0]).To(MatchError(ContainSubstring("networker-failure")))
 			})
 		})
 
-		Context("when destroying one of the volumes", func() {
+		Context("when destroying one of the volumes consistently fails", func() {
 			BeforeEach(func() {
-				volumizer.DestroyReturnsOnCall(0, errors.New("volumizer-failure"))
-				volumizer.DestroyReturnsOnCall(1, nil)
+				volumizer.DestroyReturns(errors.New("volumizer-failure"))
 			})
 
 			It("logs the failure and carries on", func() {
 				Expect(cleanupErr).NotTo(HaveOccurred())
-				Expect(volumizer.DestroyCallCount()).To(Equal(2))
+				Expect(volumizer.DestroyCallCount()).To(Equal(2 * gardener.CleanupRetryLimit))
 				Expect(logger.Errors[0]).To(MatchError(ContainSubstring("volumizer-failure")))
 			})
 		})
 
-		Context("when destroying one of the property key spaces", func() {
+		Context("when destroying one of the property key spaces consistently fails", func() {
 			BeforeEach(func() {
-				propertyManager.DestroyKeySpaceReturnsOnCall(0, errors.New("property-manager-failure"))
-				propertyManager.DestroyKeySpaceReturnsOnCall(1, nil)
+				propertyManager.DestroyKeySpaceReturns(errors.New("property-manager-failure"))
 			})
 
 			It("logs the failure and carries on", func() {
 				Expect(cleanupErr).NotTo(HaveOccurred())
-				Expect(propertyManager.DestroyKeySpaceCallCount()).To(Equal(2))
+				Expect(propertyManager.DestroyKeySpaceCallCount()).To(Equal(2 * gardener.CleanupRetryLimit))
 				Expect(logger.Errors[0]).To(MatchError(ContainSubstring("property-manager-failure")))
 			})
 		})
 
-		Context("when removing one of the bundles fails", func() {
+		Context("when removing one of the bundles consistently fails", func() {
 			BeforeEach(func() {
-				containerizer.RemoveBundleReturnsOnCall(0, errors.New("depot-failure"))
-				containerizer.RemoveBundleReturnsOnCall(1, nil)
+				containerizer.RemoveBundleReturns(errors.New("depot-failure"))
 			})
 
 			It("logs the failure and carries on", func() {
 				Expect(cleanupErr).NotTo(HaveOccurred())
-				Expect(containerizer.RemoveBundleCallCount()).To(Equal(2))
+				Expect(containerizer.RemoveBundleCallCount()).To(Equal(2 * gardener.CleanupRetryLimit))
 				Expect(logger.Errors[0]).To(MatchError("depot-failure"))
 			})
 		})

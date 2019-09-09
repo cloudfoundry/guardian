@@ -199,24 +199,19 @@ type commandWiring struct {
 }
 
 func (cmd *CommonCommand) createGardener(wiring *commandWiring) *gardener.Gardener {
-	return &gardener.Gardener{
-		UidGenerator:    wiring.UidGenerator,
-		BulkStarter:     wiring.Starter,
-		SysInfoProvider: wiring.SysInfoProvider,
-		Networker:       wiring.Networker,
-		Volumizer:       wiring.Volumizer,
-		Containerizer:   wiring.Containerizer,
-		PropertyManager: wiring.PropertiesManager,
-		MaxContainers:   cmd.Limits.MaxContainers,
-		Restorer:        wiring.Restorer,
-		PeaCleaner:      wiring.PeaCleaner,
-
-		// We want to be able to disable privileged containers independently of
-		// whether or not gdn is running as root.
-		AllowPrivilgedContainers: !cmd.Containers.DisablePrivilgedContainers,
-
-		Logger: wiring.Logger,
-	}
+	return gardener.New(wiring.UidGenerator,
+		wiring.Starter,
+		wiring.SysInfoProvider,
+		wiring.Networker,
+		wiring.Volumizer,
+		wiring.Containerizer,
+		wiring.PropertiesManager,
+		wiring.Restorer,
+		wiring.PeaCleaner,
+		wiring.Logger,
+		cmd.Limits.MaxContainers,
+		!cmd.Containers.DisablePrivilgedContainers,
+	)
 }
 
 func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, error) {
