@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
@@ -26,12 +27,15 @@ import (
 //go:generate counterfeiter . Starter
 //go:generate counterfeiter . BulkStarter
 //go:generate counterfeiter . PeaCleaner
+//go:generate counterfeiter . Sleeper
 
 const ContainerIPKey = "garden.network.container-ip"
 const BridgeIPKey = "garden.network.host-ip"
 const ExternalIPKey = "garden.network.external-ip"
 const MappedPortsKey = "garden.network.mapped-ports"
 const GraceTimeKey = "garden.grace-time"
+const CleanupRetryLimit = 30
+const CleanupRetrySleep = 3 * time.Second
 
 const VolumizerSession = "volumizer"
 
@@ -112,6 +116,8 @@ type PeaCleaner interface {
 	Clean(logger lager.Logger, handle string) error
 }
 
+type Sleeper func(time.Duration)
+
 type UidGeneratorFunc func() string
 
 func (fn UidGeneratorFunc) Generate() string {
@@ -155,6 +161,8 @@ type Gardener struct {
 	// PropertyManager creates map of container properties
 	PropertyManager PropertyManager
 
+	Sleep Sleeper
+
 	// MaxContainers limits the advertised container capacity
 	MaxContainers uint64
 
@@ -163,6 +171,40 @@ type Gardener struct {
 	PeaCleaner PeaCleaner
 
 	AllowPrivilgedContainers bool
+}
+
+func New(
+	uidGenerator UidGenerator,
+	bulkStarter BulkStarter,
+	sysInfoProvider SysInfoProvider,
+	networker Networker,
+	volumizer Volumizer,
+	containerizer Containerizer,
+	propertyManager PropertyManager,
+	restorer Restorer,
+	peaCleaner PeaCleaner,
+	logger lager.Logger,
+	maxContainers uint64,
+	allowPrivilegedContainers bool,
+) *Gardener {
+
+	gdnr := Gardener{
+		UidGenerator:             uidGenerator,
+		BulkStarter:              bulkStarter,
+		SysInfoProvider:          sysInfoProvider,
+		Networker:                networker,
+		Volumizer:                volumizer,
+		Containerizer:            containerizer,
+		PropertyManager:          propertyManager,
+		MaxContainers:            maxContainers,
+		Restorer:                 restorer,
+		PeaCleaner:               peaCleaner,
+		AllowPrivilgedContainers: allowPrivilegedContainers,
+		Logger:                   logger,
+
+		Sleep: time.Sleep,
+	}
+	return &gdnr
 }
 
 // Create creates a container by combining the results of networker.Network,
@@ -519,17 +561,28 @@ func (g *Gardener) Cleanup(log lager.Logger) error {
 		return err
 	}
 
+	var wg sync.WaitGroup
+
 	for _, handle := range g.Restorer.Restore(log, handles) {
-		destroyLog := log.Session("clean-up-container", lager.Data{"handle": handle})
-		destroyLog.Info("start")
+		wg.Add(1)
+		go func(handle string) {
+			defer wg.Done()
+			destroyLog := log.Session("clean-up-container", lager.Data{"handle": handle})
+			destroyLog.Info("start")
 
-		if err := g.destroy(destroyLog, handle); err != nil {
-			destroyLog.Error("failed", err)
-			continue
-		}
-
-		destroyLog.Info("cleaned-up")
+			for i := 0; i < CleanupRetryLimit; i++ {
+				if err := g.destroy(destroyLog, handle); err != nil {
+					destroyLog.Error(fmt.Sprintf("failed attempt %d", i+1), err)
+					g.Sleep(CleanupRetrySleep)
+					continue
+				}
+				destroyLog.Info("cleaned-up")
+				return
+			}
+			destroyLog.Info(fmt.Sprintf("failed to cleanup container after %d attempts", CleanupRetryLimit))
+		}(handle)
 	}
+	wg.Wait()
 
 	return nil
 }

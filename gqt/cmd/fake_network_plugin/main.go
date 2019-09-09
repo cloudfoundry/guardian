@@ -14,6 +14,7 @@ func main() {
 	var output *string = flag.String("output", "", "")
 	var action *string = flag.String("action", "", "")
 	var handle *string = flag.String("handle", "", "")
+	var failIfExists *string = flag.String("fail-if-exists", "", "")
 
 	flag.Parse()
 
@@ -42,4 +43,13 @@ func main() {
 	if *output != "" {
 		fmt.Println(*output)
 	}
+
+	if *failIfExists != "" && fileExists(*failIfExists) {
+		os.Exit(1)
+	}
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
