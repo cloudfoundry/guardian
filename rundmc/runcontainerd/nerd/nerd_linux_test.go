@@ -581,7 +581,7 @@ func createRootfs(modifyRootfs func(string), perm os.FileMode) string {
 func generateSpec(context context.Context, client *containerd.Client, containerID string, opts ...oci.SpecOpts) *specs.Spec {
 	spec, err := oci.GenerateSpec(context, client, &containers.Container{ID: containerID}, opts...)
 	Expect(err).NotTo(HaveOccurred())
-	spec.Process.Args = []string{"sleep", "999999"}
+	spec.Process.Args = []string{"/bin/sleep", "999999"}
 	spec.Root = &specs.Root{
 		Path: createRootfs(func(_ string) {}, 0755),
 	}
