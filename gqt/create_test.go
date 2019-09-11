@@ -370,8 +370,7 @@ var _ = Describe("Creating a Container", func() {
 
 			externalIP := externalIP(container)
 
-			Eventually(func() *gexec.Session { return sendRequest(externalIP, 9888).Wait() }).
-				Should(gbytes.Say(fmt.Sprintf("%d", 9080)))
+			serverMustReply(externalIP, 9888, "9080")
 		})
 	})
 

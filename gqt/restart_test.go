@@ -365,10 +365,7 @@ var _ = Describe("Surviving Restarts", func() {
 
 					// retry because listener process inside other container
 					// may not start immediately
-					Eventually(func() int {
-						session := sendRequest(externalIP, hostNetInPort)
-						return session.Wait().ExitCode()
-					}).Should(Equal(0))
+					serverMustReply(externalIP, hostNetInPort, "")
 				})
 
 				It("allows both OCI default and garden specific devices", func() {

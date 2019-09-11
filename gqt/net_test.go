@@ -3,6 +3,7 @@ package gqt_test
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -23,7 +24,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
 )
 
 var DEFAULT_RETRIES = 5
@@ -324,10 +324,7 @@ var _ = Describe("Networking", func() {
 
 			// retry because listener process inside other container
 			// may not start immediately
-			Eventually(func() int {
-				session := sendRequest(externalIP, hostPort)
-				return session.Wait().ExitCode()
-			}).Should(Equal(0))
+			serverMustReply(externalIP, hostPort, "")
 		})
 	})
 
@@ -348,8 +345,7 @@ var _ = Describe("Networking", func() {
 			externalIP := externalIP(container)
 
 			// the same request withing the container
-			Eventually(func() *gexec.Session { return sendRequest(externalIP, hostPort).Wait("10s") }, "10s", "1s").
-				Should(gbytes.Say(fmt.Sprintf("%d", containerPort)))
+			serverMustReply(externalIP, hostPort, fmt.Sprintf("%d", containerPort))
 		})
 
 		It("maps the random host port to a container port", func() {
@@ -362,8 +358,7 @@ var _ = Describe("Networking", func() {
 
 			externalIP := externalIP(container)
 
-			Eventually(func() *gexec.Session { return sendRequest(externalIP, actualHostPort).Wait("10s") }, "10s").
-				Should(gbytes.Say(fmt.Sprintf("%d", actualContainerPort)))
+			serverMustReply(externalIP, actualHostPort, fmt.Sprintf("%d", actualContainerPort))
 		})
 	})
 
@@ -1133,11 +1128,16 @@ func listenInContainer(container garden.Container, containerPort uint32) error {
 	return err
 }
 
-func sendRequest(ip string, port uint32) *gexec.Session {
-	sess, err := gexec.Start(exec.Command("nc", "-w5", "-v", ip, fmt.Sprintf("%d", port)), GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-
-	return sess
+func serverMustReply(serverIp string, serverPort uint32, reply string) {
+	out := []byte{}
+	err := errors.New("initial error")
+	for err != nil || !strings.Contains(string(out), reply) {
+		out, err = exec.Command("nc", "-w5", "-v", serverIp, fmt.Sprintf("%d", serverPort)).CombinedOutput()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
 func getContent(filename string) func() []byte {
