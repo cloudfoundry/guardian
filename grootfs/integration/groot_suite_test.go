@@ -11,6 +11,7 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -121,7 +122,18 @@ func TestGroot(t *testing.T) {
 	AfterEach(func() {
 		testhelpers.CleanUpOverlayMounts(StorePath)
 
-		Expect(os.RemoveAll(StorePath)).To(Succeed())
+		err := os.RemoveAll(StorePath)
+
+		info := ""
+		if err != nil && strings.Contains(err.Error(), "unlinkat /mnt/xfs") {
+			re := regexp.MustCompile(`unlinkat (\/mnt\/xfs-[0-9]\/.*):`)
+			dirNotEmpty := re.FindAllStringSubmatch(err.Error(), -1)[0][1]
+
+			out, err := exec.Command("ls", "-la", dirNotEmpty).CombinedOutput()
+			Expect(err).NotTo(HaveOccurred(), string(out))
+			info = fmt.Sprintf("DIR NOT EMPTY: %s\n%s\n", dirNotEmpty, string(out))
+		}
+		Expect(err).NotTo(HaveOccurred(), info)
 	})
 
 	RunSpecs(t, "Integration Suite")
