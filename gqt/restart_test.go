@@ -70,22 +70,25 @@ var _ = Describe("Surviving Restarts", func() {
 			container, err = client.Create(containerSpec)
 			Expect(err).NotTo(HaveOccurred())
 
-			info, err := container.Info()
-			Expect(err).NotTo(HaveOccurred())
-			interfacePrefix = info.Properties["kawasaki.iptable-prefix"]
+			if config.NetworkPluginBin == "" {
+				// only makes sense when using the kawasaki networker
+				info, err := container.Info()
+				Expect(err).NotTo(HaveOccurred())
+				interfacePrefix = info.Properties["kawasaki.iptable-prefix"]
 
-			containerBridgeName, err = container.Property("kawasaki.bridge-interface")
-			Expect(err).NotTo(HaveOccurred())
+				containerBridgeName, err = container.Property("kawasaki.bridge-interface")
+				Expect(err).NotTo(HaveOccurred())
 
-			// Sanity check for "destroys the remaining containers' bridges"
-			session := gexecStart(exec.Command("ip", "addr", "show", containerBridgeName))
-			Expect(session.Wait("10s")).To(gexec.Exit(0))
-			Expect(session.Out).To(gbytes.Say("inet %s", info.HostIP))
+				// Sanity check for "destroys the remaining containers' bridges"
+				session := gexecStart(exec.Command("ip", "addr", "show", containerBridgeName))
+				Expect(session.Wait("10s")).To(gexec.Exit(0))
+				Expect(session.Out).To(gbytes.Say("inet %s", info.HostIP))
 
-			hostNetInPort, _, err = container.NetIn(hostNetInPort, 8080)
-			Expect(err).NotTo(HaveOccurred())
+				hostNetInPort, _, err = container.NetIn(hostNetInPort, 8080)
+				Expect(err).NotTo(HaveOccurred())
 
-			Expect(container.BulkNetOut(netOutRules)).To(Succeed())
+				Expect(container.BulkNetOut(netOutRules)).To(Succeed())
+			}
 
 			if updateContainerFunc != nil {
 				Expect(updateContainerFunc(container)).To(Succeed())
@@ -261,6 +264,8 @@ var _ = Describe("Surviving Restarts", func() {
 			var failFile *os.File
 
 			BeforeEach(func() {
+				config.NetworkPluginBin = binaries.NetworkPlugin
+
 				restartConfig.NetworkPluginBin = binaries.NetworkPlugin
 				restartConfig.DestroyContainersOnStartup = boolptr(true)
 				failFile = tempFile("", "fail")
