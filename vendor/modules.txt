@@ -143,6 +143,8 @@ github.com/containerd/fifo
 github.com/containerd/go-runc
 # github.com/containerd/typeurl v0.0.0-20170912152501-f6943554a7e7
 github.com/containerd/typeurl
+# github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
+github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/docker/distribution v2.7.1+incompatible => github.com/docker/distribution v0.0.0-20190205005809-0d3efadf0154
 github.com/docker/distribution/reference
 github.com/docker/distribution/digestset
@@ -197,7 +199,7 @@ github.com/mitchellh/go-ps
 github.com/mitchellh/reflectwalk
 # github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 github.com/nu7hatch/gouuid
-# github.com/onsi/ginkgo v1.9.0
+# github.com/onsi/ginkgo v1.10.1
 github.com/onsi/ginkgo
 github.com/onsi/ginkgo/extensions/table
 github.com/onsi/ginkgo/config
@@ -217,7 +219,7 @@ github.com/onsi/ginkgo/internal/leafnodes
 github.com/onsi/ginkgo/internal/spec
 github.com/onsi/ginkgo/internal/specrunner
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
-# github.com/onsi/gomega v1.6.0
+# github.com/onsi/gomega v1.7.0
 github.com/onsi/gomega
 github.com/onsi/gomega/gexec
 github.com/onsi/gomega/gbytes
@@ -248,6 +250,10 @@ github.com/opencontainers/runc/libcontainer/configs
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
+# github.com/russross/blackfriday/v2 v2.0.1
+github.com/russross/blackfriday/v2
+# github.com/shurcooL/sanitized_anchor_name v1.0.0
+github.com/shurcooL/sanitized_anchor_name
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.3
@@ -263,7 +269,7 @@ github.com/tedsuo/ifrit/sigmon
 github.com/tedsuo/ifrit/http_server
 # github.com/tedsuo/rata v1.0.0
 github.com/tedsuo/rata
-# github.com/urfave/cli v1.21.0
+# github.com/urfave/cli v1.22.1
 github.com/urfave/cli
 # github.com/vishvananda/netlink v1.0.0
 github.com/vishvananda/netlink

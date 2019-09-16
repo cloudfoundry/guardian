@@ -37,8 +37,8 @@ require (
 	github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936
 	github.com/mitchellh/reflectwalk v0.0.0-20170726202117-63d60e9d0dbc // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo v1.9.0
-	github.com/onsi/gomega v1.6.0
+	github.com/onsi/ginkgo v1.10.1
+	github.com/onsi/gomega v1.7.0
 	github.com/opencontainers/go-digest v1.0.0-rc1
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/opencontainers/runc v1.0.0-rc8
@@ -48,7 +48,7 @@ require (
 	github.com/spf13/pflag v1.0.3
 	github.com/st3v/glager v0.3.0
 	github.com/tedsuo/ifrit v0.0.0-20180410193936-e89a512c3162
-	github.com/urfave/cli v1.21.0
+	github.com/urfave/cli v1.22.1
 	github.com/vishvananda/netlink v1.0.0
 	github.com/vishvananda/netns v0.0.0-20171111001504-be1fbeda1936
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456
