@@ -58,6 +58,8 @@ github.com/containers/image/directory/explicitfilepath
 github.com/containers/image/oci/internal
 # github.com/containers/storage v1.13.2
 github.com/containers/storage/pkg/reexec
+# github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
+github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/docker/distribution v2.7.1+incompatible
 github.com/docker/distribution/registry/api/errcode
 github.com/docker/distribution/registry/api/v2
@@ -117,7 +119,7 @@ github.com/mailru/easyjson/buffer
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 github.com/nu7hatch/gouuid
-# github.com/onsi/ginkgo v1.9.0
+# github.com/onsi/ginkgo v1.10.1
 github.com/onsi/ginkgo
 github.com/onsi/ginkgo/config
 github.com/onsi/ginkgo/internal/codelocation
@@ -136,7 +138,7 @@ github.com/onsi/ginkgo/internal/leafnodes
 github.com/onsi/ginkgo/internal/spec
 github.com/onsi/ginkgo/internal/specrunner
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
-# github.com/onsi/gomega v1.6.0
+# github.com/onsi/gomega v1.7.0
 github.com/onsi/gomega
 github.com/onsi/gomega/gexec
 github.com/onsi/gomega/gbytes
@@ -177,13 +179,17 @@ github.com/prometheus/procfs
 github.com/prometheus/procfs/nfs
 github.com/prometheus/procfs/xfs
 github.com/prometheus/procfs/internal/util
+# github.com/russross/blackfriday/v2 v2.0.1
+github.com/russross/blackfriday/v2
+# github.com/shurcooL/sanitized_anchor_name v1.0.0
+github.com/shurcooL/sanitized_anchor_name
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
 # github.com/st3v/glager v0.3.0
 github.com/st3v/glager
 # github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861
 github.com/tscolari/lagregator
-# github.com/urfave/cli v0.0.0-20161006035353-55f715e28c46
+# github.com/urfave/cli v1.22.1
 github.com/urfave/cli
 # github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c
 github.com/ventu-io/go-shortid

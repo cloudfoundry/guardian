@@ -32,8 +32,8 @@ require (
 	github.com/mailru/easyjson v0.0.0-20180323154445-8b799c424f57 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
-	github.com/onsi/ginkgo v1.9.0
-	github.com/onsi/gomega v1.6.0
+	github.com/onsi/ginkgo v1.10.1
+	github.com/onsi/gomega v1.7.0
 	github.com/opencontainers/go-digest v1.0.0-rc1
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/opencontainers/runc v1.0.0-rc8
@@ -48,7 +48,7 @@ require (
 	github.com/st3v/glager v0.3.0
 	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861
-	github.com/urfave/cli v0.0.0-20161006035353-55f715e28c46
+	github.com/urfave/cli v1.22.1
 	github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456
 	gopkg.in/yaml.v2 v2.2.2
