@@ -55,6 +55,8 @@ var _ = Describe("Rundmc", func() {
 		bundle = goci.Bndl{Spec: specs.Spec{Version: "test-version"}}
 		fakeBundleGenerator.GenerateReturns(bundle, nil)
 
+		fakeOCIRuntime.StateReturns(rundmc.State{Status: rundmc.RunningStatus}, nil)
+
 		containerizer = rundmc.New(
 			fakeDepot,
 			fakeBundleGenerator,
@@ -113,6 +115,26 @@ var _ = Describe("Rundmc", func() {
 
 			It("should return an error", func() {
 				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{})).To(MatchError("banana"))
+			})
+		})
+
+		Context("when the init process is not running after creation", func() {
+			BeforeEach(func() {
+				fakeOCIRuntime.StateReturns(rundmc.State{Status: rundmc.StoppedStatus}, nil)
+			})
+
+			It("fails", func() {
+				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{})).To(MatchError("container init process not running - status is stopped"))
+			})
+		})
+
+		Context("when checking the init process status fails", func() {
+			BeforeEach(func() {
+				fakeOCIRuntime.StateReturns(rundmc.State{}, errors.New("state-error"))
+			})
+
+			It("returns the error", func() {
+				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{})).To(MatchError("state-error"))
 			})
 		})
 	})

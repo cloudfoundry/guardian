@@ -145,7 +145,7 @@ var StateCommand = cli.Command{
 	Flags: []cli.Flag{},
 
 	Action: func(ctx *cli.Context) error {
-		state := `{"pid":1234, "status":"created"}`
+		state := `{"pid":1234, "status":"running"}`
 		if overrideState, ok := readOutput("state"); ok {
 			state = overrideState
 		}
