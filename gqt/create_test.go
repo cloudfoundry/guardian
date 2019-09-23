@@ -124,6 +124,16 @@ var _ = Describe("Creating a Container", func() {
 				Expect(err.Error()).To(ContainSubstring("no such file or directory"))
 			})
 		})
+
+		Context("when the init process returns immediately", func() {
+			BeforeEach(func() {
+				config.InitBin = "/bin/true"
+			})
+			It("recognises the container failed to start", func() {
+				_, err := client.Create(garden.ContainerSpec{})
+				Expect(err).To(MatchError("container process stopped immediately"))
+			})
+		})
 	})
 
 	Context("after creating a container without a specified handle", func() {

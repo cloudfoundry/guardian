@@ -115,6 +115,26 @@ var _ = Describe("Rundmc", func() {
 				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{})).To(MatchError("banana"))
 			})
 		})
+
+		Context("when the init process stops immediately", func() {
+			BeforeEach(func() {
+				fakeOCIRuntime.StateReturns(rundmc.State{Status: rundmc.StoppedStatus}, nil)
+			})
+
+			It("fails", func() {
+				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{})).To(MatchError("container process stopped immediately"))
+			})
+		})
+
+		Context("when checking the init process status fails", func() {
+			BeforeEach(func() {
+				fakeOCIRuntime.StateReturns(rundmc.State{}, errors.New("state-error"))
+			})
+
+			It("returns the error", func() {
+				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{})).To(MatchError("state-error"))
+			})
+		})
 	})
 
 	Describe("Run", func() {

@@ -1,6 +1,7 @@
 package rundmc
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -160,6 +161,18 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 
 	if err := c.runtime.Create(log, spec.Handle, bundle, garden.ProcessIO{}); err != nil {
 		log.Error("runtime-create-failed", err)
+		return err
+	}
+
+	state, err := c.runtime.State(log, spec.Handle)
+	if err != nil {
+		log.Error("checking-status-failed", err)
+		return err
+	}
+
+	if state.Status == StoppedStatus {
+		err := errors.New("container process stopped immediately")
+		log.Error("container-stopped-after-creation", err)
 		return err
 	}
 
