@@ -294,7 +294,7 @@ func Start(config GdnRunnerConfig) *RunningGarden {
 	gdn.Client = client.New(connection.New(runner.connectionInfo()))
 
 	if !config.StartupExpectedToFail {
-		Eventually(gdn.Ping, time.Second*10).Should(Succeed())
+		Eventually(gdn.Ping, time.Minute).Should(Succeed(), "Gdn is taking too long to start")
 	}
 
 	return gdn
