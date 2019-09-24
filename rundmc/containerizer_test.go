@@ -77,7 +77,7 @@ var _ = Describe("Rundmc", func() {
 				Handle:     "exuberant!",
 				BaseConfig: specs.Spec{Root: &specs.Root{}},
 			}
-			containerizer.Create(logger, spec)
+			Expect(containerizer.Create(logger, spec)).To(Succeed())
 
 			Expect(fakeBundleGenerator.GenerateCallCount()).To(Equal(1))
 
@@ -141,7 +141,8 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("Run", func() {
 		It("should ask the execer to exec a process in the container", func() {
-			containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello"}, garden.ProcessIO{})
+			_, err := containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello"}, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeOCIRuntime.ExecCallCount()).To(Equal(1))
 
 			_, id, spec, _ := fakeOCIRuntime.ExecArgsForCall(0)
@@ -151,7 +152,8 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when process has no image", func() {
 			It("doesn't create a pea", func() {
-				containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello"}, garden.ProcessIO{})
+				_, err := containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello"}, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
 				Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(0))
 			})
 
@@ -185,7 +187,8 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("creates a pea", func() {
-				containerizer.Run(logger, "some-handle", processSpec, pio)
+				_, err := containerizer.Run(logger, "some-handle", processSpec, pio)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(1))
 				_, actualProcessSpec, actualProcessIO, actualHandle := fakePeaCreator.CreatePeaArgsForCall(0)
 				Expect(actualProcessSpec).To(Equal(processSpec))
@@ -205,7 +208,8 @@ var _ = Describe("Rundmc", func() {
 			Describe("Username resolving", func() {
 				Context("when user is not specified", func() {
 					It("does not try to resolve the user", func() {
-						containerizer.Run(logger, "some-handle", processSpec, pio)
+						_, err := containerizer.Run(logger, "some-handle", processSpec, pio)
+						Expect(err).NotTo(HaveOccurred())
 						Expect(fakePeaUsernameResolver.ResolveUserCallCount()).To(Equal(0))
 					})
 				})
@@ -216,7 +220,8 @@ var _ = Describe("Rundmc", func() {
 					})
 
 					It("does not try to resolve the user", func() {
-						containerizer.Run(logger, "some-handle", processSpec, pio)
+						_, err := containerizer.Run(logger, "some-handle", processSpec, pio)
+						Expect(err).NotTo(HaveOccurred())
 						Expect(fakePeaUsernameResolver.ResolveUserCallCount()).To(Equal(0))
 					})
 				})
@@ -247,7 +252,8 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("Attach", func() {
 		It("should ask the execer to attach a process in the container", func() {
-			containerizer.Attach(logger, "some-handle", "123", garden.ProcessIO{})
+			_, err := containerizer.Attach(logger, "some-handle", "123", garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeOCIRuntime.AttachCallCount()).To(Equal(1))
 
 			_, id, processId, _ := fakeOCIRuntime.AttachArgsForCall(0)
