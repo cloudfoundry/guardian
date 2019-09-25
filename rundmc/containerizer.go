@@ -163,18 +163,6 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 		return err
 	}
 
-	state, err := c.runtime.State(log, spec.Handle)
-	if err != nil {
-		log.Error("checking-status-failed", err)
-		return err
-	}
-
-	if state.Status != RunningStatus {
-		err := fmt.Errorf("container init process not running - status is %s", state.Status)
-		log.Error("container-not-running-after-creation", err)
-		return err
-	}
-
 	return nil
 }
 

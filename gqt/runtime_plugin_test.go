@@ -334,12 +334,6 @@ var _ = Describe("Runtime Plugin", func() {
 
 			_, err := client.Create(garden.ContainerSpec{Handle: handle})
 			Expect(err).ToNot(HaveOccurred())
-
-			Expect(ioutil.WriteFile(
-				filepath.Join(client.TmpDir, "runtime-state-output"),
-				[]byte(`{"pid": 0, "status": "created"}`),
-				0600,
-			)).To(Succeed())
 		})
 
 		It("executes the plugin, passing the correct args for delete on windows", func() {
