@@ -44,6 +44,7 @@ var _ = Describe("Surviving Restarts", func() {
 		BeforeEach(func() {
 			propertiesDir = tempDir("", "props")
 			config.PropertiesPath = path.Join(propertiesDir, "props.json")
+			config.NetworkPluginBin = "/bin/true"
 			restartConfig = config
 
 			containerSpec = garden.ContainerSpec{
@@ -67,47 +68,50 @@ var _ = Describe("Surviving Restarts", func() {
 		JustBeforeEach(func() {
 			client = runner.Start(config)
 			var err error
-			container, err = client.Create(containerSpec)
-			Expect(err).NotTo(HaveOccurred())
-
-			if config.NetworkPluginBin == "" {
-				// only makes sense when using the kawasaki networker
-				info, err := container.Info()
-				Expect(err).NotTo(HaveOccurred())
-				interfacePrefix = info.Properties["kawasaki.iptable-prefix"]
-
-				containerBridgeName, err = container.Property("kawasaki.bridge-interface")
+			for i := 0; i < 10; i++ {
+				container, err = client.Create(containerSpec)
 				Expect(err).NotTo(HaveOccurred())
 
-				// Sanity check for "destroys the remaining containers' bridges"
-				session := gexecStart(exec.Command("ip", "addr", "show", containerBridgeName))
-				Expect(session.Wait("10s")).To(gexec.Exit(0))
-				Expect(session.Out).To(gbytes.Say("inet %s", info.HostIP))
+				// if config.NetworkPluginBin == "" {
+				// 	// only makes sense when using the kawasaki networker
+				// 	info, err := container.Info()
+				// 	Expect(err).NotTo(HaveOccurred())
+				// 	interfacePrefix = info.Properties["kawasaki.iptable-prefix"]
 
-				hostNetInPort, _, err = container.NetIn(hostNetInPort, 8080)
-				Expect(err).NotTo(HaveOccurred())
+				// 	containerBridgeName, err = container.Property("kawasaki.bridge-interface")
+				// 	Expect(err).NotTo(HaveOccurred())
 
-				Expect(container.BulkNetOut(netOutRules)).To(Succeed())
+				// 	// Sanity check for "destroys the remaining containers' bridges"
+				// 	session := gexecStart(exec.Command("ip", "addr", "show", containerBridgeName))
+				// 	Expect(session.Wait("10s")).To(gexec.Exit(0))
+				// 	Expect(session.Out).To(gbytes.Say("inet %s", info.HostIP))
+
+				// 	hostNetInPort, _, err = container.NetIn(hostNetInPort, 8080)
+				// 	Expect(err).NotTo(HaveOccurred())
+
+				// 	Expect(container.BulkNetOut(netOutRules)).To(Succeed())
+				// }
+
+				if updateContainerFunc != nil {
+					Expect(updateContainerFunc(container)).To(Succeed())
+				}
+
+				out := gbytes.NewBuffer()
+				for j := 0; j < 30; j++ {
+					existingProc, err = container.Run(
+						garden.ProcessSpec{
+							// ID:    processID,
+							Path:  "/bin/sh",
+							Args:  []string{"-c", fmt.Sprintf("while true; do echo %s; sleep 1; done;", container.Handle())},
+							Image: processImage,
+						},
+						garden.ProcessIO{
+							Stdout: io.MultiWriter(GinkgoWriter, out),
+							Stderr: io.MultiWriter(GinkgoWriter, out),
+						})
+					Expect(err).NotTo(HaveOccurred())
+				}
 			}
-
-			if updateContainerFunc != nil {
-				Expect(updateContainerFunc(container)).To(Succeed())
-			}
-
-			out := gbytes.NewBuffer()
-			existingProc, err = container.Run(
-				garden.ProcessSpec{
-					ID:    processID,
-					Path:  "/bin/sh",
-					Args:  []string{"-c", fmt.Sprintf("while true; do echo %s; sleep 1; done;", container.Handle())},
-					Image: processImage,
-				},
-				garden.ProcessIO{
-					Stdout: io.MultiWriter(GinkgoWriter, out),
-					Stderr: io.MultiWriter(GinkgoWriter, out),
-				})
-			Expect(err).NotTo(HaveOccurred())
-
 			if gracefulShutdown {
 				Expect(client.Stop()).To(Succeed())
 			} else {
@@ -164,6 +168,16 @@ var _ = Describe("Surviving Restarts", func() {
 					id, err := uuid.NewV4()
 					Expect(err).NotTo(HaveOccurred())
 					processID = fmt.Sprintf("unique-potato-%s-%d", id, GinkgoParallelNode())
+				})
+
+				FContext("reproduce", func() {
+					It("/run/runc is empty", func() {
+						Eventually(func() []os.FileInfo {
+							dirContents, err := ioutil.ReadDir(getRuncRoot())
+							Expect(err).NotTo(HaveOccurred())
+							return dirContents
+						}, "10m").Should(BeEmpty())
+					})
 				})
 
 				Context("with runc", func() {
