@@ -88,6 +88,13 @@ func TestGqt(t *testing.T) {
 				GinkgoWriter.Write([]byte(lsofErr.Error()))
 			}
 			GinkgoWriter.Write(lsofOut)
+
+			GinkgoWriter.Write([]byte("Printing the mount table...\n\n"))
+			mntTableOut, mntTableErr := exec.Command("cat", "/proc/self/mountinfo").Output()
+			if mntTableErr != nil {
+				GinkgoWriter.Write([]byte(mntTableErr.Error()))
+			}
+			GinkgoWriter.Write(mntTableOut)
 		}
 
 		Fail(message, callerSkip...)
