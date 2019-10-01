@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
@@ -91,8 +90,7 @@ var _ = Describe("Stats", func() {
 				cmd = exec.Command("sh", "-c", writeFileCmdLine)
 			}
 
-			sess := runAsUser(cmd, GrootfsTestUid, GrootfsTestGid)
-			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
+			Expect(runAsUser(cmd, GrootfsTestUid, GrootfsTestGid)).To(Succeed())
 
 			expectedStats = groot.VolumeStats{
 				DiskUsage: groot.DiskUsage{
@@ -230,7 +228,7 @@ func unshareWithMount(cmdLine string, mount specs.Mount) *exec.Cmd {
 		fmt.Sprintf("%s; %s", mountCmdLine, cmdLine))
 }
 
-func runAsUser(cmd *exec.Cmd, uid, gid int) *gexec.Session {
+func runAsUser(cmd *exec.Cmd, uid, gid int) error {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Credential: &syscall.Credential{
 			Uid: uint32(uid),
@@ -238,8 +236,7 @@ func runAsUser(cmd *exec.Cmd, uid, gid int) *gexec.Session {
 		},
 	}
 
-	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-	Expect(err).ToNot(HaveOccurred())
-	return sess
-
+	cmd.Stdout = GinkgoWriter
+	cmd.Stderr = GinkgoWriter
+	return cmd.Run()
 }
