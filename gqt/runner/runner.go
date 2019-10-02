@@ -500,7 +500,15 @@ func initGrootStore(grootBin, storePath string, idMappings []string) {
 	initStore := exec.Command(grootBin, initStoreArgs...)
 	initStore.Stdout = GinkgoWriter
 	initStore.Stderr = GinkgoWriter
-	Expect(initStore.Run()).To(Succeed())
+
+	err := initStore.Run()
+	if err != nil {
+		freeCmd := exec.Command("free", "-h")
+		freeCmd.Stdout = GinkgoWriter
+		freeCmd.Stderr = GinkgoWriter
+		freeCmd.Run()
+	}
+	Expect(err).NotTo(HaveOccurred(), "grootfs init-store failed. This might be because the machine is running out of RAM. Check the output of `free` above for more info.")
 }
 
 func isContainerd() bool {
