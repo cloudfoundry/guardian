@@ -857,12 +857,12 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			Expect(actualSandboxHandle).To(Equal("some-handle"))
 			Expect(actualProcessID).To(Equal(processID))
 
-			Expect(filepath.Join(processPath, "stdin")).To(BeAnExistingFile())
-			Expect(filepath.Join(processPath, "stdout")).To(BeAnExistingFile())
-			Expect(filepath.Join(processPath, "stderr")).To(BeAnExistingFile())
-			Expect(filepath.Join(processPath, "winsz")).To(BeAnExistingFile())
-			Expect(filepath.Join(processPath, "exit")).To(BeAnExistingFile())
-			Expect(filepath.Join(processPath, "exitcode")).To(BeAnExistingFile())
+			Eventually(filepath.Join(processPath, "stdin")).Should(BeAnExistingFile())
+			Eventually(filepath.Join(processPath, "stdout")).Should(BeAnExistingFile())
+			Eventually(filepath.Join(processPath, "stderr")).Should(BeAnExistingFile())
+			Eventually(filepath.Join(processPath, "winsz")).Should(BeAnExistingFile())
+			Eventually(filepath.Join(processPath, "exit")).Should(BeAnExistingFile())
+			Eventually(filepath.Join(processPath, "exitcode")).Should(BeAnExistingFile())
 		})
 
 		It("saves the bundle in the depot", func() {
