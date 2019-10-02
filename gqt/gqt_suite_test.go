@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -38,7 +39,7 @@ var (
 	unprivilegedGID = uint32(5000)
 
 	containerdConfig  containerdrunner.Config
-	containerdSession *gexec.Session
+	containerdProcess *os.Process
 	containerdRunDir  string
 
 	config            runner.GdnRunnerConfig
@@ -136,15 +137,14 @@ var _ = BeforeEach(func() {
 	config = defaultConfig()
 	if isContainerd() {
 		containerdRunDir = tempDir("", "")
-		containerdSession = startContainerd(containerdRunDir)
+		containerdProcess = startContainerd(containerdRunDir)
 	}
 
 })
 
 var _ = AfterEach(func() {
 	if isContainerd() {
-		Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
-		Expect(os.RemoveAll(containerdRunDir)).To(Succeed())
+		terminateContainerd()
 	}
 
 	// Windows worker is not containerised and therefore the test needs to take care to delete the temporary folder
@@ -152,6 +152,15 @@ var _ = AfterEach(func() {
 		Expect(os.RemoveAll(config.TmpDir)).To(Succeed())
 	}
 })
+
+func terminateContainerd() {
+	if err := containerdProcess.Signal(syscall.SIGTERM); err != nil {
+		fmt.Fprintf(GinkgoWriter, "WARNING: Failed to kill containerd process: %v", err)
+	}
+	waitStatus, err := containerdProcess.Wait()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(waitStatus.ExitCode()).To(BeZero())
+}
 
 func getGardenBinaries() runner.Binaries {
 	gardenBinaries := runner.Binaries{
@@ -450,16 +459,16 @@ func getRuncRoot() string {
 	return "/run/runc"
 }
 
-func startContainerd(runDir string) *gexec.Session {
+func startContainerd(runDir string) *os.Process {
 	containerdConfig := containerdrunner.ContainerdConfig(runDir)
 	config.ContainerdSocket = containerdConfig.GRPC.Address
 	config.UseContainerdForProcesses = boolptr(isContainerdForProcesses())
-	return containerdrunner.NewSession(runDir, containerdConfig)
+	return containerdrunner.NewContainerdProcess(runDir, containerdConfig)
 }
 
 func restartContainerd() {
-	containerdSession.Terminate().Wait()
-	containerdSession = startContainerd(containerdRunDir)
+	terminateContainerd()
+	containerdProcess = startContainerd(containerdRunDir)
 }
 
 func numGoRoutines(client *runner.RunningGarden) int {

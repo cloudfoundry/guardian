@@ -9,7 +9,6 @@ import (
 	"github.com/BurntSushi/toml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 )
 
 type Config struct {
@@ -86,7 +85,7 @@ func ContainerdConfig(containerdDataDir string) Config {
 	}
 }
 
-func NewSession(runDir string, config Config) *gexec.Session {
+func NewContainerdProcess(runDir string, config Config) *os.Process {
 	configFile, err := os.OpenFile(filepath.Join(runDir, "containerd.toml"), os.O_TRUNC|os.O_WRONLY|os.O_CREATE, os.ModePerm)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(toml.NewEncoder(configFile).Encode(&config)).To(Succeed())
@@ -94,7 +93,8 @@ func NewSession(runDir string, config Config) *gexec.Session {
 
 	cmd := exec.Command("containerd", "--config", configFile.Name())
 	cmd.Env = append(os.Environ(), fmt.Sprintf("PATH=%s", fmt.Sprintf("%s:%s", os.Getenv("PATH"), "/usr/local/bin")))
-	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	return session
+	cmd.Stdout = GinkgoWriter
+	cmd.Stderr = GinkgoWriter
+	Expect(cmd.Start()).To(Succeed())
+	return cmd.Process
 }

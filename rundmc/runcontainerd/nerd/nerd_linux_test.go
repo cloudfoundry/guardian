@@ -527,7 +527,11 @@ var _ = Describe("Nerd", func() {
 
 	Context("when containerd is not running", func() {
 		BeforeEach(func() {
-			Eventually(containerdSession.Terminate()).Should(gexec.Exit())
+			Expect(containerdProcess.Signal(syscall.SIGTERM)).To(Succeed())
+			waitStatus, err := containerdProcess.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			containerdProcess = nil
+			Expect(waitStatus.ExitCode()).To(BeZero())
 		})
 
 		It("does not panic when loading the container metadata", func() {

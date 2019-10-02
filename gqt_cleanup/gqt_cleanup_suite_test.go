@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"syscall"
 	"testing"
 	"time"
 
@@ -26,7 +27,7 @@ var (
 	defaultTestRootFS string
 
 	containerdConfig  containerdrunner.Config
-	containerdSession *gexec.Session
+	containerdProcess *os.Process
 	containerdRunDir  string
 )
 
@@ -66,13 +67,13 @@ var _ = BeforeEach(func() {
 	config = defaultConfig()
 	if isContainerd() {
 		containerdRunDir = tempDir("", "")
-		containerdSession = startContainerd(containerdRunDir)
+		containerdProcess = startContainerd(containerdRunDir)
 	}
 })
 
 var _ = AfterEach(func() {
 	if isContainerd() {
-		Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
+		terminateContainerd()
 		Expect(os.RemoveAll(containerdRunDir)).To(Succeed())
 	}
 
@@ -81,6 +82,15 @@ var _ = AfterEach(func() {
 		Expect(os.RemoveAll(config.TmpDir)).To(Succeed())
 	}
 })
+
+func terminateContainerd() {
+	if err := containerdProcess.Signal(syscall.SIGTERM); err != nil {
+		fmt.Fprintf(GinkgoWriter, "WARNING: Failed to kill containerd process: %v", err)
+	}
+	waitStatus, err := containerdProcess.Wait()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(waitStatus.ExitCode()).To(BeZero())
+}
 
 func defaultConfig() runner.GdnRunnerConfig {
 	cfg := runner.DefaultGdnRunnerConfig(binaries)
@@ -202,10 +212,10 @@ func skipIfContainerd() {
 	}
 }
 
-func startContainerd(runDir string) *gexec.Session {
+func startContainerd(runDir string) *os.Process {
 	containerdConfig := containerdrunner.ContainerdConfig(runDir)
 	config.ContainerdSocket = containerdConfig.GRPC.Address
-	return containerdrunner.NewSession(runDir, containerdConfig)
+	return containerdrunner.NewContainerdProcess(runDir, containerdConfig)
 }
 
 func tempDir(dir, prefix string) string {

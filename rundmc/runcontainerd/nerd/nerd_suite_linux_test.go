@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -40,7 +41,7 @@ var (
 	testConfig        *TestConfig
 	containerdClient  *containerd.Client
 	containerdContext context.Context
-	containerdSession *gexec.Session
+	containerdProcess *os.Process
 )
 
 func TestNerd(t *testing.T) {
@@ -74,7 +75,7 @@ var _ = BeforeEach(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	containerdConfig := containerdrunner.ContainerdConfig(runDir)
-	containerdSession = containerdrunner.NewSession(runDir, containerdConfig)
+	containerdProcess = containerdrunner.NewContainerdProcess(runDir, containerdConfig)
 
 	containerdClient, err = containerd.New(containerdConfig.GRPC.Address)
 	Expect(err).NotTo(HaveOccurred())
@@ -90,7 +91,12 @@ var _ = BeforeEach(func() {
 })
 
 var _ = AfterEach(func() {
-	Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
+	if containerdProcess != nil {
+		Expect(containerdProcess.Signal(syscall.SIGTERM)).To(Succeed())
+		waitStatus, err := containerdProcess.Wait()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(waitStatus.ExitCode()).To(BeZero())
+	}
 	Expect(os.RemoveAll(testConfig.RunDir)).To(Succeed())
 	gexec.CleanupBuildArtifacts()
 })
