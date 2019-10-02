@@ -53,7 +53,7 @@ require (
 	github.com/vishvananda/netns v0.0.0-20171111001504-be1fbeda1936
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456
 	google.golang.org/grpc v1.23.0 // indirect
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v2 v2.2.3
 )
 
 replace (
