@@ -2,9 +2,11 @@ package containerdrunner
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	. "github.com/onsi/ginkgo"
@@ -96,5 +98,11 @@ func NewContainerdProcess(runDir string, config Config) *os.Process {
 	cmd.Stdout = GinkgoWriter
 	cmd.Stderr = GinkgoWriter
 	Expect(cmd.Start()).To(Succeed())
+	Eventually(func() error { return ping(config) }, time.Minute).Should(Succeed(), "containerd is taking too long to make socket available")
 	return cmd.Process
+}
+
+func ping(config Config) error {
+	_, err := net.Dial("unix", config.GRPC.Address)
+	return err
 }
