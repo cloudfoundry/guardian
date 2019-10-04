@@ -101,15 +101,16 @@ var _ = Describe("Dadoo", func() {
 			stdinPipe, stdoutPipe, stderrPipe, exitPipe string
 		)
 
-		openIOPipes := func() {
-			_, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
+		openIOPipes := func() (stdin, stdout, stderr *os.File) {
+			stdin, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = os.OpenFile(stdoutPipe, os.O_RDONLY, 0600)
+			stdout, err = os.OpenFile(stdoutPipe, os.O_RDONLY, 0600)
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = os.OpenFile(stderrPipe, os.O_RDONLY, 0600)
+			stderr, err = os.OpenFile(stderrPipe, os.O_RDONLY, 0600)
 			Expect(err).NotTo(HaveOccurred())
+			return stdin, stdout, stderr
 		}
 
 		BeforeEach(func() {
@@ -225,14 +226,8 @@ var _ = Describe("Dadoo", func() {
 						Cwd:         "/",
 						ConsoleSize: &specs.Box{},
 					})
-					stdin, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
-					Expect(err).NotTo(HaveOccurred())
 
-					_, err = os.OpenFile(stdoutPipe, os.O_RDONLY, 0600)
-					Expect(err).NotTo(HaveOccurred())
-
-					_, err = os.OpenFile(stderrPipe, os.O_RDONLY, 0600)
-					Expect(err).NotTo(HaveOccurred())
+					stdin, _, _ := openIOPipes()
 
 					exitFifoCh := make(chan struct{})
 					go func() {
@@ -273,19 +268,13 @@ var _ = Describe("Dadoo", func() {
 						ConsoleSize: &specs.Box{},
 					})
 
-					openIOPipes()
-
-					stdinP, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
-					Expect(err).NotTo(HaveOccurred())
-
-					stdoutP, err := os.Open(stdoutPipe)
-					Expect(err).NotTo(HaveOccurred())
+					stdinP, stdoutP, _ := openIOPipes()
 
 					stdinP.WriteString("hello")
 					Expect(stdinP.Close()).To(Succeed())
 
 					stdout := make([]byte, len("hello"))
-					_, err = stdoutP.Read(stdout)
+					_, err := stdoutP.Read(stdout)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(string(stdout)).To(Equal("hello"))
@@ -300,19 +289,10 @@ var _ = Describe("Dadoo", func() {
 						ConsoleSize: &specs.Box{},
 					})
 
-					openIOPipes()
-
-					_, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
-					Expect(err).NotTo(HaveOccurred())
-
-					stdoutP, err := os.Open(stdoutPipe)
-					Expect(err).NotTo(HaveOccurred())
-
-					_, err = os.Open(stderrPipe)
-					Expect(err).NotTo(HaveOccurred())
+					_, stdoutP, _ := openIOPipes()
 
 					stdoutContents := make([]byte, len("hello"))
-					_, err = stdoutP.Read(stdoutContents)
+					_, err := stdoutP.Read(stdoutContents)
 					Expect(err).NotTo(HaveOccurred())
 
 					stdoutP.Close()
@@ -341,16 +321,9 @@ var _ = Describe("Dadoo", func() {
 						ConsoleSize: &specs.Box{},
 					})
 
-					_, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
-					Expect(err).NotTo(HaveOccurred())
+					openIOPipes()
 
-					_, err = os.Open(stdoutPipe)
-					Expect(err).NotTo(HaveOccurred())
-
-					_, err = os.Open(stderrPipe)
-					Expect(err).NotTo(HaveOccurred())
-
-					_, err = os.OpenFile(winszPipe, os.O_WRONLY, 0600)
+					_, err := os.OpenFile(winszPipe, os.O_WRONLY, 0600)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(sess.Wait().ExitCode()).To(Equal(0))
@@ -364,16 +337,9 @@ var _ = Describe("Dadoo", func() {
 						ConsoleSize: &specs.Box{},
 					})
 
-					stdin, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
-					Expect(err).NotTo(HaveOccurred())
+					stdin, stdout, _ := openIOPipes()
 
-					stdout, err := os.Open(stdoutPipe)
-					Expect(err).NotTo(HaveOccurred())
-
-					_, err = os.Open(stderrPipe)
-					Expect(err).NotTo(HaveOccurred())
-
-					_, err = os.OpenFile(winszPipe, os.O_WRONLY, 0600)
+					_, err := os.OpenFile(winszPipe, os.O_WRONLY, 0600)
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = stdin.WriteString("banana\n")
@@ -398,16 +364,9 @@ var _ = Describe("Dadoo", func() {
 						ConsoleSize: &specs.Box{},
 					})
 
-					_, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
-					Expect(err).NotTo(HaveOccurred())
+					_, stdout, _ := openIOPipes()
 
-					stdout, err := os.Open(stdoutPipe)
-					Expect(err).NotTo(HaveOccurred())
-
-					_, err = os.Open(stderrPipe)
-					Expect(err).NotTo(HaveOccurred())
-
-					_, err = os.OpenFile(winszPipe, os.O_WRONLY, 0600)
+					_, err := os.OpenFile(winszPipe, os.O_WRONLY, 0600)
 					Expect(err).NotTo(HaveOccurred())
 
 					buffer := gbytes.NewBuffer()
@@ -444,16 +403,9 @@ var _ = Describe("Dadoo", func() {
 							},
 						})
 
-						_, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
-						Expect(err).NotTo(HaveOccurred())
+						_, stdout, _ := openIOPipes()
 
-						stdout, err := os.Open(stdoutPipe)
-						Expect(err).NotTo(HaveOccurred())
-
-						_, err = os.Open(stderrPipe)
-						Expect(err).NotTo(HaveOccurred())
-
-						_, err = os.OpenFile(winszPipe, os.O_WRONLY, 0600)
+						_, err := os.OpenFile(winszPipe, os.O_WRONLY, 0600)
 						Expect(err).NotTo(HaveOccurred())
 
 						data, err := ioutil.ReadAll(stdout)
@@ -483,14 +435,7 @@ var _ = Describe("Dadoo", func() {
 							ConsoleSize: &specs.Box{},
 						})
 
-						_, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
-						Expect(err).NotTo(HaveOccurred())
-
-						stdout, err := os.Open(stdoutPipe)
-						Expect(err).NotTo(HaveOccurred())
-
-						_, err = os.Open(stderrPipe)
-						Expect(err).NotTo(HaveOccurred())
+						_, stdout, _ := openIOPipes()
 
 						winszW, err := os.OpenFile(winszPipe, os.O_WRONLY, 0600)
 						Expect(err).NotTo(HaveOccurred())
@@ -523,12 +468,7 @@ var _ = Describe("Dadoo", func() {
 							ConsoleSize: &specs.Box{},
 						})
 
-						_, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
-						Expect(err).NotTo(HaveOccurred())
-						_, err = os.OpenFile(stdoutPipe, os.O_RDONLY, 0600)
-						Expect(err).NotTo(HaveOccurred())
-						_, err = os.OpenFile(stderrPipe, os.O_RDONLY, 0600)
-						Expect(err).NotTo(HaveOccurred())
+						openIOPipes()
 
 						Expect(process.Wait().ExitCode()).To(Equal(2))
 						Expect(string(process.Buffer().Contents())).To(ContainSubstring("open %s: no such file or directory", winszPipe))
@@ -607,12 +547,7 @@ var _ = Describe("Dadoo", func() {
 						ConsoleSize: &specs.Box{},
 					})
 
-					_, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
-					Expect(err).NotTo(HaveOccurred())
-					_, err = os.OpenFile(stdoutPipe, os.O_RDONLY, 0600)
-					Expect(err).NotTo(HaveOccurred())
-					_, err = os.OpenFile(stderrPipe, os.O_RDONLY, 0600)
-					Expect(err).NotTo(HaveOccurred())
+					openIOPipes()
 
 					Expect(process.Wait().ExitCode()).To(Equal(2))
 					Expect(string(process.Buffer().Contents())).To(ContainSubstring("open %s: no such file or directory", exitPipe))
@@ -650,6 +585,7 @@ var _ = Describe("Dadoo", func() {
 
 					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
+
 					openIOPipes()
 
 					matches, err := filepath.Glob(fmt.Sprintf("%s/*/state.json", runcRoot))
@@ -715,10 +651,8 @@ var _ = Describe("Dadoo", func() {
 
 					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
-					openIOPipes()
 
-					_, err = os.Open(stdoutPipe)
-					Expect(err).NotTo(HaveOccurred())
+					openIOPipes()
 
 					// This is a weak assertion that there is a sync message when the pipes are open
 					// but does not tell us anything about the timing between the two unfortunately
@@ -845,10 +779,8 @@ var _ = Describe("Dadoo", func() {
 
 					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
-					openIOPipes()
 
-					_, err = os.Open(stdoutPipe)
-					Expect(err).NotTo(HaveOccurred())
+					openIOPipes()
 
 					// This is a weak assertion that there is a sync message when the pipes are open
 					// but does not tell us anything about the timing between the two unfortunately
