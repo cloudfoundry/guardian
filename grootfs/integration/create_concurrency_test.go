@@ -45,7 +45,7 @@ var _ = Describe("Concurrent creations", func() {
 
 		for i := 0; i < 20; i++ {
 			wg.Add(1)
-			go func(wg *sync.WaitGroup, idx int) {
+			go func(idx int) {
 				defer GinkgoRecover()
 				defer wg.Done()
 				runner := Runner.WithLogLevel(lager.ERROR) // clone runner to avoid data-race on stdout
@@ -59,7 +59,7 @@ var _ = Describe("Concurrent creations", func() {
 					CleanOnCreateThresholdBytes: 0,
 				})
 				Expect(err).NotTo(HaveOccurred())
-			}(wg, i)
+			}(i)
 		}
 
 		wg.Wait()

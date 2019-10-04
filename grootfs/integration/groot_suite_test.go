@@ -129,7 +129,7 @@ func TestGroot(t *testing.T) {
 			re := regexp.MustCompile(`unlinkat (\/mnt\/xfs-[0-9]\/.*):`)
 			dirNotEmpty := re.FindAllStringSubmatch(err.Error(), -1)[0][1]
 
-			out, err := exec.Command("ls", "-la", dirNotEmpty).CombinedOutput()
+			out, err := exec.Command("find", dirNotEmpty, "-ls").CombinedOutput()
 			Expect(err).NotTo(HaveOccurred(), string(out))
 			info = fmt.Sprintf("DIR NOT EMPTY: %s\n%s\n", dirNotEmpty, string(out))
 		}
