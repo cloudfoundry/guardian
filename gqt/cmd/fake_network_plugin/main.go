@@ -14,7 +14,7 @@ func main() {
 	var output *string = flag.String("output", "", "")
 	var action *string = flag.String("action", "", "")
 	var handle *string = flag.String("handle", "", "")
-	var failIfExists *string = flag.String("fail-if-exists", "", "")
+	var failOnceIfExists *string = flag.String("fail-once-if-exists", "", "")
 
 	flag.Parse()
 
@@ -44,7 +44,8 @@ func main() {
 		fmt.Println(*output)
 	}
 
-	if *failIfExists != "" && fileExists(*failIfExists) {
+	if *failOnceIfExists != "" && fileExists(*failOnceIfExists) {
+		os.Remove(*failOnceIfExists)
 		os.Exit(1)
 	}
 }

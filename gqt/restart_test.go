@@ -269,12 +269,8 @@ var _ = Describe("Surviving Restarts", func() {
 				restartConfig.NetworkPluginBin = binaries.NetworkPlugin
 				restartConfig.DestroyContainersOnStartup = boolptr(true)
 				failFile = tempFile("", "fail")
-				restartConfig.NetworkPluginExtraArgs = []string{"--fail-if-exists", failFile.Name()}
 				updateContainerFunc = func(_ garden.Container) error {
-					go func() {
-						time.Sleep(5 * time.Second)
-						os.Remove(failFile.Name())
-					}()
+					restartConfig.NetworkPluginExtraArgs = []string{"--fail-once-if-exists", failFile.Name()}
 					return nil
 				}
 			})
