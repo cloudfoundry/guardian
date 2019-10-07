@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/grootfs/metrics"
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
+	"code.cloudfoundry.org/grootfs/store/filesystems/mount"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
@@ -70,7 +71,12 @@ var CleanCommand = cli.Command{
 
 		logger.Debug("clean-config", lager.Data{"currentConfig": cfg})
 
-		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin)
+		rootless := os.Getuid() != 0
+		var unmounter overlayxfs.Unmounter = mount.RootfulUnmounter{}
+		if rootless {
+			unmounter = mount.RootlessUnmounter{}
+		}
+		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, unmounter)
 
 		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, cfg.StorePath)
 		dependencyManager := dependency_manager.NewDependencyManager(

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
+	"code.cloudfoundry.org/grootfs/store/filesystems/mount"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/lager"
 
@@ -30,7 +31,7 @@ var GenerateVolumeSizeMetadata = cli.Command{
 			return err
 		}
 
-		driver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin)
+		driver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, mount.NilUnmounter{})
 
 		volumes, err := driver.Volumes(logger)
 		if err != nil {

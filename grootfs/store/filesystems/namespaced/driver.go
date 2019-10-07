@@ -7,6 +7,7 @@ import (
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/sandbox"
+	"code.cloudfoundry.org/grootfs/store/filesystems/mount"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/spec"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
@@ -150,9 +151,14 @@ func (d *Driver) DestroyImage(logger lager.Logger, path string) error {
 func specToDriver(spec spec.DriverSpec) (internalDriver, error) {
 	switch spec.Type {
 	case "overlay-xfs":
+		var unmounter overlayxfs.Unmounter = mount.RootfulUnmounter{}
+		if spec.Rootless {
+			unmounter = mount.RootlessUnmounter{}
+		}
 		return overlayxfs.NewDriver(
 			spec.StorePath,
-			spec.SuidBinaryPath), nil
+			spec.SuidBinaryPath,
+			unmounter), nil
 	default:
 		return nil, errors.Errorf("invalid filesystem spec: %s not recognized", spec.Type)
 	}

@@ -1,9 +1,8 @@
 package overlayxfs_test
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -19,6 +18,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/filesystems"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
+	fakes "code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/overlayxfsfakes"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -28,6 +28,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	. "github.com/st3v/glager"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -46,9 +47,15 @@ var _ = Describe("Driver", func() {
 		randomID      string
 		randomImageID string
 		tardisBinPath string
+		unmounter     *fakes.FakeUnmounter
 	)
 
 	BeforeEach(func() {
+		unmounter = new(fakes.FakeUnmounter)
+		unmounter.UnmountStub = func(path string) error {
+			return unix.Unmount(path, 0)
+		}
+
 		tardisBinPath = filepath.Join(os.TempDir(), fmt.Sprintf("tardis-%d", rand.Int()))
 		testhelpers.CopyFile(TardisBinPath, tardisBinPath)
 		testhelpers.SuidBinary(tardisBinPath)
@@ -59,7 +66,7 @@ var _ = Describe("Driver", func() {
 		var err error
 		storePath, err = ioutil.TempDir(StorePath, "")
 		Expect(err).ToNot(HaveOccurred())
-		driver = overlayxfs.NewDriver(storePath, tardisBinPath)
+		driver = overlayxfs.NewDriver(storePath, tardisBinPath, unmounter)
 
 		Expect(os.MkdirAll(storePath, 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(storePath, store.VolumesDirName), 0777)).To(Succeed())
@@ -613,7 +620,7 @@ var _ = Describe("Driver", func() {
 
 			Context("when tardis is not in the path", func() {
 				BeforeEach(func() {
-					driver = overlayxfs.NewDriver(storePath, "/bin/bananas")
+					driver = overlayxfs.NewDriver(storePath, "/bin/bananas", unmounter)
 				})
 
 				It("returns an error", func() {
@@ -685,15 +692,9 @@ var _ = Describe("Driver", func() {
 
 		It("unmounts the rootfs dir", func() {
 			Expect(driver.DestroyImage(logger, spec.ImagePath)).To(Succeed())
-			output, err := exec.Command("mount").Output()
-			Expect(err).NotTo(HaveOccurred())
-
-			buffer := bytes.NewBuffer(output)
-			scanner := bufio.NewScanner(buffer)
-			for scanner.Scan() {
-				mountLine := scanner.Text()
-				Expect(mountLine).NotTo(ContainSubstring(spec.ImagePath))
-			}
+			Expect(unmounter.UnmountCallCount()).To(Equal(1))
+			unmountPath := unmounter.UnmountArgsForCall(0)
+			Expect(unmountPath).To(Equal(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)))
 		})
 
 		It("removes upper, work and rootfs dir from the image path", func() {
@@ -728,21 +729,25 @@ var _ = Describe("Driver", func() {
 		})
 
 		Context("when it fails to unmount the rootfs", func() {
-			var busyFile *os.File
-
 			JustBeforeEach(func() {
-				var err error
-				busyFile, err = os.Create(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "busyfile"))
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			AfterEach(func() {
-				Expect(busyFile.Close()).To(Succeed())
+				unmounter.UnmountReturns(errors.New("unmount-failed"))
 			})
 
 			It("returns an error", func() {
 				err := driver.DestroyImage(logger, spec.ImagePath)
+				Expect(err).To(MatchError(ContainSubstring("deleting image path")))
+			})
+
+			It("does not delete the image directory", func() {
+				err := driver.DestroyImage(logger, spec.ImagePath)
 				Expect(err).To(HaveOccurred())
+
+				Expect(filepath.Join(spec.ImagePath, overlayxfs.UpperDir)).To(BeADirectory())
+
+				rootfsPath := filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)
+				rootfsContent, err := ioutil.ReadDir(rootfsPath)
+				Expect(rootfsContent).NotTo(BeEmpty())
+
 			})
 		})
 

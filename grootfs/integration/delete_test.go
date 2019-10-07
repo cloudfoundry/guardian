@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -33,6 +34,8 @@ var _ = Describe("Delete", func() {
 		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 
 		randomImageID = testhelpers.NewRandomID()
+		containerSpec = specs.Spec{}
+		baseImagePath = ""
 	})
 
 	AfterEach(func() {
@@ -145,6 +148,31 @@ var _ = Describe("Delete", func() {
 			Expect(Runner.Delete(filepath.Dir(containerSpec.Root.Path))).To(MatchError(ContainSubstring("deleting image path")))
 			Expect(metadataPath).To(BeAnExistingFile())
 		})
+	})
+
+	Context("when it fails to unmount the rootfs directory", func() {
+		var mntPoint string
+
+		BeforeEach(func() {
+			integration.SkipIfNonRoot(GrootfsTestUid)
+		})
+
+		JustBeforeEach(func() {
+			mntPoint = filepath.Join(filepath.Dir(containerSpec.Root.Path), overlayxfs.RootfsDir, "mnt")
+			Expect(os.Mkdir(mntPoint, 0700)).To(Succeed())
+			Expect(unix.Mount(mntPoint, mntPoint, "none", unix.MS_BIND, "")).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(unix.Unmount(mntPoint, unix.MNT_DETACH)).To(Succeed())
+		})
+
+		It("doesn't remove the diff directory", func() {
+			diffPath := filepath.Join(filepath.Dir(containerSpec.Root.Path), overlayxfs.UpperDir)
+			Expect(Runner.Delete(filepath.Dir(containerSpec.Root.Path))).To(MatchError(ContainSubstring("deleting image path")))
+			Expect(diffPath).To(BeADirectory())
+		})
+
 	})
 
 	Context("when the id is not provided", func() {

@@ -39,16 +39,24 @@ const (
 	MinQuota       = 1024 * 256
 )
 
-func NewDriver(storePath, tardisBinPath string) *Driver {
+//go:generate counterfeiter . Unmounter
+type Unmounter interface {
+	Unmount(path string) error
+	IsRootless() bool
+}
+
+func NewDriver(storePath, tardisBinPath string, unmounter Unmounter) *Driver {
 	return &Driver{
 		storePath:     storePath,
 		tardisBinPath: tardisBinPath,
+		unmounter:     unmounter,
 	}
 }
 
 type Driver struct {
 	storePath     string
 	tardisBinPath string
+	unmounter     Unmounter
 }
 
 func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath string) error {
@@ -506,9 +514,9 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 		logger.Info("skipping-project-id-folder-removal")
 	}
 
-	if err := ensureImageDestroyed(logger, imagePath); err != nil {
+	if err := d.ensureImageDestroyed(logger, imagePath); err != nil {
 		logger.Error("removing-image-path-failed", err)
-		return errorspkg.Wrap(err, "deleting rootfs folder")
+		return errorspkg.Wrap(err, "deleting image path")
 	}
 
 	if projectID != 0 {
@@ -545,6 +553,7 @@ func (d *Driver) Marshal(logger lager.Logger) ([]byte, error) {
 		Type:           "overlay-xfs",
 		StorePath:      d.storePath,
 		SuidBinaryPath: d.tardisBinPath,
+		Rootless:       d.unmounter.IsRootless(),
 	}
 
 	return json.Marshal(driverSpec)
@@ -759,9 +768,9 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 	return nil
 }
 
-func ensureImageDestroyed(logger lager.Logger, imagePath string) error {
-	if err := unix.Unmount(filepath.Join(imagePath, RootfsDir), 0); err != nil {
-		logger.Info("unmount image path failed", lager.Data{"path": imagePath, "error": err})
+func (d *Driver) ensureImageDestroyed(logger lager.Logger, imagePath string) error {
+	if err := d.unmounter.Unmount(filepath.Join(imagePath, RootfsDir)); err != nil {
+		return errorspkg.Wrapf(err, "unmount rootfs path %q failed", filepath.Join(imagePath, RootfsDir))
 	}
 	return os.RemoveAll(imagePath)
 }

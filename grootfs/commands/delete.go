@@ -2,6 +2,7 @@ package commands // import "code.cloudfoundry.org/grootfs/commands"
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
@@ -10,6 +11,7 @@ import (
 	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
+	"code.cloudfoundry.org/grootfs/store/filesystems/mount"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
@@ -49,7 +51,12 @@ var DeleteCommand = cli.Command{
 			return nil
 		}
 
-		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin)
+		rootless := os.Getuid() != 0
+		var unmounter overlayxfs.Unmounter = mount.RootfulUnmounter{}
+		if rootless {
+			unmounter = mount.RootlessUnmounter{}
+		}
+		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, unmounter)
 
 		imageDriver, err := createImageDriver(logger, cfg, fsDriver)
 		if err != nil {
