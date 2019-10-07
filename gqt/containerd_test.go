@@ -439,7 +439,13 @@ var _ = Describe("Containerd", func() {
 							status <- exit
 						}()
 
-						Eventually(status).Should(Receive(BeEquivalentTo(42)))
+						timeout := time.NewTimer(5 * time.Second)
+						select {
+						case s := <-status:
+							Expect(s).To(BeEquivalentTo(42))
+						case <-timeout.C:
+							Fail("No signal received after 5 seconds!\n\nProcesses running:\n" + psFaux())
+						}
 					})
 				})
 			})
@@ -589,4 +595,10 @@ func findFilesContaining(substring string) bool {
 	}
 
 	return false
+}
+
+func psFaux() string {
+	output, err := exec.Command("ps", "faux").Output()
+	Expect(err).NotTo(HaveOccurred())
+	return string(output)
 }
