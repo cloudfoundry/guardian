@@ -53,6 +53,7 @@ require (
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456
 	gopkg.in/yaml.v2 v2.2.2
 	gotest.tools v2.2.0+incompatible // indirect
+	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
 
 replace code.cloudfoundry.org/idmapper => ../idmapper
