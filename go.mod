@@ -54,6 +54,7 @@ require (
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456
 	google.golang.org/grpc v1.23.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2
+	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
 
 replace (
