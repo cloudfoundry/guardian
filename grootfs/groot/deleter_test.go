@@ -15,7 +15,7 @@ import (
 
 var _ = Describe("Deleter", func() {
 	var (
-		fakeImageCloner       *grootfakes.FakeImageCloner
+		fakeImageManager      *grootfakes.FakeImageManager
 		fakeDependencyManager *grootfakes.FakeDependencyManager
 		fakeMetricsEmitter    *grootfakes.FakeMetricsEmitter
 		deleter               *groot.Deleter
@@ -23,11 +23,11 @@ var _ = Describe("Deleter", func() {
 	)
 
 	BeforeEach(func() {
-		fakeImageCloner = new(grootfakes.FakeImageCloner)
+		fakeImageManager = new(grootfakes.FakeImageManager)
 		fakeDependencyManager = new(grootfakes.FakeDependencyManager)
 		fakeMetricsEmitter = new(grootfakes.FakeMetricsEmitter)
 
-		deleter = groot.IamDeleter(fakeImageCloner, fakeDependencyManager, fakeMetricsEmitter)
+		deleter = groot.IamDeleter(fakeImageManager, fakeDependencyManager, fakeMetricsEmitter)
 		logger = lagertest.NewTestLogger("deleter")
 	})
 
@@ -35,7 +35,7 @@ var _ = Describe("Deleter", func() {
 		It("destroys a image", func() {
 			Expect(deleter.Delete(logger, "some-id")).To(Succeed())
 
-			_, imageId := fakeImageCloner.DestroyArgsForCall(0)
+			_, imageId := fakeImageManager.DestroyArgsForCall(0)
 			Expect(imageId).To(Equal("some-id"))
 		})
 
@@ -46,7 +46,7 @@ var _ = Describe("Deleter", func() {
 
 		Context("when destroying a image fails", func() {
 			BeforeEach(func() {
-				fakeImageCloner.DestroyReturns(errors.New("failed to destroy image"))
+				fakeImageManager.DestroyReturns(errors.New("failed to destroy image"))
 			})
 
 			It("returns an error", func() {

@@ -10,11 +10,11 @@ import (
 	errorspkg "github.com/pkg/errors"
 )
 
-//go:generate counterfeiter . ImageCloner
+//go:generate counterfeiter . ImageIDsGetter
 //go:generate counterfeiter . DependencyManager
 //go:generate counterfeiter . VolumeDriver
 
-type ImageCloner interface {
+type ImageIDsGetter interface {
 	ImageIDs(logger lager.Logger) ([]string, error)
 }
 
@@ -32,14 +32,14 @@ type VolumeDriver interface {
 
 type GarbageCollector struct {
 	volumeDriver      VolumeDriver
-	imageCloner       ImageCloner
+	imageIDsGetter    ImageIDsGetter
 	dependencyManager DependencyManager
 }
 
-func NewGC(volumeDriver VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager) *GarbageCollector {
+func NewGC(volumeDriver VolumeDriver, imageIDsGetter ImageIDsGetter, dependencyManager DependencyManager) *GarbageCollector {
 	return &GarbageCollector{
 		volumeDriver:      volumeDriver,
-		imageCloner:       imageCloner,
+		imageIDsGetter:    imageIDsGetter,
 		dependencyManager: dependencyManager,
 	}
 }
@@ -141,7 +141,7 @@ func (g *GarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, error) 
 		}
 	}
 
-	imageIDs, err := g.imageCloner.ImageIDs(logger)
+	imageIDs, err := g.imageIDsGetter.ImageIDs(logger)
 	if err != nil {
 		return nil, errorspkg.Wrap(err, "failed to retrieve images")
 	}

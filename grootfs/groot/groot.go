@@ -21,7 +21,7 @@ const (
 	MetricDiskPurgeableCachePercentage = "DiskPurgeableCachePercentage"
 )
 
-//go:generate counterfeiter . ImageCloner
+//go:generate counterfeiter . ImageManager
 //go:generate counterfeiter . BaseImagePuller
 //go:generate counterfeiter . Locksmith
 //go:generate counterfeiter . DependencyManager
@@ -97,7 +97,7 @@ type ImageSpec struct {
 	OwnerGID                  int
 }
 
-type ImageCloner interface {
+type ImageManager interface {
 	Exists(id string) (bool, error)
 	Create(logger lager.Logger, spec ImageSpec) (ImageInfo, error)
 	Destroy(logger lager.Logger, id string) error

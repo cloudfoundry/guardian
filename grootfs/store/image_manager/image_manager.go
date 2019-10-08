@@ -1,4 +1,4 @@
-package image_cloner // import "code.cloudfoundry.org/grootfs/store/image_cloner"
+package image_manager // import "code.cloudfoundry.org/grootfs/store/image_manager"
 
 import (
 	"errors"
@@ -29,19 +29,19 @@ type ImageDriver interface {
 	FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error)
 }
 
-type ImageCloner struct {
+type ImageManager struct {
 	imageDriver ImageDriver
 	storePath   string
 }
 
-func NewImageCloner(imageDriver ImageDriver, storePath string) *ImageCloner {
-	return &ImageCloner{
+func NewImageManager(imageDriver ImageDriver, storePath string) *ImageManager {
+	return &ImageManager{
 		imageDriver: imageDriver,
 		storePath:   storePath,
 	}
 }
 
-func (b *ImageCloner) ImageIDs(logger lager.Logger) ([]string, error) {
+func (b *ImageManager) ImageIDs(logger lager.Logger) ([]string, error) {
 	images := []string{}
 
 	existingImages, err := ioutil.ReadDir(path.Join(b.storePath, store.ImageDirName))
@@ -56,7 +56,7 @@ func (b *ImageCloner) ImageIDs(logger lager.Logger) ([]string, error) {
 	return images, nil
 }
 
-func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.ImageInfo, error) {
+func (b *ImageManager) Create(logger lager.Logger, spec groot.ImageSpec) (groot.ImageInfo, error) {
 	logger = logger.Session("making-image", lager.Data{"storePath": b.storePath, "id": spec.ID})
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -120,7 +120,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 	return imageInfo, nil
 }
 
-func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
+func (b *ImageManager) Destroy(logger lager.Logger, id string) error {
 	logger = logger.Session("deleting-image", lager.Data{"storePath": b.storePath, "id": id})
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -147,7 +147,7 @@ func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
 	return nil
 }
 
-func (b *ImageCloner) Exists(id string) (bool, error) {
+func (b *ImageManager) Exists(id string) (bool, error) {
 	imagePath := path.Join(b.storePath, store.ImageDirName, id)
 	if _, err := os.Stat(imagePath); err != nil {
 		if os.IsNotExist(err) {
@@ -159,7 +159,7 @@ func (b *ImageCloner) Exists(id string) (bool, error) {
 	return true, nil
 }
 
-func (b *ImageCloner) Stats(logger lager.Logger, id string) (groot.VolumeStats, error) {
+func (b *ImageManager) Stats(logger lager.Logger, id string) (groot.VolumeStats, error) {
 	logger = logger.Session("fetching-stats", lager.Data{"id": id})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
@@ -176,7 +176,7 @@ func (b *ImageCloner) Stats(logger lager.Logger, id string) (groot.VolumeStats, 
 
 var OpenFile = os.OpenFile
 
-func (b *ImageCloner) imageInfo(rootfsPath, imagePath string, baseImage specsv1.Image, mountJson groot.MountInfo, mount bool) (groot.ImageInfo, error) {
+func (b *ImageManager) imageInfo(rootfsPath, imagePath string, baseImage specsv1.Image, mountJson groot.MountInfo, mount bool) (groot.ImageInfo, error) {
 	imageInfo := groot.ImageInfo{
 		Path:   imagePath,
 		Rootfs: rootfsPath,
@@ -190,11 +190,11 @@ func (b *ImageCloner) imageInfo(rootfsPath, imagePath string, baseImage specsv1.
 	return imageInfo, nil
 }
 
-func (b *ImageCloner) imagePath(id string) string {
+func (b *ImageManager) imagePath(id string) string {
 	return path.Join(b.storePath, store.ImageDirName, id)
 }
 
-func (b *ImageCloner) setOwnership(spec groot.ImageSpec, paths ...string) error {
+func (b *ImageManager) setOwnership(spec groot.ImageSpec, paths ...string) error {
 	if spec.OwnerUID == 0 && spec.OwnerGID == 0 {
 		return nil
 	}

@@ -1,4 +1,4 @@
-package image_cloner_test
+package image_manager_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestImageCloner(t *testing.T) {
+func TestImageManager(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ImageCloner Suite")
+	RunSpecs(t, "ImageManager Suite")
 }

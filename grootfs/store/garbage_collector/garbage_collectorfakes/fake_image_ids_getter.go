@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type FakeImageCloner struct {
+type FakeImageIDsGetter struct {
 	ImageIDsStub        func(lager.Logger) ([]string, error)
 	imageIDsMutex       sync.RWMutex
 	imageIDsArgsForCall []struct {
@@ -26,7 +26,7 @@ type FakeImageCloner struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeImageCloner) ImageIDs(arg1 lager.Logger) ([]string, error) {
+func (fake *FakeImageIDsGetter) ImageIDs(arg1 lager.Logger) ([]string, error) {
 	fake.imageIDsMutex.Lock()
 	ret, specificReturn := fake.imageIDsReturnsOnCall[len(fake.imageIDsArgsForCall)]
 	fake.imageIDsArgsForCall = append(fake.imageIDsArgsForCall, struct {
@@ -44,26 +44,26 @@ func (fake *FakeImageCloner) ImageIDs(arg1 lager.Logger) ([]string, error) {
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeImageCloner) ImageIDsCallCount() int {
+func (fake *FakeImageIDsGetter) ImageIDsCallCount() int {
 	fake.imageIDsMutex.RLock()
 	defer fake.imageIDsMutex.RUnlock()
 	return len(fake.imageIDsArgsForCall)
 }
 
-func (fake *FakeImageCloner) ImageIDsCalls(stub func(lager.Logger) ([]string, error)) {
+func (fake *FakeImageIDsGetter) ImageIDsCalls(stub func(lager.Logger) ([]string, error)) {
 	fake.imageIDsMutex.Lock()
 	defer fake.imageIDsMutex.Unlock()
 	fake.ImageIDsStub = stub
 }
 
-func (fake *FakeImageCloner) ImageIDsArgsForCall(i int) lager.Logger {
+func (fake *FakeImageIDsGetter) ImageIDsArgsForCall(i int) lager.Logger {
 	fake.imageIDsMutex.RLock()
 	defer fake.imageIDsMutex.RUnlock()
 	argsForCall := fake.imageIDsArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeImageCloner) ImageIDsReturns(result1 []string, result2 error) {
+func (fake *FakeImageIDsGetter) ImageIDsReturns(result1 []string, result2 error) {
 	fake.imageIDsMutex.Lock()
 	defer fake.imageIDsMutex.Unlock()
 	fake.ImageIDsStub = nil
@@ -73,7 +73,7 @@ func (fake *FakeImageCloner) ImageIDsReturns(result1 []string, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakeImageCloner) ImageIDsReturnsOnCall(i int, result1 []string, result2 error) {
+func (fake *FakeImageIDsGetter) ImageIDsReturnsOnCall(i int, result1 []string, result2 error) {
 	fake.imageIDsMutex.Lock()
 	defer fake.imageIDsMutex.Unlock()
 	fake.ImageIDsStub = nil
@@ -89,7 +89,7 @@ func (fake *FakeImageCloner) ImageIDsReturnsOnCall(i int, result1 []string, resu
 	}{result1, result2}
 }
 
-func (fake *FakeImageCloner) Invocations() map[string][][]interface{} {
+func (fake *FakeImageIDsGetter) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.imageIDsMutex.RLock()
@@ -101,7 +101,7 @@ func (fake *FakeImageCloner) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *FakeImageCloner) recordInvocation(key string, args []interface{}) {
+func (fake *FakeImageIDsGetter) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -113,4 +113,4 @@ func (fake *FakeImageCloner) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ garbage_collector.ImageCloner = new(FakeImageCloner)
+var _ garbage_collector.ImageIDsGetter = new(FakeImageIDsGetter)

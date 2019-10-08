@@ -11,14 +11,14 @@ import (
 )
 
 type Deleter struct {
-	imageCloner       ImageCloner
+	imageManager      ImageManager
 	dependencyManager DependencyManager
 	metricsEmitter    MetricsEmitter
 }
 
-func IamDeleter(imageCloner ImageCloner, dependencyManager DependencyManager, metricsEmitter MetricsEmitter) *Deleter {
+func IamDeleter(imageManager ImageManager, dependencyManager DependencyManager, metricsEmitter MetricsEmitter) *Deleter {
 	return &Deleter{
-		imageCloner:       imageCloner,
+		imageManager:      imageManager,
 		dependencyManager: dependencyManager,
 		metricsEmitter:    metricsEmitter,
 	}
@@ -31,7 +31,7 @@ func (d *Deleter) Delete(logger lager.Logger, id string) error {
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	if err := d.imageCloner.Destroy(logger, id); err != nil {
+	if err := d.imageManager.Destroy(logger, id); err != nil {
 		return err
 	}
 

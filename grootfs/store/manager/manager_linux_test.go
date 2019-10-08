@@ -12,7 +12,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
 	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/store/image_cloner/image_clonerfakes"
+	"code.cloudfoundry.org/grootfs/store/image_manager/image_managerfakes"
 	managerpkg "code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/grootfs/store/manager/managerfakes"
 	"code.cloudfoundry.org/lager"
@@ -28,7 +28,7 @@ var _ = Describe("Manager", func() {
 	var (
 		originalTmpDir string
 
-		imgDriver   *image_clonerfakes.FakeImageDriver
+		imgDriver   *image_managerfakes.FakeImageDriver
 		volDriver   *base_image_pullerfakes.FakeVolumeDriver
 		storeDriver *managerfakes.FakeStoreDriver
 		manager     *managerpkg.Manager
@@ -44,7 +44,7 @@ var _ = Describe("Manager", func() {
 		originalTmpDir = os.TempDir()
 		grootfsPath = filepath.Join(os.TempDir(), fmt.Sprintf("grootfs-%d", GinkgoParallelNode()))
 
-		imgDriver = new(image_clonerfakes.FakeImageDriver)
+		imgDriver = new(image_managerfakes.FakeImageDriver)
 		volDriver = new(base_image_pullerfakes.FakeVolumeDriver)
 		storeDriver = new(managerfakes.FakeStoreDriver)
 		namespacer = new(managerfakes.FakeStoreNamespacer)

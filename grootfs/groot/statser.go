@@ -5,12 +5,12 @@ import (
 )
 
 type Statser struct {
-	imageCloner ImageCloner
+	imageManager ImageManager
 }
 
-func IamStatser(imageCloner ImageCloner) *Statser {
+func IamStatser(imageManager ImageManager) *Statser {
 	return &Statser{
-		imageCloner: imageCloner,
+		imageManager: imageManager,
 	}
 }
 
@@ -19,7 +19,7 @@ func (m *Statser) Stats(logger lager.Logger, id string) (VolumeStats, error) {
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	stats, err := m.imageCloner.Stats(logger, id)
+	stats, err := m.imageManager.Stats(logger, id)
 	if err != nil {
 		logger.Error("fetching-stats", err, lager.Data{"id": id})
 		return VolumeStats{}, err

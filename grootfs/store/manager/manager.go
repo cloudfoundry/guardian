@@ -10,7 +10,7 @@ import (
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/store/image_cloner"
+	"code.cloudfoundry.org/grootfs/store/image_manager"
 	"code.cloudfoundry.org/lager"
 	"github.com/docker/docker/pkg/mount"
 	errorspkg "github.com/pkg/errors"
@@ -30,7 +30,7 @@ type StoreDriver interface {
 
 type Manager struct {
 	storePath       string
-	imageDriver     image_cloner.ImageDriver
+	imageDriver     image_manager.ImageDriver
 	volumeDriver    base_image_puller.VolumeDriver
 	storeDriver     StoreDriver
 	storeNamespacer StoreNamespacer
@@ -48,7 +48,7 @@ type InitSpec struct {
 	StoreSizeBytes int64
 }
 
-func New(storePath string, storeNamespacer StoreNamespacer, volumeDriver base_image_puller.VolumeDriver, imageDriver image_cloner.ImageDriver, storeDriver StoreDriver, locksmith groot.Locksmith) *Manager {
+func New(storePath string, storeNamespacer StoreNamespacer, volumeDriver base_image_puller.VolumeDriver, imageDriver image_manager.ImageDriver, storeDriver StoreDriver, locksmith groot.Locksmith) *Manager {
 	return &Manager{
 		storePath:       storePath,
 		volumeDriver:    volumeDriver,

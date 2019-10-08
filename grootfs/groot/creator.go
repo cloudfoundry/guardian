@@ -27,7 +27,7 @@ type CreateSpec struct {
 
 type Creator struct {
 	cleaner           Cleaner
-	imageCloner       ImageCloner
+	imageManager      ImageManager
 	baseImagePuller   BaseImagePuller
 	locksmith         Locksmith
 	dependencyManager DependencyManager
@@ -35,11 +35,11 @@ type Creator struct {
 }
 
 func IamCreator(
-	imageCloner ImageCloner, baseImagePuller BaseImagePuller,
+	imageManager ImageManager, baseImagePuller BaseImagePuller,
 	locksmith Locksmith, dependencyManager DependencyManager,
 	metricsEmitter MetricsEmitter, cleaner Cleaner) *Creator {
 	return &Creator{
-		imageCloner:       imageCloner,
+		imageManager:      imageManager,
 		baseImagePuller:   baseImagePuller,
 		locksmith:         locksmith,
 		dependencyManager: dependencyManager,
@@ -59,7 +59,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (info ImageInfo, 
 		return ImageInfo{}, errorspkg.Errorf("id `%s` contains invalid characters: `/`", spec.ID)
 	}
 
-	ok, err := c.imageCloner.Exists(spec.ID)
+	ok, err := c.imageManager.Exists(spec.ID)
 	if err != nil {
 		return ImageInfo{}, errorspkg.Wrap(err, "checking id exists")
 	}
@@ -114,14 +114,14 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (info ImageInfo, 
 		OwnerGID:                  ownerGid,
 	}
 
-	image, err := c.imageCloner.Create(logger, imageSpec)
+	image, err := c.imageManager.Create(logger, imageSpec)
 	if err != nil {
 		return ImageInfo{}, errorspkg.Wrap(err, "making image")
 	}
 
 	imageRefName := fmt.Sprintf(ImageReferenceFormat, spec.ID)
 	if err := c.dependencyManager.Register(imageRefName, baseImageChainIDs); err != nil {
-		if destroyErr := c.imageCloner.Destroy(logger, spec.ID); destroyErr != nil {
+		if destroyErr := c.imageManager.Destroy(logger, spec.ID); destroyErr != nil {
 			logger.Error("failed-to-destroy-image", destroyErr)
 		}
 

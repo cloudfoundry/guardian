@@ -15,7 +15,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/mount"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
-	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
+	imagemanagerpkg "code.cloudfoundry.org/grootfs/store/image_manager"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
 	errorspkg "github.com/pkg/errors"
 
@@ -78,7 +78,7 @@ var CleanCommand = cli.Command{
 		}
 		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, unmounter)
 
-		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, cfg.StorePath)
+		imageManager := imagemanagerpkg.NewImageManager(fsDriver, cfg.StorePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(cfg.StorePath, storepkg.MetaDirName, "dependencies"),
 		)
@@ -88,7 +88,7 @@ var CleanCommand = cli.Command{
 			logger.Error("failed-to-create-image-driver", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
-		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager)
+		gc := garbage_collector.NewGC(nsFsDriver, imageManager, dependencyManager)
 		sm := storepkg.NewStoreMeasurer(cfg.StorePath, fsDriver, gc)
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)

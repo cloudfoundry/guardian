@@ -19,7 +19,7 @@ import (
 var _ = Describe("Creator", func() {
 	var (
 		baseImageUrl          *url.URL
-		fakeImageCloner       *grootfakes.FakeImageCloner
+		fakeImageManager      *grootfakes.FakeImageManager
 		fakeBaseImagePuller   *grootfakes.FakeBaseImagePuller
 		fakeLocksmith         *grootfakes.FakeLocksmith
 		fakeDependencyManager *grootfakes.FakeDependencyManager
@@ -38,7 +38,7 @@ var _ = Describe("Creator", func() {
 	BeforeEach(func() {
 		baseImageUrl, _ = url.Parse("/path/to/image")
 
-		fakeImageCloner = new(grootfakes.FakeImageCloner)
+		fakeImageManager = new(grootfakes.FakeImageManager)
 		fakeBaseImagePuller = new(grootfakes.FakeBaseImagePuller)
 		fakeLocksmith = new(grootfakes.FakeLocksmith)
 		fakeDependencyManager = new(grootfakes.FakeDependencyManager)
@@ -53,7 +53,7 @@ var _ = Describe("Creator", func() {
 
 		logger = lagertest.NewTestLogger("creator")
 
-		fakeImageCloner.CreateReturns(groot.ImageInfo{
+		fakeImageManager.CreateReturns(groot.ImageInfo{
 			Path:   "/path/to/images/123",
 			Rootfs: "/path/to/images/123/rootfs",
 		}, nil)
@@ -72,7 +72,7 @@ var _ = Describe("Creator", func() {
 		pullError = nil
 
 		creator = groot.IamCreator(
-			fakeImageCloner, fakeBaseImagePuller, fakeLocksmith,
+			fakeImageManager, fakeBaseImagePuller, fakeLocksmith,
 			fakeDependencyManager, fakeMetricsEmitter,
 			fakeCleaner)
 	})
@@ -156,8 +156,8 @@ var _ = Describe("Creator", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeImageCloner.CreateCallCount()).To(Equal(1))
-			_, createImagerSpec := fakeImageCloner.CreateArgsForCall(0)
+			Expect(fakeImageManager.CreateCallCount()).To(Equal(1))
+			_, createImagerSpec := fakeImageManager.CreateArgsForCall(0)
 			Expect(createImagerSpec).To(Equal(groot.ImageSpec{
 				ID:            "some-id",
 				BaseVolumeIDs: []string{"id-1", "id-2"},
@@ -184,7 +184,7 @@ var _ = Describe("Creator", func() {
 				Path:   "/path/to/image",
 				Rootfs: "rootfs-path",
 			}
-			fakeImageCloner.CreateReturns(expectedImage, nil)
+			fakeImageManager.CreateReturns(expectedImage, nil)
 
 			image, err := creator.Create(logger, groot.CreateSpec{})
 			Expect(err).NotTo(HaveOccurred())
@@ -226,8 +226,8 @@ var _ = Describe("Creator", func() {
 				Expect(imageSpec.OwnerUID).To(Equal(50))
 				Expect(imageSpec.OwnerGID).To(Equal(60))
 
-				Expect(fakeImageCloner.CreateCallCount()).To(Equal(1))
-				_, createImagerSpec := fakeImageCloner.CreateArgsForCall(0)
+				Expect(fakeImageManager.CreateCallCount()).To(Equal(1))
+				_, createImagerSpec := fakeImageManager.CreateArgsForCall(0)
 				Expect(createImagerSpec.OwnerUID).To(Equal(50))
 				Expect(createImagerSpec.OwnerGID).To(Equal(60))
 			})
@@ -244,8 +244,8 @@ var _ = Describe("Creator", func() {
 					Expect(imageSpec.OwnerUID).To(Equal(os.Getuid()))
 					Expect(imageSpec.OwnerGID).To(Equal(os.Getgid()))
 
-					Expect(fakeImageCloner.CreateCallCount()).To(Equal(1))
-					_, createImagerSpec := fakeImageCloner.CreateArgsForCall(0)
+					Expect(fakeImageManager.CreateCallCount()).To(Equal(1))
+					_, createImagerSpec := fakeImageManager.CreateArgsForCall(0)
 					Expect(createImagerSpec.OwnerUID).To(Equal(os.Getuid()))
 					Expect(createImagerSpec.OwnerGID).To(Equal(os.Getgid()))
 				})
@@ -254,7 +254,7 @@ var _ = Describe("Creator", func() {
 
 		Context("when the id already exists", func() {
 			BeforeEach(func() {
-				fakeImageCloner.ExistsReturns(true, nil)
+				fakeImageManager.ExistsReturns(true, nil)
 			})
 
 			It("returns an error", func() {
@@ -264,7 +264,7 @@ var _ = Describe("Creator", func() {
 				})
 				Expect(err).To(HaveOccurred())
 
-				Expect(fakeImageCloner.CreateCallCount()).To(Equal(0))
+				Expect(fakeImageManager.CreateCallCount()).To(Equal(0))
 				Expect(err).To(MatchError(ContainSubstring("image for id `some-id` already exists")))
 			})
 
@@ -282,7 +282,7 @@ var _ = Describe("Creator", func() {
 
 		Context("when checking if the id exists fails", func() {
 			BeforeEach(func() {
-				fakeImageCloner.ExistsReturns(false, errors.New("Checking if the image ID exists"))
+				fakeImageManager.ExistsReturns(false, errors.New("Checking if the image ID exists"))
 			})
 
 			It("returns an error", func() {
@@ -291,7 +291,7 @@ var _ = Describe("Creator", func() {
 				})
 				Expect(err).To(HaveOccurred())
 
-				Expect(fakeImageCloner.CreateCallCount()).To(Equal(0))
+				Expect(fakeImageManager.CreateCallCount()).To(Equal(0))
 				Expect(err).To(MatchError(ContainSubstring("Checking if the image ID exists")))
 			})
 
@@ -314,7 +314,7 @@ var _ = Describe("Creator", func() {
 				})
 				Expect(err).To(HaveOccurred())
 
-				Expect(fakeImageCloner.CreateCallCount()).To(Equal(0))
+				Expect(fakeImageManager.CreateCallCount()).To(Equal(0))
 				Expect(err).To(MatchError(ContainSubstring("id `some/id` contains invalid characters: `/`")))
 			})
 		})
@@ -359,13 +359,13 @@ var _ = Describe("Creator", func() {
 				})
 				Expect(err).To(HaveOccurred())
 
-				Expect(fakeImageCloner.CreateCallCount()).To(Equal(0))
+				Expect(fakeImageManager.CreateCallCount()).To(Equal(0))
 			})
 		})
 
 		Context("when cloning the image fails", func() {
 			BeforeEach(func() {
-				fakeImageCloner.CreateReturns(groot.ImageInfo{}, errors.New("Failed to make image"))
+				fakeImageManager.CreateReturns(groot.ImageInfo{}, errors.New("Failed to make image"))
 			})
 
 			It("returns the error", func() {
@@ -395,12 +395,12 @@ var _ = Describe("Creator", func() {
 				})
 				Expect(err).To(HaveOccurred())
 
-				Expect(fakeImageCloner.DestroyCallCount()).To(Equal(1))
+				Expect(fakeImageManager.DestroyCallCount()).To(Equal(1))
 			})
 		})
 
 		Context("when disk limit is given", func() {
-			It("passes the disk limit to the imageCloner", func() {
+			It("passes the disk limit to the imageManager", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
 					ID:           "some-id",
 					DiskLimit:    int64(1024),
@@ -408,8 +408,8 @@ var _ = Describe("Creator", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(fakeImageCloner.CreateCallCount()).To(Equal(1))
-				_, createImagerSpec := fakeImageCloner.CreateArgsForCall(0)
+				Expect(fakeImageManager.CreateCallCount()).To(Equal(1))
+				_, createImagerSpec := fakeImageManager.CreateArgsForCall(0)
 				Expect(createImagerSpec).To(Equal(groot.ImageSpec{
 					ID:            "some-id",
 					BaseVolumeIDs: []string{"id-1", "id-2"},

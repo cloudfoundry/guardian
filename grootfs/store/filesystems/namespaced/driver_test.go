@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced/namespacedfakes"
-	"code.cloudfoundry.org/grootfs/store/image_cloner"
+	"code.cloudfoundry.org/grootfs/store/image_manager"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 
@@ -174,13 +174,13 @@ var _ = Describe("Driver", func() {
 		})
 
 		It("decorates the internal driver function", func() {
-			mountInfo, err := driver.CreateImage(logger, image_cloner.ImageDriverSpec{Mount: true})
+			mountInfo, err := driver.CreateImage(logger, image_manager.ImageDriverSpec{Mount: true})
 			Expect(mountInfo).To(Equal(groot.MountInfo{Destination: "Dimension 31-C"}))
 			Expect(err).To(MatchError("error"))
 			Expect(internalDriver.CreateImageCallCount()).To(Equal(1))
 			loggerArg, specArg := internalDriver.CreateImageArgsForCall(0)
 			Expect(loggerArg).To(Equal(logger))
-			Expect(specArg).To(Equal(image_cloner.ImageDriverSpec{Mount: true}))
+			Expect(specArg).To(Equal(image_manager.ImageDriverSpec{Mount: true}))
 		})
 	})
 

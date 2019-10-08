@@ -14,7 +14,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/mount"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
-	"code.cloudfoundry.org/grootfs/store/image_cloner"
+	"code.cloudfoundry.org/grootfs/store/image_manager"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
@@ -64,15 +64,15 @@ var DeleteCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		imageCloner := image_cloner.NewImageCloner(imageDriver, storePath)
+		imageManager := image_manager.NewImageManager(imageDriver, storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, store.MetaDirName, "dependencies"),
 		)
 
 		metricsEmitter := metrics.NewEmitter(logger, cfg.MetronEndpoint)
-		deleter := groot.IamDeleter(imageCloner, dependencyManager, metricsEmitter)
+		deleter := groot.IamDeleter(imageManager, dependencyManager, metricsEmitter)
 
-		gc := garbage_collector.NewGC(fsDriver, imageCloner, dependencyManager)
+		gc := garbage_collector.NewGC(fsDriver, imageManager, dependencyManager)
 		sm := store.NewStoreMeasurer(storePath, fsDriver, gc)
 
 		defer func() {

@@ -19,7 +19,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	fakes "code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/overlayxfsfakes"
-	"code.cloudfoundry.org/grootfs/store/image_cloner"
+	"code.cloudfoundry.org/grootfs/store/image_manager"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/docker/docker/pkg/system"
@@ -43,7 +43,7 @@ var _ = Describe("Driver", func() {
 		storePath     string
 		driver        *overlayxfs.Driver
 		logger        *lagertest.TestLogger
-		spec          image_cloner.ImageDriverSpec
+		spec          image_manager.ImageDriverSpec
 		randomID      string
 		randomImageID string
 		tardisBinPath string
@@ -78,7 +78,7 @@ var _ = Describe("Driver", func() {
 		imagePath := filepath.Join(storePath, store.ImageDirName, randomImageID)
 		Expect(os.Mkdir(imagePath, 0755)).To(Succeed())
 
-		spec = image_cloner.ImageDriverSpec{
+		spec = image_manager.ImageDriverSpec{
 			ImagePath: imagePath,
 			Mount:     true,
 		}

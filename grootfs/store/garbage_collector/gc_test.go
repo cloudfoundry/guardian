@@ -20,11 +20,11 @@ var _ = Describe("Gc", func() {
 		garbageCollector      *garbage_collector.GarbageCollector
 		fakeVolumeDriver      *garbage_collectorfakes.FakeVolumeDriver
 		fakeDependencyManager *garbage_collectorfakes.FakeDependencyManager
-		fakeImageCloner       *garbage_collectorfakes.FakeImageCloner
+		fakeImageIDsGetter    *garbage_collectorfakes.FakeImageIDsGetter
 	)
 
 	BeforeEach(func() {
-		fakeImageCloner = new(garbage_collectorfakes.FakeImageCloner)
+		fakeImageIDsGetter = new(garbage_collectorfakes.FakeImageIDsGetter)
 		fakeVolumeDriver = new(garbage_collectorfakes.FakeVolumeDriver)
 		fakeDependencyManager = new(garbage_collectorfakes.FakeDependencyManager)
 
@@ -32,7 +32,7 @@ var _ = Describe("Gc", func() {
 	})
 
 	JustBeforeEach(func() {
-		garbageCollector = garbage_collector.NewGC(fakeVolumeDriver, fakeImageCloner, fakeDependencyManager)
+		garbageCollector = garbage_collector.NewGC(fakeVolumeDriver, fakeImageIDsGetter, fakeDependencyManager)
 	})
 
 	Describe("UnusedVolumes", func() {
@@ -63,7 +63,7 @@ var _ = Describe("Gc", func() {
 				}[id], nil
 			}
 
-			fakeImageCloner.ImageIDsReturns([]string{"idA", "idB", "idLocal"}, nil)
+			fakeImageIDsGetter.ImageIDsReturns([]string{"idA", "idB", "idLocal"}, nil)
 		})
 
 		It("retrieves the names of unused volumes", func() {
@@ -75,7 +75,7 @@ var _ = Describe("Gc", func() {
 
 		Context("when retrieving images fails", func() {
 			BeforeEach(func() {
-				fakeImageCloner.ImageIDsReturns(nil, errors.New("failed to retrieve images"))
+				fakeImageIDsGetter.ImageIDsReturns(nil, errors.New("failed to retrieve images"))
 			})
 
 			It("returns an error", func() {

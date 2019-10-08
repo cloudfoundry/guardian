@@ -26,7 +26,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
-	"code.cloudfoundry.org/grootfs/store/image_cloner"
+	"code.cloudfoundry.org/grootfs/store/image_manager"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
@@ -150,7 +150,7 @@ var CreateCommand = cli.Command{
 		exclusiveLocksmith := locksmithpkg.NewExclusiveFileSystem(storeLocksDir).WithMetrics(metricsEmitter)
 		initStoreLocksmith := locksmithpkg.NewExclusiveFileSystem(initLocksDir)
 
-		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)
+		imageManager := image_manager.NewImageManager(fsDriver, storePath)
 		storeNamespacer := groot.NewStoreNamespacer(storePath)
 
 		manager := manager.New(storePath, storeNamespacer, fsDriver, fsDriver, fsDriver, initStoreLocksmith)
@@ -199,12 +199,12 @@ var CreateCommand = cli.Command{
 			baseDirHandler,
 		)
 
-		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager)
+		gc := garbage_collector.NewGC(nsFsDriver, imageManager, dependencyManager)
 		sm := storepkg.NewStoreMeasurer(storePath, fsDriver, gc)
 		cleaner := groot.YouAreCleaner(cfg)
 
 		creator := groot.IamCreator(
-			imageCloner, baseImagePuller, sharedLocksmith,
+			imageManager, baseImagePuller, sharedLocksmith,
 			dependencyManager, metricsEmitter, cleaner,
 		)
 

@@ -9,7 +9,7 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/idfinder"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
-	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
+	imageManagerpkg "code.cloudfoundry.org/grootfs/store/image_manager"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
@@ -46,9 +46,9 @@ var StatsCommand = cli.Command{
 		}
 
 		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, nil)
-		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
+		imageManager := imageManagerpkg.NewImageManager(fsDriver, storePath)
 
-		statser := groot.IamStatser(imageCloner)
+		statser := groot.IamStatser(imageManager)
 		stats, err := statser.Stats(logger, id)
 		if err != nil {
 			logger.Error("fetching-stats", err)

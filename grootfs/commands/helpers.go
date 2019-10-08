@@ -14,13 +14,13 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/sandbox"
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
-	"code.cloudfoundry.org/grootfs/store/image_cloner"
+	"code.cloudfoundry.org/grootfs/store/image_manager"
 	"code.cloudfoundry.org/lager"
 	"github.com/opencontainers/runc/libcontainer/user"
 )
 
 type fileSystemDriver interface {
-	CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (groot.MountInfo, error)
+	CreateImage(logger lager.Logger, spec image_manager.ImageDriverSpec) (groot.MountInfo, error)
 	DestroyImage(logger lager.Logger, path string) error
 	FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error)
 	ConfigureStore(logger lager.Logger, storePath string, ownerUID, ownerGID int) error

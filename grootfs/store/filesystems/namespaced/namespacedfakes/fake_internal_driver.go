@@ -6,16 +6,16 @@ import (
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/store/image_cloner"
+	"code.cloudfoundry.org/grootfs/store/image_manager"
 	"code.cloudfoundry.org/lager"
 )
 
 type FakeInternalDriver struct {
-	CreateImageStub        func(lager.Logger, image_cloner.ImageDriverSpec) (groot.MountInfo, error)
+	CreateImageStub        func(lager.Logger, image_manager.ImageDriverSpec) (groot.MountInfo, error)
 	createImageMutex       sync.RWMutex
 	createImageArgsForCall []struct {
 		arg1 lager.Logger
-		arg2 image_cloner.ImageDriverSpec
+		arg2 image_manager.ImageDriverSpec
 	}
 	createImageReturns struct {
 		result1 groot.MountInfo
@@ -173,12 +173,12 @@ type FakeInternalDriver struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeInternalDriver) CreateImage(arg1 lager.Logger, arg2 image_cloner.ImageDriverSpec) (groot.MountInfo, error) {
+func (fake *FakeInternalDriver) CreateImage(arg1 lager.Logger, arg2 image_manager.ImageDriverSpec) (groot.MountInfo, error) {
 	fake.createImageMutex.Lock()
 	ret, specificReturn := fake.createImageReturnsOnCall[len(fake.createImageArgsForCall)]
 	fake.createImageArgsForCall = append(fake.createImageArgsForCall, struct {
 		arg1 lager.Logger
-		arg2 image_cloner.ImageDriverSpec
+		arg2 image_manager.ImageDriverSpec
 	}{arg1, arg2})
 	fake.recordInvocation("CreateImage", []interface{}{arg1, arg2})
 	fake.createImageMutex.Unlock()
@@ -198,13 +198,13 @@ func (fake *FakeInternalDriver) CreateImageCallCount() int {
 	return len(fake.createImageArgsForCall)
 }
 
-func (fake *FakeInternalDriver) CreateImageCalls(stub func(lager.Logger, image_cloner.ImageDriverSpec) (groot.MountInfo, error)) {
+func (fake *FakeInternalDriver) CreateImageCalls(stub func(lager.Logger, image_manager.ImageDriverSpec) (groot.MountInfo, error)) {
 	fake.createImageMutex.Lock()
 	defer fake.createImageMutex.Unlock()
 	fake.CreateImageStub = stub
 }
 
-func (fake *FakeInternalDriver) CreateImageArgsForCall(i int) (lager.Logger, image_cloner.ImageDriverSpec) {
+func (fake *FakeInternalDriver) CreateImageArgsForCall(i int) (lager.Logger, image_manager.ImageDriverSpec) {
 	fake.createImageMutex.RLock()
 	defer fake.createImageMutex.RUnlock()
 	argsForCall := fake.createImageArgsForCall[i]

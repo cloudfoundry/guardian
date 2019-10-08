@@ -10,7 +10,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/mount"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/spec"
-	"code.cloudfoundry.org/grootfs/store/image_cloner"
+	"code.cloudfoundry.org/grootfs/store/image_manager"
 	"code.cloudfoundry.org/lager"
 	"github.com/containers/storage/pkg/reexec"
 	"github.com/pkg/errors"
@@ -27,7 +27,7 @@ type internalDriver interface {
 	WriteVolumeMeta(logger lager.Logger, id string, data base_image_puller.VolumeMeta) error
 	MarkVolumeArtifacts(logger lager.Logger, id string) error
 
-	CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (groot.MountInfo, error)
+	CreateImage(logger lager.Logger, spec image_manager.ImageDriverSpec) (groot.MountInfo, error)
 	DestroyImage(logger lager.Logger, path string) error
 	FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error)
 

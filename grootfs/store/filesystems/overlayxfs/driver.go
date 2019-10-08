@@ -19,7 +19,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems"
 	quotapkg "code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/quota"
 	"code.cloudfoundry.org/grootfs/store/filesystems/spec"
-	"code.cloudfoundry.org/grootfs/store/image_cloner"
+	"code.cloudfoundry.org/grootfs/store/image_manager"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
 	"github.com/tscolari/lagregator"
@@ -240,7 +240,7 @@ func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
 	return volumes, nil
 }
 
-func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (groot.MountInfo, error) {
+func (d *Driver) CreateImage(logger lager.Logger, spec image_manager.ImageDriverSpec) (groot.MountInfo, error) {
 	logger = logger.Session("overlayxfs-creating-image", lager.Data{"spec": spec})
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -724,7 +724,7 @@ func (d *Driver) generateShortishID() (string, error) {
 	return id + strconv.Itoa(os.Getpid()), err
 }
 
-func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriverSpec, volumeSize int64) error {
+func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_manager.ImageDriverSpec, volumeSize int64) error {
 	logger = logger.Session("applying-quotas", lager.Data{"spec": spec})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
