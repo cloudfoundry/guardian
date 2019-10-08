@@ -53,7 +53,7 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, pi
 	}
 
 	log.Debug("creating-task", lager.Data{"containerID": containerID})
-	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(noTtyProcessIO(pio), n.ioFifoDir)), containerd.WithNoNewKeyring, WithCurrentUIDAndGID)
+	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), containerd.WithNoNewKeyring, WithCurrentUIDAndGID)
 	if err != nil {
 		return err
 	}
@@ -200,7 +200,7 @@ func exponentialBackoffCloseIO(process containerd.Process, ctx context.Context, 
 	}
 }
 
-func noTtyProcessIO(initProcessIO func() (io.Reader, io.Writer, io.Writer)) func() (io.Reader, io.Writer, io.Writer, bool) {
+func noTTYProcessIO(initProcessIO func() (io.Reader, io.Writer, io.Writer)) func() (io.Reader, io.Writer, io.Writer, bool) {
 	return func() (io.Reader, io.Writer, io.Writer, bool) {
 		stdin, stdout, stderr := initProcessIO()
 		return stdin, stdout, stderr, false
@@ -377,6 +377,7 @@ func (n *Nerd) RemoveBundle(log lager.Logger, handle string) error {
 }
 
 func WithCurrentUIDAndGID(ctx context.Context, c *containerd.Client, ti *containerd.TaskInfo) error {
+
 	return updateTaskInfoCreateOptions(ti, func(opts *runctypes.CreateOptions) error {
 		opts.IoUid = uint32(syscall.Geteuid())
 		opts.IoGid = uint32(syscall.Getegid())

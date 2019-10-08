@@ -31,7 +31,8 @@ import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/leases"
 	"github.com/containerd/containerd/namespaces"
-	"github.com/containerd/containerd/runtime/v1/linux/proc"
+	"github.com/containerd/containerd/pkg/process"
+	"github.com/containerd/containerd/plugin"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
@@ -147,7 +148,7 @@ func (f *LinuxFactory) WireRootfsFileCreator() depot.RootfsFileCreator {
 }
 
 func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger, volumizer peas.Volumizer, peaHandlesGetter runcontainerd.PeaHandlesGetter) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, peas.BundleLoader, error) {
-	containerdClient, err := containerd.New(f.config.Containerd.Socket)
+	containerdClient, err := containerd.New(f.config.Containerd.Socket, containerd.WithDefaultRuntime(plugin.RuntimeLinuxV1))
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
@@ -235,7 +236,7 @@ func containerdRuncRoot() string {
 	if root := getRuntimeDir(); root != "" {
 		return root
 	}
-	return proc.RuncRoot
+	return process.RuncRoot
 }
 
 func (cmd *CommonCommand) computeRuncRoot() string {

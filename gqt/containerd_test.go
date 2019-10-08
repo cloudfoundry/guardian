@@ -515,7 +515,7 @@ var _ = Describe("Containerd", func() {
 			restartContainerd()
 			Eventually(
 				func() string {
-					out, err := exec.Command("/bin/bash", "-c", fmt.Sprintf("ss -xp | grep %s | wc -l", container.Handle())).CombinedOutput()
+					out, err := exec.Command("/bin/bash", "-c", fmt.Sprintf("ps aux | grep -E '[c]ontainerd-shim.*%s' | awk '{print $2}' | xargs -I {} sh -c 'ss -xp | grep {} | wc -l'", container.Handle())).CombinedOutput()
 					Expect(err).NotTo(HaveOccurred())
 					return strings.TrimSpace(string(out))
 				}).Should(Equal("1"))
