@@ -45,10 +45,6 @@ var _ = Describe("Rootful Unmounter", func() {
 		unmountErr = unmounter.Unmount(mountDestPath)
 	})
 
-	It("is rootful", func() {
-		Expect(unmounter.IsRootless()).To(BeFalse())
-	})
-
 	When("the directory to unmount is mounted", func() {
 		BeforeEach(func() {
 			Expect(exec.Command("mount", "--bind", mountSrcPath, mountDestPath).Run()).To(Succeed())

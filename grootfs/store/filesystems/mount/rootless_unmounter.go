@@ -44,7 +44,3 @@ func isMountPoint(path string) (bool, error) {
 
 	return false, err
 }
-
-func (u RootlessUnmounter) IsRootless() bool {
-	return true
-}

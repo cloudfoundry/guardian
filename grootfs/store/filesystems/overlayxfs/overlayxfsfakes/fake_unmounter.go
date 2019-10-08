@@ -8,16 +8,6 @@ import (
 )
 
 type FakeUnmounter struct {
-	IsRootlessStub        func() bool
-	isRootlessMutex       sync.RWMutex
-	isRootlessArgsForCall []struct {
-	}
-	isRootlessReturns struct {
-		result1 bool
-	}
-	isRootlessReturnsOnCall map[int]struct {
-		result1 bool
-	}
 	UnmountStub        func(string) error
 	unmountMutex       sync.RWMutex
 	unmountArgsForCall []struct {
@@ -31,58 +21,6 @@ type FakeUnmounter struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *FakeUnmounter) IsRootless() bool {
-	fake.isRootlessMutex.Lock()
-	ret, specificReturn := fake.isRootlessReturnsOnCall[len(fake.isRootlessArgsForCall)]
-	fake.isRootlessArgsForCall = append(fake.isRootlessArgsForCall, struct {
-	}{})
-	fake.recordInvocation("IsRootless", []interface{}{})
-	fake.isRootlessMutex.Unlock()
-	if fake.IsRootlessStub != nil {
-		return fake.IsRootlessStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	fakeReturns := fake.isRootlessReturns
-	return fakeReturns.result1
-}
-
-func (fake *FakeUnmounter) IsRootlessCallCount() int {
-	fake.isRootlessMutex.RLock()
-	defer fake.isRootlessMutex.RUnlock()
-	return len(fake.isRootlessArgsForCall)
-}
-
-func (fake *FakeUnmounter) IsRootlessCalls(stub func() bool) {
-	fake.isRootlessMutex.Lock()
-	defer fake.isRootlessMutex.Unlock()
-	fake.IsRootlessStub = stub
-}
-
-func (fake *FakeUnmounter) IsRootlessReturns(result1 bool) {
-	fake.isRootlessMutex.Lock()
-	defer fake.isRootlessMutex.Unlock()
-	fake.IsRootlessStub = nil
-	fake.isRootlessReturns = struct {
-		result1 bool
-	}{result1}
-}
-
-func (fake *FakeUnmounter) IsRootlessReturnsOnCall(i int, result1 bool) {
-	fake.isRootlessMutex.Lock()
-	defer fake.isRootlessMutex.Unlock()
-	fake.IsRootlessStub = nil
-	if fake.isRootlessReturnsOnCall == nil {
-		fake.isRootlessReturnsOnCall = make(map[int]struct {
-			result1 bool
-		})
-	}
-	fake.isRootlessReturnsOnCall[i] = struct {
-		result1 bool
-	}{result1}
 }
 
 func (fake *FakeUnmounter) Unmount(arg1 string) error {
@@ -148,8 +86,6 @@ func (fake *FakeUnmounter) UnmountReturnsOnCall(i int, result1 error) {
 func (fake *FakeUnmounter) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.isRootlessMutex.RLock()
-	defer fake.isRootlessMutex.RUnlock()
 	fake.unmountMutex.RLock()
 	defer fake.unmountMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

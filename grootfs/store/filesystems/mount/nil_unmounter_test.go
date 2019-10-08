@@ -16,8 +16,4 @@ var _ = Describe("NilUnmounter", func() {
 	It("panics when asked to unmount", func() {
 		Expect(func() { unmounter.Unmount("/foo/bar") }).To(Panic())
 	})
-
-	It("panics when asked whether rootless", func() {
-		Expect(func() { unmounter.IsRootless() }).To(Panic())
-	})
 })

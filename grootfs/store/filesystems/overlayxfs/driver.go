@@ -42,7 +42,6 @@ const (
 //go:generate counterfeiter . Unmounter
 type Unmounter interface {
 	Unmount(path string) error
-	IsRootless() bool
 }
 
 func NewDriver(storePath, tardisBinPath string, unmounter Unmounter) *Driver {
@@ -553,7 +552,6 @@ func (d *Driver) Marshal(logger lager.Logger) ([]byte, error) {
 		Type:           "overlay-xfs",
 		StorePath:      d.storePath,
 		SuidBinaryPath: d.tardisBinPath,
-		Rootless:       d.unmounter.IsRootless(),
 	}
 
 	return json.Marshal(driverSpec)

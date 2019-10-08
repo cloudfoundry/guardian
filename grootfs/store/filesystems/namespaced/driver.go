@@ -151,14 +151,10 @@ func (d *Driver) DestroyImage(logger lager.Logger, path string) error {
 func specToDriver(spec spec.DriverSpec) (internalDriver, error) {
 	switch spec.Type {
 	case "overlay-xfs":
-		var unmounter overlayxfs.Unmounter = mount.RootfulUnmounter{}
-		if spec.Rootless {
-			unmounter = mount.RootlessUnmounter{}
-		}
 		return overlayxfs.NewDriver(
 			spec.StorePath,
 			spec.SuidBinaryPath,
-			unmounter), nil
+			mount.RootlessUnmounter{}), nil
 	default:
 		return nil, errors.Errorf("invalid filesystem spec: %s not recognized", spec.Type)
 	}

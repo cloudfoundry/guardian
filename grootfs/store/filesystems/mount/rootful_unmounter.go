@@ -17,7 +17,3 @@ func (u RootfulUnmounter) Unmount(path string) error {
 	}
 	return err
 }
-
-func (u RootfulUnmounter) IsRootless() bool {
-	return false
-}
