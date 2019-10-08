@@ -22,14 +22,13 @@ require (
 	github.com/containerd/fifo v0.0.0-20180307165137-3d5202aec260 // indirect
 	github.com/containerd/go-runc v0.0.0-20180907222934-5a6d9f37cfa3 // indirect
 	github.com/containerd/ttrpc v0.0.0-20190828172938-92c8520ef9f8 // indirect
-	github.com/containerd/typeurl v0.0.0-20170912152501-f6943554a7e7
+	github.com/containerd/typeurl v0.0.0-20190911142611-5eb25027c9fd
 	github.com/coreos/go-systemd v0.0.0-20190212144455-93d5ec2c7f76 // indirect
 	github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
 	github.com/docker/go-events v0.0.0-20170721190031-9461782956ad // indirect
 	github.com/eapache/go-resiliency v1.2.0
 	github.com/godbus/dbus v4.1.0+incompatible // indirect
 	github.com/gogo/googleapis v1.0.0 // indirect
-	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/jessevdk/go-flags v1.4.0
@@ -57,7 +56,6 @@ require (
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456
 	google.golang.org/grpc v1.23.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2
-	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
 
 replace (

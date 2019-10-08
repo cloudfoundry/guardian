@@ -145,7 +145,7 @@ github.com/containerd/fifo
 github.com/containerd/go-runc
 # github.com/containerd/ttrpc v0.0.0-20190828172938-92c8520ef9f8
 github.com/containerd/ttrpc
-# github.com/containerd/typeurl v0.0.0-20170912152501-f6943554a7e7
+# github.com/containerd/typeurl v0.0.0-20190911142611-5eb25027c9fd
 github.com/containerd/typeurl
 # github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
 github.com/cpuguy83/go-md2man/v2/md2man
@@ -163,7 +163,7 @@ github.com/docker/go-units
 github.com/eapache/go-resiliency/retrier
 # github.com/gogo/googleapis v1.0.0
 github.com/gogo/googleapis/google/rpc
-# github.com/gogo/protobuf v1.2.1
+# github.com/gogo/protobuf v1.3.0
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
