@@ -1,9 +1,11 @@
 package runner
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -24,7 +26,6 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 )
@@ -523,10 +524,12 @@ func (r *RunningGarden) runCtr(args []string) string {
 	socket := r.GdnRunnerConfig.ContainerdSocket
 	defaultArgs := []string{"--address", socket, "--namespace", "garden"}
 	cmd := exec.Command("ctr", append(defaultArgs, args...)...)
+	var stdout bytes.Buffer
+	cmd.Stdout = io.MultiWriter(&stdout, GinkgoWriter)
+	cmd.Stderr = GinkgoWriter
 
-	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	err := cmd.Run()
 	Expect(err).NotTo(HaveOccurred())
-	Eventually(session).Should(gexec.Exit(0), string(session.Err.Contents()))
 
-	return string(session.Out.Contents())
+	return string(stdout.Bytes())
 }
