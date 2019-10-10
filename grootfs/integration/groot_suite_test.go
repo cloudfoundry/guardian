@@ -129,9 +129,16 @@ func TestGroot(t *testing.T) {
 			re := regexp.MustCompile(`unlinkat (\/mnt\/xfs-[0-9]\/.*):`)
 			dirNotEmpty := re.FindAllStringSubmatch(err.Error(), -1)[0][1]
 
-			out, err := exec.Command("find", dirNotEmpty, "-ls").CombinedOutput()
-			Expect(err).NotTo(HaveOccurred(), string(out))
-			info = fmt.Sprintf("DIR NOT EMPTY: %s\n%s\n", dirNotEmpty, string(out))
+			filesOut, err := exec.Command("find", dirNotEmpty, "-ls").CombinedOutput()
+			Expect(err).NotTo(HaveOccurred(), string(filesOut))
+
+			lsofOut, _ := exec.Command("sh", "-c", "lsof | grep "+dirNotEmpty).CombinedOutput()
+
+			mountTable, err := exec.Command("cat", "/proc/self/mountinfo").CombinedOutput()
+			Expect(err).NotTo(HaveOccurred(), string(mountTable))
+
+			info = fmt.Sprintf("DIR NOT EMPTY: %s\nFILES:\n%s\nOPEN FILES:\n%s\nMOUNT TABLE:\n%s\n",
+				dirNotEmpty, string(filesOut), string(lsofOut), string(mountTable))
 		}
 		Expect(err).NotTo(HaveOccurred(), info)
 	})
