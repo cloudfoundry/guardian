@@ -639,12 +639,18 @@ func initProcessPID(handle string) int {
 	return state.Pid
 }
 
+func psauxf() string {
+	out, err := exec.Command("ps", "auxf").CombinedOutput()
+	Expect(err).NotTo(HaveOccurred())
+	return fmt.Sprintf("\nPS OUTPUT:\n%s\n", string(out))
+}
+
 func numOpenSockets(pid int) (num int) {
-	stdout := runCommand(exec.Command("sh", "-c", fmt.Sprintf("lsof -p %d | grep sock", pid)))
+	stdout := runCommand(exec.Command("sh", "-c", fmt.Sprintf("lsof -p %d | grep sock", pid)), psauxf)
 	return strings.Count(stdout, "\n")
 }
 
 func numPipes(pid int) (num int) {
-	stdout := runCommand(exec.Command("sh", "-c", fmt.Sprintf("lsof -p %d | grep pipe", pid)))
+	stdout := runCommand(exec.Command("sh", "-c", fmt.Sprintf("lsof -p %d | grep pipe", pid)), psauxf)
 	return strings.Count(stdout, "\n")
 }

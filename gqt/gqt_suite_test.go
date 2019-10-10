@@ -209,15 +209,20 @@ func CompileGdn(additionalCompileArgs ...string) string {
 	return goCompile("code.cloudfoundry.org/guardian/cmd/gdn", compileArgs...)
 }
 
-func runCommandInDir(cmd *exec.Cmd, workingDir string) string {
+func runCommandInDir(cmd *exec.Cmd, workingDir string, diagnosticFunc ...func() string) string {
 	cmd.Dir = workingDir
 	cmdOutput, err := cmd.CombinedOutput()
-	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Running command %#v failed: %v: %s", cmd, err, string(cmdOutput)))
+	diagnostics := []interface{}{fmt.Sprintf("Running command %#v failed: %v: %s", cmd, err, string(cmdOutput))}
+
+	for _, f := range diagnosticFunc {
+		diagnostics = append(diagnostics, f())
+	}
+	Expect(err).NotTo(HaveOccurred(), diagnostics...)
 	return string(cmdOutput)
 }
 
-func runCommand(cmd *exec.Cmd) string {
-	return runCommandInDir(cmd, "")
+func runCommand(cmd *exec.Cmd, diagnosticFunc ...func() string) string {
+	return runCommandInDir(cmd, "", diagnosticFunc...)
 }
 
 func defaultConfig() runner.GdnRunnerConfig {
