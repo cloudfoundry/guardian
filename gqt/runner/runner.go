@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -23,6 +24,7 @@ import (
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/localip"
 	multierror "github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -295,7 +297,29 @@ func Start(config GdnRunnerConfig) *RunningGarden {
 	gdn.Client = client.New(connection.New(runner.connectionInfo()))
 
 	if !config.StartupExpectedToFail {
-		Eventually(gdn.Ping, time.Minute).Should(Succeed(), "Gdn is taking too long to start")
+		Eventually(gdn.Ping, time.Minute).Should(Succeed(), "Gdn is taking too long to start\n%s", func() string {
+			ip, err := localip.LocalIP()
+			if err != nil {
+				ip = "Error getting local ip: " + err.Error()
+			}
+
+			interfaces, err := net.Interfaces()
+			if err != nil {
+				return fmt.Sprintf("\nLOCAL IP: %s\nLIST OF NET INTERFACES:\nError listing net interfaces: %s", ip, err.Error())
+			}
+
+			ifaces := []string{}
+			for _, iface := range interfaces {
+				addrs, err := iface.Addrs()
+				if err != nil {
+					continue
+				}
+				for _, addr := range addrs {
+					ifaces = append(ifaces, addr.String())
+				}
+			}
+			return fmt.Sprintf("\nLOCAL IP: %s\nLIST OF NET INTERFACES:\n%s\n", ip, strings.Join(ifaces, "\n"))
+		}())
 	}
 
 	return gdn
