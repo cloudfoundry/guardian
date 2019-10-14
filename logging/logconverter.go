@@ -8,7 +8,10 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type logLine struct{ Msg string }
+type logLine struct {
+	Msg   string
+	Level string
+}
 
 func ForwardRuncLogsToLager(log lager.Logger, tag string, logfileContent []byte) {
 	lines := bytes.Split(logfileContent, []byte("\n"))
@@ -41,21 +44,23 @@ func WrapWithErrorFromLastLogLine(tag string, originalError error, logfileConten
 }
 
 func MsgFromLastLogLine(logFileContent []byte) string {
-	msg := lastNonEmptyLine(logFileContent)
-	var line logLine
-	if err := json.Unmarshal(msg, &line); err == nil {
-		msg = []byte(line.Msg)
-	}
+	lines := bytes.Split(logFileContent, []byte("\n"))
 
-	return string(msg)
-}
-
-func lastNonEmptyLine(content []byte) []byte {
-	lines := bytes.Split(content, []byte("\n"))
 	for i := len(lines) - 1; i >= 0; i-- {
-		if string(lines[i]) != "" {
-			return lines[i]
+		if len(lines[i]) == 0 {
+			continue
+		}
+
+		var logLine logLine
+		err := json.Unmarshal(lines[i], &logLine)
+		if err != nil {
+			continue
+		}
+
+		if logLine.Level == "error" || logLine.Level == "fatal" {
+			return string(logLine.Msg)
 		}
 	}
-	return lines[len(lines)-1]
+
+	return ""
 }

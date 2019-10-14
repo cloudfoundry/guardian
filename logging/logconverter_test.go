@@ -89,27 +89,71 @@ var _ = Describe("WrapWithErrorFromLastLogLine", func() {
 
 	Context("when the logs are valid json", func() {
 		BeforeEach(func() {
-			runcLogs = []byte(`{"msg":"message 1"}
-{"msg":"message 2"}`)
+			runcLogs = []byte(`{"level":"error","msg":"message 1"}
+{"level":"error","msg":"message 2"}`)
 		})
 
-		It("returns an error containing the last runc log message", func() {
+		It("returns an error containing the last runc error log message", func() {
 			Expect(wrappedErr).To(MatchError("a tag: some-err: message 2"))
 		})
 
 		It("preserves the cause", func() {
 			Expect(wrappedErr.(logging.WrappedError).Underlying).To(Equal(myError{}))
 		})
+
+		Context("when the last log line is not an error", func() {
+			BeforeEach(func() {
+				runcLogs = []byte(`{"level":"error","msg":"message 1"}
+{"level":"debug","msg":"message 2"}`)
+			})
+
+			It("returns an error containing the last runc log message", func() {
+				Expect(wrappedErr).To(MatchError("a tag: some-err: message 1"))
+			})
+		})
+
+		Context("when the last error log line is a fatal error", func() {
+			BeforeEach(func() {
+				runcLogs = []byte(`{"level":"error","msg":"message 1"}
+{"level":"fatal","msg":"message 2"}`)
+			})
+
+			It("returns an error containing the fatal error message", func() {
+				Expect(wrappedErr).To(MatchError("a tag: some-err: message 2"))
+			})
+		})
 	})
 
-	Context("when the last line is not valid json", func() {
+	Context("when the last log line is not valid json", func() {
 		BeforeEach(func() {
-			runcLogs = []byte(`{"msg":"a valid entry"}
+			runcLogs = []byte(`{"level":"error","msg":"a valid entry"}
 }weirdStuff{`)
 		})
 
-		It("returns an error containing the raw last line", func() {
-			Expect(wrappedErr).To(MatchError("a tag: some-err: }weirdStuff{"))
+		It("ignores it", func() {
+			Expect(wrappedErr).To(MatchError("a tag: some-err: a valid entry"))
+		})
+	})
+
+	Context("when the last log line is empty", func() {
+		BeforeEach(func() {
+			runcLogs = []byte(`{"level":"error","msg":"a valid entry"}
+`)
+		})
+
+		It("ignores it", func() {
+			Expect(wrappedErr).To(MatchError("a tag: some-err: a valid entry"))
+		})
+	})
+
+	Context("when there are no valid log lines", func() {
+		BeforeEach(func() {
+			runcLogs = []byte(`}weirdStuff{
+`)
+		})
+
+		It("returns an error with an empty message", func() {
+			Expect(wrappedErr).To(MatchError("a tag: some-err: "))
 		})
 	})
 })
