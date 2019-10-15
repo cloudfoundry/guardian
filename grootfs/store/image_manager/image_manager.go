@@ -1,7 +1,7 @@
 package image_manager // import "code.cloudfoundry.org/grootfs/store/image_manager"
 
 import (
-	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -141,7 +141,7 @@ func (b *ImageManager) Destroy(logger lager.Logger, id string) error {
 
 	if _, err := os.Stat(imagePath); err == nil {
 		logger.Error("deleting-image-dir-failed", err, lager.Data{"volumeDriverError": volDriverErr})
-		return errors.New("deleting image path")
+		return fmt.Errorf("deleting image path '%s' failed", imagePath)
 	}
 
 	return nil
