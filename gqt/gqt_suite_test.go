@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -76,26 +77,39 @@ func TestGqt(t *testing.T) {
 
 		if strings.Contains(message, "running image plugin destroy: deleting image path") {
 			GinkgoWriter.Write([]byte(fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelNode())))
-			GinkgoWriter.Write([]byte("Printing rootfs directories inodes...\n\n"))
+			GinkgoWriter.Write([]byte("\nPrinting rootfs directories inodes...\n\n"))
 			findOut, findErr := exec.Command("/bin/bash", "-c", fmt.Sprintf("find %s -printf '%%p %%i\n'", config.StorePath)).Output()
 			if findErr != nil {
 				GinkgoWriter.Write([]byte(findErr.Error()))
 			}
 			GinkgoWriter.Write(findOut)
 
-			GinkgoWriter.Write([]byte("Printing lsof...\n\n"))
+			GinkgoWriter.Write([]byte("\nPrinting lsof...\n\n"))
 			lsofOut, lsofErr := exec.Command("lsof").Output()
 			if lsofErr != nil {
 				GinkgoWriter.Write([]byte(lsofErr.Error()))
 			}
 			GinkgoWriter.Write(lsofOut)
 
-			GinkgoWriter.Write([]byte("Printing the mount table...\n\n"))
+			GinkgoWriter.Write([]byte("\nPrinting the mount table...\n\n"))
 			mntTableOut, mntTableErr := exec.Command("cat", "/proc/self/mountinfo").Output()
 			if mntTableErr != nil {
 				GinkgoWriter.Write([]byte(mntTableErr.Error()))
 			}
 			GinkgoWriter.Write(mntTableOut)
+
+			r, _ := regexp.Compile("deleting image path '(.+)' failed")
+			submatches := r.FindStringSubmatch(message)
+			if len(submatches) >= 2 {
+				imagePath := submatches[1]
+				GinkgoWriter.Write([]byte(fmt.Sprintf("\nTrying to unmount %s\n\n", imagePath)))
+
+				umountOut, umountErr := exec.Command("/bin/umount", imagePath).Output()
+				if umountErr != nil {
+					GinkgoWriter.Write([]byte(umountErr.Error()))
+				}
+				GinkgoWriter.Write(umountOut)
+			}
 		}
 
 		Fail(message, callerSkip...)
