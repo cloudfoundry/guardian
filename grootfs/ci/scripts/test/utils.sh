@@ -33,7 +33,12 @@ mount_storage() {
 
     # Mount XFS
     mkdir /mnt/xfs-${i}
-    mount -t xfs -o pquota,noatime /xfs_volume_${i} /mnt/xfs-${i}
+    if ! mount -t xfs -o pquota,noatime /xfs_volume_${i} /mnt/xfs-${i}; then
+      free -h
+      echo Mounting xfs failed, bailing out early!
+      echo NOTE: this might be because of low system memory, please check out output from free above
+      exit 13
+    fi
     chmod 777 -R /mnt/xfs-${i}
   done
 }

@@ -107,14 +107,14 @@ var _ = Describe("Driver", func() {
 		})
 
 		It("succcesfully creates and mounts a filesystem", func() {
-			Expect(driver.InitFilesystem(logger, fsFile, storePath)).To(Succeed())
+			mustSucceed(driver.InitFilesystem(logger, fsFile, storePath))
 			statfs := syscall.Statfs_t{}
 			Expect(syscall.Statfs(storePath, &statfs)).To(Succeed())
 			Expect(statfs.Type).To(Equal(filesystems.XfsType))
 		})
 
 		It("successfully mounts the filesystem with the correct mount options", func() {
-			Expect(driver.InitFilesystem(logger, fsFile, storePath)).To(Succeed())
+			mustSucceed(driver.InitFilesystem(logger, fsFile, storePath))
 			mountinfo, err := ioutil.ReadFile("/proc/self/mountinfo")
 			Expect(err).NotTo(HaveOccurred())
 
@@ -136,7 +136,7 @@ var _ = Describe("Driver", func() {
 			})
 
 			It("succeeds", func() {
-				Expect(driver.InitFilesystem(logger, fsFile, storePath)).To(Succeed())
+				mustSucceed(driver.InitFilesystem(logger, fsFile, storePath))
 			})
 		})
 
@@ -150,7 +150,7 @@ var _ = Describe("Driver", func() {
 			})
 
 			It("succeeds", func() {
-				Expect(driver.InitFilesystem(logger, fsFile, storePath)).To(Succeed())
+				mustSucceed(driver.InitFilesystem(logger, fsFile, storePath))
 			})
 		})
 
@@ -229,7 +229,7 @@ var _ = Describe("Driver", func() {
 
 			deinitStorePath, err = ioutil.TempDir("", "store")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(driver.InitFilesystem(logger, fsFile, deinitStorePath)).To(Succeed())
+			mustSucceed(driver.InitFilesystem(logger, fsFile, deinitStorePath))
 			Expect(testhelpers.XFSMountPoints()).To(ContainElement(deinitStorePath))
 		})
 
@@ -1463,4 +1463,15 @@ func mkdirAt(atPath, path string) error {
 	defer syscall.Close(fd)
 
 	return syscall.Mkdirat(fd, path, 755)
+}
+
+func mustSucceed(err error) {
+	if err != nil {
+		freeCmd := exec.Command("free", "-h")
+		freeCmd.Stdout = GinkgoWriter
+		freeCmd.Stderr = GinkgoWriter
+		freeCmd.Run()
+	}
+	Expect(err).NotTo(HaveOccurred(), "grootfs init-store failed. This might be because the machine is "+
+		"running out of RAM. Check the output of `free` above for more info.")
 }
