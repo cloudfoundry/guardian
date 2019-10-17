@@ -67,48 +67,43 @@ type runnerBinaries struct {
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(func(message string, callerSkip ...int) {
 		if strings.Contains(message, "<requesting dmesg>") {
-			GinkgoWriter.Write([]byte(fmt.Sprintf("\n\nCurrent UTC time is %s\n", time.Now().UTC().Format(time.RFC3339))))
+			io.WriteString(GinkgoWriter, fmt.Sprintf("\n\nCurrent UTC time is %s\n", time.Now().UTC().Format(time.RFC3339)))
 			dmesgOutput, dmesgErr := exec.Command("/bin/dmesg", "-T").Output()
 			if dmesgErr != nil {
-				GinkgoWriter.Write([]byte(dmesgErr.Error()))
+				io.WriteString(GinkgoWriter, dmesgErr.Error())
 			}
 			GinkgoWriter.Write(dmesgOutput)
 		}
 
 		if strings.Contains(message, "running image plugin destroy: deleting image path") {
-			GinkgoWriter.Write([]byte(fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelNode())))
-			GinkgoWriter.Write([]byte("\nPrinting rootfs directories inodes...\n\n"))
+			io.WriteString(GinkgoWriter, fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelNode()))
+			io.WriteString(GinkgoWriter, "\nPrinting rootfs directories inodes...\n\n")
 			findOut, findErr := exec.Command("/bin/bash", "-c", fmt.Sprintf("find %s -printf '%%p %%i\n'", config.StorePath)).Output()
 			if findErr != nil {
-				GinkgoWriter.Write([]byte(findErr.Error()))
+				io.WriteString(GinkgoWriter, findErr.Error())
 			}
 			GinkgoWriter.Write(findOut)
 
-			GinkgoWriter.Write([]byte("\nPrinting lsof...\n\n"))
+			io.WriteString(GinkgoWriter, "\nPrinting lsof...\n\n")
 			lsofOut, lsofErr := exec.Command("lsof").Output()
 			if lsofErr != nil {
-				GinkgoWriter.Write([]byte(lsofErr.Error()))
+				io.WriteString(GinkgoWriter, lsofErr.Error())
 			}
 			GinkgoWriter.Write(lsofOut)
 
-			GinkgoWriter.Write([]byte("\nPrinting the mount table...\n\n"))
-			mntTableOut, mntTableErr := exec.Command("cat", "/proc/self/mountinfo").Output()
+			io.WriteString(GinkgoWriter, "\nPrinting the mount table...\n\n")
+			mntTableOut, mntTableErr := getMountTable()
 			if mntTableErr != nil {
-				GinkgoWriter.Write([]byte(mntTableErr.Error()))
+				io.WriteString(GinkgoWriter, mntTableErr.Error())
 			}
-			GinkgoWriter.Write(mntTableOut)
+			io.WriteString(GinkgoWriter, mntTableOut)
 
 			r, _ := regexp.Compile("deleting image path '(.+)' failed")
 			submatches := r.FindStringSubmatch(message)
 			if len(submatches) >= 2 {
 				imagePath := submatches[1]
-				GinkgoWriter.Write([]byte(fmt.Sprintf("\nTrying to unmount %s\n\n", imagePath)))
-
-				umountOut, umountErr := exec.Command("/bin/umount", imagePath).Output()
-				if umountErr != nil {
-					GinkgoWriter.Write([]byte(umountErr.Error()))
-				}
-				GinkgoWriter.Write(umountOut)
+				rootfsPath := filepath.Join(imagePath, "rootfs")
+				Eventually(getMountTable, "2m", "1s").ShouldNot(ContainSubstring(rootfsPath), "Image rootfs path %q is still a mountpoint", rootfsPath)
 			}
 		}
 
@@ -578,4 +573,13 @@ func ociBundlesDir() string {
 		return filepath.Join(containerdRunDir, "state", "io.containerd.runtime.v1.linux", "garden")
 	}
 	return config.DepotDir
+}
+
+func getMountTable() (string, error) {
+	output, err := exec.Command("cat", "/proc/self/mountinfo").Output()
+	if err != nil {
+		return "", err
+	}
+
+	return string(output), nil
 }
