@@ -15,7 +15,7 @@ require (
 	github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4
 	github.com/containerd/continuity v0.0.0-20180524210603-d3c23511c1bf // indirect
 	github.com/containers/image v1.5.1
-	github.com/containers/storage v1.13.2
+	github.com/containers/storage v1.13.5
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
 	github.com/docker/docker-credential-helpers v0.6.0 // indirect
@@ -32,8 +32,8 @@ require (
 	github.com/mailru/easyjson v0.0.0-20180323154445-8b799c424f57 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
-	github.com/onsi/ginkgo v1.10.1
-	github.com/onsi/gomega v1.7.0
+	github.com/onsi/ginkgo v1.10.3
+	github.com/onsi/gomega v1.7.1
 	github.com/opencontainers/go-digest v1.0.0-rc1
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/opencontainers/runc v1.0.0-rc9
@@ -50,8 +50,8 @@ require (
 	github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861
 	github.com/urfave/cli v1.22.1
 	github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c
-	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456
-	gopkg.in/yaml.v2 v2.2.2
+	golang.org/x/sys v0.0.0-20191029155521-f43be2a4598c
+	gopkg.in/yaml.v2 v2.2.4
 	gotest.tools v2.2.0+incompatible // indirect
 	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
