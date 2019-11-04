@@ -1,6 +1,7 @@
 package containerdrunner
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/plugin"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -102,6 +105,12 @@ func NewContainerdProcess(runDir string, config Config) *os.Process {
 }
 
 func ping(config Config) error {
-	_, err := containerd.New(config.GRPC.Address)
+	client, err := containerd.New(config.GRPC.Address, containerd.WithDefaultRuntime(plugin.RuntimeLinuxV1))
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	_, err = client.Containers(namespaces.WithNamespace(context.Background(), "garden"))
 	return err
 }
