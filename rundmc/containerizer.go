@@ -284,11 +284,6 @@ func (c *Containerizer) Stop(log lager.Logger, handle string, kill bool) error {
 		return fmt.Errorf("stop: %s", err)
 	}
 
-	if err := c.runtimeStopper.Stop(); err != nil {
-		log.Error("stop-runtime-failed", err)
-		return fmt.Errorf("stop: %s", err)
-	}
-
 	c.states.StoreStopped(handle)
 	return nil
 }
@@ -379,6 +374,10 @@ func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.Actua
 	actualContainerMetrics.CPUEntitlement = calculateCPUEntitlement(getShares(bundle), c.cpuEntitlementPerShare, containerMetrics.Age)
 
 	return actualContainerMetrics, nil
+}
+
+func (c *Containerizer) Shutdown() error {
+	return c.runtimeStopper.Stop()
 }
 
 func isNotFound(err error) bool {

@@ -346,10 +346,6 @@ var _ = Describe("Rundmc", func() {
 				handle := fakeStateStore.StoreStoppedArgsForCall(0)
 				Expect(handle).To(Equal("some-handle"))
 			})
-
-			It("stops the runtime", func() {
-				Expect(fakeRuntimeStopper.StopCallCount()).To(Equal(1))
-			})
 		})
 
 		Context("when stopping container processes fails", func() {
@@ -360,10 +356,6 @@ var _ = Describe("Rundmc", func() {
 			It("does not transition to the stopped state", func() {
 				Expect(containerizer.Stop(logger, "some-handle", true)).To(MatchError(ContainSubstring("boom")))
 				Expect(fakeStateStore.StoreStoppedCallCount()).To(Equal(0))
-			})
-
-			It("does not stop the runtime", func() {
-				Expect(fakeRuntimeStopper.StopCallCount()).To(BeZero())
 			})
 		})
 
@@ -378,17 +370,6 @@ var _ = Describe("Rundmc", func() {
 
 			It("does not transition to the stopped state", func() {
 				Expect(containerizer.Stop(logger, "some-handle", true)).To(MatchError(ContainSubstring("boom")))
-				Expect(fakeStateStore.StoreStoppedCallCount()).To(Equal(0))
-			})
-		})
-
-		Context("when stopping the runtime fails", func() {
-			BeforeEach(func() {
-				fakeRuntimeStopper.StopReturns(errors.New("stop-rt-err"))
-			})
-
-			It("does not transition to the stopped state", func() {
-				Expect(containerizer.Stop(logger, "some-handle", true)).To(MatchError(ContainSubstring("stop-rt-err")))
 				Expect(fakeStateStore.StoreStoppedCallCount()).To(Equal(0))
 			})
 		})
@@ -722,6 +703,29 @@ var _ = Describe("Rundmc", func() {
 
 			It("errors", func() {
 				Expect(watchErr).To(MatchError("boom"))
+			})
+		})
+	})
+
+	Describe("Shutdown", func() {
+		var shutdownError error
+
+		JustBeforeEach(func() {
+			shutdownError = containerizer.Shutdown()
+		})
+
+		It("stops the runtime", func() {
+			Expect(shutdownError).NotTo(HaveOccurred())
+			Expect(fakeRuntimeStopper.StopCallCount()).To(Equal(1))
+		})
+
+		Context("when stopping the runtime fails", func() {
+			BeforeEach(func() {
+				fakeRuntimeStopper.StopReturns(errors.New("stop-rt-err"))
+			})
+
+			It("returns the error", func() {
+				Expect(shutdownError).To(MatchError("stop-rt-err"))
 			})
 		})
 	})

@@ -1841,4 +1841,27 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 	})
+
+	Describe("Stop", func() {
+		var stopErr error
+
+		JustBeforeEach(func() {
+			stopErr = gdnr.Stop()
+		})
+
+		It("shuts down the containerizer", func() {
+			Expect(stopErr).NotTo(HaveOccurred())
+			Expect(containerizer.ShutdownCallCount()).To(Equal(1))
+		})
+
+		Context("when the containerizer fails to shutdown", func() {
+			BeforeEach(func() {
+				containerizer.ShutdownReturns(errors.New("shutdown-err"))
+			})
+
+			It("returns the error", func() {
+				Expect(stopErr).To(MatchError("shutdown-err"))
+			})
+		})
+	})
 })

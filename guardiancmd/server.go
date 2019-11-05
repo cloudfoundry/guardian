@@ -296,7 +296,9 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 
 	<-signals
 
-	gardenServer.Stop()
+	if err := gardenServer.Stop(); err != nil {
+		logger.Error("stopping-garden-server", err)
+	}
 
 	cmd.saveProperties(logger, cmd.Containers.PropertiesPath, wiring.PropertiesManager)
 

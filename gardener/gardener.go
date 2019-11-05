@@ -61,6 +61,8 @@ type Containerizer interface {
 	Info(log lager.Logger, handle string) (spec.ActualContainerSpec, error)
 	Metrics(log lager.Logger, handle string) (ActualContainerMetrics, error)
 	WatchRuntimeEvents(log lager.Logger) error
+
+	Shutdown() error
 }
 
 type Networker interface {
@@ -384,7 +386,9 @@ func (g *Gardener) deleteContainerMetadata(log lager.Logger, handle string) erro
 	return g.PropertyManager.DestroyKeySpace(handle)
 }
 
-func (g *Gardener) Stop() {}
+func (g *Gardener) Stop() error {
+	return g.Containerizer.Shutdown()
+}
 
 func (g *Gardener) GraceTime(container garden.Container) time.Duration {
 	property, ok := g.PropertyManager.Get(container.Handle(), GraceTimeKey)

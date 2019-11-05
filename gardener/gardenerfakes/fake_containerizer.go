@@ -120,6 +120,16 @@ type FakeContainerizer struct {
 		result1 garden.Process
 		result2 error
 	}
+	ShutdownStub        func() error
+	shutdownMutex       sync.RWMutex
+	shutdownArgsForCall []struct {
+	}
+	shutdownReturns struct {
+		result1 error
+	}
+	shutdownReturnsOnCall map[int]struct {
+		result1 error
+	}
 	StopStub        func(lager.Logger, string, bool) error
 	stopMutex       sync.RWMutex
 	stopArgsForCall []struct {
@@ -674,6 +684,58 @@ func (fake *FakeContainerizer) RunReturnsOnCall(i int, result1 garden.Process, r
 	}{result1, result2}
 }
 
+func (fake *FakeContainerizer) Shutdown() error {
+	fake.shutdownMutex.Lock()
+	ret, specificReturn := fake.shutdownReturnsOnCall[len(fake.shutdownArgsForCall)]
+	fake.shutdownArgsForCall = append(fake.shutdownArgsForCall, struct {
+	}{})
+	fake.recordInvocation("Shutdown", []interface{}{})
+	fake.shutdownMutex.Unlock()
+	if fake.ShutdownStub != nil {
+		return fake.ShutdownStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.shutdownReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeContainerizer) ShutdownCallCount() int {
+	fake.shutdownMutex.RLock()
+	defer fake.shutdownMutex.RUnlock()
+	return len(fake.shutdownArgsForCall)
+}
+
+func (fake *FakeContainerizer) ShutdownCalls(stub func() error) {
+	fake.shutdownMutex.Lock()
+	defer fake.shutdownMutex.Unlock()
+	fake.ShutdownStub = stub
+}
+
+func (fake *FakeContainerizer) ShutdownReturns(result1 error) {
+	fake.shutdownMutex.Lock()
+	defer fake.shutdownMutex.Unlock()
+	fake.ShutdownStub = nil
+	fake.shutdownReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeContainerizer) ShutdownReturnsOnCall(i int, result1 error) {
+	fake.shutdownMutex.Lock()
+	defer fake.shutdownMutex.Unlock()
+	fake.ShutdownStub = nil
+	if fake.shutdownReturnsOnCall == nil {
+		fake.shutdownReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.shutdownReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeContainerizer) Stop(arg1 lager.Logger, arg2 string, arg3 bool) error {
 	fake.stopMutex.Lock()
 	ret, specificReturn := fake.stopReturnsOnCall[len(fake.stopArgsForCall)]
@@ -942,6 +1004,8 @@ func (fake *FakeContainerizer) Invocations() map[string][][]interface{} {
 	defer fake.removeBundleMutex.RUnlock()
 	fake.runMutex.RLock()
 	defer fake.runMutex.RUnlock()
+	fake.shutdownMutex.RLock()
+	defer fake.shutdownMutex.RUnlock()
 	fake.stopMutex.RLock()
 	defer fake.stopMutex.RUnlock()
 	fake.streamInMutex.RLock()
