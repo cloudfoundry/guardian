@@ -21,10 +21,11 @@ import (
 //go:generate counterfeiter . OCIRuntime
 //go:generate counterfeiter . NstarRunner
 //go:generate counterfeiter . EventStore
-//go:generate counterfeiter . Stopper
+//go:generate counterfeiter . ProcessesStopper
 //go:generate counterfeiter . StateStore
 //go:generate counterfeiter . PeaCreator
 //go:generate counterfeiter . PeaUsernameResolver
+//go:generate counterfeiter . RuntimeStopper
 
 type Depot interface {
 	Destroy(log lager.Logger, handle string) error
@@ -69,8 +70,12 @@ type NstarRunner interface {
 	StreamOut(log lager.Logger, pid int, path string, user string) (io.ReadCloser, error)
 }
 
-type Stopper interface {
+type ProcessesStopper interface {
 	StopAll(log lager.Logger, cgroupName string, save []int, kill bool) error
+}
+
+type RuntimeStopper interface {
+	Stop() error
 }
 
 type EventStore interface {
@@ -92,13 +97,14 @@ type Containerizer struct {
 	depot                  Depot
 	bundler                BundleGenerator
 	runtime                OCIRuntime
-	stopper                Stopper
+	processesStopper       ProcessesStopper
 	nstar                  NstarRunner
 	events                 EventStore
 	states                 StateStore
 	peaCreator             PeaCreator
 	peaUsernameResolver    PeaUsernameResolver
 	cpuEntitlementPerShare float64
+	runtimeStopper         RuntimeStopper
 }
 
 func New(
@@ -106,24 +112,26 @@ func New(
 	bundler BundleGenerator,
 	runtime OCIRuntime,
 	nstarRunner NstarRunner,
-	stopper Stopper,
+	processesStopper ProcessesStopper,
 	events EventStore,
 	states StateStore,
 	peaCreator PeaCreator,
 	peaUsernameResolver PeaUsernameResolver,
 	cpuEntitlementPerShare float64,
+	runtimeStopper RuntimeStopper,
 ) *Containerizer {
 	containerizer := &Containerizer{
 		depot:                  depot,
 		bundler:                bundler,
 		runtime:                runtime,
 		nstar:                  nstarRunner,
-		stopper:                stopper,
+		processesStopper:       processesStopper,
 		events:                 events,
 		states:                 states,
 		peaCreator:             peaCreator,
 		peaUsernameResolver:    peaUsernameResolver,
 		cpuEntitlementPerShare: cpuEntitlementPerShare,
+		runtimeStopper:         runtimeStopper,
 	}
 	return containerizer
 }
@@ -271,8 +279,13 @@ func (c *Containerizer) Stop(log lager.Logger, handle string, kill bool) error {
 		return fmt.Errorf("stop: pid not found for container: %s", err)
 	}
 
-	if err = c.stopper.StopAll(log, handle, []int{state.Pid}, kill); err != nil {
-		log.Error("stop-all-failed", err, lager.Data{"pid": state.Pid})
+	if err = c.processesStopper.StopAll(log, handle, []int{state.Pid}, kill); err != nil {
+		log.Error("stop-all-processes-failed", err, lager.Data{"pid": state.Pid})
+		return fmt.Errorf("stop: %s", err)
+	}
+
+	if err := c.runtimeStopper.Stop(); err != nil {
+		log.Error("stop-runtime-failed", err)
 		return fmt.Errorf("stop: %s", err)
 	}
 

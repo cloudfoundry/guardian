@@ -557,6 +557,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	var ociRuntime rundmc.OCIRuntime
 	var peaCreator *peas.PeaCreator
 	var privilegeChecker peas.PrivilegedGetter
+	var runtimeStopper rundmc.RuntimeStopper
 
 	userLookupper := users.LookupFunc(users.LookupUser)
 
@@ -577,6 +578,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	var depotPidGetter PidGetter = &pid.ContainerPidGetter{Depot: depot, PidFileReader: pidFileReader}
 	containersPidGetter := depotPidGetter
 	peaPidGetter := depotPidGetter
+	runtimeStopper = stopper.NewNoopStopper()
 
 	if cmd.useContainerd() {
 		var err error
@@ -589,12 +591,15 @@ func (cmd *CommonCommand) wireContainerizer(
 		}
 
 		var nerdPidGetter PidGetter
-		ociRuntime, peaRunner, nerdPidGetter, privilegeChecker, peaBundleLoader, err = factory.WireContainerd(processBuilder, userLookupper, wireExecerFunc, statser, log, volumizer, peaHandlesGetter)
+		var runContainerd *runcontainerd.RunContainerd
+		runContainerd, peaRunner, nerdPidGetter, privilegeChecker, peaBundleLoader, err = factory.WireContainerd(processBuilder, userLookupper, wireExecerFunc, statser, log, volumizer, peaHandlesGetter)
 		if err != nil {
 			return nil, nil, err
 		}
+		ociRuntime = runContainerd
 		peasBundleLoader = peaBundleLoader
 		containersPidGetter = nerdPidGetter
+		runtimeStopper = runContainerd
 
 		if cmd.Containerd.UseContainerdForProcesses {
 			peaPidGetter = nerdPidGetter
@@ -644,8 +649,9 @@ func (cmd *CommonCommand) wireContainerizer(
 	}
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)
-	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
-	return rundmc.New(depot, template, ociRuntime, nstar, stopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare), peaCleaner, nil
+	processesStopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
+
+	return rundmc.New(depot, template, ociRuntime, nstar, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper), peaCleaner, nil
 }
 
 func (cmd *CommonCommand) useContainerd() bool {

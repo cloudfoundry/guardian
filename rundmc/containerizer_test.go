@@ -29,11 +29,12 @@ var _ = Describe("Rundmc", func() {
 		fakeBundleGenerator     *fakes.FakeBundleGenerator
 		fakeOCIRuntime          *fakes.FakeOCIRuntime
 		fakeNstarRunner         *fakes.FakeNstarRunner
-		fakeStopper             *fakes.FakeStopper
+		fakeProcessesStopper    *fakes.FakeProcessesStopper
 		fakeEventStore          *fakes.FakeEventStore
 		fakeStateStore          *fakes.FakeStateStore
 		fakePeaCreator          *fakes.FakePeaCreator
 		fakePeaUsernameResolver *fakes.FakePeaUsernameResolver
+		fakeRuntimeStopper      *fakes.FakeRuntimeStopper
 
 		logger        lager.Logger
 		containerizer *rundmc.Containerizer
@@ -45,11 +46,12 @@ var _ = Describe("Rundmc", func() {
 		fakeBundleGenerator = new(fakes.FakeBundleGenerator)
 		fakeOCIRuntime = new(fakes.FakeOCIRuntime)
 		fakeNstarRunner = new(fakes.FakeNstarRunner)
-		fakeStopper = new(fakes.FakeStopper)
+		fakeProcessesStopper = new(fakes.FakeProcessesStopper)
 		fakeEventStore = new(fakes.FakeEventStore)
 		fakeStateStore = new(fakes.FakeStateStore)
 		fakePeaCreator = new(fakes.FakePeaCreator)
 		fakePeaUsernameResolver = new(fakes.FakePeaUsernameResolver)
+		fakeRuntimeStopper = new(fakes.FakeRuntimeStopper)
 		logger = lagertest.NewTestLogger("test")
 
 		bundle = goci.Bndl{Spec: specs.Spec{Version: "test-version"}}
@@ -60,12 +62,13 @@ var _ = Describe("Rundmc", func() {
 			fakeBundleGenerator,
 			fakeOCIRuntime,
 			fakeNstarRunner,
-			fakeStopper,
+			fakeProcessesStopper,
 			fakeEventStore,
 			fakeStateStore,
 			fakePeaCreator,
 			fakePeaUsernameResolver,
 			0,
+			fakeRuntimeStopper,
 		)
 	})
 
@@ -324,9 +327,9 @@ var _ = Describe("Rundmc", func() {
 				}, nil)
 
 				Expect(containerizer.Stop(logger, "some-handle", true)).To(Succeed())
-				Expect(fakeStopper.StopAllCallCount()).To(Equal(1))
+				Expect(fakeProcessesStopper.StopAllCallCount()).To(Equal(1))
 
-				_, cgroupPathArg, exceptionsArg, killArg = fakeStopper.StopAllArgsForCall(0)
+				_, cgroupPathArg, exceptionsArg, killArg = fakeProcessesStopper.StopAllArgsForCall(0)
 			})
 
 			It("asks to stop all processes in the processes's cgroup", func() {
@@ -343,16 +346,24 @@ var _ = Describe("Rundmc", func() {
 				handle := fakeStateStore.StoreStoppedArgsForCall(0)
 				Expect(handle).To(Equal("some-handle"))
 			})
+
+			It("stops the runtime", func() {
+				Expect(fakeRuntimeStopper.StopCallCount()).To(Equal(1))
+			})
 		})
 
-		Context("when the stop fails", func() {
+		Context("when stopping container processes fails", func() {
 			BeforeEach(func() {
-				fakeStopper.StopAllReturns(errors.New("boom"))
+				fakeProcessesStopper.StopAllReturns(errors.New("boom"))
 			})
 
 			It("does not transition to the stopped state", func() {
 				Expect(containerizer.Stop(logger, "some-handle", true)).To(MatchError(ContainSubstring("boom")))
 				Expect(fakeStateStore.StoreStoppedCallCount()).To(Equal(0))
+			})
+
+			It("does not stop the runtime", func() {
+				Expect(fakeRuntimeStopper.StopCallCount()).To(BeZero())
 			})
 		})
 
@@ -362,11 +373,22 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("does not stop the processes", func() {
-				Expect(fakeStopper.StopAllCallCount()).To(Equal(0))
+				Expect(fakeProcessesStopper.StopAllCallCount()).To(Equal(0))
 			})
 
 			It("does not transition to the stopped state", func() {
 				Expect(containerizer.Stop(logger, "some-handle", true)).To(MatchError(ContainSubstring("boom")))
+				Expect(fakeStateStore.StoreStoppedCallCount()).To(Equal(0))
+			})
+		})
+
+		Context("when stopping the runtime fails", func() {
+			BeforeEach(func() {
+				fakeRuntimeStopper.StopReturns(errors.New("stop-rt-err"))
+			})
+
+			It("does not transition to the stopped state", func() {
+				Expect(containerizer.Stop(logger, "some-handle", true)).To(MatchError(ContainSubstring("stop-rt-err")))
 				Expect(fakeStateStore.StoreStoppedCallCount()).To(Equal(0))
 			})
 		})
@@ -592,12 +614,13 @@ var _ = Describe("Rundmc", func() {
 					fakeBundleGenerator,
 					fakeOCIRuntime,
 					fakeNstarRunner,
-					fakeStopper,
+					fakeProcessesStopper,
 					fakeEventStore,
 					fakeStateStore,
 					fakePeaCreator,
 					fakePeaUsernameResolver,
 					entitlementPerSharePercent,
+					fakeRuntimeStopper,
 				)
 			})
 

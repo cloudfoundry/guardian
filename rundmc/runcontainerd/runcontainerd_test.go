@@ -41,6 +41,7 @@ var _ = Describe("Runcontainerd", func() {
 		cgroupManager    *runcontainerdfakes.FakeCgroupManager
 		mkdirer          *runcontainerdfakes.FakeMkdirer
 		peaHandlesGetter *runcontainerdfakes.FakePeaHandlesGetter
+		runtimeStopper   *runcontainerdfakes.FakeRuntimeStopper
 	)
 
 	BeforeEach(func() {
@@ -54,10 +55,11 @@ var _ = Describe("Runcontainerd", func() {
 		userLookupper = new(usersfakes.FakeUserLookupper)
 		cgroupManager = new(runcontainerdfakes.FakeCgroupManager)
 		mkdirer = new(runcontainerdfakes.FakeMkdirer)
+		runtimeStopper = new(runcontainerdfakes.FakeRuntimeStopper)
 
 		processManager.GetProcessReturns(backingProcess, nil)
 
-		runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, nil, false)
+		runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, nil, false, runtimeStopper)
 	})
 
 	Describe("Create", func() {
@@ -151,7 +153,7 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("when using containerd for processes", func() {
 			BeforeEach(func() {
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, false)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, false, runtimeStopper)
 			})
 
 			It("sets the container to use the memory hierarchy", func() {
@@ -352,7 +354,7 @@ var _ = Describe("Runcontainerd", func() {
 
 				containerManager.GetContainerPIDReturns(1234, nil)
 				containerManager.ExecReturns(nil)
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, false)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, false, runtimeStopper)
 			})
 
 			It("passes the logger through", func() {
@@ -570,12 +572,13 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("when using containerd for processes", func() {
 			BeforeEach(func() {
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, false)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, false, runtimeStopper)
 			})
 
 			It("returns a process wired to the process manager", func() {
 				Expect(attachError).NotTo(HaveOccurred())
-				attachProcess.Wait()
+				_, err := attachProcess.Wait()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(backingProcess.WaitCallCount()).To(Equal(1))
 			})
 
@@ -829,7 +832,7 @@ var _ = Describe("Runcontainerd", func() {
 			BeforeEach(func() {
 				peaHandlesGetter = new(runcontainerdfakes.FakePeaHandlesGetter)
 				peaHandlesGetter.ContainerPeaHandlesReturns([]string{"apple", "apple2"}, nil)
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, peaHandlesGetter, false)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, peaHandlesGetter, false, runtimeStopper)
 			})
 
 			It("returns the list of bundleIDs", func() {
@@ -850,6 +853,28 @@ var _ = Describe("Runcontainerd", func() {
 				It("returns an error", func() {
 					Expect(err).To(MatchError("boom"))
 				})
+			})
+		})
+	})
+
+	Describe("Stop", func() {
+		var stopErr error
+
+		JustBeforeEach(func() {
+			stopErr = runContainerd.Stop()
+		})
+
+		It("delegates to the runtime stopper", func() {
+			Expect(runtimeStopper.StopCallCount()).To(Equal(1))
+		})
+
+		When("the runtime stopper fails", func() {
+			BeforeEach(func() {
+				runtimeStopper.StopReturns(errors.New("stop-err"))
+			})
+
+			It("returns the error", func() {
+				Expect(stopErr).To(MatchError("stop-err"))
 			})
 		})
 	})

@@ -21,7 +21,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
-	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
+	nerdpkg "code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/privchecker"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/signals"
@@ -154,12 +154,13 @@ func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, use
 	}
 	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
 	ctx = leases.WithLease(ctx, "lease-is-off")
-	nerd := nerd.New(containerdClient, ctx, filepath.Join(containerdRuncRoot(), "fifo"))
+	nerd := nerdpkg.New(containerdClient, ctx, filepath.Join(containerdRuncRoot(), "fifo"))
+	nerdStopper := nerdpkg.NewNerdStopper(containerdClient)
 	pidGetter := &runcontainerd.PidGetter{Nerd: nerd}
 
 	cgroupManager := runcontainerd.NewCgroupManager(containerdRuncRoot(), containerdNamespace)
 
-	containerdManager := runcontainerd.New(nerd, nerd, processBuilder, userLookupper, wireExecer(pidGetter), statser, f.config.Containerd.UseContainerdForProcesses, cgroupManager, f.WireMkdirer(), peaHandlesGetter, f.config.Containers.CleanupProcessDirsOnWait)
+	containerdManager := runcontainerd.New(nerd, nerd, processBuilder, userLookupper, wireExecer(pidGetter), statser, f.config.Containerd.UseContainerdForProcesses, cgroupManager, f.WireMkdirer(), peaHandlesGetter, f.config.Containers.CleanupProcessDirsOnWait, nerdStopper)
 
 	peaRunner := runcontainerd.NewRunContainerPea(containerdManager, nerd, volumizer, f.config.Containers.CleanupProcessDirsOnWait)
 

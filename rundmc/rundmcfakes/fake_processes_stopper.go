@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type FakeStopper struct {
+type FakeProcessesStopper struct {
 	StopAllStub        func(lager.Logger, string, []int, bool) error
 	stopAllMutex       sync.RWMutex
 	stopAllArgsForCall []struct {
@@ -27,7 +27,7 @@ type FakeStopper struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeStopper) StopAll(arg1 lager.Logger, arg2 string, arg3 []int, arg4 bool) error {
+func (fake *FakeProcessesStopper) StopAll(arg1 lager.Logger, arg2 string, arg3 []int, arg4 bool) error {
 	var arg3Copy []int
 	if arg3 != nil {
 		arg3Copy = make([]int, len(arg3))
@@ -53,26 +53,26 @@ func (fake *FakeStopper) StopAll(arg1 lager.Logger, arg2 string, arg3 []int, arg
 	return fakeReturns.result1
 }
 
-func (fake *FakeStopper) StopAllCallCount() int {
+func (fake *FakeProcessesStopper) StopAllCallCount() int {
 	fake.stopAllMutex.RLock()
 	defer fake.stopAllMutex.RUnlock()
 	return len(fake.stopAllArgsForCall)
 }
 
-func (fake *FakeStopper) StopAllCalls(stub func(lager.Logger, string, []int, bool) error) {
+func (fake *FakeProcessesStopper) StopAllCalls(stub func(lager.Logger, string, []int, bool) error) {
 	fake.stopAllMutex.Lock()
 	defer fake.stopAllMutex.Unlock()
 	fake.StopAllStub = stub
 }
 
-func (fake *FakeStopper) StopAllArgsForCall(i int) (lager.Logger, string, []int, bool) {
+func (fake *FakeProcessesStopper) StopAllArgsForCall(i int) (lager.Logger, string, []int, bool) {
 	fake.stopAllMutex.RLock()
 	defer fake.stopAllMutex.RUnlock()
 	argsForCall := fake.stopAllArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
-func (fake *FakeStopper) StopAllReturns(result1 error) {
+func (fake *FakeProcessesStopper) StopAllReturns(result1 error) {
 	fake.stopAllMutex.Lock()
 	defer fake.stopAllMutex.Unlock()
 	fake.StopAllStub = nil
@@ -81,7 +81,7 @@ func (fake *FakeStopper) StopAllReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeStopper) StopAllReturnsOnCall(i int, result1 error) {
+func (fake *FakeProcessesStopper) StopAllReturnsOnCall(i int, result1 error) {
 	fake.stopAllMutex.Lock()
 	defer fake.stopAllMutex.Unlock()
 	fake.StopAllStub = nil
@@ -95,7 +95,7 @@ func (fake *FakeStopper) StopAllReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeStopper) Invocations() map[string][][]interface{} {
+func (fake *FakeProcessesStopper) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.stopAllMutex.RLock()
@@ -107,7 +107,7 @@ func (fake *FakeStopper) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *FakeStopper) recordInvocation(key string, args []interface{}) {
+func (fake *FakeProcessesStopper) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -119,4 +119,4 @@ func (fake *FakeStopper) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ rundmc.Stopper = new(FakeStopper)
+var _ rundmc.ProcessesStopper = new(FakeProcessesStopper)

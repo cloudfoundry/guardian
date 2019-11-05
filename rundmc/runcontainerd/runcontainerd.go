@@ -35,6 +35,11 @@ type ContainerManager interface {
 	RemoveBundle(lager.Logger, string) error
 }
 
+//go:generate counterfeiter . RuntimeStopper
+type RuntimeStopper interface {
+	Stop() error
+}
+
 //go:generate counterfeiter . ProcessManager
 type ProcessManager interface {
 	GetProcess(log lager.Logger, containerID, processID string) (BackingProcess, error)
@@ -85,9 +90,21 @@ type RunContainerd struct {
 	mkdirer                   Mkdirer
 	peaHandlesGetter          PeaHandlesGetter
 	cleanupProcessDirsOnWait  bool
+	runtimeStopper            RuntimeStopper
 }
 
-func New(containerManager ContainerManager, processManager ProcessManager, processBuilder ProcessBuilder, userLookupper users.UserLookupper, execer Execer, statser Statser, useContainerdForProcesses bool, cgroupManager CgroupManager, mkdirer Mkdirer, peaHandlesGetter PeaHandlesGetter, cleanupProcessDirsOnWait bool) *RunContainerd {
+func New(containerManager ContainerManager,
+	processManager ProcessManager,
+	processBuilder ProcessBuilder,
+	userLookupper users.UserLookupper,
+	execer Execer,
+	statser Statser,
+	useContainerdForProcesses bool,
+	cgroupManager CgroupManager,
+	mkdirer Mkdirer,
+	peaHandlesGetter PeaHandlesGetter,
+	cleanupProcessDirsOnWait bool,
+	runtimeStopper RuntimeStopper) *RunContainerd {
 	return &RunContainerd{
 		containerManager:          containerManager,
 		processManager:            processManager,
@@ -100,6 +117,7 @@ func New(containerManager ContainerManager, processManager ProcessManager, proce
 		mkdirer:                   mkdirer,
 		peaHandlesGetter:          peaHandlesGetter,
 		cleanupProcessDirsOnWait:  cleanupProcessDirsOnWait,
+		runtimeStopper:            runtimeStopper,
 	}
 }
 
@@ -304,4 +322,8 @@ func (r *RunContainerd) ContainerPeaHandles(log lager.Logger, sandboxHandle stri
 
 func (r *RunContainerd) RemoveBundle(log lager.Logger, handle string) error {
 	return r.containerManager.RemoveBundle(log, handle)
+}
+
+func (r *RunContainerd) Stop() error {
+	return r.runtimeStopper.Stop()
 }
