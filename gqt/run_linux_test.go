@@ -593,7 +593,7 @@ var _ = Describe("Run", func() {
 					return s
 				}
 
-				Eventually(pollNumGoRoutines(client), time.Second*30).Should(
+				Eventually(pollNumGoRoutines(client), time.Minute).Should(
 					Equal(numGoRoutinesBefore),
 					fmt.Sprintf("possible go routine leak\n\n--- stack dump before ---\n%s\n\n--- stack dump after ---\n%s\n", stackBefore, getStackDump()),
 				)
