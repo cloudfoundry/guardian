@@ -182,6 +182,10 @@ type CommonCommand struct {
 		Socket                    string `long:"containerd-socket" description:"Path to a containerd socket."`
 		UseContainerdForProcesses bool   `long:"use-containerd-for-processes" description:"Use containerd to run processes in containers."`
 	} `group:"Containerd"`
+
+	CPUThrottling struct {
+		Enabled bool `long:"enable-cpu-throttling" description:"Enable CPU throttling."`
+	}
 }
 
 type commandWiring struct {

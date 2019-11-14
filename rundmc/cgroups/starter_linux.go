@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	Root   = "/sys/fs/cgroup"
-	Garden = "garden"
-	Header = "#subsys_name hierarchy num_cgroups enabled"
+	Root           = "/sys/fs/cgroup"
+	Garden         = "garden"
+	Header         = "#subsys_name hierarchy num_cgroups enabled"
+	GoodCgroupName = "good"
 )
 
 type CgroupsFormatError struct {
@@ -41,12 +42,14 @@ func NewStarter(
 	gardenCgroup string,
 	allowedDevices []specs.LinuxDeviceCgroup,
 	mountPointChecker rundmc.MountPointChecker,
+	enableCPUThrottling bool,
 ) *CgroupStarter {
 	return &CgroupStarter{
 		CgroupPath:        cgroupMountpoint,
 		GardenCgroup:      gardenCgroup,
 		ProcCgroups:       procCgroupReader,
 		ProcSelfCgroups:   procSelfCgroupReader,
+		CPUThrottling:     enableCPUThrottling,
 		AllowedDevices:    allowedDevices,
 		Logger:            logger,
 		MountPointChecker: mountPointChecker,
@@ -60,6 +63,7 @@ type CgroupStarter struct {
 	AllowedDevices  []specs.LinuxDeviceCgroup
 	ProcCgroups     io.ReadCloser
 	ProcSelfCgroups io.ReadCloser
+	CPUThrottling   bool
 
 	Logger            lager.Logger
 	MountPointChecker rundmc.MountPointChecker
@@ -115,6 +119,11 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		return CgroupsFormatError{Content: scanner.Text()}
 	}
 
+	gardenCgroup := s.GardenCgroup
+	if s.CPUThrottling {
+		gardenCgroup = filepath.Join(gardenCgroup, GoodCgroupName)
+	}
+
 	kernelSubsystems := []string{}
 	for scanner.Scan() {
 		var subsystem string
@@ -130,10 +139,10 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 			continue
 		}
 
-		subsystemToMount, dirToCreate := subsystem, s.GardenCgroup
+		subsystemToMount, dirToCreate := subsystem, gardenCgroup
 		if v, ok := subsystemGroupings[subsystem]; ok {
 			subsystemToMount = v.SubSystem
-			dirToCreate = path.Join(v.Path, s.GardenCgroup)
+			dirToCreate = path.Join(v.Path, gardenCgroup)
 		}
 
 		subsystemMountPath := path.Join(s.CgroupPath, subsystem)
@@ -153,7 +162,7 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		cgroup := subsystemGroupings[subsystem]
 		subsystemName := cgroup.SubSystem[len("name="):len(cgroup.SubSystem)]
 		subsystemMountPath := path.Join(s.CgroupPath, subsystemName)
-		gardenCgroupPath := filepath.Join(subsystemMountPath, cgroup.Path, s.GardenCgroup)
+		gardenCgroupPath := filepath.Join(subsystemMountPath, cgroup.Path, gardenCgroup)
 
 		if err := s.createAndChownCgroup(logger, subsystemMountPath, subsystem, gardenCgroupPath); err != nil {
 			return err

@@ -117,6 +117,7 @@ func setupCgroups(cgroupsRoot string) {
 		"nerd",
 		[]specs.LinuxDeviceCgroup{},
 		rundmc.IsMountPoint,
+		false,
 	)
 
 	Expect(starter.Start()).To(Succeed())

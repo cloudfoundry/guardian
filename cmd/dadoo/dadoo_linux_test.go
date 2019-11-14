@@ -901,7 +901,7 @@ func mustOpen(path string) *os.File {
 func setupCgroups(cgroupsRoot string) error {
 	logger := lagertest.NewTestLogger("test")
 
-	starter := cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsRoot, "garden", []specs.LinuxDeviceCgroup{}, rundmc.IsMountPoint)
+	starter := cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsRoot, "garden", []specs.LinuxDeviceCgroup{}, rundmc.IsMountPoint, false)
 
 	return starter.Start()
 }
