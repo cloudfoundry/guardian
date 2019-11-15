@@ -389,8 +389,19 @@ var _ = Describe("CgroupStarter", func() {
 		})
 	})
 
-	FContext("when cpu throttling is enabled", func() {
+	Context("when cpu throttling is enabled", func() {
 		BeforeEach(func() {
+			procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
+				"devices\t1\t1\t1\n" +
+				"memory\t2\t1\t1\n" +
+				"cpu\t3\t1\t1\n" +
+				"cpuacct\t4\t1\t1\n"
+
+			procSelfCgroupsContents = "5:devices:/\n" +
+				"4:memory:/\n" +
+				"3:cpu,cpuacct:/\n"
+
+			notMountedCgroups = []string{"devices", "cpu", "cpuacct"}
 			cpuThrottlingEnabled = true
 		})
 
@@ -423,14 +434,14 @@ var _ = Describe("CgroupStarter", func() {
 			}
 
 			for _, subsystem := range []string{"devices", "cpu", "memory"} {
-				fullPath := path.Join(tmpDir, "cgroup", subsystem, "garden", cgroups.GoodCgroupName)
+				fullPath := path.Join(tmpDir, "cgroup", subsystem, "garden")
 				Expect(fullPath).To(BeADirectory())
 				Expect(allChowns).To(ContainElement(fullPath))
 				Expect(stat(fullPath).Mode() & os.ModePerm).To(Equal(os.FileMode(0755)))
 			}
 		})
 
-		XIt("creates the bad CPU group owned by the specified user and group", func() {
+		It("creates the bad CPU group owned by the specified user and group", func() {
 			Expect(starter.WithUID(123).WithGID(987).Start()).To(Succeed())
 			allChowns := []string{}
 			for i := 0; i < fakeFS.ChownCallCount(); i++ {
@@ -440,7 +451,7 @@ var _ = Describe("CgroupStarter", func() {
 				Expect(gid).To(Equal(987))
 			}
 
-			fullPath := path.Join(tmpDir, "cgroup", "cpu", "garden", cgroups.GoodCgroupName)
+			fullPath := path.Join(tmpDir, "cgroup", "cpu", "garden", cgroups.BadCgroupName)
 			Expect(fullPath).To(BeADirectory())
 			Expect(allChowns).To(ContainElement(fullPath))
 			Expect(stat(fullPath).Mode() & os.ModePerm).To(Equal(os.FileMode(0755)))

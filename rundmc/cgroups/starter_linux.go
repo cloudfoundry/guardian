@@ -24,6 +24,7 @@ const (
 	Garden         = "garden"
 	Header         = "#subsys_name hierarchy num_cgroups enabled"
 	GoodCgroupName = "good"
+	BadCgroupName  = "bad"
 )
 
 type CgroupsFormatError struct {
@@ -119,9 +120,9 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		return CgroupsFormatError{Content: scanner.Text()}
 	}
 
-	gardenCgroup := s.GardenCgroup
+	cgroupHierarchy := []string{s.GardenCgroup}
 	if s.CPUThrottling {
-		gardenCgroup = filepath.Join(gardenCgroup, GoodCgroupName)
+		cgroupHierarchy = append(cgroupHierarchy, GoodCgroupName)
 	}
 
 	kernelSubsystems := []string{}
@@ -139,19 +140,21 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 			continue
 		}
 
-		subsystemToMount, dirToCreate := subsystem, gardenCgroup
+		parentCgroupPath := ""
+		subsystemToMount := subsystem
 		if v, ok := subsystemGroupings[subsystem]; ok {
 			subsystemToMount = v.SubSystem
-			dirToCreate = path.Join(v.Path, gardenCgroup)
+			parentCgroupPath = v.Path
 		}
 
 		subsystemMountPath := path.Join(s.CgroupPath, subsystem)
-		gardenCgroupPath := filepath.Join(subsystemMountPath, dirToCreate)
-		if err := s.createAndChownCgroup(logger, subsystemMountPath, subsystemToMount, gardenCgroupPath); err != nil {
+
+		if err := s.createCgroupHierarchy(logger, subsystemMountPath, subsystemToMount, parentCgroupPath, cgroupHierarchy); err != nil {
 			return err
 		}
 
 		if subsystem == "devices" {
+			gardenCgroupPath := filepath.Join(append([]string{subsystemMountPath, parentCgroupPath}, cgroupHierarchy...)...)
 			if err := s.modifyAllowedDevices(gardenCgroupPath, s.AllowedDevices); err != nil {
 				return err
 			}
@@ -162,26 +165,32 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		cgroup := subsystemGroupings[subsystem]
 		subsystemName := cgroup.SubSystem[len("name="):len(cgroup.SubSystem)]
 		subsystemMountPath := path.Join(s.CgroupPath, subsystemName)
-		gardenCgroupPath := filepath.Join(subsystemMountPath, cgroup.Path, gardenCgroup)
 
-		if err := s.createAndChownCgroup(logger, subsystemMountPath, subsystem, gardenCgroupPath); err != nil {
+		if err := s.createCgroupHierarchy(logger, subsystemMountPath, subsystem, cgroup.Path, cgroupHierarchy); err != nil {
 			return err
 		}
+
 	}
 
 	return nil
 }
 
-func (s *CgroupStarter) createAndChownCgroup(logger lager.Logger, mountPath, subsystem, gardenCgroupPath string) error {
+func (s *CgroupStarter) createCgroupHierarchy(logger lager.Logger, mountPath, subsystem, parentCgroupPath string, cgroups []string) error {
 	if err := s.idempotentCgroupMount(logger, mountPath, subsystem); err != nil {
 		return err
 	}
 
+	gardenCgroupPath := filepath.Join(append([]string{mountPath, parentCgroupPath}, cgroups...)...)
 	if err := s.createGardenCgroup(logger, gardenCgroupPath); err != nil {
 		return err
 	}
 
-	return s.recursiveChown(gardenCgroupPath)
+	gardenRootPath := filepath.Join(mountPath, parentCgroupPath, cgroups[0])
+	if err := s.recursiveChown(gardenRootPath); err != nil {
+		return err
+	}
+
+	return recursiveChmod(gardenRootPath, 0755)
 }
 
 func procSelfSubsystems(m map[string]group) []string {
@@ -276,11 +285,7 @@ func (s *CgroupStarter) createGardenCgroup(log lager.Logger, gardenCgroupPath st
 	log.Info("started")
 	defer log.Info("finished")
 
-	if err := os.MkdirAll(gardenCgroupPath, 0755); err != nil {
-		return err
-	}
-
-	return os.Chmod(gardenCgroupPath, 0755)
+	return os.MkdirAll(gardenCgroupPath, 0755)
 }
 
 func (s *CgroupStarter) mountTmpfsOnCgroupPath(log lager.Logger, path string) {
@@ -361,5 +366,15 @@ func (s *CgroupStarter) recursiveChown(path string) error {
 		}
 
 		return s.FS.Chown(name, *s.uid, *s.gid)
+	})
+}
+
+func recursiveChmod(path string, mode os.FileMode) error {
+	return filepath.Walk(path, func(name string, info os.FileInfo, statErr error) error {
+		if statErr != nil {
+			return statErr
+		}
+
+		return os.Chmod(name, mode)
 	})
 }
