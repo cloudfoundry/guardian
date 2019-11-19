@@ -6,12 +6,18 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strings"
+
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 )
 
-func GetCGroupPath(cgroupsRootPath, subsystem, tag string, privileged bool) (string, error) {
+func GetCGroupPath(cgroupsRootPath, subsystem, tag string, privileged, throttlingCPU bool) (string, error) {
 	parentCgroup := "garden"
 	if tag != "" {
 		parentCgroup = fmt.Sprintf("garden-%s", tag)
+	}
+
+	if throttlingCPU {
+		parentCgroup = filepath.Join(parentCgroup, cgroups.GoodCgroupName)
 	}
 
 	// We always use the cgroup root for privileged containers, regardless of
@@ -20,7 +26,7 @@ func GetCGroupPath(cgroupsRootPath, subsystem, tag string, privileged bool) (str
 		parentCgroup = ""
 	}
 
-	currentCgroup, err := GetCGroup(subsystem)
+	currentCgroup, err := getCGroup(subsystem)
 	if err != nil {
 		return "", err
 	}
@@ -28,11 +34,7 @@ func GetCGroupPath(cgroupsRootPath, subsystem, tag string, privileged bool) (str
 	return filepath.Join(cgroupsRootPath, subsystem, currentCgroup, parentCgroup), nil
 }
 
-// GetCGroup, when running inside a container, returns the relative path of
-// the cgroup in the host.
-// E.g. /6d8612e9-cf2c-48d7-669e-249a546683f7, where 6d8612e9-cf2c-48d7-669e-249a546683f7
-// is the container id.
-func GetCGroup(subsystemToFind string) (string, error) {
+func getCGroup(subsystemToFind string) (string, error) {
 	cgroupContent, err := ioutil.ReadFile(fmt.Sprintf("/proc/self/cgroup"))
 	if err != nil {
 		return "", err
