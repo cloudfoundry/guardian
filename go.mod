@@ -15,20 +15,22 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.1.0
-	github.com/containerd/cgroups v0.0.0-20190226200435-dbea6f2bd416 // indirect
+	github.com/containerd/cgroups v0.0.0-20190717030353-c4b9ac5c7601 // indirect
 	github.com/containerd/console v0.0.0-20181022165439-0650fd9eeb50 // indirect
-	github.com/containerd/containerd v1.3.0
+	github.com/containerd/containerd v0.0.0-20190926213100-90735a5d13e3
 	github.com/containerd/continuity v0.0.0-20190426062206-aaeac12a7ffc // indirect
-	github.com/containerd/fifo v0.0.0-20180307165137-3d5202aec260 // indirect
+	github.com/containerd/fifo v0.0.0-20190816180239-bda0ff6ed73c // indirect
 	github.com/containerd/go-runc v0.0.0-20180907222934-5a6d9f37cfa3 // indirect
 	github.com/containerd/ttrpc v0.0.0-20190828172938-92c8520ef9f8 // indirect
 	github.com/containerd/typeurl v0.0.0-20190911142611-5eb25027c9fd
-	github.com/coreos/go-systemd v0.0.0-20190212144455-93d5ec2c7f76 // indirect
+	github.com/coreos/go-systemd v0.0.0-20161114122254-48702e0da86b // indirect
 	github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
 	github.com/docker/go-events v0.0.0-20170721190031-9461782956ad // indirect
 	github.com/eapache/go-resiliency v1.2.0
-	github.com/godbus/dbus v4.1.0+incompatible // indirect
+	github.com/godbus/dbus v0.0.0-20151105175453-c7fdd8b5cd55 // indirect
 	github.com/gogo/googleapis v1.0.0 // indirect
+	github.com/google/uuid v1.1.1 // indirect
+	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/jessevdk/go-flags v1.4.0
@@ -63,4 +65,5 @@ replace (
 	code.cloudfoundry.org/grootfs => ../grootfs
 	code.cloudfoundry.org/idmapper => ../idmapper
 	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20190205005809-0d3efadf0154
+	github.com/opencontainers/runtime-spec => github.com/opencontainers/runtime-spec v0.0.0-20190207185410-29686dbc5559
 )

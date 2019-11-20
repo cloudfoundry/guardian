@@ -43,12 +43,15 @@ import (
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/localip"
+	"github.com/containerd/containerd"
 	"github.com/eapache/go-resiliency/retrier"
 	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 const containerdNamespace = "garden"
+
+var ContainerdClient *containerd.Client
 
 type GardenFactory interface {
 	WireResolvConfigurer() kawasaki.DnsResolvConfigurer

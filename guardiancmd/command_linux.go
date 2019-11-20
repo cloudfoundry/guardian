@@ -28,11 +28,9 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
-	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/leases"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/pkg/process"
-	"github.com/containerd/containerd/plugin"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
@@ -148,10 +146,13 @@ func (f *LinuxFactory) WireRootfsFileCreator() depot.RootfsFileCreator {
 }
 
 func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger, volumizer peas.Volumizer, peaHandlesGetter runcontainerd.PeaHandlesGetter) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, peas.BundleLoader, error) {
-	containerdClient, err := containerd.New(f.config.Containerd.Socket, containerd.WithDefaultRuntime(plugin.RuntimeLinuxV1))
-	if err != nil {
-		return nil, nil, nil, nil, nil, err
-	}
+	// containerdClient, err := containerd.New(f.config.Containerd.Socket, containerd.WithDefaultRuntime(plugin.RuntimeLinuxV1))
+	// if err != nil {
+	// 	return nil, nil, nil, nil, nil, err
+	// }
+	containerdClient := ContainerdClient
+	log.Info("containerd-client", lager.Data{"client": containerdClient})
+
 	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
 	ctx = leases.WithLease(ctx, "lease-is-off")
 	nerd := nerdpkg.New(containerdClient, ctx, filepath.Join(containerdRuncRoot(), "fifo"))

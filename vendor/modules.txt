@@ -37,6 +37,8 @@ code.cloudfoundry.org/localip
 github.com/BurntSushi/toml
 # github.com/Microsoft/go-winio v0.4.14
 github.com/Microsoft/go-winio
+github.com/Microsoft/go-winio/pkg/etw
+github.com/Microsoft/go-winio/pkg/etwlogrus
 github.com/Microsoft/go-winio/pkg/guid
 # github.com/Microsoft/hcsshim v0.8.6
 github.com/Microsoft/hcsshim
@@ -54,6 +56,8 @@ github.com/Microsoft/hcsshim/internal/schema1
 github.com/Microsoft/hcsshim/internal/schema2
 github.com/Microsoft/hcsshim/internal/timeout
 github.com/Microsoft/hcsshim/internal/wclayer
+# github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
+github.com/beorn7/perks/quantile
 # github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40
 github.com/bmizerany/pat
 # github.com/cloudfoundry/dropsonde v1.0.0
@@ -79,9 +83,11 @@ github.com/cloudfoundry/gosteno
 github.com/cloudfoundry/gosteno/syslog
 # github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4
 github.com/cloudfoundry/sonde-go/events
+# github.com/containerd/cgroups v0.0.0-20190717030353-c4b9ac5c7601
+github.com/containerd/cgroups
 # github.com/containerd/console v0.0.0-20181022165439-0650fd9eeb50
 github.com/containerd/console
-# github.com/containerd/containerd v1.3.0
+# github.com/containerd/containerd v0.0.0-20190926213100-90735a5d13e3
 github.com/containerd/containerd
 github.com/containerd/containerd/api/events
 github.com/containerd/containerd/api/services/containers/v1
@@ -94,14 +100,17 @@ github.com/containerd/containerd/api/services/leases/v1
 github.com/containerd/containerd/api/services/namespaces/v1
 github.com/containerd/containerd/api/services/snapshots/v1
 github.com/containerd/containerd/api/services/tasks/v1
+github.com/containerd/containerd/api/services/ttrpc/events/v1
 github.com/containerd/containerd/api/services/version/v1
 github.com/containerd/containerd/api/types
 github.com/containerd/containerd/api/types/task
 github.com/containerd/containerd/archive
 github.com/containerd/containerd/archive/compression
 github.com/containerd/containerd/cio
+github.com/containerd/containerd/cmd/containerd/command
 github.com/containerd/containerd/containers
 github.com/containerd/containerd/content
+github.com/containerd/containerd/content/local
 github.com/containerd/containerd/content/proxy
 github.com/containerd/containerd/defaults
 github.com/containerd/containerd/diff
@@ -109,6 +118,7 @@ github.com/containerd/containerd/errdefs
 github.com/containerd/containerd/events
 github.com/containerd/containerd/events/exchange
 github.com/containerd/containerd/filters
+github.com/containerd/containerd/gc
 github.com/containerd/containerd/identifiers
 github.com/containerd/containerd/images
 github.com/containerd/containerd/images/archive
@@ -116,12 +126,16 @@ github.com/containerd/containerd/labels
 github.com/containerd/containerd/leases
 github.com/containerd/containerd/leases/proxy
 github.com/containerd/containerd/log
+github.com/containerd/containerd/metadata
+github.com/containerd/containerd/metadata/boltutil
 github.com/containerd/containerd/mount
 github.com/containerd/containerd/namespaces
 github.com/containerd/containerd/oci
 github.com/containerd/containerd/pkg/dialer
 github.com/containerd/containerd/pkg/process
 github.com/containerd/containerd/pkg/stdio
+github.com/containerd/containerd/pkg/timeout
+github.com/containerd/containerd/pkg/ttrpcutil
 github.com/containerd/containerd/platforms
 github.com/containerd/containerd/plugin
 github.com/containerd/containerd/reference
@@ -129,17 +143,34 @@ github.com/containerd/containerd/remotes
 github.com/containerd/containerd/remotes/docker
 github.com/containerd/containerd/remotes/docker/schema1
 github.com/containerd/containerd/rootfs
+github.com/containerd/containerd/runtime
 github.com/containerd/containerd/runtime/linux/runctypes
+github.com/containerd/containerd/runtime/v1
+github.com/containerd/containerd/runtime/v1/linux
+github.com/containerd/containerd/runtime/v1/shim
+github.com/containerd/containerd/runtime/v1/shim/client
+github.com/containerd/containerd/runtime/v1/shim/v1
+github.com/containerd/containerd/runtime/v2
 github.com/containerd/containerd/runtime/v2/runc/options
+github.com/containerd/containerd/runtime/v2/shim
+github.com/containerd/containerd/runtime/v2/task
+github.com/containerd/containerd/services
+github.com/containerd/containerd/services/containers
+github.com/containerd/containerd/services/server
+github.com/containerd/containerd/services/server/config
+github.com/containerd/containerd/services/tasks
 github.com/containerd/containerd/snapshots
+github.com/containerd/containerd/snapshots/native
 github.com/containerd/containerd/snapshots/proxy
+github.com/containerd/containerd/snapshots/storage
 github.com/containerd/containerd/sys
+github.com/containerd/containerd/sys/reaper
 github.com/containerd/containerd/version
 # github.com/containerd/continuity v0.0.0-20190426062206-aaeac12a7ffc
 github.com/containerd/continuity/fs
 github.com/containerd/continuity/syscallx
 github.com/containerd/continuity/sysx
-# github.com/containerd/fifo v0.0.0-20180307165137-3d5202aec260
+# github.com/containerd/fifo v0.0.0-20190816180239-bda0ff6ed73c
 github.com/containerd/fifo
 # github.com/containerd/go-runc v0.0.0-20180907222934-5a6d9f37cfa3
 github.com/containerd/go-runc
@@ -147,6 +178,8 @@ github.com/containerd/go-runc
 github.com/containerd/ttrpc
 # github.com/containerd/typeurl v0.0.0-20190911142611-5eb25027c9fd
 github.com/containerd/typeurl
+# github.com/coreos/go-systemd v0.0.0-20161114122254-48702e0da86b
+github.com/coreos/go-systemd/dbus
 # github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
 github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/docker/distribution v2.7.1+incompatible => github.com/docker/distribution v0.0.0-20190205005809-0d3efadf0154
@@ -157,10 +190,14 @@ github.com/docker/distribution/registry/api/errcode
 github.com/docker/docker/pkg/reexec
 # github.com/docker/go-events v0.0.0-20170721190031-9461782956ad
 github.com/docker/go-events
+# github.com/docker/go-metrics v0.0.0-20180209012529-399ea8c73916
+github.com/docker/go-metrics
 # github.com/docker/go-units v0.4.0
 github.com/docker/go-units
 # github.com/eapache/go-resiliency v1.2.0
 github.com/eapache/go-resiliency/retrier
+# github.com/godbus/dbus v0.0.0-20151105175453-c7fdd8b5cd55
+github.com/godbus/dbus
 # github.com/gogo/googleapis v1.0.0
 github.com/gogo/googleapis/google/rpc
 # github.com/gogo/protobuf v1.3.0
@@ -175,6 +212,8 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
+# github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
+github.com/grpc-ecosystem/go-grpc-prometheus
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
 # github.com/hashicorp/go-multierror v1.0.0
@@ -185,6 +224,8 @@ github.com/hpcloud/tail/ratelimiter
 github.com/hpcloud/tail/util
 github.com/hpcloud/tail/watch
 github.com/hpcloud/tail/winfile
+# github.com/imdario/mergo v0.3.8
+github.com/imdario/mergo
 # github.com/jessevdk/go-flags v1.4.0
 github.com/jessevdk/go-flags
 # github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1
@@ -196,6 +237,8 @@ github.com/mailru/easyjson
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
+# github.com/matttproud/golang_protobuf_extensions v1.0.1
+github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mitchellh/copystructure v0.0.0-20170525013902-d23ffcb85de3
 github.com/mitchellh/copystructure
 # github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936
@@ -251,10 +294,24 @@ github.com/opencontainers/runc/libcontainer/configs
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
 github.com/opencontainers/runc/libcontainer/utils
-# github.com/opencontainers/runtime-spec v1.0.1
+# github.com/opencontainers/runtime-spec v1.0.1 => github.com/opencontainers/runtime-spec v0.0.0-20190207185410-29686dbc5559
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
+# github.com/prometheus/client_golang v0.0.0-20180529170124-42bc0a18c220
+github.com/prometheus/client_golang/prometheus
+github.com/prometheus/client_golang/prometheus/promhttp
+# github.com/prometheus/client_model v0.0.0-20171117100541-99fa1f4be8e5
+github.com/prometheus/client_model/go
+# github.com/prometheus/common v0.0.0-20180518154759-7600349dcfe1
+github.com/prometheus/common/expfmt
+github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
+github.com/prometheus/common/model
+# github.com/prometheus/procfs v0.0.0-20180528183257-fe93d378a6b0
+github.com/prometheus/procfs
+github.com/prometheus/procfs/internal/util
+github.com/prometheus/procfs/nfs
+github.com/prometheus/procfs/xfs
 # github.com/russross/blackfriday/v2 v2.0.1
 github.com/russross/blackfriday/v2
 # github.com/shurcooL/sanitized_anchor_name v1.0.0
@@ -281,6 +338,8 @@ github.com/vishvananda/netlink
 github.com/vishvananda/netlink/nl
 # github.com/vishvananda/netns v0.0.0-20171111001504-be1fbeda1936
 github.com/vishvananda/netns
+# go.etcd.io/bbolt v1.3.3
+go.etcd.io/bbolt
 # golang.org/x/net v0.0.0-20191028085509-fe3aa8a45271
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -299,6 +358,9 @@ golang.org/x/sync/semaphore
 # golang.org/x/sys v0.0.0-20191029155521-f43be2a4598c
 golang.org/x/sys/unix
 golang.org/x/sys/windows
+golang.org/x/sys/windows/svc
+golang.org/x/sys/windows/svc/debug
+golang.org/x/sys/windows/svc/mgr
 # golang.org/x/text v0.3.2
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
