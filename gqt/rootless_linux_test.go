@@ -164,7 +164,7 @@ var _ = Describe("rootless containers", func() {
 			container, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
-			parentPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), "devices", strconv.Itoa(GinkgoParallelNode()), false, true)
+			parentPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), "devices", strconv.Itoa(GinkgoParallelNode()), false, cpuThrottlingEnabled())
 			Expect(err).NotTo(HaveOccurred())
 			cgroupPath := filepath.Join(parentPath, container.Handle())
 
@@ -208,7 +208,7 @@ var _ = Describe("rootless containers", func() {
 			)
 
 			JustBeforeEach(func() {
-				parentPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), cgroupType, config.Tag, false, true)
+				parentPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), cgroupType, config.Tag, false, cpuThrottlingEnabled())
 				Expect(err).NotTo(HaveOccurred())
 				cgroupPath = filepath.Join(parentPath, container.Handle())
 			})

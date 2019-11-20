@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"time"
 
 	"code.cloudfoundry.org/clock"
@@ -25,6 +26,7 @@ import (
 	"code.cloudfoundry.org/guardian/properties"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/deleter"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
@@ -520,6 +522,10 @@ func (cmd *CommonCommand) wireContainerizer(
 	cgroupRootPath := "garden"
 	if cmd.Server.Tag != "" {
 		cgroupRootPath = fmt.Sprintf("%s-%s", cgroupRootPath, cmd.Server.Tag)
+	}
+
+	if cmd.CPUThrottling.Enabled {
+		cgroupRootPath = filepath.Join(cgroupRootPath, cgroups.GoodCgroupName)
 	}
 
 	bundleRules := []rundmc.BundlerRule{

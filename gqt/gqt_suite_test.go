@@ -149,6 +149,10 @@ var _ = BeforeEach(func() {
 		containerdProcess = startContainerd(containerdRunDir)
 	}
 
+	if cpuThrottlingEnabled() {
+		t := true
+		config.EnableCPUThrottling = &t
+	}
 })
 
 var _ = AfterEach(func() {
@@ -425,6 +429,10 @@ func jsonMarshal(v interface{}) []byte {
 
 func jsonUnmarshal(data []byte, v interface{}) {
 	Expect(toml.Unmarshal(data, v)).To(Succeed())
+}
+
+func cpuThrottlingEnabled() bool {
+	return os.Getenv("CPU_THROTTLING_ENABLED") == "true"
 }
 
 func isContainerd() bool {

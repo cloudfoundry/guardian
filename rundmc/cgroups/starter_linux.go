@@ -20,11 +20,9 @@ import (
 )
 
 const (
-	Root           = "/sys/fs/cgroup"
-	Garden         = "garden"
-	Header         = "#subsys_name hierarchy num_cgroups enabled"
-	GoodCgroupName = "good"
-	BadCgroupName  = "bad"
+	Root   = "/sys/fs/cgroup"
+	Garden = "garden"
+	Header = "#subsys_name hierarchy num_cgroups enabled"
 )
 
 type CgroupsFormatError struct {
@@ -179,33 +177,29 @@ func (s *CgroupStarter) createAndChownCgroup(logger lager.Logger, mountPath, sub
 		return err
 	}
 
-	if err := s.createGardenCgroup(logger, gardenCgroupPath); err != nil {
-		return err
-	}
-
-	if err := s.recursiveChown(gardenCgroupPath); err != nil {
+	if err := s.createChownedCgroup(logger, gardenCgroupPath); err != nil {
 		return err
 	}
 
 	if s.CPUThrottling {
-		if err := s.createGardenCgroup(logger, filepath.Join(gardenCgroupPath, GoodCgroupName)); err != nil {
+		if err := s.createChownedCgroup(logger, filepath.Join(gardenCgroupPath, GoodCgroupName)); err != nil {
 			return err
 		}
 
-		if err := s.recursiveChown(filepath.Join(gardenCgroupPath, GoodCgroupName)); err != nil {
-			return err
-		}
-
-		if err := s.createGardenCgroup(logger, filepath.Join(gardenCgroupPath, BadCgroupName)); err != nil {
-			return err
-		}
-
-		if err := s.recursiveChown(filepath.Join(gardenCgroupPath, BadCgroupName)); err != nil {
-			return err
+		if contains(strings.Split(subsystem, ","), "cpu") {
+			return s.createChownedCgroup(logger, filepath.Join(gardenCgroupPath, BadCgroupName))
 		}
 	}
 
 	return nil
+}
+
+func (s *CgroupStarter) createChownedCgroup(logger lager.Logger, cgroupPath string) error {
+	if err := s.createGardenCgroup(logger, cgroupPath); err != nil {
+		return err
+	}
+
+	return s.recursiveChown(cgroupPath)
 }
 
 func procSelfSubsystems(m map[string]group) []string {

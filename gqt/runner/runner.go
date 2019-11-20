@@ -404,7 +404,11 @@ func CgroupsRootPath(tag string) string {
 }
 
 func (r *RunningGarden) CgroupSubsystemPath(subsystem, handle string) string {
-	cgroupSubsystemPath, err := cgrouper.GetCGroupPath(CgroupsRootPath(r.Tag), subsystem, r.Tag, false, true)
+	enableCPUThrottling := false
+	if r.EnableCPUThrottling != nil && *r.EnableCPUThrottling {
+		enableCPUThrottling = true
+	}
+	cgroupSubsystemPath, err := cgrouper.GetCGroupPath(CgroupsRootPath(r.Tag), subsystem, r.Tag, false, enableCPUThrottling)
 	Expect(err).NotTo(HaveOccurred())
 
 	return filepath.Join(cgroupSubsystemPath, handle)

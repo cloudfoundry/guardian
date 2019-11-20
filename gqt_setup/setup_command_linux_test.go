@@ -33,6 +33,9 @@ var _ = Describe("gdn setup", func() {
 		// limitations.
 		tag = nodeToString(GinkgoParallelNode())
 		setupArgs = []string{"setup", "--tag", tag}
+		if cpuThrottlingEnabled() {
+			setupArgs = append(setupArgs, "--enable-cpu-throttling")
+		}
 		cgroupsRoot = runner.CgroupsRootPath(tag)
 		assertNotMounted(cgroupsRoot)
 	})
@@ -65,7 +68,8 @@ var _ = Describe("gdn setup", func() {
 		})
 
 		It("allows both OCI default and garden specific devices", func() {
-			cgroupPath, err := cgrouper.GetCGroupPath(cgroupsRoot, "devices", tag, false, true)
+			privileged := false
+			cgroupPath, err := cgrouper.GetCGroupPath(cgroupsRoot, "devices", tag, privileged, cpuThrottlingEnabled())
 			Expect(err).NotTo(HaveOccurred())
 			time.Sleep(time.Second * 20)
 
@@ -100,7 +104,7 @@ var _ = Describe("gdn setup", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				for _, subsystem := range subsystems {
-					path, err := cgrouper.GetCGroupPath(cgroupsRoot, subsystem.Name(), tag, false, true)
+					path, err := cgrouper.GetCGroupPath(cgroupsRoot, subsystem.Name(), tag, false, cpuThrottlingEnabled())
 					Expect(path).To(BeADirectory())
 					Expect(err).NotTo(HaveOccurred())
 

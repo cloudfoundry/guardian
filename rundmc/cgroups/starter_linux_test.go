@@ -441,6 +441,14 @@ var _ = Describe("CgroupStarter", func() {
 			}
 		})
 
+		It("does not create a bad cgroup for other subsystems", func() {
+			Expect(starter.WithUID(123).WithGID(987).Start()).To(Succeed())
+			for _, subsystem := range []string{"devices", "memory"} {
+				fullPath := path.Join(tmpDir, "cgroup", subsystem, "garden", cgroups.BadCgroupName)
+				Expect(fullPath).ToNot(BeADirectory())
+			}
+		})
+
 		It("creates the bad CPU group owned by the specified user and group", func() {
 			Expect(starter.WithUID(123).WithGID(987).Start()).To(Succeed())
 			allChowns := []string{}
