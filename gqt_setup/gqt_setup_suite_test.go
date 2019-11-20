@@ -127,3 +127,7 @@ func jsonMarshal(v interface{}) []byte {
 func jsonUnmarshal(data []byte, v interface{}) {
 	Expect(toml.Unmarshal(data, v)).To(Succeed())
 }
+
+func cpuThrottlingEnabled() bool {
+	return os.Getenv("CPU_THROTTLING_ENABLED") == "true"
+}

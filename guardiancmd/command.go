@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"time"
 
 	"code.cloudfoundry.org/clock"
@@ -25,6 +26,7 @@ import (
 	"code.cloudfoundry.org/guardian/properties"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/deleter"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
@@ -182,6 +184,10 @@ type CommonCommand struct {
 		Socket                    string `long:"containerd-socket" description:"Path to a containerd socket."`
 		UseContainerdForProcesses bool   `long:"use-containerd-for-processes" description:"Use containerd to run processes in containers."`
 	} `group:"Containerd"`
+
+	CPUThrottling struct {
+		Enabled bool `long:"enable-cpu-throttling" description:"Enable CPU throttling."`
+	}
 }
 
 type commandWiring struct {
@@ -516,6 +522,10 @@ func (cmd *CommonCommand) wireContainerizer(
 	cgroupRootPath := "garden"
 	if cmd.Server.Tag != "" {
 		cgroupRootPath = fmt.Sprintf("%s-%s", cgroupRootPath, cmd.Server.Tag)
+	}
+
+	if cmd.CPUThrottling.Enabled {
+		cgroupRootPath = filepath.Join(cgroupRootPath, cgroups.GoodCgroupName)
 	}
 
 	bundleRules := []rundmc.BundlerRule{

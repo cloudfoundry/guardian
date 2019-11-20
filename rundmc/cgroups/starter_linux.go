@@ -41,12 +41,14 @@ func NewStarter(
 	gardenCgroup string,
 	allowedDevices []specs.LinuxDeviceCgroup,
 	mountPointChecker rundmc.MountPointChecker,
+	enableCPUThrottling bool,
 ) *CgroupStarter {
 	return &CgroupStarter{
 		CgroupPath:        cgroupMountpoint,
 		GardenCgroup:      gardenCgroup,
 		ProcCgroups:       procCgroupReader,
 		ProcSelfCgroups:   procSelfCgroupReader,
+		CPUThrottling:     enableCPUThrottling,
 		AllowedDevices:    allowedDevices,
 		Logger:            logger,
 		MountPointChecker: mountPointChecker,
@@ -60,6 +62,7 @@ type CgroupStarter struct {
 	AllowedDevices  []specs.LinuxDeviceCgroup
 	ProcCgroups     io.ReadCloser
 	ProcSelfCgroups io.ReadCloser
+	CPUThrottling   bool
 
 	Logger            lager.Logger
 	MountPointChecker rundmc.MountPointChecker
@@ -143,8 +146,14 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		}
 
 		if subsystem == "devices" {
-			if err := s.modifyAllowedDevices(gardenCgroupPath, s.AllowedDevices); err != nil {
-				return err
+			if s.CPUThrottling {
+				if err := s.modifyAllowedDevices(filepath.Join(gardenCgroupPath, GoodCgroupName), s.AllowedDevices); err != nil {
+					return err
+				}
+			} else {
+				if err := s.modifyAllowedDevices(gardenCgroupPath, s.AllowedDevices); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -168,11 +177,29 @@ func (s *CgroupStarter) createAndChownCgroup(logger lager.Logger, mountPath, sub
 		return err
 	}
 
-	if err := s.createGardenCgroup(logger, gardenCgroupPath); err != nil {
+	if err := s.createChownedCgroup(logger, gardenCgroupPath); err != nil {
 		return err
 	}
 
-	return s.recursiveChown(gardenCgroupPath)
+	if s.CPUThrottling {
+		if err := s.createChownedCgroup(logger, filepath.Join(gardenCgroupPath, GoodCgroupName)); err != nil {
+			return err
+		}
+
+		if contains(strings.Split(subsystem, ","), "cpu") {
+			return s.createChownedCgroup(logger, filepath.Join(gardenCgroupPath, BadCgroupName))
+		}
+	}
+
+	return nil
+}
+
+func (s *CgroupStarter) createChownedCgroup(logger lager.Logger, cgroupPath string) error {
+	if err := s.createGardenCgroup(logger, cgroupPath); err != nil {
+		return err
+	}
+
+	return s.recursiveChown(cgroupPath)
 }
 
 func procSelfSubsystems(m map[string]group) []string {
@@ -221,9 +248,11 @@ func (s *CgroupStarter) modifyAllowedDevices(dir string, devices []specs.LinuxDe
 	} else if has {
 		return nil
 	}
+
 	if err := ioutil.WriteFile(filepath.Join(dir, "devices.deny"), []byte("a"), 0770); err != nil {
 		return err
 	}
+
 	for _, device := range devices {
 		data := fmt.Sprintf("%s %s:%s %s", device.Type, s.deviceNumberString(device.Major), s.deviceNumberString(device.Minor), device.Access)
 		if err := s.setDeviceCgroup(dir, "devices.allow", data); err != nil {

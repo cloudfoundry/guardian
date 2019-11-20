@@ -21,7 +21,8 @@ import (
 
 var _ = Describe("CgroupStarter", func() {
 	var (
-		starter                   *cgroups.CgroupStarter
+		starter *cgroups.CgroupStarter
+
 		logger                    lager.Logger
 		mountPointChecker         *rundmcfakes.FakeMountPointChecker
 		fakeFS                    *fsfakes.FakeFS
@@ -30,6 +31,7 @@ var _ = Describe("CgroupStarter", func() {
 		cgroupPathMounted         bool
 		cgroupPathMountCheckError error
 		notMountedCgroups         []string
+		cpuThrottlingEnabled      bool
 
 		tmpDir string
 	)
@@ -47,6 +49,7 @@ var _ = Describe("CgroupStarter", func() {
 		cgroupPathMounted = true
 		cgroupPathMountCheckError = nil
 		notMountedCgroups = []string{}
+		cpuThrottlingEnabled = false
 	})
 
 	JustBeforeEach(func() {
@@ -77,6 +80,7 @@ var _ = Describe("CgroupStarter", func() {
 				Access: "rwm",
 			}},
 			mountPointChecker.Spy,
+			cpuThrottlingEnabled,
 		)
 		starter.FS = fakeFS
 	})
@@ -382,6 +386,101 @@ var _ = Describe("CgroupStarter", func() {
 		It("returns CgroupsFormatError", func() {
 			err := starter.Start()
 			Expect(err).To(Equal(cgroups.CgroupsFormatError{Content: "#subsys_name\tsome\tbogus\tcolumns"}))
+		})
+	})
+
+	Context("when cpu throttling is enabled", func() {
+		BeforeEach(func() {
+			procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
+				"devices\t1\t1\t1\n" +
+				"memory\t2\t1\t1\n" +
+				"cpu\t3\t1\t1\n" +
+				"cpuacct\t4\t1\t1\n"
+
+			procSelfCgroupsContents = "5:devices:/\n" +
+				"4:memory:/\n" +
+				"3:cpu,cpuacct:/\n"
+
+			notMountedCgroups = []string{"devices", "cpu", "cpuacct"}
+			cpuThrottlingEnabled = true
+		})
+
+		It("adds the right content into devices.allow", func() {
+			Expect(starter.Start()).To(Succeed())
+
+			Expect(path.Join(tmpDir, "cgroup", "devices", "garden", cgroups.GoodCgroupName)).To(BeADirectory())
+
+			content := readFile(path.Join(tmpDir, "cgroup", "devices", "garden", cgroups.GoodCgroupName, "devices.allow"))
+			Expect(string(content)).To(Equal("c 10:200 rwm"))
+		})
+
+		It("adds the right content into devices.deny", func() {
+			Expect(starter.Start()).To(Succeed())
+
+			Expect(path.Join(tmpDir, "cgroup", "devices", "garden", cgroups.GoodCgroupName)).To(BeADirectory())
+
+			content := readFile(path.Join(tmpDir, "cgroup", "devices", "garden", cgroups.GoodCgroupName, "devices.deny"))
+			Expect(string(content)).To(Equal("a"))
+		})
+
+		It("creates subdirectories owned by the specified user and group", func() {
+			Expect(starter.WithUID(123).WithGID(987).Start()).To(Succeed())
+			allChowns := []string{}
+			for i := 0; i < fakeFS.ChownCallCount(); i++ {
+				path, uid, gid := fakeFS.ChownArgsForCall(i)
+				allChowns = append(allChowns, path)
+				Expect(uid).To(Equal(123))
+				Expect(gid).To(Equal(987))
+			}
+
+			for _, subsystem := range []string{"devices", "cpu", "memory"} {
+				fullPath := path.Join(tmpDir, "cgroup", subsystem, "garden")
+				Expect(fullPath).To(BeADirectory())
+				Expect(allChowns).To(ContainElement(fullPath))
+				Expect(stat(fullPath).Mode() & os.ModePerm).To(Equal(os.FileMode(0755)))
+			}
+		})
+
+		It("does not create a bad cgroup for other subsystems", func() {
+			Expect(starter.WithUID(123).WithGID(987).Start()).To(Succeed())
+			for _, subsystem := range []string{"devices", "memory"} {
+				fullPath := path.Join(tmpDir, "cgroup", subsystem, "garden", cgroups.BadCgroupName)
+				Expect(fullPath).ToNot(BeADirectory())
+			}
+		})
+
+		It("creates the bad CPU group owned by the specified user and group", func() {
+			Expect(starter.WithUID(123).WithGID(987).Start()).To(Succeed())
+			allChowns := []string{}
+			for i := 0; i < fakeFS.ChownCallCount(); i++ {
+				path, uid, gid := fakeFS.ChownArgsForCall(i)
+				allChowns = append(allChowns, path)
+				Expect(uid).To(Equal(123))
+				Expect(gid).To(Equal(987))
+			}
+
+			fullPath := path.Join(tmpDir, "cgroup", "cpu", "garden", cgroups.BadCgroupName)
+			Expect(fullPath).To(BeADirectory())
+			Expect(allChowns).To(ContainElement(fullPath))
+			Expect(stat(fullPath).Mode() & os.ModePerm).To(Equal(os.FileMode(0755)))
+		})
+
+		Context("when the garden folder already exists", func() {
+			BeforeEach(func() {
+				for _, subsystem := range []string{"devices", "cpu", "memory"} {
+					fullPath := path.Join(tmpDir, "cgroup", subsystem, "garden", cgroups.GoodCgroupName)
+					Expect(fullPath).ToNot(BeADirectory())
+					Expect(os.MkdirAll(fullPath, 0700)).To(Succeed())
+				}
+			})
+
+			It("changes the permissions of the subdirectories", func() {
+				starter.Start()
+				for _, subsystem := range []string{"devices", "cpu", "memory"} {
+					fullPath := path.Join(tmpDir, "cgroup", subsystem, "garden", cgroups.GoodCgroupName)
+					Expect(stat(fullPath).Mode() & os.ModePerm).To(Equal(os.FileMode(0755)))
+				}
+			})
 		})
 	})
 })

@@ -50,7 +50,7 @@ var _ = Describe("Creating a Container", func() {
 		container, err = client.Create(garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())
 
-		parentPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), "devices", strconv.Itoa(GinkgoParallelNode()), false)
+		parentPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), "devices", strconv.Itoa(GinkgoParallelNode()), false, cpuThrottlingEnabled())
 		Expect(err).NotTo(HaveOccurred())
 		cgroupPath := filepath.Join(parentPath, container.Handle())
 

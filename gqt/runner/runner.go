@@ -98,6 +98,7 @@ type GdnRunnerConfig struct {
 	ContainerdSocket               string   `flag:"containerd-socket"`
 	UseContainerdForProcesses      *bool    `flag:"use-containerd-for-processes"`
 	CPUEntitlementPerShare         *float64 `flag:"cpu-entitlement-per-share"`
+	EnableCPUThrottling            *bool    `flag:"enable-cpu-throttling"`
 
 	StartupExpectedToFail bool
 	StorePath             string
@@ -403,10 +404,14 @@ func CgroupsRootPath(tag string) string {
 }
 
 func (r *RunningGarden) CgroupSubsystemPath(subsystem, handle string) string {
-	gardenCgroupRelativePath, err := cgrouper.GetCGroup(subsystem)
+	enableCPUThrottling := false
+	if r.EnableCPUThrottling != nil && *r.EnableCPUThrottling {
+		enableCPUThrottling = true
+	}
+	cgroupSubsystemPath, err := cgrouper.GetCGroupPath(CgroupsRootPath(r.Tag), subsystem, r.Tag, false, enableCPUThrottling)
 	Expect(err).NotTo(HaveOccurred())
 
-	return filepath.Join(CgroupsRootPath(r.Tag), subsystem, gardenCgroupRelativePath, "garden-"+r.Tag, handle)
+	return filepath.Join(cgroupSubsystemPath, handle)
 }
 
 func (r *RunningGarden) removeTempDirContentsPreservingGrootFSStores() error {

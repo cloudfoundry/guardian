@@ -370,7 +370,7 @@ var _ = Describe("Surviving Restarts", func() {
 				})
 
 				It("allows both OCI default and garden specific devices", func() {
-					cgroupPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), "devices", config.Tag, containerSpec.Privileged)
+					cgroupPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), "devices", config.Tag, containerSpec.Privileged, cpuThrottlingEnabled())
 					Expect(err).NotTo(HaveOccurred())
 
 					content := readFileString(filepath.Join(cgroupPath, "devices.list"))

@@ -104,11 +104,11 @@ func (f *LinuxFactory) WireExecRunner(runcRoot string, containerRootHostUID, con
 }
 
 func (f *LinuxFactory) WireCgroupsStarter(logger lager.Logger) gardener.Starter {
-	return createCgroupsStarter(logger, f.config.Server.Tag, rundmc.IsMountPoint)
+	return createCgroupsStarter(logger, f.config.Server.Tag, rundmc.IsMountPoint, f.config.CPUThrottling.Enabled)
 }
 
 func (cmd *SetupCommand) WireCgroupsStarter(logger lager.Logger) gardener.Starter {
-	starter := createCgroupsStarter(logger, cmd.Tag, rundmc.IsMountPoint)
+	starter := createCgroupsStarter(logger, cmd.Tag, rundmc.IsMountPoint, cmd.EnableCPUThrottling)
 
 	if cmd.RootlessUID != nil {
 		starter = starter.WithUID(*cmd.RootlessUID)
@@ -121,7 +121,7 @@ func (cmd *SetupCommand) WireCgroupsStarter(logger lager.Logger) gardener.Starte
 	return starter
 }
 
-func createCgroupsStarter(logger lager.Logger, tag string, mountPointChecker rundmc.MountPointChecker) *cgroups.CgroupStarter {
+func createCgroupsStarter(logger lager.Logger, tag string, mountPointChecker rundmc.MountPointChecker, cpuThrottlingEnabled bool) *cgroups.CgroupStarter {
 	cgroupsMountpoint := cgroups.Root
 	gardenCgroup := cgroups.Garden
 
@@ -131,7 +131,7 @@ func createCgroupsStarter(logger lager.Logger, tag string, mountPointChecker run
 	}
 
 	return cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"),
-		cgroupsMountpoint, gardenCgroup, allowedDevices, mountPointChecker)
+		cgroupsMountpoint, gardenCgroup, allowedDevices, mountPointChecker, cpuThrottlingEnabled)
 }
 
 func (f *LinuxFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {
