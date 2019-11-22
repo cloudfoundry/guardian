@@ -142,8 +142,7 @@ github.com/tchap/go-patricia v2.3.0+incompatible h1:GkY4dP3cEfEASBPPkWd+AmjYxhmD
 github.com/tchap/go-patricia v2.3.0+incompatible/go.mod h1:bmLyhP68RS6kStMGxByiQ23RP/odRBOTVjwp2cDyi6I=
 github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861 h1:lB2XrnIvTdJdfhLJ7+3hCmzaS9n3oJ3uy40C6ETkEjY=
 github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861/go.mod h1:Bk476IH9wMKENKHSERaFD+30wigZMc4b03Km8A/xsPc=
-github.com/urfave/cli v1.22.2 h1:gsqYFH8bb9ekPA12kRo0hfjngWQjkJPlN9R0N78BoUo=
-github.com/urfave/cli v1.22.2/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
+github.com/urfave/cli v1.22.1/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
 github.com/vbatts/tar-split v0.11.1 h1:0Odu65rhcZ3JZaPHxl7tCI3V/C/Q9Zf82UFravl02dE=
 github.com/vbatts/tar-split v0.11.1/go.mod h1:LEuURwDEiWjRjwu46yU3KVGuUdVv/dcnpcEPSzR8z6g=
 github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c h1:5v/4YnGPv0eHaqzlkPwEN+Ch0BV1RcnIHjy19xKqSYA=
