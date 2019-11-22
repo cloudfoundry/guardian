@@ -56,9 +56,9 @@ github.com/containers/image/pkg/sysregistriesv2
 github.com/containers/image/pkg/tlsclientconfig
 github.com/containers/image/transports
 github.com/containers/image/types
-# github.com/containers/storage v1.13.5
+# github.com/containers/storage v1.14.0
 github.com/containers/storage/pkg/reexec
-# github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
+# github.com/cpuguy83/go-md2man/v2 v2.0.0
 github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/docker/distribution v2.7.1+incompatible
 github.com/docker/distribution
@@ -189,7 +189,7 @@ github.com/sirupsen/logrus
 github.com/st3v/glager
 # github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861
 github.com/tscolari/lagregator
-# github.com/urfave/cli v1.22.1
+# github.com/urfave/cli v1.22.2
 github.com/urfave/cli
 # github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c
 github.com/ventu-io/go-shortid
@@ -224,5 +224,5 @@ golang.org/x/text/transform
 gopkg.in/fsnotify.v1
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 gopkg.in/tomb.v1
-# gopkg.in/yaml.v2 v2.2.4
+# gopkg.in/yaml.v2 v2.2.7
 gopkg.in/yaml.v2

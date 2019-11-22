@@ -6,7 +6,6 @@ require (
 	code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b
 	code.cloudfoundry.org/idmapper v0.0.0-00010101000000-000000000000
 	code.cloudfoundry.org/lager v0.0.0-20181119165122-baf208c4c56b
-	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77 // indirect
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
 	github.com/cloudfoundry/dropsonde v1.0.0
@@ -15,7 +14,8 @@ require (
 	github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4
 	github.com/containerd/continuity v0.0.0-20180524210603-d3c23511c1bf // indirect
 	github.com/containers/image v1.5.1
-	github.com/containers/storage v1.13.5
+	github.com/containers/storage v1.14.0
+	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
 	github.com/docker/docker-credential-helpers v0.6.0 // indirect
@@ -46,12 +46,11 @@ require (
 	github.com/prometheus/procfs v0.0.0-20180528183257-fe93d378a6b0 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/st3v/glager v0.3.0
-	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861
-	github.com/urfave/cli v1.22.1
+	github.com/urfave/cli v1.22.2
 	github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c
 	golang.org/x/sys v0.0.0-20191029155521-f43be2a4598c
-	gopkg.in/yaml.v2 v2.2.4
+	gopkg.in/yaml.v2 v2.2.7
 	gotest.tools v2.2.0+incompatible // indirect
 	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
