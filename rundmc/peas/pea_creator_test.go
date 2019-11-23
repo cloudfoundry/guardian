@@ -132,7 +132,7 @@ var _ = Describe("PeaCreator", func() {
 
 		It("creates a volume", func() {
 			Expect(volumizer.CreateCallCount()).To(Equal(1))
-			_, actualSpec := volumizer.CreateArgsForCall(0)
+			_, _, actualSpec := volumizer.CreateArgsForCall(0)
 			Expect(actualSpec.Handle).To(Equal(processSpec.ID))
 			Expect(actualSpec.Image).To(Equal(garden.ImageRef{
 				URI:      imageURI,

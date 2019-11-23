@@ -2,6 +2,7 @@ package gqt_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os/exec"
@@ -37,7 +38,7 @@ var _ = Describe("Containerd", func() {
 
 	Describe("creating containers", func() {
 		It("creates a containerd container with running init task", func() {
-			container, err := client.Create(garden.ContainerSpec{})
+			container, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			containers := listContainers("ctr", config.ContainerdSocket)
@@ -54,7 +55,7 @@ var _ = Describe("Containerd", func() {
 
 		JustBeforeEach(func() {
 			var err error
-			container, err = client.Create(garden.ContainerSpec{})
+			container, err = client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -75,7 +76,7 @@ var _ = Describe("Containerd", func() {
 
 		JustBeforeEach(func() {
 			var err error
-			container, err = client.Create(garden.ContainerSpec{})
+			container, err = client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -458,7 +459,7 @@ var _ = Describe("Containerd", func() {
 		JustBeforeEach(func() {
 			var err error
 			restartContainerd()
-			container, err = client.Create(garden.ContainerSpec{
+			container, err = client.Create(context.Background(), garden.ContainerSpec{
 				Limits: garden.Limits{
 					Memory: garden.MemoryLimits{
 						LimitInBytes: 30 * mb,

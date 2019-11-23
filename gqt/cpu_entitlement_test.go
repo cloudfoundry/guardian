@@ -1,6 +1,8 @@
 package gqt_test
 
 import (
+	"context"
+
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"code.cloudfoundry.org/guardian/sysinfo"
@@ -29,7 +31,7 @@ var _ = Describe("CPU entitlement", func() {
 	JustBeforeEach(func() {
 		client = runner.Start(config)
 		var err error
-		container, err = client.Create(containerSpec)
+		container, err = client.Create(context.Background(), containerSpec)
 		Expect(err).NotTo(HaveOccurred())
 	})
 

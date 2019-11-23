@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -29,7 +30,7 @@ var _ = Describe("Info", func() {
 
 	JustBeforeEach(func() {
 		var err error
-		container, err = client.Create(garden.ContainerSpec{
+		container, err = client.Create(context.Background(), garden.ContainerSpec{
 			Image:   image,
 			Network: "10.252.0.2",
 			Properties: garden.Properties{
@@ -141,12 +142,12 @@ var _ = Describe("BulkInfo", func() {
 
 	BeforeEach(func() {
 		client = runner.Start(config)
-		_, err := client.Create(garden.ContainerSpec{
+		_, err := client.Create(context.Background(), garden.ContainerSpec{
 			Handle: "first",
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = client.Create(garden.ContainerSpec{
+		_, err = client.Create(context.Background(), garden.ContainerSpec{
 			Handle: "second",
 		})
 		Expect(err).NotTo(HaveOccurred())

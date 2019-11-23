@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -39,7 +40,7 @@ var _ = Describe("Destroying a Container", func() {
 		numGoroutinesBefore := numGoRoutines(client)
 
 		handle := fmt.Sprintf("goroutine-leak-test-%d", GinkgoParallelNode())
-		_, err := client.Create(garden.ContainerSpec{
+		_, err := client.Create(context.Background(), garden.ContainerSpec{
 			Handle: handle,
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -49,7 +50,7 @@ var _ = Describe("Destroying a Container", func() {
 	})
 
 	It("should destroy the container's rootfs", func() {
-		container, err := client.Create(garden.ContainerSpec{})
+		container, err := client.Create(context.Background(), garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())
 
 		info, err := container.Info()
@@ -62,7 +63,7 @@ var _ = Describe("Destroying a Container", func() {
 	})
 
 	It("should destroy the container's depot directory", func() {
-		container, err := client.Create(garden.ContainerSpec{})
+		container, err := client.Create(context.Background(), garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(client.Destroy(container.Handle())).To(Succeed())
@@ -71,7 +72,7 @@ var _ = Describe("Destroying a Container", func() {
 	})
 
 	It("should kill the container's init process", func() {
-		container, err := client.Create(garden.ContainerSpec{})
+		container, err := client.Create(context.Background(), garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())
 
 		initProcPid := initProcessPID(container.Handle())
@@ -104,7 +105,7 @@ var _ = Describe("Destroying a Container", func() {
 
 		JustBeforeEach(func() {
 			var err error
-			container, err = client.Create(garden.ContainerSpec{})
+			container, err = client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			// make image deletion fail (because device or resource busy)
@@ -144,7 +145,7 @@ var _ = Describe("Destroying a Container", func() {
 			var err error
 
 			networkSpec = fmt.Sprintf("177.100.%d.0/24", GinkgoParallelNode())
-			container, err = client.Create(garden.ContainerSpec{
+			container, err = client.Create(context.Background(), garden.ContainerSpec{
 				Network: networkSpec,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -192,7 +193,7 @@ var _ = Describe("Destroying a Container", func() {
 				JustBeforeEach(func() {
 					var err error
 
-					otherContainer, err = client.Create(garden.ContainerSpec{
+					otherContainer, err = client.Create(context.Background(), garden.ContainerSpec{
 						Network: networkSpec,
 					})
 					Expect(err).NotTo(HaveOccurred())

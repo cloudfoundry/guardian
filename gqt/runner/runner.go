@@ -2,6 +2,7 @@ package runner
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -326,8 +327,8 @@ func Start(config GdnRunnerConfig) *RunningGarden {
 	return gdn
 }
 
-func (r *RunningGarden) Create(spec garden.ContainerSpec) (garden.Container, error) {
-	container, err := r.Client.Create(spec)
+func (r *RunningGarden) Create(ctx context.Context, spec garden.ContainerSpec) (garden.Container, error) {
+	container, err := r.Client.Create(ctx, spec)
 	if err != nil {
 		return nil, err
 	}

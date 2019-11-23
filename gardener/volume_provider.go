@@ -1,6 +1,7 @@
 package gardener
 
 import (
+	"context"
 	"errors"
 	"net/url"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"go.opencensus.io/trace"
 )
 
 const RawRootFSScheme = "raw"
@@ -50,7 +52,10 @@ type RootfsSpec struct {
 	QuotaScope garden.DiskLimitScope
 }
 
-func (v *VolumeProvider) Create(log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error) {
+func (v *VolumeProvider) Create(ctx context.Context, log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error) {
+	_, span := trace.StartSpan(ctx, "VolumeProvider.Create")
+	defer span.End()
+
 	path := spec.Image.URI
 	if path == "" {
 		path = spec.RootFSPath

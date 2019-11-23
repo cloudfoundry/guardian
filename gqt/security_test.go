@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"context"
 	"io"
 
 	"code.cloudfoundry.org/garden"
@@ -36,7 +37,7 @@ var _ = Describe("Security", func() {
 				)
 
 				JustBeforeEach(func() {
-					container, err = client.Create(garden.ContainerSpec{})
+					container, err = client.Create(context.Background(), garden.ContainerSpec{})
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -85,7 +86,7 @@ var _ = Describe("Security", func() {
 
 			Context("when running processes in privileged containers", func() {
 				It("should not enforce the policy", func() {
-					container, err := client.Create(garden.ContainerSpec{
+					container, err := client.Create(context.Background(), garden.ContainerSpec{
 						Privileged: true,
 					})
 					Expect(err).NotTo(HaveOccurred())
@@ -108,7 +109,7 @@ var _ = Describe("Security", func() {
 
 		Context("when the --apparmor flag is not set", func() {
 			It("should not enforce the policy when running processes in unprivileged containers", func() {
-				container, err := client.Create(garden.ContainerSpec{})
+				container, err := client.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
 				buffer := gbytes.NewBuffer()
@@ -126,7 +127,7 @@ var _ = Describe("Security", func() {
 			})
 
 			It("should not enforce the policy when running processes in privileged containers", func() {
-				container, err := client.Create(garden.ContainerSpec{
+				container, err := client.Create(context.Background(), garden.ContainerSpec{
 					Privileged: true,
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -152,7 +153,7 @@ var _ = Describe("Security", func() {
 			})
 
 			It("should return an error when creating a container", func() {
-				_, err := client.Create(garden.ContainerSpec{})
+				_, err := client.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err).To(HaveOccurred())
 			})
 		})

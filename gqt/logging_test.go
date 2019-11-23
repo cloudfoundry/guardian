@@ -1,6 +1,8 @@
 package gqt_test
 
 import (
+	"context"
+
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 
@@ -29,7 +31,7 @@ var _ = Describe("runC Logging", func() {
 		config.RuntimePluginBin = binPath
 		config.LogLevel = logLevel
 		client = runner.Start(config)
-		client.Create(containerSpec)
+		client.Create(context.Background(), containerSpec)
 	})
 
 	AfterEach(func() {
@@ -84,7 +86,7 @@ var _ = Describe("garden server Logging", func() {
 		It("logs at debug level", func() {
 			// create a container in order to execute a code path that prints debug
 			// logs
-			_, err := client.Create(garden.ContainerSpec{})
+			_, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(client, "1s").Should(gbytes.Say(`"log_level":0`))

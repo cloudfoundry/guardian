@@ -1,6 +1,7 @@
 package runcontainerd
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"strconv"
 
 	"code.cloudfoundry.org/guardian/rundmc"
+	"go.opencensus.io/trace"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -31,7 +33,7 @@ type ContainerManager interface {
 	GetContainerPID(log lager.Logger, containerID string) (uint32, error)
 	OOMEvents(log lager.Logger) <-chan *apievents.TaskOOM
 	Spec(log lager.Logger, containerID string) (*specs.Spec, error)
-	BundleIDs(filterLabels ...ContainerFilter) ([]string, error)
+	BundleIDs(ctx context.Context, filterLabels ...ContainerFilter) ([]string, error)
 	RemoveBundle(lager.Logger, string) error
 }
 
@@ -121,7 +123,10 @@ func New(containerManager ContainerManager,
 	}
 }
 
-func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pio garden.ProcessIO) error {
+func (r *RunContainerd) Create(ctx context.Context, log lager.Logger, id string, bundle goci.Bndl, pio garden.ProcessIO) error {
+	_, span := trace.StartSpan(ctx, "runcontainerd.Create")
+	defer span.End()
+
 	log.Debug("Annotations before update", lager.Data{"id": id, "Annotations": bundle.Spec.Annotations})
 	updateAnnotationsIfNeeded(&bundle)
 	log.Debug("Annotations after update", lager.Data{"id": id, "Annotations": bundle.Spec.Annotations})
@@ -291,11 +296,11 @@ func isNotFound(err error) bool {
 	return cok || pok
 }
 
-func (r *RunContainerd) ContainerHandles() ([]string, error) {
+func (r *RunContainerd) ContainerHandles(ctx context.Context) ([]string, error) {
 	// We couldn't find a way to make containerd only give us the containers with no container-type label.
 	// So we just get all the non-pea ones. This should be OK because even if people want to create
 	// containers using containerd, but not garden, they should not use the garden namespace.
-	return r.containerManager.BundleIDs(ContainerFilter{
+	return r.containerManager.BundleIDs(ctx, ContainerFilter{
 		Label:        "container-type",
 		Value:        "pea",
 		ComparisonOp: "!=",
@@ -307,6 +312,7 @@ func (r *RunContainerd) ContainerPeaHandles(log lager.Logger, sandboxHandle stri
 		return r.peaHandlesGetter.ContainerPeaHandles(log, sandboxHandle)
 	}
 	return r.containerManager.BundleIDs(
+		context.TODO(),
 		ContainerFilter{
 			Label:        "container-type",
 			Value:        "pea",

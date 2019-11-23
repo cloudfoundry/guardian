@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"context"
 	"os"
 	"path"
 
@@ -28,7 +29,7 @@ var _ = Describe("Properties", func() {
 		props = garden.Properties{"somename": "somevalue"}
 
 		var err error
-		container, err = client.Create(garden.ContainerSpec{
+		container, err = client.Create(context.Background(), garden.ContainerSpec{
 			Properties: props,
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -76,7 +77,7 @@ var _ = Describe("Properties", func() {
 	})
 
 	It("can filter containers based on their properties", func() {
-		_, err := client.Create(garden.ContainerSpec{
+		_, err := client.Create(context.Background(), garden.ContainerSpec{
 			Properties: garden.Properties{
 				"somename": "wrongvalue",
 			},

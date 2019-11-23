@@ -2,6 +2,7 @@ package gqt_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -69,7 +70,7 @@ var _ = Describe("Networking", func() {
 
 		containerSpec.Network = containerNetwork
 		containerSpec.Properties = extraProperties
-		container, err = client.Create(containerSpec)
+		container, err = client.Create(context.Background(), containerSpec)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -158,7 +159,7 @@ var _ = Describe("Networking", func() {
 
 		JustBeforeEach(func() {
 			var err error
-			longHandleContainer, err = client.Create(garden.ContainerSpec{
+			longHandleContainer, err = client.Create(context.Background(), garden.ContainerSpec{
 				Handle:     longHandle,
 				RootFSPath: rootFSPath,
 			})
@@ -248,7 +249,7 @@ var _ = Describe("Networking", func() {
 
 		JustBeforeEach(func() {
 			var err error
-			otherContainer, err = client.Create(garden.ContainerSpec{
+			otherContainer, err = client.Create(context.Background(), garden.ContainerSpec{
 				Network: containerNetwork,
 			})
 
@@ -303,7 +304,7 @@ var _ = Describe("Networking", func() {
 
 			Expect(client.Destroy(container.Handle())).To(Succeed())
 
-			container, err = client.Create(garden.ContainerSpec{
+			container, err = client.Create(context.Background(), garden.ContainerSpec{
 				Network: containerNetwork,
 			})
 			Expect(err).ToNot(HaveOccurred())
@@ -508,7 +509,7 @@ var _ = Describe("Networking", func() {
 			})
 
 			It("successfully creates a container", func() {
-				_, err := client.Create(garden.ContainerSpec{})
+				_, err := client.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})

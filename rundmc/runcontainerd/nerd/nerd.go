@@ -22,6 +22,7 @@ import (
 	"github.com/containerd/containerd/runtime/linux/runctypes"
 	"github.com/containerd/typeurl"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"go.opencensus.io/trace"
 )
 
 type Nerd struct {
@@ -255,7 +256,11 @@ func (n *Nerd) loadContainer(log lager.Logger, containerID string) (containerd.C
 	return container, nil
 }
 
-func (n *Nerd) loadContainers(labels ...runcontainerd.ContainerFilter) ([]containerd.Container, error) {
+func (n *Nerd) loadContainers(ctx context.Context, labels ...runcontainerd.ContainerFilter) ([]containerd.Container, error) {
+
+	_, span := trace.StartSpan(ctx, "nerd.loadContainers")
+	defer span.End()
+
 	var flattenedLabels []string
 	for _, label := range labels {
 		flattenedLabels = append(flattenedLabels, fmt.Sprintf("labels.\"%s\"%s%s", label.Label, label.ComparisonOp, label.Value))
@@ -346,8 +351,8 @@ func coerceEvent(event *ctrdevents.Envelope) (*apievents.TaskOOM, error) {
 	return oom, nil
 }
 
-func (n *Nerd) BundleIDs(labels ...runcontainerd.ContainerFilter) ([]string, error) {
-	containers, err := n.loadContainers(labels...)
+func (n *Nerd) BundleIDs(ctx context.Context, labels ...runcontainerd.ContainerFilter) ([]string, error) {
+	containers, err := n.loadContainers(ctx, labels...)
 	if err != nil {
 		return nil, err
 	}

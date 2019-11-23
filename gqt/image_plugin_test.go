@@ -2,6 +2,7 @@ package gqt_test
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -91,7 +92,7 @@ var _ = Describe("Image Plugin", func() {
 
 			JustBeforeEach(func() {
 				var err error
-				container, err = client.Create(containerSpec)
+				container, err = client.Create(context.Background(), containerSpec)
 				Expect(err).NotTo(HaveOccurred())
 				handle = container.Handle()
 			})
@@ -585,14 +586,14 @@ var _ = Describe("Image Plugin", func() {
 			})
 
 			It("returns the plugin's stdout in a useful error", func() {
-				_, err := client.Create(garden.ContainerSpec{})
+				_, err := client.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err).To(MatchError(ContainSubstring("running image plugin create: create failed")))
 			})
 		})
 
 		Context("but we attempt to create a privileged container", func() {
 			It("returns an informative error", func() {
-				_, err := client.Create(garden.ContainerSpec{Privileged: true})
+				_, err := client.Create(context.Background(), garden.ContainerSpec{Privileged: true})
 				Expect(err).To(MatchError(ContainSubstring("no privileged_image_plugin provided")))
 			})
 		})
@@ -628,7 +629,7 @@ var _ = Describe("Image Plugin", func() {
 
 			JustBeforeEach(func() {
 				var err error
-				container, err = client.Create(containerSpec)
+				container, err = client.Create(context.Background(), containerSpec)
 				Expect(err).NotTo(HaveOccurred())
 				handle = container.Handle()
 			})
@@ -895,14 +896,14 @@ var _ = Describe("Image Plugin", func() {
 			})
 
 			It("returns the plugin's stdout in a useful error", func() {
-				_, err := client.Create(garden.ContainerSpec{Privileged: true})
+				_, err := client.Create(context.Background(), garden.ContainerSpec{Privileged: true})
 				Expect(err).To(MatchError(ContainSubstring("running image plugin create: create failed")))
 			})
 		})
 
 		Context("but we attempt to create an unprivileged container", func() {
 			It("returns an informative error", func() {
-				_, err := client.Create(garden.ContainerSpec{Privileged: false})
+				_, err := client.Create(context.Background(), garden.ContainerSpec{Privileged: false})
 				Expect(err).To(MatchError(ContainSubstring("no image_plugin provided")))
 			})
 		})
@@ -941,7 +942,7 @@ var _ = Describe("Image Plugin", func() {
 
 			JustBeforeEach(func() {
 				var err error
-				container, err = client.Create(garden.ContainerSpec{})
+				container, err = client.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -987,7 +988,7 @@ var _ = Describe("Image Plugin", func() {
 
 			JustBeforeEach(func() {
 				var err error
-				container, err = client.Create(garden.ContainerSpec{Privileged: true})
+				container, err = client.Create(context.Background(), garden.ContainerSpec{Privileged: true})
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -1044,7 +1045,7 @@ var _ = Describe("Image Plugin", func() {
 		})
 
 		It("calls the image plugin with username and password", func() {
-			_, err := client.Create(garden.ContainerSpec{
+			_, err := client.Create(context.Background(), garden.ContainerSpec{
 				Image: imageSpec,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -1055,7 +1056,7 @@ var _ = Describe("Image Plugin", func() {
 		})
 
 		It("does not log username and password", func() {
-			_, err := client.Create(garden.ContainerSpec{
+			_, err := client.Create(context.Background(), garden.ContainerSpec{
 				Image: imageSpec,
 			})
 			Expect(err).NotTo(HaveOccurred())

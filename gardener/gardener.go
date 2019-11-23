@@ -1,6 +1,7 @@
 package gardener
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/lager"
 	multierror "github.com/hashicorp/go-multierror"
+	"go.opencensus.io/trace"
 )
 
 //go:generate counterfeiter . SysInfoProvider
@@ -46,8 +48,8 @@ type SysInfoProvider interface {
 }
 
 type Containerizer interface {
-	Create(log lager.Logger, desiredContainerSpec spec.DesiredContainerSpec) error
-	Handles() ([]string, error)
+	Create(ctx context.Context, log lager.Logger, desiredContainerSpec spec.DesiredContainerSpec) error
+	Handles(ctx context.Context) ([]string, error)
 
 	StreamIn(log lager.Logger, handle string, streamInSpec garden.StreamInSpec) error
 	StreamOut(log lager.Logger, handle string, streamOutSpec garden.StreamOutSpec) (io.ReadCloser, error)
@@ -77,7 +79,7 @@ type Networker interface {
 }
 
 type Volumizer interface {
-	Create(log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error)
+	Create(ctx context.Context, log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error)
 	VolumeDestroyMetricsGC
 }
 
@@ -211,7 +213,14 @@ func New(
 
 // Create creates a container by combining the results of networker.Network,
 // volumizer.Create and containzer.Create.
-func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Container, err error) {
+func (g *Gardener) Create(
+	ctx context.Context,
+	containerSpec garden.ContainerSpec,
+) (ctr garden.Container, err error) {
+
+	_, span := trace.StartSpan(ctx, "gardener.Create")
+	defer span.End()
+
 	if containerSpec.Handle == "" {
 		containerSpec.Handle = g.UidGenerator.Generate()
 	}
@@ -227,7 +236,7 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 		return nil, errors.New("privileged container creation is disabled")
 	}
 
-	knownHandles, err := g.Containerizer.Handles()
+	knownHandles, err := g.Containerizer.Handles(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +272,7 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 		log.Error("graph-cleanup-failed", err)
 	}
 
-	runtimeSpec, err := g.Volumizer.Create(log, containerSpec)
+	runtimeSpec, err := g.Volumizer.Create(ctx, log, containerSpec)
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +292,7 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 		BaseConfig: runtimeSpec,
 	}
 
-	if err := g.Containerizer.Create(log, desiredSpec); err != nil {
+	if err := g.Containerizer.Create(ctx, log, desiredSpec); err != nil {
 		return nil, err
 	}
 
@@ -347,7 +356,7 @@ func (g *Gardener) Destroy(handle string) error {
 	log.Info("start")
 	defer log.Info("finished")
 
-	handles, err := g.Containerizer.Handles()
+	handles, err := g.Containerizer.Handles(context.TODO())
 	if err != nil {
 		return err
 	}
@@ -445,7 +454,7 @@ func (g *Gardener) Containers(props garden.Properties) ([]garden.Container, erro
 	log.Info("starting")
 	defer log.Info("finished")
 
-	handles, err := g.Containerizer.Handles()
+	handles, err := g.Containerizer.Handles(context.TODO())
 	if err != nil {
 		log.Error("handles-failed", err)
 		return []garden.Container{}, err
@@ -560,7 +569,7 @@ func (g *Gardener) Cleanup(log lager.Logger) error {
 		return fmt.Errorf("clean peas: %s", err)
 	}
 
-	handles, err := g.Containerizer.Handles()
+	handles, err := g.Containerizer.Handles(context.TODO())
 	if err != nil {
 		return err
 	}

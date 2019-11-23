@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -33,7 +34,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 	JustBeforeEach(func() {
 		gdn = runner.Start(config)
 		var err error
-		ctr, err = gdn.Create(containerSpec)
+		ctr, err = gdn.Create(context.Background(), containerSpec)
 		Expect(err).NotTo(HaveOccurred())
 	})
 

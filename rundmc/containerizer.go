@@ -1,6 +1,7 @@
 package rundmc
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -48,14 +49,14 @@ type State struct {
 }
 
 type OCIRuntime interface {
-	Create(log lager.Logger, id string, bundle goci.Bndl, io garden.ProcessIO) error
+	Create(ctx context.Context, log lager.Logger, id string, bundle goci.Bndl, io garden.ProcessIO) error
 	Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, id, processId string, io garden.ProcessIO) (garden.Process, error)
 	Delete(log lager.Logger, id string) error
 	State(log lager.Logger, id string) (State, error)
 	Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)
 	Events(log lager.Logger) (<-chan event.Event, error)
-	ContainerHandles() ([]string, error)
+	ContainerHandles(ctx context.Context) ([]string, error)
 	ContainerPeaHandles(log lager.Logger, id string) ([]string, error)
 	BundleInfo(log lager.Logger, id string) (string, goci.Bndl, error)
 	RemoveBundle(log lager.Logger, id string) error
@@ -154,7 +155,7 @@ func (c *Containerizer) WatchRuntimeEvents(log lager.Logger) error {
 }
 
 // Create creates a bundle in the depot and starts its init process
-func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec) error {
+func (c *Containerizer) Create(ctx context.Context, log lager.Logger, spec spec.DesiredContainerSpec) error {
 	log = log.Session("containerizer-create", lager.Data{"handle": spec.Handle})
 
 	log.Info("start")
@@ -166,7 +167,7 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 		return err
 	}
 
-	if err := c.runtime.Create(log, spec.Handle, bundle, garden.ProcessIO{}); err != nil {
+	if err := c.runtime.Create(ctx, log, spec.Handle, bundle, garden.ProcessIO{}); err != nil {
 		log.Error("runtime-create-failed", err)
 		return err
 	}
@@ -385,8 +386,8 @@ func isNotFound(err error) bool {
 	return ok
 }
 
-func (c *Containerizer) Handles() ([]string, error) {
-	return c.runtime.ContainerHandles()
+func (c *Containerizer) Handles(ctx context.Context) ([]string, error) {
+	return c.runtime.ContainerHandles(ctx)
 }
 
 func calculateCPUEntitlement(shares uint64, entitlementPerShare float64, containerAge time.Duration) uint64 {

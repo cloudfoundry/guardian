@@ -2,6 +2,7 @@
 package peasfakes
 
 import (
+	"context"
 	"sync"
 
 	"code.cloudfoundry.org/garden"
@@ -11,11 +12,12 @@ import (
 )
 
 type FakeVolumizer struct {
-	CreateStub        func(lager.Logger, garden.ContainerSpec) (specs.Spec, error)
+	CreateStub        func(context.Context, lager.Logger, garden.ContainerSpec) (specs.Spec, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
-		arg1 lager.Logger
-		arg2 garden.ContainerSpec
+		arg1 context.Context
+		arg2 lager.Logger
+		arg3 garden.ContainerSpec
 	}
 	createReturns struct {
 		result1 specs.Spec
@@ -41,17 +43,18 @@ type FakeVolumizer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeVolumizer) Create(arg1 lager.Logger, arg2 garden.ContainerSpec) (specs.Spec, error) {
+func (fake *FakeVolumizer) Create(arg1 context.Context, arg2 lager.Logger, arg3 garden.ContainerSpec) (specs.Spec, error) {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		arg1 lager.Logger
-		arg2 garden.ContainerSpec
-	}{arg1, arg2})
-	fake.recordInvocation("Create", []interface{}{arg1, arg2})
+		arg1 context.Context
+		arg2 lager.Logger
+		arg3 garden.ContainerSpec
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(arg1, arg2)
+		return fake.CreateStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -66,17 +69,17 @@ func (fake *FakeVolumizer) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeVolumizer) CreateCalls(stub func(lager.Logger, garden.ContainerSpec) (specs.Spec, error)) {
+func (fake *FakeVolumizer) CreateCalls(stub func(context.Context, lager.Logger, garden.ContainerSpec) (specs.Spec, error)) {
 	fake.createMutex.Lock()
 	defer fake.createMutex.Unlock()
 	fake.CreateStub = stub
 }
 
-func (fake *FakeVolumizer) CreateArgsForCall(i int) (lager.Logger, garden.ContainerSpec) {
+func (fake *FakeVolumizer) CreateArgsForCall(i int) (context.Context, lager.Logger, garden.ContainerSpec) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	argsForCall := fake.createArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeVolumizer) CreateReturns(result1 specs.Spec, result2 error) {

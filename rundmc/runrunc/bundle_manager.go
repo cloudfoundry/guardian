@@ -1,6 +1,7 @@
 package runrunc
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"time"
@@ -43,7 +44,7 @@ func (i *BundleManager) BundleInfo(log lager.Logger, handle string) (string, goc
 	return bundlePath, bundle, err
 }
 
-func (i *BundleManager) ContainerHandles() ([]string, error) {
+func (i *BundleManager) ContainerHandles(ctx context.Context) ([]string, error) {
 	return i.depot.Handles()
 }
 

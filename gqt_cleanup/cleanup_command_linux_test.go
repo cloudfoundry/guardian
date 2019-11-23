@@ -1,6 +1,7 @@
 package gqt_cleanup_test
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -28,7 +29,7 @@ var _ = Describe("gdn cleanup", func() {
 		Expect(err).NotTo(HaveOccurred())
 		config.PropertiesPath = path.Join(tmpDir, "props.json")
 		client := runner.Start(config)
-		container, err := client.Create(garden.ContainerSpec{
+		container, err := client.Create(context.Background(), garden.ContainerSpec{
 			Network: fmt.Sprintf("177.100.%d.0/24", GinkgoParallelNode()),
 		})
 		Expect(err).NotTo(HaveOccurred())

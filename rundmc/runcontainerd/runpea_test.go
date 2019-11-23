@@ -44,7 +44,7 @@ var _ = Describe("RunContainerPea", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakePeaManager.CreateCallCount()).To(Equal(1))
-			_, actualProcessID, actualBundle, _ := fakePeaManager.CreateArgsForCall(0)
+			_, _, actualProcessID, actualBundle, _ := fakePeaManager.CreateArgsForCall(0)
 			Expect(actualProcessID).To(Equal(processID))
 			Expect(actualBundle.Spec.Version).To(Equal("test-version"))
 			Expect(actualBundle.Spec.Annotations["container-type"]).To(Equal("pea"))

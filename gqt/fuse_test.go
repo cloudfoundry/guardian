@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"context"
 	"io"
 	"os"
 
@@ -25,7 +26,7 @@ var _ = Describe("Fuse", func() {
 
 		var err error
 		client = runner.Start(config)
-		container, err = client.Create(garden.ContainerSpec{
+		container, err = client.Create(context.Background(), garden.ContainerSpec{
 			RootFSPath: fuseRootfs,
 			Privileged: true,
 		})

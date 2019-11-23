@@ -2,6 +2,7 @@ package rundmc_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"time"
@@ -78,7 +79,7 @@ var _ = Describe("Rundmc", func() {
 				Handle:     "exuberant!",
 				BaseConfig: specs.Spec{Root: &specs.Root{}},
 			}
-			Expect(containerizer.Create(logger, spec)).To(Succeed())
+			Expect(containerizer.Create(context.TODO(), logger, spec)).To(Succeed())
 
 			Expect(fakeBundleGenerator.GenerateCallCount()).To(Equal(1))
 
@@ -87,14 +88,14 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("should create a container with the given id", func() {
-			Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{
+			Expect(containerizer.Create(context.TODO(), logger, specpkg.DesiredContainerSpec{
 				Handle:     "exuberant!",
 				BaseConfig: specs.Spec{Root: &specs.Root{}},
 			})).To(Succeed())
 
 			Expect(fakeOCIRuntime.CreateCallCount()).To(Equal(1))
 
-			_, actualId, actualBundle, _ := fakeOCIRuntime.CreateArgsForCall(0)
+			_, _, actualId, actualBundle, _ := fakeOCIRuntime.CreateArgsForCall(0)
 			Expect(actualBundle).To(Equal(bundle))
 			Expect(actualId).To(Equal("exuberant!"))
 		})
@@ -105,7 +106,7 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{})).To(MatchError("banana"))
+				Expect(containerizer.Create(context.TODO(), logger, specpkg.DesiredContainerSpec{})).To(MatchError("banana"))
 			})
 		})
 
@@ -115,7 +116,7 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{})).To(MatchError("banana"))
+				Expect(containerizer.Create(context.TODO(), logger, specpkg.DesiredContainerSpec{})).To(MatchError("banana"))
 			})
 		})
 	})
@@ -652,7 +653,7 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("should return the handles", func() {
-			Expect(containerizer.Handles()).To(ConsistOf("banana", "banana2"))
+			Expect(containerizer.Handles(context.TODO())).To(ConsistOf("banana", "banana2"))
 		})
 
 		Context("when the runtime returns an error", func() {
@@ -661,7 +662,7 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("should return the error", func() {
-				_, err := containerizer.Handles()
+				_, err := containerizer.Handles(context.TODO())
 				Expect(err).To(MatchError("handles-error"))
 			})
 		})

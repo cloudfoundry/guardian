@@ -554,6 +554,7 @@ var _ = Describe("Nerd", func() {
 			Expect(cnerd.Create(testLogger, "banana2", spec, initProcessIO)).To(Succeed())
 
 			handles, err := cnerd.BundleIDs(
+				context.TODO(),
 				runcontainerd.ContainerFilter{
 					Label:        "hello",
 					Value:        "potato",

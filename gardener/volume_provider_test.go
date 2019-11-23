@@ -1,6 +1,7 @@
 package gardener_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -54,7 +55,7 @@ var _ = Describe("VolumeProvider", func() {
 		Describe("success", func() {
 			JustBeforeEach(func() {
 				var err error
-				runtimeSpec, err = volumeProvider.Create(logger, containerSpec)
+				runtimeSpec, err = volumeProvider.Create(context.TODO(), logger, containerSpec)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -163,7 +164,7 @@ var _ = Describe("VolumeProvider", func() {
 			var createErr error
 
 			JustBeforeEach(func() {
-				_, createErr = volumeProvider.Create(logger, containerSpec)
+				_, createErr = volumeProvider.Create(context.TODO(), logger, containerSpec)
 			})
 
 			Context("when passing both an Image and a rootfsPath", func() {

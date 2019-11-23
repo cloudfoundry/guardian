@@ -2,6 +2,7 @@
 package gardenerfakes
 
 import (
+	"context"
 	"io"
 	"sync"
 
@@ -28,11 +29,12 @@ type FakeContainerizer struct {
 		result1 garden.Process
 		result2 error
 	}
-	CreateStub        func(lager.Logger, spec.DesiredContainerSpec) error
+	CreateStub        func(context.Context, lager.Logger, spec.DesiredContainerSpec) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
-		arg1 lager.Logger
-		arg2 spec.DesiredContainerSpec
+		arg1 context.Context
+		arg2 lager.Logger
+		arg3 spec.DesiredContainerSpec
 	}
 	createReturns struct {
 		result1 error
@@ -52,9 +54,10 @@ type FakeContainerizer struct {
 	destroyReturnsOnCall map[int]struct {
 		result1 error
 	}
-	HandlesStub        func() ([]string, error)
+	HandlesStub        func(context.Context) ([]string, error)
 	handlesMutex       sync.RWMutex
 	handlesArgsForCall []struct {
+		arg1 context.Context
 	}
 	handlesReturns struct {
 		result1 []string
@@ -252,17 +255,18 @@ func (fake *FakeContainerizer) AttachReturnsOnCall(i int, result1 garden.Process
 	}{result1, result2}
 }
 
-func (fake *FakeContainerizer) Create(arg1 lager.Logger, arg2 spec.DesiredContainerSpec) error {
+func (fake *FakeContainerizer) Create(arg1 context.Context, arg2 lager.Logger, arg3 spec.DesiredContainerSpec) error {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		arg1 lager.Logger
-		arg2 spec.DesiredContainerSpec
-	}{arg1, arg2})
-	fake.recordInvocation("Create", []interface{}{arg1, arg2})
+		arg1 context.Context
+		arg2 lager.Logger
+		arg3 spec.DesiredContainerSpec
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(arg1, arg2)
+		return fake.CreateStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
@@ -277,17 +281,17 @@ func (fake *FakeContainerizer) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeContainerizer) CreateCalls(stub func(lager.Logger, spec.DesiredContainerSpec) error) {
+func (fake *FakeContainerizer) CreateCalls(stub func(context.Context, lager.Logger, spec.DesiredContainerSpec) error) {
 	fake.createMutex.Lock()
 	defer fake.createMutex.Unlock()
 	fake.CreateStub = stub
 }
 
-func (fake *FakeContainerizer) CreateArgsForCall(i int) (lager.Logger, spec.DesiredContainerSpec) {
+func (fake *FakeContainerizer) CreateArgsForCall(i int) (context.Context, lager.Logger, spec.DesiredContainerSpec) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	argsForCall := fake.createArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeContainerizer) CreateReturns(result1 error) {
@@ -374,15 +378,16 @@ func (fake *FakeContainerizer) DestroyReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeContainerizer) Handles() ([]string, error) {
+func (fake *FakeContainerizer) Handles(arg1 context.Context) ([]string, error) {
 	fake.handlesMutex.Lock()
 	ret, specificReturn := fake.handlesReturnsOnCall[len(fake.handlesArgsForCall)]
 	fake.handlesArgsForCall = append(fake.handlesArgsForCall, struct {
-	}{})
-	fake.recordInvocation("Handles", []interface{}{})
+		arg1 context.Context
+	}{arg1})
+	fake.recordInvocation("Handles", []interface{}{arg1})
 	fake.handlesMutex.Unlock()
 	if fake.HandlesStub != nil {
-		return fake.HandlesStub()
+		return fake.HandlesStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -397,10 +402,17 @@ func (fake *FakeContainerizer) HandlesCallCount() int {
 	return len(fake.handlesArgsForCall)
 }
 
-func (fake *FakeContainerizer) HandlesCalls(stub func() ([]string, error)) {
+func (fake *FakeContainerizer) HandlesCalls(stub func(context.Context) ([]string, error)) {
 	fake.handlesMutex.Lock()
 	defer fake.handlesMutex.Unlock()
 	fake.HandlesStub = stub
+}
+
+func (fake *FakeContainerizer) HandlesArgsForCall(i int) context.Context {
+	fake.handlesMutex.RLock()
+	defer fake.handlesMutex.RUnlock()
+	argsForCall := fake.handlesArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeContainerizer) HandlesReturns(result1 []string, result2 error) {

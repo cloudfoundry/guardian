@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -67,7 +68,7 @@ var _ = Describe("Surviving Restarts", func() {
 		JustBeforeEach(func() {
 			client = runner.Start(config)
 			var err error
-			container, err = client.Create(containerSpec)
+			container, err = client.Create(context.Background(), containerSpec)
 			Expect(err).NotTo(HaveOccurred())
 
 			if config.NetworkPluginBin == "" {
@@ -210,7 +211,7 @@ var _ = Describe("Surviving Restarts", func() {
 
 			Context("when a container is created after restart", func() {
 				It("can be created with the same network reservation", func() {
-					_, err := client.Create(containerSpec)
+					_, err := client.Create(context.Background(), containerSpec)
 					Expect(err).NotTo(HaveOccurred())
 				})
 			})
@@ -424,7 +425,7 @@ var _ = Describe("Surviving Restarts", func() {
 
 			Context("when creating a container after restart", func() {
 				It("should not allocate ports used before restart", func() {
-					secondContainer, err := client.Create(garden.ContainerSpec{})
+					secondContainer, err := client.Create(context.Background(), garden.ContainerSpec{})
 					Expect(err).NotTo(HaveOccurred())
 					secondContainerHostPort, _, err := secondContainer.NetIn(0, 8080)
 					Expect(err).NotTo(HaveOccurred())
@@ -433,7 +434,7 @@ var _ = Describe("Surviving Restarts", func() {
 
 				Context("with a subnet used before restart", func() {
 					It("will not allocate an IP", func() {
-						_, err := client.Create(containerSpec)
+						_, err := client.Create(context.Background(), containerSpec)
 						Expect(err).To(MatchError("the requested IP is already allocated"))
 					})
 				})
@@ -447,7 +448,7 @@ var _ = Describe("Surviving Restarts", func() {
 					})
 
 					It("should not allocate the IP", func() {
-						_, err := client.Create(containerSpec)
+						_, err := client.Create(context.Background(), containerSpec)
 						Expect(err).To(MatchError("the requested IP is already allocated"))
 					})
 				})
@@ -458,7 +459,7 @@ var _ = Describe("Surviving Restarts", func() {
 					})
 
 					It("successfully creates another container with no network specified", func() {
-						_, err := client.Create(containerSpec)
+						_, err := client.Create(context.Background(), containerSpec)
 						Expect(err).NotTo(HaveOccurred())
 					})
 				})

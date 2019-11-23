@@ -4,6 +4,7 @@ package gqt_test
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -44,6 +45,7 @@ var _ = Describe("Bind mount", func() {
 
 		var err error
 		container, err = client.Create(
+			context.Background(),
 			garden.ContainerSpec{
 				Privileged: privileged,
 				BindMounts: []garden.BindMount{{

@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -50,7 +51,7 @@ var _ = Describe("Runtime Plugin", func() {
 		})
 
 		It("executes the plugin, passing the correct args for create", func() {
-			_, err := client.Create(garden.ContainerSpec{Handle: handle})
+			_, err := client.Create(context.Background(), garden.ContainerSpec{Handle: handle})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
@@ -80,7 +81,7 @@ var _ = Describe("Runtime Plugin", func() {
 			It("executes the plugin, passing the correct args for whatever a pea needs", func() {
 				onlyOnLinux()
 
-				container, err := client.Create(garden.ContainerSpec{Handle: handle})
+				container, err := client.Create(context.Background(), garden.ContainerSpec{Handle: handle})
 				Expect(err).ToNot(HaveOccurred())
 
 				process, err := container.Run(garden.ProcessSpec{
@@ -111,7 +112,7 @@ var _ = Describe("Runtime Plugin", func() {
 			It("executes the plugin, passing the correct args for whatever a pea needs", func() {
 				onlyOnWindows()
 
-				container, err := client.Create(garden.ContainerSpec{Handle: handle})
+				container, err := client.Create(context.Background(), garden.ContainerSpec{Handle: handle})
 				Expect(err).ToNot(HaveOccurred())
 
 				process, err := container.Run(garden.ProcessSpec{
@@ -157,7 +158,7 @@ var _ = Describe("Runtime Plugin", func() {
 		})
 
 		It("succeeds", func() {
-			_, err := client.Create(garden.ContainerSpec{Handle: handle})
+			_, err := client.Create(context.Background(), garden.ContainerSpec{Handle: handle})
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
@@ -183,7 +184,7 @@ var _ = Describe("Runtime Plugin", func() {
 		})
 
 		It("returns an error without calling the network plugin", func() {
-			_, err := client.Create(garden.ContainerSpec{Handle: handle})
+			_, err := client.Create(context.Background(), garden.ContainerSpec{Handle: handle})
 			Expect(err).To(HaveOccurred())
 			Expect(readFile(networkPluginArgsFile)).NotTo(ContainSubstring("up"))
 		})
@@ -211,7 +212,7 @@ var _ = Describe("Runtime Plugin", func() {
 		JustBeforeEach(func() {
 			argsFilepath = filepath.Join(client.TmpDir, "exec-args")
 
-			container, err := client.Create(garden.ContainerSpec{Handle: handle})
+			container, err := client.Create(context.Background(), garden.ContainerSpec{Handle: handle})
 			Expect(err).ToNot(HaveOccurred())
 
 			process, runErr = container.Run(garden.ProcessSpec{
@@ -332,7 +333,7 @@ var _ = Describe("Runtime Plugin", func() {
 			handle = fmt.Sprintf("runtime-plugin-test-handle-%s", config.Tag)
 			argsFilepath = filepath.Join(client.TmpDir, "delete-args")
 
-			_, err := client.Create(garden.ContainerSpec{Handle: handle})
+			_, err := client.Create(context.Background(), garden.ContainerSpec{Handle: handle})
 			Expect(err).ToNot(HaveOccurred())
 		})
 

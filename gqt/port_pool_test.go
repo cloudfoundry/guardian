@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 
@@ -34,7 +35,7 @@ var _ = Describe("Port Pool", func() {
 
 			// Create containers and NetIn
 			for i := 0; i < numContainers; i++ {
-				container, err := client.Create(garden.ContainerSpec{})
+				container, err := client.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
 				hostPort, _, err := container.NetIn(0, 0)
@@ -76,7 +77,7 @@ var _ = Describe("Port Pool", func() {
 
 			It("should FIFO released/allocated ports", func() {
 				for i := 0; i < numContainers; i++ {
-					container, err := client.Create(garden.ContainerSpec{})
+					container, err := client.Create(context.Background(), garden.ContainerSpec{})
 					Expect(err).NotTo(HaveOccurred())
 
 					hostPort, _, err := container.NetIn(0, 0)
@@ -96,7 +97,7 @@ var _ = Describe("Port Pool", func() {
 				})
 
 				It("should persist the head of the port allocation queue", func() {
-					container, err := client.Create(garden.ContainerSpec{})
+					container, err := client.Create(context.Background(), garden.ContainerSpec{})
 					Expect(err).NotTo(HaveOccurred())
 
 					hostPort, _, err := container.NetIn(0, 0)
@@ -106,7 +107,7 @@ var _ = Describe("Port Pool", func() {
 
 				It("should arrange the ports in increasing order starting with the head", func() {
 					for i := 0; i < numContainers; i++ {
-						container, err := client.Create(garden.ContainerSpec{})
+						container, err := client.Create(context.Background(), garden.ContainerSpec{})
 						Expect(err).NotTo(HaveOccurred())
 
 						hostPort, _, err := container.NetIn(0, 0)

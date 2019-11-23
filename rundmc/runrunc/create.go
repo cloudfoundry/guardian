@@ -1,6 +1,7 @@
 package runrunc
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,6 +13,7 @@ import (
 	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
+	"go.opencensus.io/trace"
 )
 
 //go:generate counterfeiter . EventsWatcher
@@ -43,7 +45,10 @@ func NewCreator(
 	}
 }
 
-func (c *Creator) Create(log lager.Logger, id string, bundle goci.Bndl, pio garden.ProcessIO) error {
+func (c *Creator) Create(ctx context.Context, log lager.Logger, id string, bundle goci.Bndl, pio garden.ProcessIO) error {
+	_, span := trace.StartSpan(ctx, "runrunc.Create")
+	defer span.End()
+
 	bundlePath, err := c.depot.Create(log, id, bundle)
 	if err != nil {
 		log.Error("depot-create-failed", err)

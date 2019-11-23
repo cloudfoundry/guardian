@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -31,7 +32,7 @@ var _ = Describe("Run", func() {
 	DescribeTable("running a process",
 		func(spec garden.ProcessSpec, matchers ...func(actual interface{})) {
 			client = runner.Start(config)
-			container, err := client.Create(garden.ContainerSpec{})
+			container, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			out := gbytes.NewBuffer()
@@ -82,7 +83,7 @@ var _ = Describe("Run", func() {
 		JustBeforeEach(func() {
 			client = runner.Start(config)
 			var err error
-			container, err = client.Create(garden.ContainerSpec{})
+			container, err = client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			process, err = container.Run(garden.ProcessSpec{
@@ -163,7 +164,7 @@ var _ = Describe("Run", func() {
 	It("creates process files with the right permisssion and ownership", func() {
 		skipIfContainerdForProcesses("There is no processes directory in the depot when running processes with containerd")
 		client = runner.Start(config)
-		container, err := client.Create(garden.ContainerSpec{})
+		container, err := client.Create(context.Background(), garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())
 
 		process, err := container.Run(garden.ProcessSpec{
@@ -212,7 +213,7 @@ var _ = Describe("Run", func() {
 	It("cleans up file handles when the process exits", func() {
 		client = runner.Start(config)
 
-		container, err := client.Create(garden.ContainerSpec{})
+		container, err := client.Create(context.Background(), garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())
 
 		process, err := container.Run(garden.ProcessSpec{
@@ -241,7 +242,7 @@ var _ = Describe("Run", func() {
 				defer unix.Setrlimit(unix.RLIMIT_NOFILE, &old)
 
 				client = runner.Start(config)
-				container, err := client.Create(garden.ContainerSpec{
+				container, err := client.Create(context.Background(), garden.ContainerSpec{
 					Privileged: false,
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -285,7 +286,7 @@ var _ = Describe("Run", func() {
 
 			It("does not follow symlinks into the host when creating cwd", func() {
 				client = runner.Start(config)
-				container, err := client.Create(garden.ContainerSpec{RootFSPath: rootfs})
+				container, err := client.Create(context.Background(), garden.ContainerSpec{RootFSPath: rootfs})
 				Expect(err).NotTo(HaveOccurred())
 
 				_, err = container.Run(garden.ProcessSpec{
@@ -302,7 +303,7 @@ var _ = Describe("Run", func() {
 	Context("when container is privileged", func() {
 		It("can run a process as a particular user", func() {
 			client = runner.Start(config)
-			container, err := client.Create(garden.ContainerSpec{
+			container, err := client.Create(context.Background(), garden.ContainerSpec{
 				Privileged: true,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -333,7 +334,7 @@ var _ = Describe("Run", func() {
 		BeforeEach(func() {
 			client = runner.Start(config)
 			var err error
-			container, err = client.Create(garden.ContainerSpec{})
+			container, err = client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -373,7 +374,7 @@ var _ = Describe("Run", func() {
 		BeforeEach(func() {
 			client = runner.Start(config)
 			var err error
-			container, err = client.Create(garden.ContainerSpec{
+			container, err = client.Create(context.Background(), garden.ContainerSpec{
 				Env: []string{"USER=ppp", "HOME=/home/ppp"},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -432,7 +433,7 @@ var _ = Describe("Run", func() {
 				client = runner.Start(config)
 
 				var err error
-				container, err = client.Create(garden.ContainerSpec{})
+				container, err = client.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
 				fakeRuncBinPath, err := gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc_stderr", "-mod=vendor")
@@ -463,7 +464,7 @@ var _ = Describe("Run", func() {
 		It("forwards runc logs to lager when exec fails, and gives proper error messages", func() {
 			config.LogLevel = "debug"
 			client = runner.Start(config)
-			container, err := client.Create(garden.ContainerSpec{})
+			container, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = container.Run(garden.ProcessSpec{
@@ -477,7 +478,7 @@ var _ = Describe("Run", func() {
 		It("forwards runc logs to lager when exec fails, and gives proper error messages when requesting a TTY", func() {
 			config.LogLevel = "debug"
 			client = runner.Start(config)
-			container, err := client.Create(garden.ContainerSpec{})
+			container, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = container.Run(garden.ProcessSpec{
@@ -499,7 +500,7 @@ var _ = Describe("Run", func() {
 		It("should forward SIGTERM to the process", func() {
 			client = runner.Start(config)
 
-			container, err := client.Create(garden.ContainerSpec{})
+			container, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			buffer := gbytes.NewBuffer()
@@ -552,7 +553,7 @@ var _ = Describe("Run", func() {
 				config.DebugPort = intptr(8080 + GinkgoParallelNode())
 				client = runner.Start(config)
 
-				container, err := client.Create(garden.ContainerSpec{})
+				container, err := client.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
 				stackBefore, err = client.StackDump()
@@ -623,7 +624,7 @@ var _ = Describe("Attach", func() {
 	Context("when attaching to a running process", func() {
 		BeforeEach(func() {
 			var err error
-			container, err = client.Create(garden.ContainerSpec{})
+			container, err = client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			process, err := container.Run(garden.ProcessSpec{
@@ -692,7 +693,7 @@ var _ = Describe("Attach", func() {
 	Context("when attaching to an exited process", func() {
 		BeforeEach(func() {
 			var err error
-			container, err = client.Create(garden.ContainerSpec{})
+			container, err = client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			process, err := container.Run(garden.ProcessSpec{

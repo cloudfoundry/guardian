@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -47,7 +48,7 @@ var _ = Describe("Creating a Container", func() {
 
 	It("has the expected device list allowed", func() {
 		var err error
-		container, err = client.Create(garden.ContainerSpec{})
+		container, err = client.Create(context.Background(), garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())
 
 		parentPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), "devices", strconv.Itoa(GinkgoParallelNode()), false, cpuThrottlingEnabled())
@@ -82,12 +83,12 @@ var _ = Describe("Creating a Container", func() {
 		}
 
 		It("returns a nice error rather than timing out", func() {
-			_, err := client.Create(containerSpec)
+			_, err := client.Create(context.Background(), containerSpec)
 			Expect(err).To(MatchError(ContainSubstring("invalid CIDR address")))
 		})
 
 		It("cleans up the depot directory", func() {
-			_, err := client.Create(containerSpec)
+			_, err := client.Create(context.Background(), containerSpec)
 			Expect(err).To(HaveOccurred())
 
 			Expect(ioutil.ReadDir(client.DepotDir)).To(BeEmpty())
@@ -96,13 +97,13 @@ var _ = Describe("Creating a Container", func() {
 		It("cleans up the groot store", func() {
 			// pre-warm cache to avoid test pollution
 			// i.e. ensure base layers that are never removed are already in the groot store
-			_, err := client.Create(containerSpec)
+			_, err := client.Create(context.Background(), containerSpec)
 			Expect(err).To(HaveOccurred())
 
 			prev, err := ioutil.ReadDir(filepath.Join(client.TmpDir, "groot_store", "images"))
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = client.Create(containerSpec)
+			_, err = client.Create(context.Background(), containerSpec)
 			Expect(err).To(HaveOccurred())
 
 			Eventually(func() int {
@@ -119,7 +120,7 @@ var _ = Describe("Creating a Container", func() {
 			})
 
 			It("returns a sensible error", func() {
-				_, err := client.Create(garden.ContainerSpec{})
+				_, err := client.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("no such file or directory"))
 			})
@@ -139,7 +140,7 @@ var _ = Describe("Creating a Container", func() {
 
 		JustBeforeEach(func() {
 			var err error
-			container, err = client.Create(garden.ContainerSpec{
+			container, err = client.Create(context.Background(), garden.ContainerSpec{
 				Privileged: privileged,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -246,7 +247,7 @@ var _ = Describe("Creating a Container", func() {
 				Expect(os.Mkdir(path.Join(unpackedRootfs, "somedir"), 0777)).To(Succeed())
 			})
 
-			container, err = client.Create(garden.ContainerSpec{
+			container, err = client.Create(context.Background(), garden.ContainerSpec{
 				RootFSPath: rootFSPath,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -264,7 +265,7 @@ var _ = Describe("Creating a Container", func() {
 			runInContainer(container, "touch", []string{"/somedir/created-file"})
 			Expect(container).To(HaveFile("/somedir/created-file"))
 
-			container2, err := client.Create(garden.ContainerSpec{
+			container2, err := client.Create(context.Background(), garden.ContainerSpec{
 				RootFSPath: rootFSPath,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -276,7 +277,7 @@ var _ = Describe("Creating a Container", func() {
 
 	Context("after creating a container with a specified handle", func() {
 		It("should lookup the right container for the handle", func() {
-			container, err := client.Create(garden.ContainerSpec{
+			container, err := client.Create(context.Background(), garden.ContainerSpec{
 				Handle: "container-banana",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -287,14 +288,14 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		It("allow the container to be created with the same name after destroying", func() {
-			container, err := client.Create(garden.ContainerSpec{
+			container, err := client.Create(context.Background(), garden.ContainerSpec{
 				Handle: "another-banana",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(client.Destroy(container.Handle())).To(Succeed())
 
-			container, err = client.Create(garden.ContainerSpec{
+			container, err = client.Create(context.Background(), garden.ContainerSpec{
 				Handle: "another-banana",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -303,7 +304,7 @@ var _ = Describe("Creating a Container", func() {
 	//TODO why duplicate?
 	Context("when creating a container fails", func() {
 		It("should not leak networking configuration", func() {
-			_, err := client.Create(garden.ContainerSpec{
+			_, err := client.Create(context.Background(), garden.ContainerSpec{
 				Network:    fmt.Sprintf("172.250.%d.20/24", GinkgoParallelNode()),
 				RootFSPath: "/banana/does/not/exist",
 			})
@@ -338,7 +339,7 @@ var _ = Describe("Creating a Container", func() {
 			}
 
 			var err error
-			container, err = client.Create(garden.ContainerSpec{
+			container, err = client.Create(context.Background(), garden.ContainerSpec{
 				NetOut: rules,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -359,7 +360,7 @@ var _ = Describe("Creating a Container", func() {
 			}
 
 			var err error
-			container, err = client.Create(garden.ContainerSpec{
+			container, err = client.Create(context.Background(), garden.ContainerSpec{
 				NetIn: netIn,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -383,7 +384,7 @@ var _ = Describe("Creating a Container", func() {
 				},
 			}
 
-			container, err := client.Create(garden.ContainerSpec{
+			container, err := client.Create(context.Background(), garden.ContainerSpec{
 				Limits: limits,
 			})
 
@@ -448,7 +449,7 @@ var _ = Describe("Creating a Container", func() {
 		}
 
 		It("uses the specified block IO weight", func() {
-			container, err := client.Create(garden.ContainerSpec{})
+			container, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(getContainerBlockIOWeight(container)).To(Equal(400))
 		})
@@ -459,7 +460,7 @@ var _ = Describe("Creating a Container", func() {
 			})
 
 			It("uses the system default value of 500", func() {
-				container, err := client.Create(garden.ContainerSpec{})
+				container, err := client.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(getContainerBlockIOWeight(container)).To(Equal(500))
 			})
@@ -471,7 +472,7 @@ var _ = Describe("Creating a Container", func() {
 			})
 
 			It("returns an out of range error", func() {
-				_, err := client.Create(garden.ContainerSpec{})
+				_, err := client.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err.Error()).To(ContainSubstring("numerical result out of range"))
 			})
 		})
@@ -490,7 +491,7 @@ var _ = Describe("Creating a Container", func() {
 			})
 
 			It("does not run kawasaki", func() {
-				container, err := client.Create(garden.ContainerSpec{})
+				container, err := client.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
 				out := gbytes.NewBuffer()
@@ -526,7 +527,7 @@ var _ = Describe("Creating a Container", func() {
 			})
 
 			It("returns a useful error message", func() {
-				_, err := client.Create(garden.ContainerSpec{})
+				_, err := client.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err).To(MatchError(ContainSubstring("unmarshaling result from external networker: invalid character")))
 			})
 		})
@@ -551,7 +552,7 @@ var _ = Describe("Creating a Container", func() {
 			Expect(lookupContainer.Properties()).To(HaveKeyWithValue("somename", "somevalue"))
 		}(assertionsComplete)
 
-		_, err := client.Create(garden.ContainerSpec{
+		_, err := client.Create(context.Background(), garden.ContainerSpec{
 			Handle:     handle,
 			Properties: garden.Properties{"somename": "somevalue"},
 		})
@@ -570,10 +571,10 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		It("works", func() {
-			c1, err := client.Create(garden.ContainerSpec{})
+			c1, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
-			c2, err := client.Create(garden.ContainerSpec{})
+			c2, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(client.Destroy(c1.Handle())).To(Succeed())
@@ -587,12 +588,12 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		JustBeforeEach(func() {
-			_, err := client.Create(garden.ContainerSpec{})
+			_, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns an error", func() {
-			_, err := client.Create(garden.ContainerSpec{})
+			_, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(("max containers reached")))
 		})
@@ -601,7 +602,7 @@ var _ = Describe("Creating a Container", func() {
 	Describe("creating privileged containers", func() {
 		Context("when --disable-privileged-containers is not specified", func() {
 			It("can create privileged containers", func() {
-				_, err := client.Create(garden.ContainerSpec{Privileged: true})
+				_, err := client.Create(context.Background(), garden.ContainerSpec{Privileged: true})
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -612,7 +613,7 @@ var _ = Describe("Creating a Container", func() {
 			})
 
 			It("cannot create privileged containers, even when gdn runs as root", func() {
-				_, err := client.Create(garden.ContainerSpec{Privileged: true})
+				_, err := client.Create(context.Background(), garden.ContainerSpec{Privileged: true})
 				Expect(err).To(MatchError("privileged container creation is disabled"))
 			})
 		})

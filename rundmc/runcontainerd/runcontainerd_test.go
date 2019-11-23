@@ -2,6 +2,7 @@ package runcontainerd_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -91,7 +92,7 @@ var _ = Describe("Runcontainerd", func() {
 		})
 
 		JustBeforeEach(func() {
-			createErr = runContainerd.Create(log, id, bundle, garden.ProcessIO{Stdin: stdin, Stdout: stdout, Stderr: stderr})
+			createErr = runContainerd.Create(context.TODO(), log, id, bundle, garden.ProcessIO{Stdin: stdin, Stdout: stdout, Stderr: stderr})
 		})
 
 		It("creates the container with the passed containerID", func() {
@@ -767,7 +768,7 @@ var _ = Describe("Runcontainerd", func() {
 		})
 
 		JustBeforeEach(func() {
-			bundleIDs, err = runContainerd.ContainerHandles()
+			bundleIDs, err = runContainerd.ContainerHandles(context.TODO())
 		})
 
 		It("gets the BundleIDs of garden init containers + containers with no labels", func() {

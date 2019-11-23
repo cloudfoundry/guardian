@@ -2,6 +2,7 @@
 package rundmcfakes
 
 import (
+	"context"
 	"sync"
 
 	"code.cloudfoundry.org/garden"
@@ -45,9 +46,10 @@ type FakeOCIRuntime struct {
 		result2 goci.Bndl
 		result3 error
 	}
-	ContainerHandlesStub        func() ([]string, error)
+	ContainerHandlesStub        func(context.Context) ([]string, error)
 	containerHandlesMutex       sync.RWMutex
 	containerHandlesArgsForCall []struct {
+		arg1 context.Context
 	}
 	containerHandlesReturns struct {
 		result1 []string
@@ -71,13 +73,14 @@ type FakeOCIRuntime struct {
 		result1 []string
 		result2 error
 	}
-	CreateStub        func(lager.Logger, string, goci.Bndl, garden.ProcessIO) error
+	CreateStub        func(context.Context, lager.Logger, string, goci.Bndl, garden.ProcessIO) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
-		arg1 lager.Logger
-		arg2 string
-		arg3 goci.Bndl
-		arg4 garden.ProcessIO
+		arg1 context.Context
+		arg2 lager.Logger
+		arg3 string
+		arg4 goci.Bndl
+		arg5 garden.ProcessIO
 	}
 	createReturns struct {
 		result1 error
@@ -303,15 +306,16 @@ func (fake *FakeOCIRuntime) BundleInfoReturnsOnCall(i int, result1 string, resul
 	}{result1, result2, result3}
 }
 
-func (fake *FakeOCIRuntime) ContainerHandles() ([]string, error) {
+func (fake *FakeOCIRuntime) ContainerHandles(arg1 context.Context) ([]string, error) {
 	fake.containerHandlesMutex.Lock()
 	ret, specificReturn := fake.containerHandlesReturnsOnCall[len(fake.containerHandlesArgsForCall)]
 	fake.containerHandlesArgsForCall = append(fake.containerHandlesArgsForCall, struct {
-	}{})
-	fake.recordInvocation("ContainerHandles", []interface{}{})
+		arg1 context.Context
+	}{arg1})
+	fake.recordInvocation("ContainerHandles", []interface{}{arg1})
 	fake.containerHandlesMutex.Unlock()
 	if fake.ContainerHandlesStub != nil {
-		return fake.ContainerHandlesStub()
+		return fake.ContainerHandlesStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -326,10 +330,17 @@ func (fake *FakeOCIRuntime) ContainerHandlesCallCount() int {
 	return len(fake.containerHandlesArgsForCall)
 }
 
-func (fake *FakeOCIRuntime) ContainerHandlesCalls(stub func() ([]string, error)) {
+func (fake *FakeOCIRuntime) ContainerHandlesCalls(stub func(context.Context) ([]string, error)) {
 	fake.containerHandlesMutex.Lock()
 	defer fake.containerHandlesMutex.Unlock()
 	fake.ContainerHandlesStub = stub
+}
+
+func (fake *FakeOCIRuntime) ContainerHandlesArgsForCall(i int) context.Context {
+	fake.containerHandlesMutex.RLock()
+	defer fake.containerHandlesMutex.RUnlock()
+	argsForCall := fake.containerHandlesArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeOCIRuntime) ContainerHandlesReturns(result1 []string, result2 error) {
@@ -422,19 +433,20 @@ func (fake *FakeOCIRuntime) ContainerPeaHandlesReturnsOnCall(i int, result1 []st
 	}{result1, result2}
 }
 
-func (fake *FakeOCIRuntime) Create(arg1 lager.Logger, arg2 string, arg3 goci.Bndl, arg4 garden.ProcessIO) error {
+func (fake *FakeOCIRuntime) Create(arg1 context.Context, arg2 lager.Logger, arg3 string, arg4 goci.Bndl, arg5 garden.ProcessIO) error {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		arg1 lager.Logger
-		arg2 string
-		arg3 goci.Bndl
-		arg4 garden.ProcessIO
-	}{arg1, arg2, arg3, arg4})
-	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3, arg4})
+		arg1 context.Context
+		arg2 lager.Logger
+		arg3 string
+		arg4 goci.Bndl
+		arg5 garden.ProcessIO
+	}{arg1, arg2, arg3, arg4, arg5})
+	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3, arg4, arg5})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(arg1, arg2, arg3, arg4)
+		return fake.CreateStub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
 		return ret.result1
@@ -449,17 +461,17 @@ func (fake *FakeOCIRuntime) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeOCIRuntime) CreateCalls(stub func(lager.Logger, string, goci.Bndl, garden.ProcessIO) error) {
+func (fake *FakeOCIRuntime) CreateCalls(stub func(context.Context, lager.Logger, string, goci.Bndl, garden.ProcessIO) error) {
 	fake.createMutex.Lock()
 	defer fake.createMutex.Unlock()
 	fake.CreateStub = stub
 }
 
-func (fake *FakeOCIRuntime) CreateArgsForCall(i int) (lager.Logger, string, goci.Bndl, garden.ProcessIO) {
+func (fake *FakeOCIRuntime) CreateArgsForCall(i int) (context.Context, lager.Logger, string, goci.Bndl, garden.ProcessIO) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	argsForCall := fake.createArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
 }
 
 func (fake *FakeOCIRuntime) CreateReturns(result1 error) {

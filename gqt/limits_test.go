@@ -2,6 +2,7 @@ package gqt_test
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -31,7 +32,7 @@ var _ = Describe("Limits", func() {
 	JustBeforeEach(func() {
 		client = runner.Start(config)
 		var err error
-		container, err = client.Create(garden.ContainerSpec{
+		container, err = client.Create(context.Background(), garden.ContainerSpec{
 			Limits:     limits,
 			Privileged: privileged,
 		})

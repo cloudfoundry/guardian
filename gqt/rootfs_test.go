@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -53,7 +54,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 		})
 
 		It("does not error when creating a container from a raw rootfs", func() {
-			_, err := client.Create(garden.ContainerSpec{
+			_, err := client.Create(context.Background(), garden.ContainerSpec{
 				Image: garden.ImageRef{URI: fmt.Sprintf("raw://%s", rootfsPath)},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -62,14 +63,14 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 	Context("with an Image URI provided", func() {
 		It("creates a container using that URI as the rootfs", func() {
-			_, err := client.Create(garden.ContainerSpec{Image: garden.ImageRef{URI: "docker:///cfgarden/garden-busybox"}})
+			_, err := client.Create(context.Background(), garden.ContainerSpec{Image: garden.ImageRef{URI: "docker:///cfgarden/garden-busybox"}})
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
 	Context("when Image URI and RootFSPath are both specified", func() {
 		It("returns an informative error message", func() {
-			_, err := client.Create(garden.ContainerSpec{Image: garden.ImageRef{URI: "docker:///cfgarden/garden-busybox"}, RootFSPath: "docker:///cfgarden/garden-busybox"})
+			_, err := client.Create(context.Background(), garden.ContainerSpec{Image: garden.ImageRef{URI: "docker:///cfgarden/garden-busybox"}, RootFSPath: "docker:///cfgarden/garden-busybox"})
 			Expect(err).To(MatchError(ContainSubstring("Cannot provide both Image.URI and RootFSPath")))
 		})
 	})
@@ -80,12 +81,12 @@ var _ = Describe("Rootfs container create parameter", func() {
 		})
 
 		It("fails if a rootfs is not supplied in container spec", func() {
-			_, err := client.Create(garden.ContainerSpec{RootFSPath: ""})
+			_, err := client.Create(context.Background(), garden.ContainerSpec{RootFSPath: ""})
 			Expect(err).To(MatchError(ContainSubstring("no such file or directory")))
 		})
 
 		It("creates successfully if a rootfs is supplied in container spec", func() {
-			_, err := client.Create(garden.ContainerSpec{RootFSPath: defaultTestRootFS})
+			_, err := client.Create(context.Background(), garden.ContainerSpec{RootFSPath: defaultTestRootFS})
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -96,7 +97,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 		})
 
 		It("the container is created successfully", func() {
-			_, err := client.Create(garden.ContainerSpec{RootFSPath: "", Image: garden.ImageRef{URI: ""}})
+			_, err := client.Create(context.Background(), garden.ContainerSpec{RootFSPath: "", Image: garden.ImageRef{URI: ""}})
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -106,7 +107,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 			rootfs := filepath.Join(tempDir("", "emptyrootfs"), "empty.tar")
 			runCommand(exec.Command("tar", "cvf", rootfs, "-T", "/dev/null"))
 
-			_, err := client.Create(garden.ContainerSpec{RootFSPath: rootfs})
+			_, err := client.Create(context.Background(), garden.ContainerSpec{RootFSPath: rootfs})
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -114,13 +115,13 @@ var _ = Describe("Rootfs container create parameter", func() {
 	Context("with a docker rootfs URI", func() {
 		Context("not containing a host", func() {
 			It("succesfully creates the container", func() {
-				_, err := client.Create(garden.ContainerSpec{RootFSPath: "docker:///cfgarden/garden-busybox"})
+				_, err := client.Create(context.Background(), garden.ContainerSpec{RootFSPath: "docker:///cfgarden/garden-busybox"})
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			Context("when image does not exist", func() {
 				It("should not leak the depot directory", func() {
-					_, err := client.Create(
+					_, err := client.Create(context.Background(),
 						garden.ContainerSpec{
 							RootFSPath: "docker:///cloudfoundry/doesnotexist",
 						},
@@ -137,14 +138,14 @@ var _ = Describe("Rootfs container create parameter", func() {
 		Context("containing a host", func() {
 			Context("which is valid", func() {
 				It("creates the container successfully", func() {
-					_, err := client.Create(garden.ContainerSpec{RootFSPath: "docker://registry-1.docker.io/cfgarden/garden-busybox"})
+					_, err := client.Create(context.Background(), garden.ContainerSpec{RootFSPath: "docker://registry-1.docker.io/cfgarden/garden-busybox"})
 					Expect(err).ToNot(HaveOccurred())
 				})
 			})
 
 			Context("which is invalid", func() {
 				It("the container is not created successfully", func() {
-					_, err := client.Create(garden.ContainerSpec{RootFSPath: "docker://xindex.docker.io/busybox"})
+					_, err := client.Create(context.Background(), garden.ContainerSpec{RootFSPath: "docker://xindex.docker.io/busybox"})
 					Expect(err).To(MatchError(ContainSubstring("no such host")))
 				})
 			})
@@ -186,7 +187,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 						})
 
 						It("creates the container successfully ", func() {
-							_, err := client.Create(garden.ContainerSpec{
+							_, err := client.Create(context.Background(), garden.ContainerSpec{
 								RootFSPath: fmt.Sprintf("docker://%s:%s/busybox", dockerRegistryIP,
 									dockerRegistryPort),
 							})
@@ -202,7 +203,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 						It("creates the container successfully ", func() {
 							Skip("Does not work with groot")
 
-							_, err := client.Create(garden.ContainerSpec{
+							_, err := client.Create(context.Background(), garden.ContainerSpec{
 								RootFSPath: fmt.Sprintf("docker://%s:%s/busybox", dockerRegistryIP, dockerRegistryPort),
 							})
 							Expect(err).ToNot(HaveOccurred())
@@ -230,7 +231,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 						})
 
 						It("creates the container successfully", func() {
-							_, err := client.Create(garden.ContainerSpec{
+							_, err := client.Create(context.Background(), garden.ContainerSpec{
 								RootFSPath: fmt.Sprintf("docker://%s/busybox", serverURL.Host),
 							})
 							Expect(err).ToNot(HaveOccurred())
@@ -242,14 +243,14 @@ var _ = Describe("Rootfs container create parameter", func() {
 							})
 
 							It("still works when the host is specified", func() {
-								_, err := client.Create(garden.ContainerSpec{
+								_, err := client.Create(context.Background(), garden.ContainerSpec{
 									RootFSPath: fmt.Sprintf("docker://%s/busybox", serverURL.Host),
 								})
 								Expect(err).ToNot(HaveOccurred())
 							})
 
 							It("still works using the default host", func() {
-								_, err := client.Create(garden.ContainerSpec{
+								_, err := client.Create(context.Background(), garden.ContainerSpec{
 									RootFSPath: "docker:///busybox",
 								})
 								Expect(err).ToNot(HaveOccurred())
@@ -260,7 +261,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 				Context("when the host is NOT listed in -insecureDockerRegistry", func() {
 					It("fails", func() {
-						_, err := client.Create(garden.ContainerSpec{
+						_, err := client.Create(context.Background(), garden.ContainerSpec{
 							RootFSPath: fmt.Sprintf("docker://%s:%s/busybox", dockerRegistryIP,
 								dockerRegistryPort),
 						})
@@ -275,6 +276,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 func startV2DockerRegistry(client garden.Client, dockerRegistryIP string, dockerRegistryPort string) garden.Container {
 	dockerRegistry, err := client.Create(
+		context.Background(),
 		garden.ContainerSpec{
 			RootFSPath: dockerRegistryV2RootFSPath,
 			Network:    dockerRegistryIP,

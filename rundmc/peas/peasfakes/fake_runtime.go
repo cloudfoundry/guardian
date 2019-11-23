@@ -2,6 +2,7 @@
 package peasfakes
 
 import (
+	"context"
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/peas"
@@ -9,9 +10,10 @@ import (
 )
 
 type FakeRuntime struct {
-	ContainerHandlesStub        func() ([]string, error)
+	ContainerHandlesStub        func(context.Context) ([]string, error)
 	containerHandlesMutex       sync.RWMutex
 	containerHandlesArgsForCall []struct {
+		arg1 context.Context
 	}
 	containerHandlesReturns struct {
 		result1 []string
@@ -39,15 +41,16 @@ type FakeRuntime struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRuntime) ContainerHandles() ([]string, error) {
+func (fake *FakeRuntime) ContainerHandles(arg1 context.Context) ([]string, error) {
 	fake.containerHandlesMutex.Lock()
 	ret, specificReturn := fake.containerHandlesReturnsOnCall[len(fake.containerHandlesArgsForCall)]
 	fake.containerHandlesArgsForCall = append(fake.containerHandlesArgsForCall, struct {
-	}{})
-	fake.recordInvocation("ContainerHandles", []interface{}{})
+		arg1 context.Context
+	}{arg1})
+	fake.recordInvocation("ContainerHandles", []interface{}{arg1})
 	fake.containerHandlesMutex.Unlock()
 	if fake.ContainerHandlesStub != nil {
-		return fake.ContainerHandlesStub()
+		return fake.ContainerHandlesStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -62,10 +65,17 @@ func (fake *FakeRuntime) ContainerHandlesCallCount() int {
 	return len(fake.containerHandlesArgsForCall)
 }
 
-func (fake *FakeRuntime) ContainerHandlesCalls(stub func() ([]string, error)) {
+func (fake *FakeRuntime) ContainerHandlesCalls(stub func(context.Context) ([]string, error)) {
 	fake.containerHandlesMutex.Lock()
 	defer fake.containerHandlesMutex.Unlock()
 	fake.ContainerHandlesStub = stub
+}
+
+func (fake *FakeRuntime) ContainerHandlesArgsForCall(i int) context.Context {
+	fake.containerHandlesMutex.RLock()
+	defer fake.containerHandlesMutex.RUnlock()
+	argsForCall := fake.containerHandlesArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeRuntime) ContainerHandlesReturns(result1 []string, result2 error) {

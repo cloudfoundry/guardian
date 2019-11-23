@@ -2,6 +2,7 @@ package gqt_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -87,7 +88,7 @@ func createAndDestroy(client *runner.RunningGarden, n int) {
 		id, err := uuid.NewV4()
 		Expect(err).NotTo(HaveOccurred())
 		randomID := handlePrefix + id.String()
-		container, err := client.Create(garden.ContainerSpec{
+		container, err := client.Create(context.Background(), garden.ContainerSpec{
 			Handle: randomID,
 			NetIn:  []garden.NetIn{garden.NetIn{HostPort: 8080}},
 		})

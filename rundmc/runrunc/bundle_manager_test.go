@@ -1,6 +1,7 @@
 package runrunc_test
 
 import (
+	"context"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -107,7 +108,7 @@ var _ = Describe("BundleManager", func() {
 		})
 
 		JustBeforeEach(func() {
-			bundleIDs, err = bundleManager.ContainerHandles()
+			bundleIDs, err = bundleManager.ContainerHandles(context.TODO())
 		})
 
 		It("returns the list of bundleIDs", func() {

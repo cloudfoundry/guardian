@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -28,7 +29,7 @@ var _ = Describe("Streaming", func() {
 
 		client = runner.Start(config)
 
-		container, err = client.Create(garden.ContainerSpec{})
+		container, err = client.Create(context.Background(), garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())
 	})
 

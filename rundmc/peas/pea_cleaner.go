@@ -1,6 +1,8 @@
 package peas
 
 import (
+	"context"
+
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/peas/processwaiter"
 	"code.cloudfoundry.org/lager"
@@ -17,7 +19,7 @@ type PeaCleaner struct {
 
 //go:generate counterfeiter . Runtime
 type Runtime interface {
-	ContainerHandles() ([]string, error)
+	ContainerHandles(ctx context.Context) ([]string, error)
 	ContainerPeaHandles(log lager.Logger, id string) ([]string, error)
 }
 
@@ -64,7 +66,7 @@ func (p *PeaCleaner) CleanAll(log lager.Logger) error {
 	log.Info("start")
 	defer log.Info("end")
 
-	sandboxHandles, err := p.Runtime.ContainerHandles()
+	sandboxHandles, err := p.Runtime.ContainerHandles(context.TODO())
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package peas
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -25,7 +26,7 @@ var RootfsPath = filepath.Join(os.TempDir(), "pea-empty-rootfs")
 
 //go:generate counterfeiter . Volumizer
 type Volumizer interface {
-	Create(log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error)
+	Create(ctx context.Context, log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error)
 	Destroy(log lager.Logger, handle string) error
 }
 
@@ -105,7 +106,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		return errs("determining-namespaces", err)
 	}
 
-	runtimeSpec, err := p.Volumizer.Create(log, garden.ContainerSpec{
+	runtimeSpec, err := p.Volumizer.Create(context.TODO(), log, garden.ContainerSpec{
 		Handle:     processID,
 		Image:      processSpec.Image,
 		Privileged: privileged,

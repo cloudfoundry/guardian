@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"context"
 	"io"
 	"strings"
 	"syscall"
@@ -108,12 +109,12 @@ var _ = Describe("rootless containers", func() {
 
 	Describe("creating a container", func() {
 		It("succeeds", func() {
-			_, err := client.Create(garden.ContainerSpec{})
+			_, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("maps uids and gids other than guardian's user", func() {
-			container, err := client.Create(garden.ContainerSpec{})
+			container, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			var stdout bytes.Buffer
@@ -138,7 +139,7 @@ var _ = Describe("rootless containers", func() {
 		// In the container, this mount point appears to be owned by the
 		// unprivileged host gid, rather than 0.
 		It("should have devpts mounted with gid=unprivilegedGID", func() {
-			container, err := client.Create(garden.ContainerSpec{})
+			container, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			stdout := gbytes.NewBuffer()
@@ -161,7 +162,7 @@ var _ = Describe("rootless containers", func() {
 		})
 
 		It("has the expected device list allowed", func() {
-			container, err := client.Create(garden.ContainerSpec{})
+			container, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			parentPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), "devices", strconv.Itoa(GinkgoParallelNode()), false, cpuThrottlingEnabled())
@@ -195,7 +196,7 @@ var _ = Describe("rootless containers", func() {
 			})
 
 			It("succeeds anyway", func() {
-				_, err := client.Create(garden.ContainerSpec{})
+				_, err := client.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -215,7 +216,7 @@ var _ = Describe("rootless containers", func() {
 
 			BeforeEach(func() {
 				var err error
-				container, err = client.Create(garden.ContainerSpec{
+				container, err = client.Create(context.Background(), garden.ContainerSpec{
 					Limits: garden.Limits{
 						Memory: garden.MemoryLimits{
 							LimitInBytes: 64 * 1024 * 1024,
@@ -270,7 +271,7 @@ var _ = Describe("rootless containers", func() {
 		})
 
 		It("doesn't leak the gdn socket FD to container processes", func() {
-			ctr, err := client.Create(garden.ContainerSpec{})
+			ctr, err := client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			path := filepath.Join(client.DepotDir, ctr.Handle(), "pidfile")
@@ -291,7 +292,7 @@ var _ = Describe("rootless containers", func() {
 		BeforeEach(func() {
 			var err error
 
-			container, err = client.Create(garden.ContainerSpec{})
+			container, err = client.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 

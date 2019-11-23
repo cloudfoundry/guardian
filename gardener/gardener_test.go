@@ -1,6 +1,7 @@
 package gardener_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -75,7 +76,7 @@ var _ = Describe("Gardener", func() {
 	Describe("creating a container", func() {
 		ItDestroysEverything := func() {
 			It("should clean up the networking configuration", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "poor-banana"})
 				Expect(err).To(HaveOccurred())
 				Expect(networker.DestroyCallCount()).To(Equal(1))
 				_, handle := networker.DestroyArgsForCall(0)
@@ -83,7 +84,7 @@ var _ = Describe("Gardener", func() {
 			})
 
 			It("should clean up any created volumes", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "poor-banana"})
 				Expect(err).To(HaveOccurred())
 				Expect(volumizer.DestroyCallCount()).To(Equal(1))
 				_, handle := volumizer.DestroyArgsForCall(0)
@@ -91,7 +92,7 @@ var _ = Describe("Gardener", func() {
 			})
 
 			It("should destroy any container state", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "poor-banana"})
 				Expect(err).To(HaveOccurred())
 				Expect(containerizer.DestroyCallCount()).To(Equal(1))
 				_, handle := containerizer.DestroyArgsForCall(0)
@@ -99,7 +100,7 @@ var _ = Describe("Gardener", func() {
 			})
 
 			It("should remove the bundle", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "poor-banana"})
 				Expect(err).To(HaveOccurred())
 				Expect(containerizer.RemoveBundleCallCount()).To(Equal(1))
 				_, handle := containerizer.RemoveBundleArgsForCall(0)
@@ -110,39 +111,39 @@ var _ = Describe("Gardener", func() {
 		It("assigns a random handle to the container", func() {
 			uidGenerator.GenerateReturns("generated-handle")
 
-			_, err := gdnr.Create(garden.ContainerSpec{})
+			_, err := gdnr.Create(context.Background(), garden.ContainerSpec{})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(containerizer.CreateCallCount()).To(Equal(1))
-			_, spec := containerizer.CreateArgsForCall(0)
+			_, _, spec := containerizer.CreateArgsForCall(0)
 			Expect(spec.Handle).To(Equal("generated-handle"))
 		})
 
 		It("assigns the hostname to be the same as the random handle", func() {
 			uidGenerator.GenerateReturns("generated-handle")
 
-			_, err := gdnr.Create(garden.ContainerSpec{})
+			_, err := gdnr.Create(context.Background(), garden.ContainerSpec{})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(containerizer.CreateCallCount()).To(Equal(1))
-			_, spec := containerizer.CreateArgsForCall(0)
+			_, _, spec := containerizer.CreateArgsForCall(0)
 			Expect(spec.Handle).To(Equal("generated-handle"))
 			Expect(spec.Hostname).To(Equal(spec.Handle))
 		})
 
 		Context("when a handle is specified", func() {
 			It("assigns the handle to the container", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{Handle: "handle"})
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "handle"})
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				_, spec := containerizer.CreateArgsForCall(0)
+				_, _, spec := containerizer.CreateArgsForCall(0)
 				Expect(spec.Handle).To(Equal("handle"))
 			})
 		})
 
 		It("runs the graph cleanup", func() {
-			_, err := gdnr.Create(garden.ContainerSpec{})
+			_, err := gdnr.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(volumizer.GCCallCount()).To(Equal(1))
@@ -151,22 +152,22 @@ var _ = Describe("Gardener", func() {
 		Context("when the graph cleanup fails", func() {
 			It("does NOT return the error", func() {
 				volumizer.GCReturns(errors.New("graph-cleanup-fail"))
-				_, err := gdnr.Create(garden.ContainerSpec{})
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
 		It("passes the ContainerSpec to the Volumizer", func() {
 			spec := garden.ContainerSpec{Handle: "some-ctr"}
-			_, err := gdnr.Create(spec)
+			_, err := gdnr.Create(context.Background(), spec)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(volumizer.CreateCallCount()).To(Equal(1))
-			_, actualContainerSpec := volumizer.CreateArgsForCall(0)
+			_, _, actualContainerSpec := volumizer.CreateArgsForCall(0)
 			Expect(actualContainerSpec).To(Equal(spec))
 		})
 
 		It("fails to create privileged containers", func() {
-			_, err := gdnr.Create(garden.ContainerSpec{
+			_, err := gdnr.Create(context.Background(), garden.ContainerSpec{
 				Privileged: true,
 			})
 			Expect(err).To(MatchError("privileged container creation is disabled"))
@@ -178,7 +179,7 @@ var _ = Describe("Gardener", func() {
 			})
 
 			It("can create privileged containers", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{
 					Privileged: true,
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -191,12 +192,12 @@ var _ = Describe("Gardener", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "bob"})
 				Expect(err).To(MatchError("booom!"))
 			})
 
 			It("should not call the containerizer", func() {
-				gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+				gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "bob"})
 				Expect(containerizer.CreateCallCount()).To(Equal(0))
 			})
 
@@ -214,7 +215,7 @@ var _ = Describe("Gardener", func() {
 				{SrcPath: "from-networker"},
 			}, nil)
 
-			_, err := gdnr.Create(garden.ContainerSpec{
+			_, err := gdnr.Create(context.Background(), garden.ContainerSpec{
 				Handle:     "some-ctr",
 				Privileged: true,
 				BindMounts: []garden.BindMount{
@@ -231,7 +232,7 @@ var _ = Describe("Gardener", func() {
 			Expect(actualRootfsPath).To(Equal("/rootfs/path"))
 
 			Expect(containerizer.CreateCallCount()).To(Equal(1))
-			_, actualDesiredSpec := containerizer.CreateArgsForCall(0)
+			_, _, actualDesiredSpec := containerizer.CreateArgsForCall(0)
 			Expect(actualDesiredSpec.BindMounts).To(Equal([]garden.BindMount{
 				{SrcPath: "original"},
 				{SrcPath: "from-networker"},
@@ -242,25 +243,25 @@ var _ = Describe("Gardener", func() {
 			It("returns the error", func() {
 				networker.SetupBindMountsReturns(nil, errors.New("failed"))
 
-				_, err := gdnr.Create(garden.ContainerSpec{Handle: "some-ctr"})
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "some-ctr"})
 				Expect(err).To(MatchError("failed"))
 			})
 		})
 
 		It("asks the containerizer to create a container", func() {
-			_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+			_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "bob"})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(containerizer.CreateCallCount()).To(Equal(1))
-			_, spec := containerizer.CreateArgsForCall(0)
+			_, _, spec := containerizer.CreateArgsForCall(0)
 			Expect(spec.Handle).To(Equal("bob"))
 		})
 
 		It("sets the handle as the container hostname", func() {
-			_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+			_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "bob"})
 			Expect(err).NotTo(HaveOccurred())
 
-			_, spec := containerizer.CreateArgsForCall(0)
+			_, _, spec := containerizer.CreateArgsForCall(0)
 			Expect(spec.Hostname).To(Equal("bob"))
 		})
 
@@ -270,7 +271,7 @@ var _ = Describe("Gardener", func() {
 			})
 
 			It("should return an error", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{
 					Handle: "poor-banana",
 				})
 				Expect(err).To(HaveOccurred())
@@ -279,7 +280,7 @@ var _ = Describe("Gardener", func() {
 			ItDestroysEverything()
 
 			It("logs the underlying error", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "bob"})
 				Expect(err).To(HaveOccurred())
 				Eventually(logger).Should(gbytes.Say("failed to create the banana"))
 			})
@@ -290,13 +291,13 @@ var _ = Describe("Gardener", func() {
 				})
 
 				It("does not destroy the bundle (so that the container can be looked up)", func() {
-					_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+					_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "poor-banana"})
 					Expect(err).To(HaveOccurred())
 					Expect(containerizer.RemoveBundleCallCount()).To(BeZero())
 				})
 
 				It("should clean up the networking configuration", func() {
-					_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+					_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "poor-banana"})
 					Expect(err).To(HaveOccurred())
 					Expect(networker.DestroyCallCount()).To(Equal(1))
 					_, handle := networker.DestroyArgsForCall(0)
@@ -304,7 +305,7 @@ var _ = Describe("Gardener", func() {
 				})
 
 				It("should clean up any created volumes", func() {
-					_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+					_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "poor-banana"})
 					Expect(err).To(HaveOccurred())
 					Expect(volumizer.DestroyCallCount()).To(Equal(1))
 					_, handle := volumizer.DestroyArgsForCall(0)
@@ -312,7 +313,7 @@ var _ = Describe("Gardener", func() {
 				})
 
 				It("should destroy any container state", func() {
-					_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+					_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "poor-banana"})
 					Expect(err).To(HaveOccurred())
 					Expect(containerizer.DestroyCallCount()).To(Equal(1))
 					_, handle := containerizer.DestroyArgsForCall(0)
@@ -326,13 +327,13 @@ var _ = Describe("Gardener", func() {
 				})
 
 				It("should not destroy the network state metadata", func() {
-					_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+					_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "poor-banana"})
 					Expect(err).To(HaveOccurred())
 					Expect(propertyManager.DestroyKeySpaceCallCount()).To(BeZero())
 				})
 
 				It("does not destroy the bundle (so that the container can be looked up)", func() {
-					_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+					_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "poor-banana"})
 					Expect(err).To(HaveOccurred())
 					Expect(containerizer.RemoveBundleCallCount()).To(BeZero())
 				})
@@ -348,11 +349,11 @@ var _ = Describe("Gardener", func() {
 			})
 
 			It("calls the containerizer with the disk limit", func() {
-				_, err := gdnr.Create(spec)
+				_, err := gdnr.Create(context.Background(), spec)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				_, actualDesiredContainerSpec := containerizer.CreateArgsForCall(0)
+				_, _, actualDesiredContainerSpec := containerizer.CreateArgsForCall(0)
 				Expect(actualDesiredContainerSpec.Limits).To(Equal(garden.Limits{
 					Disk: garden.DiskLimits{
 						Scope:    garden.DiskLimitScopeTotal,
@@ -367,7 +368,7 @@ var _ = Describe("Gardener", func() {
 				Pid:        42,
 				BundlePath: "bndl",
 			}, nil)
-			_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+			_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "bob"})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(networker.NetworkCallCount()).To(Equal(1))
@@ -382,7 +383,7 @@ var _ = Describe("Gardener", func() {
 			It("errors", func() {
 				containerizer.InfoReturns(spec.ActualContainerSpec{}, errors.New("boom"))
 
-				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "bob"})
 				Expect(err).To(MatchError("boom"))
 
 			})
@@ -394,7 +395,7 @@ var _ = Describe("Gardener", func() {
 			})
 
 			It("errors", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "bob"})
 				Expect(err).To(HaveOccurred())
 			})
 		})
@@ -403,14 +404,14 @@ var _ = Describe("Gardener", func() {
 			It("errors", func() {
 				networker.NetworkReturns(errors.New("network-failed"))
 
-				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Handle: "bob"})
 				Expect(err).To(MatchError("network-failed"))
 			})
 		})
 
 		Context("when a grace time is specified", func() {
 			It("sets the grace time via the property manager", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{
 					Handle:    "something",
 					GraceTime: time.Minute,
 				})
@@ -427,20 +428,20 @@ var _ = Describe("Gardener", func() {
 			runtimeConfig := specs.Spec{Version: "some-idiosyncratic-version", Root: &specs.Root{Path: ""}}
 			volumizer.CreateReturns(runtimeConfig, nil)
 
-			_, err := gdnr.Create(garden.ContainerSpec{})
+			_, err := gdnr.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(containerizer.CreateCallCount()).To(Equal(1))
-			_, spec := containerizer.CreateArgsForCall(0)
+			_, _, spec := containerizer.CreateArgsForCall(0)
 			Expect(spec.BaseConfig).To(Equal(runtimeConfig))
 		})
 
 		It("passes env to containerizer", func() {
-			_, err := gdnr.Create(garden.ContainerSpec{Env: []string{"FOO=bar"}})
+			_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Env: []string{"FOO=bar"}})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(containerizer.CreateCallCount()).To(Equal(1))
-			_, spec := containerizer.CreateArgsForCall(0)
+			_, _, spec := containerizer.CreateArgsForCall(0)
 			Expect(spec.Env).To(Equal([]string{"FOO=bar"}))
 		})
 
@@ -455,12 +456,12 @@ var _ = Describe("Gardener", func() {
 			})
 
 			It("returns a useful error message", func() {
-				_, err := gdnr.Create(containerSpec)
+				_, err := gdnr.Create(context.Background(), containerSpec)
 				Expect(err).To(MatchError("Handle 'duplicate-banana' already in use"))
 			})
 
 			It("doesn't return a container", func() {
-				container, _ := gdnr.Create(containerSpec)
+				container, _ := gdnr.Create(context.Background(), containerSpec)
 				Expect(container).To(BeNil())
 			})
 		})
@@ -472,7 +473,7 @@ var _ = Describe("Gardener", func() {
 
 			Context("when MaxContainers = 0", func() {
 				It("succeeds", func() {
-					_, err := gdnr.Create(garden.ContainerSpec{})
+					_, err := gdnr.Create(context.Background(), garden.ContainerSpec{})
 					Expect(err).NotTo(HaveOccurred())
 				})
 			})
@@ -483,7 +484,7 @@ var _ = Describe("Gardener", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := gdnr.Create(garden.ContainerSpec{})
+					_, err := gdnr.Create(context.Background(), garden.ContainerSpec{})
 					Expect(err).To(MatchError("max containers reached"))
 				})
 			})
@@ -495,7 +496,7 @@ var _ = Describe("Gardener", func() {
 			})
 
 			It("forwards the error", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{})
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{})
 				Expect(err).To(MatchError("error-fetching-handles"))
 			})
 		})
@@ -511,7 +512,7 @@ var _ = Describe("Gardener", func() {
 			})
 
 			It("sets every property on the container", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{
 					Handle:     "something",
 					Properties: startingProperties,
 				})
@@ -532,7 +533,7 @@ var _ = Describe("Gardener", func() {
 		})
 
 		It("sets the container state to created", func() {
-			_, err := gdnr.Create(garden.ContainerSpec{
+			_, err := gdnr.Create(context.Background(), garden.ContainerSpec{
 				Handle: "something",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -553,19 +554,19 @@ var _ = Describe("Gardener", func() {
 					},
 				}
 
-				_, err := gdnr.Create(garden.ContainerSpec{
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{
 					BindMounts: bindMounts,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				_, spec := containerizer.CreateArgsForCall(0)
+				_, _, spec := containerizer.CreateArgsForCall(0)
 				Expect(spec.BindMounts).To(Equal(bindMounts))
 			})
 		})
 
 		It("returns the container that Lookup would return", func() {
-			c, err := gdnr.Create(garden.ContainerSpec{})
+			c, err := gdnr.Create(context.Background(), garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			d, err := gdnr.Lookup(c.Handle())
@@ -575,12 +576,12 @@ var _ = Describe("Gardener", func() {
 
 		Context("when creating privileged containers is not permitted, and a privileged container is requested", func() {
 			It("returns an error", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{Privileged: true})
+				_, err := gdnr.Create(context.Background(), garden.ContainerSpec{Privileged: true})
 				Expect(err).To(MatchError("privileged container creation is disabled"))
 			})
 
 			It("does not try to provision a volume", func() {
-				gdnr.Create(garden.ContainerSpec{Privileged: true})
+				gdnr.Create(context.Background(), garden.ContainerSpec{Privileged: true})
 				Expect(volumizer.CreateCallCount()).To(Equal(0))
 			})
 		})
