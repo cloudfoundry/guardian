@@ -8,6 +8,7 @@ import (
 	"time"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"go.opencensus.io/trace"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -309,7 +310,10 @@ func (c *Containerizer) RemoveBundle(log lager.Logger, handle string) error {
 	return c.runtime.RemoveBundle(log, handle)
 }
 
-func (c *Containerizer) Info(log lager.Logger, handle string) (spec.ActualContainerSpec, error) {
+func (c *Containerizer) Info(ctx context.Context, log lager.Logger, handle string) (spec.ActualContainerSpec, error) {
+	ctx, span := trace.StartSpan(ctx, "containerizer.Info")
+	defer span.End()
+
 	bundlePath, bundle, err := c.runtime.BundleInfo(log, handle)
 	if err != nil {
 		return spec.ActualContainerSpec{}, err

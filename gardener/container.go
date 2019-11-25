@@ -1,6 +1,7 @@
 package gardener
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -46,7 +47,7 @@ func (c *container) Info() (garden.ContainerInfo, error) {
 	hostIP, _ := c.propertyManager.Get(c.handle, BridgeIPKey)
 	externalIP, _ := c.propertyManager.Get(c.handle, ExternalIPKey)
 
-	actualContainerSpec, err := c.containerizer.Info(c.logger, c.handle)
+	actualContainerSpec, err := c.containerizer.Info(context.TODO(), c.logger, c.handle)
 	if err != nil {
 		return garden.ContainerInfo{}, err
 	}
@@ -98,7 +99,7 @@ func (c *container) LimitCPU(limits garden.CPULimits) error {
 }
 
 func (c *container) CurrentCPULimits() (garden.CPULimits, error) {
-	info, err := c.containerizer.Info(c.logger, c.handle)
+	info, err := c.containerizer.Info(context.TODO(), c.logger, c.handle)
 	return info.Limits.CPU, err
 }
 
@@ -115,7 +116,7 @@ func (c *container) LimitMemory(limits garden.MemoryLimits) error {
 }
 
 func (c *container) CurrentMemoryLimits() (garden.MemoryLimits, error) {
-	info, err := c.containerizer.Info(c.logger, c.handle)
+	info, err := c.containerizer.Info(context.TODO(), c.logger, c.handle)
 	return info.Limits.Memory, err
 }
 

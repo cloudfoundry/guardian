@@ -2,6 +2,7 @@ package netplugin
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -14,6 +15,7 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/lager"
+	"go.opencensus.io/trace"
 )
 
 const NetworkPropertyPrefix = "network."
@@ -91,7 +93,10 @@ func (p *externalBinaryNetworker) SetupBindMounts(log lager.Logger, handle strin
 	return p.networkDepot.SetupBindMounts(log, handle, privileged, rootfsPath)
 }
 
-func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {
+func (p *externalBinaryNetworker) Network(ctx context.Context, log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {
+	ctx, span := trace.StartSpan(ctx, "externalNetworker.Network")
+	defer span.End()
+
 	p.configStore.Set(containerSpec.Handle, gardener.ExternalIPKey, p.externalIP.String())
 
 	inputs := UpInputs{

@@ -1,6 +1,7 @@
 package netplugin_test
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -90,7 +91,7 @@ var _ = Describe("ExternalNetworker", func() {
 
 	Describe("Network", func() {
 		It("passes the pid of the container to the external plugin's stdin", func() {
-			err := plugin.Network(logger, containerSpec, 42)
+			err := plugin.Network(context.TODO(), logger, containerSpec, 42)
 			Expect(err).NotTo(HaveOccurred())
 
 			cmd := fakeCommandRunner.ExecutedCommands()[0]
@@ -101,7 +102,7 @@ var _ = Describe("ExternalNetworker", func() {
 		})
 
 		It("executes the external plugin with the correct args and input", func() {
-			err := plugin.Network(logger, containerSpec, 42)
+			err := plugin.Network(context.TODO(), logger, containerSpec, 42)
 			Expect(err).NotTo(HaveOccurred())
 
 			cmd := fakeCommandRunner.ExecutedCommands()[0]
@@ -144,7 +145,7 @@ var _ = Describe("ExternalNetworker", func() {
 			})
 
 			It("passes them in the stdin to the network plugin", func() {
-				Expect(plugin.Network(logger, containerSpec, 42)).To(Succeed())
+				Expect(plugin.Network(context.TODO(), logger, containerSpec, 42)).To(Succeed())
 
 				cmd := fakeCommandRunner.ExecutedCommands()[0]
 				pluginInput, err := ioutil.ReadAll(cmd.Stdin)
@@ -186,7 +187,7 @@ var _ = Describe("ExternalNetworker", func() {
 			})
 
 			It("passes the input through stdin to the network plugin", func() {
-				Expect(plugin.Network(logger, containerSpec, 42)).To(Succeed())
+				Expect(plugin.Network(context.TODO(), logger, containerSpec, 42)).To(Succeed())
 
 				cmd := fakeCommandRunner.ExecutedCommands()[0]
 				pluginInput, err := ioutil.ReadAll(cmd.Stdin)
@@ -213,7 +214,7 @@ var _ = Describe("ExternalNetworker", func() {
 		})
 
 		It("collects and logs the stderr from the plugin", func() {
-			err := plugin.Network(logger, containerSpec, 42)
+			err := plugin.Network(context.TODO(), logger, containerSpec, 42)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(logger).To(gbytes.Say("result.*some-stderr-bytes"))
@@ -225,7 +226,7 @@ var _ = Describe("ExternalNetworker", func() {
 			})
 
 			It("collects and logs the stderr from the plugin to log level info", func() {
-				err := plugin.Network(logger, containerSpec, 42)
+				err := plugin.Network(context.TODO(), logger, containerSpec, 42)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(logger).To(gbytes.Say(`result.*"log_level":1.*some-stderr-bytes`))
@@ -238,7 +239,7 @@ var _ = Describe("ExternalNetworker", func() {
 			})
 
 			It("doesn't output stderr log to log level info", func() {
-				err := plugin.Network(logger, containerSpec, 42)
+				err := plugin.Network(context.TODO(), logger, containerSpec, 42)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(logger).NotTo(gbytes.Say(`result.*"log_level":1.*some-stderr-bytes`))
@@ -254,7 +255,7 @@ var _ = Describe("ExternalNetworker", func() {
 					pid int
 				)
 
-				err := plugin.Network(logger, containerSpec, 42)
+				err := plugin.Network(context.TODO(), logger, containerSpec, 42)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(resolvConfigurer.ConfigureCallCount()).To(Equal(1))
@@ -375,7 +376,7 @@ var _ = Describe("ExternalNetworker", func() {
 					pid int
 				)
 
-				err := plugin.Network(logger, containerSpec, 42)
+				err := plugin.Network(context.TODO(), logger, containerSpec, 42)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(resolvConfigurer.ConfigureCallCount()).To(Equal(1))
@@ -425,11 +426,11 @@ var _ = Describe("ExternalNetworker", func() {
 			})
 
 			It("returns the error", func() {
-				Expect(plugin.Network(logger, containerSpec, 42)).To(MatchError("external networker up: external-plugin-error"))
+				Expect(plugin.Network(context.TODO(), logger, containerSpec, 42)).To(MatchError("external networker up: external-plugin-error"))
 			})
 
 			It("collects and logs the stderr from the plugin", func() {
-				plugin.Network(logger, containerSpec, 42)
+				plugin.Network(context.TODO(), logger, containerSpec, 42)
 				Expect(logger).To(gbytes.Say("result.*error.*some-stderr-bytes"))
 			})
 		})
@@ -438,7 +439,7 @@ var _ = Describe("ExternalNetworker", func() {
 			It("persists the returned properties to the container's properties", func() {
 				pluginOutput = `{"properties":{"foo":"bar","ping":"pong","garden.network.container-ip":"10.255.1.2"}}`
 
-				err := plugin.Network(logger, containerSpec, 42)
+				err := plugin.Network(context.TODO(), logger, containerSpec, 42)
 				Expect(err).NotTo(HaveOccurred())
 
 				persistedPropertyValue, _ := configStore.Get("some-handle", "foo")
@@ -450,7 +451,7 @@ var _ = Describe("ExternalNetworker", func() {
 			It("returns a useful error message", func() {
 				pluginOutput = "invalid-json"
 
-				err := plugin.Network(logger, containerSpec, 42)
+				err := plugin.Network(context.TODO(), logger, containerSpec, 42)
 				Expect(err).To(MatchError(ContainSubstring("unmarshaling result from external networker")))
 			})
 		})
@@ -459,7 +460,7 @@ var _ = Describe("ExternalNetworker", func() {
 			It("succeeds", func() {
 				pluginOutput = ""
 
-				err := plugin.Network(logger, containerSpec, 42)
+				err := plugin.Network(context.TODO(), logger, containerSpec, 42)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})

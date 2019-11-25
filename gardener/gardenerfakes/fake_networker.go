@@ -2,6 +2,7 @@
 package gardenerfakes
 
 import (
+	"context"
 	"sync"
 
 	"code.cloudfoundry.org/garden"
@@ -76,12 +77,13 @@ type FakeNetworker struct {
 	netOutReturnsOnCall map[int]struct {
 		result1 error
 	}
-	NetworkStub        func(lager.Logger, garden.ContainerSpec, int) error
+	NetworkStub        func(context.Context, lager.Logger, garden.ContainerSpec, int) error
 	networkMutex       sync.RWMutex
 	networkArgsForCall []struct {
-		arg1 lager.Logger
-		arg2 garden.ContainerSpec
-		arg3 int
+		arg1 context.Context
+		arg2 lager.Logger
+		arg3 garden.ContainerSpec
+		arg4 int
 	}
 	networkReturns struct {
 		result1 error
@@ -432,18 +434,19 @@ func (fake *FakeNetworker) NetOutReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeNetworker) Network(arg1 lager.Logger, arg2 garden.ContainerSpec, arg3 int) error {
+func (fake *FakeNetworker) Network(arg1 context.Context, arg2 lager.Logger, arg3 garden.ContainerSpec, arg4 int) error {
 	fake.networkMutex.Lock()
 	ret, specificReturn := fake.networkReturnsOnCall[len(fake.networkArgsForCall)]
 	fake.networkArgsForCall = append(fake.networkArgsForCall, struct {
-		arg1 lager.Logger
-		arg2 garden.ContainerSpec
-		arg3 int
-	}{arg1, arg2, arg3})
-	fake.recordInvocation("Network", []interface{}{arg1, arg2, arg3})
+		arg1 context.Context
+		arg2 lager.Logger
+		arg3 garden.ContainerSpec
+		arg4 int
+	}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("Network", []interface{}{arg1, arg2, arg3, arg4})
 	fake.networkMutex.Unlock()
 	if fake.NetworkStub != nil {
-		return fake.NetworkStub(arg1, arg2, arg3)
+		return fake.NetworkStub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1
@@ -458,17 +461,17 @@ func (fake *FakeNetworker) NetworkCallCount() int {
 	return len(fake.networkArgsForCall)
 }
 
-func (fake *FakeNetworker) NetworkCalls(stub func(lager.Logger, garden.ContainerSpec, int) error) {
+func (fake *FakeNetworker) NetworkCalls(stub func(context.Context, lager.Logger, garden.ContainerSpec, int) error) {
 	fake.networkMutex.Lock()
 	defer fake.networkMutex.Unlock()
 	fake.NetworkStub = stub
 }
 
-func (fake *FakeNetworker) NetworkArgsForCall(i int) (lager.Logger, garden.ContainerSpec, int) {
+func (fake *FakeNetworker) NetworkArgsForCall(i int) (context.Context, lager.Logger, garden.ContainerSpec, int) {
 	fake.networkMutex.RLock()
 	defer fake.networkMutex.RUnlock()
 	argsForCall := fake.networkArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeNetworker) NetworkReturns(result1 error) {

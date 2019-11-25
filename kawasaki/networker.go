@@ -1,6 +1,7 @@
 package kawasaki
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -11,6 +12,7 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki/subnets"
 	"code.cloudfoundry.org/lager"
+	"go.opencensus.io/trace"
 )
 
 // generic gardener properties
@@ -133,7 +135,10 @@ func (n *Networker) SetupBindMounts(log lager.Logger, handle string, privileged 
 	return n.networkDepot.SetupBindMounts(log, handle, privileged, rootfsPath)
 }
 
-func (n *Networker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {
+func (n *Networker) Network(ctx context.Context, log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {
+	ctx, span := trace.StartSpan(ctx, "kawasaki.Network")
+	defer span.End()
+
 	log = log.Session("network", lager.Data{
 		"handle": containerSpec.Handle,
 		"spec":   containerSpec.Network,

@@ -60,7 +60,7 @@ type Containerizer interface {
 	Destroy(log lager.Logger, handle string) error
 	RemoveBundle(log lager.Logger, handle string) error
 
-	Info(log lager.Logger, handle string) (spec.ActualContainerSpec, error)
+	Info(ctx context.Context, log lager.Logger, handle string) (spec.ActualContainerSpec, error)
 	Metrics(log lager.Logger, handle string) (ActualContainerMetrics, error)
 	WatchRuntimeEvents(log lager.Logger) error
 
@@ -69,7 +69,7 @@ type Containerizer interface {
 
 type Networker interface {
 	SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error)
-	Network(log lager.Logger, spec garden.ContainerSpec, pid int) error
+	Network(ctx context.Context, log lager.Logger, spec garden.ContainerSpec, pid int) error
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
 	NetIn(log lager.Logger, handle string, hostPort, containerPort uint32) (uint32, uint32, error)
@@ -296,7 +296,7 @@ func (g *Gardener) Create(
 		return nil, err
 	}
 
-	actualSpec, err := g.Containerizer.Info(log, containerSpec.Handle)
+	actualSpec, err := g.Containerizer.Info(ctx, log, containerSpec.Handle)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +307,7 @@ func (g *Gardener) Create(
 		return nil, err
 	}
 
-	if err = g.Networker.Network(log, containerSpec, actualSpec.Pid); err != nil {
+	if err = g.Networker.Network(ctx, log, containerSpec, actualSpec.Pid); err != nil {
 		return nil, err
 	}
 

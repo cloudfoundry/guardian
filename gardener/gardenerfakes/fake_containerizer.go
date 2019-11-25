@@ -67,11 +67,12 @@ type FakeContainerizer struct {
 		result1 []string
 		result2 error
 	}
-	InfoStub        func(lager.Logger, string) (spec.ActualContainerSpec, error)
+	InfoStub        func(context.Context, lager.Logger, string) (spec.ActualContainerSpec, error)
 	infoMutex       sync.RWMutex
 	infoArgsForCall []struct {
-		arg1 lager.Logger
-		arg2 string
+		arg1 context.Context
+		arg2 lager.Logger
+		arg3 string
 	}
 	infoReturns struct {
 		result1 spec.ActualContainerSpec
@@ -441,17 +442,18 @@ func (fake *FakeContainerizer) HandlesReturnsOnCall(i int, result1 []string, res
 	}{result1, result2}
 }
 
-func (fake *FakeContainerizer) Info(arg1 lager.Logger, arg2 string) (spec.ActualContainerSpec, error) {
+func (fake *FakeContainerizer) Info(arg1 context.Context, arg2 lager.Logger, arg3 string) (spec.ActualContainerSpec, error) {
 	fake.infoMutex.Lock()
 	ret, specificReturn := fake.infoReturnsOnCall[len(fake.infoArgsForCall)]
 	fake.infoArgsForCall = append(fake.infoArgsForCall, struct {
-		arg1 lager.Logger
-		arg2 string
-	}{arg1, arg2})
-	fake.recordInvocation("Info", []interface{}{arg1, arg2})
+		arg1 context.Context
+		arg2 lager.Logger
+		arg3 string
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("Info", []interface{}{arg1, arg2, arg3})
 	fake.infoMutex.Unlock()
 	if fake.InfoStub != nil {
-		return fake.InfoStub(arg1, arg2)
+		return fake.InfoStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -466,17 +468,17 @@ func (fake *FakeContainerizer) InfoCallCount() int {
 	return len(fake.infoArgsForCall)
 }
 
-func (fake *FakeContainerizer) InfoCalls(stub func(lager.Logger, string) (spec.ActualContainerSpec, error)) {
+func (fake *FakeContainerizer) InfoCalls(stub func(context.Context, lager.Logger, string) (spec.ActualContainerSpec, error)) {
 	fake.infoMutex.Lock()
 	defer fake.infoMutex.Unlock()
 	fake.InfoStub = stub
 }
 
-func (fake *FakeContainerizer) InfoArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeContainerizer) InfoArgsForCall(i int) (context.Context, lager.Logger, string) {
 	fake.infoMutex.RLock()
 	defer fake.infoMutex.RUnlock()
 	argsForCall := fake.infoArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeContainerizer) InfoReturns(result1 spec.ActualContainerSpec, result2 error) {

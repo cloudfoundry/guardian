@@ -458,25 +458,25 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("should return the ActualContainerSpec with the correct bundlePath", func() {
-			actualSpec, err := containerizer.Info(logger, "some-handle")
+			actualSpec, err := containerizer.Info(context.TODO(), logger, "some-handle")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualSpec.BundlePath).To(Equal("/path/to/some-handle"))
 		})
 
 		It("should return the ActualContainerSpec with the correct CPU limits", func() {
-			actualSpec, err := containerizer.Info(logger, "some-handle")
+			actualSpec, err := containerizer.Info(context.TODO(), logger, "some-handle")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualSpec.Limits.CPU.LimitInShares).To(BeEquivalentTo(20))
 		})
 
 		It("should return the ActualContainerSpec with the correct memory limits", func() {
-			actualSpec, err := containerizer.Info(logger, "some-handle")
+			actualSpec, err := containerizer.Info(context.TODO(), logger, "some-handle")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualSpec.Limits.Memory.LimitInBytes).To(BeEquivalentTo(10))
 		})
 
 		It("should return the ActualContainerSpec with the correct pid", func() {
-			actualSpec, err := containerizer.Info(logger, "some-handle")
+			actualSpec, err := containerizer.Info(context.TODO(), logger, "some-handle")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualSpec.Pid).To(Equal(42))
 		})
@@ -484,7 +484,7 @@ var _ = Describe("Rundmc", func() {
 		Context("when loading up the bundle info fails", func() {
 			It("should return the error", func() {
 				fakeOCIRuntime.BundleInfoReturns("", goci.Bndl{}, errors.New("bundle-info-error"))
-				_, err := containerizer.Info(logger, "some-handle")
+				_, err := containerizer.Info(context.TODO(), logger, "some-handle")
 				Expect(err).To(MatchError("bundle-info-error"))
 			})
 		})
@@ -495,7 +495,7 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("doesn't fail", func() {
-				actualSpec, err := containerizer.Info(logger, "some-handle")
+				actualSpec, err := containerizer.Info(context.TODO(), logger, "some-handle")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actualSpec.Limits.Memory.LimitInBytes).To(BeEquivalentTo(0))
 				Expect(actualSpec.Limits.CPU.LimitInShares).To(BeEquivalentTo(0))
@@ -508,7 +508,7 @@ var _ = Describe("Rundmc", func() {
 				"fire",
 			})
 
-			actualSpec, err := containerizer.Info(logger, "some-handle")
+			actualSpec, err := containerizer.Info(context.TODO(), logger, "some-handle")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualSpec.Events).To(Equal([]string{
 				"potato",
@@ -519,13 +519,13 @@ var _ = Describe("Rundmc", func() {
 		It("should return the stopped state from the property manager", func() {
 			fakeStateStore.IsStoppedReturns(true)
 
-			actualSpec, err := containerizer.Info(logger, "some-handle")
+			actualSpec, err := containerizer.Info(context.TODO(), logger, "some-handle")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualSpec.Stopped).To(Equal(true))
 		})
 
 		It("should return the ActualContainerSpec with privileged by default", func() {
-			actualSpec, err := containerizer.Info(logger, "some-handle")
+			actualSpec, err := containerizer.Info(context.TODO(), logger, "some-handle")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualSpec.Privileged).To(BeTrue())
 		})
@@ -536,7 +536,7 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("should return the ActualContainerSpec with privileged", func() {
-				actualSpec, err := containerizer.Info(logger, "some-handle")
+				actualSpec, err := containerizer.Info(context.TODO(), logger, "some-handle")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actualSpec.Privileged).To(BeFalse())
 			})
@@ -548,7 +548,7 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("returns the error", func() {
-				_, err := containerizer.Info(logger, "some-handle")
+				_, err := containerizer.Info(context.TODO(), logger, "some-handle")
 				Expect(err).To(MatchError("error-fetching-state"))
 			})
 		})

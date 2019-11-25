@@ -372,7 +372,7 @@ var _ = Describe("Gardener", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(networker.NetworkCallCount()).To(Equal(1))
-			_, spec, pid := networker.NetworkArgsForCall(0)
+			_, _, spec, pid := networker.NetworkArgsForCall(0)
 			Expect(spec).To(Equal(garden.ContainerSpec{
 				Handle: "bob",
 			}))
