@@ -19,6 +19,8 @@ import (
 	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/errdefs"
 	ctrdevents "github.com/containerd/containerd/events"
+	"github.com/containerd/containerd/leases"
+	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/runtime/linux/runctypes"
 	"github.com/containerd/typeurl"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -39,33 +41,50 @@ func New(client *containerd.Client, context context.Context, ioFifoDir string) *
 	}
 }
 
-func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, pio func() (io.Reader, io.Writer, io.Writer)) error {
+func (n *Nerd) Create(ctx context.Context, log lager.Logger, containerID string, spec *specs.Spec, pio func() (io.Reader, io.Writer, io.Writer)) error {
+	ctx, span := trace.StartSpan(ctx, "nerd.Create")
+	defer span.End()
+
+	containerdNamespace := "garden"
+
+	ctx = namespaces.WithNamespace(ctx, containerdNamespace)
+	ctx = leases.WithLease(ctx, "lease-is-off")
+
+	_, spanCreate := trace.StartSpan(ctx, "containerd.NewContainer")
 	log.Debug("creating-container", lager.Data{"containerID": containerID})
-	container, err := n.client.NewContainer(n.context, containerID, containerd.WithSpec(spec))
+	container, err := n.client.NewContainer(ctx, containerID, containerd.WithSpec(spec))
+	spanCreate.End()
 	if err != nil {
 		return err
 	}
 
 	for key, value := range spec.Annotations {
 		log.Debug("setting-label", lager.Data{"containerID": containerID, "label-key": key, "label-value": value})
-		if _, err := container.SetLabels(n.context, map[string]string{key: value}); err != nil {
+		_, spanSetLabels := trace.StartSpan(ctx, "container.SetLabels")
+		_, err := container.SetLabels(ctx, map[string]string{key: value})
+		spanSetLabels.End()
+		if err != nil {
 			return err
 		}
 	}
 
 	log.Debug("creating-task", lager.Data{"containerID": containerID})
-	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), containerd.WithNoNewKeyring, WithCurrentUIDAndGID)
+	_, spanNewTask := trace.StartSpan(ctx, "container.NewTask")
+	task, err := container.NewTask(ctx, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), containerd.WithNoNewKeyring, WithCurrentUIDAndGID)
+	spanNewTask.End()
 	if err != nil {
 		return err
 	}
 
 	log.Debug("starting-task", lager.Data{"containerID": containerID})
-	err = task.Start(n.context)
+	_, spanStart := trace.StartSpan(ctx, "task.Start")
+	err = task.Start(ctx)
+	spanStart.End()
 	if err != nil {
 		return err
 	}
 
-	return task.CloseIO(n.context, containerd.WithStdinCloser)
+	return task.CloseIO(ctx, containerd.WithStdinCloser)
 }
 
 func withProcessKillLogging(log lager.Logger) func(context.Context, containerd.Process) error {

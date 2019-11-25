@@ -46,7 +46,7 @@ func NewCreator(
 }
 
 func (c *Creator) Create(ctx context.Context, log lager.Logger, id string, bundle goci.Bndl, pio garden.ProcessIO) error {
-	_, span := trace.StartSpan(ctx, "runrunc.Create")
+	ctx, span := trace.StartSpan(ctx, "runrunc.Create")
 	defer span.End()
 
 	bundlePath, err := c.depot.Create(log, id, bundle)

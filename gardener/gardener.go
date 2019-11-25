@@ -218,7 +218,7 @@ func (g *Gardener) Create(
 	containerSpec garden.ContainerSpec,
 ) (ctr garden.Container, err error) {
 
-	_, span := trace.StartSpan(ctx, "gardener.Create")
+	ctx, span := trace.StartSpan(ctx, "gardener.Create")
 	defer span.End()
 
 	if containerSpec.Handle == "" {

@@ -97,19 +97,19 @@ var _ = Describe("Runcontainerd", func() {
 
 		It("creates the container with the passed containerID", func() {
 			Expect(containerManager.CreateCallCount()).To(Equal(1))
-			_, actualID, _, _ := containerManager.CreateArgsForCall(0)
+			_, _, actualID, _, _ := containerManager.CreateArgsForCall(0)
 			Expect(actualID).To(Equal(id))
 		})
 
 		It("creates the container using the spec from the loaded bundle", func() {
 			Expect(containerManager.CreateCallCount()).To(Equal(1))
-			_, _, actualSpec, _ := containerManager.CreateArgsForCall(0)
+			_, _, _, actualSpec, _ := containerManager.CreateArgsForCall(0)
 			Expect(actualSpec).To(Equal(&bundle.Spec))
 		})
 
 		It("creates the container and attaches IO", func() {
 			Expect(containerManager.CreateCallCount()).To(Equal(1))
-			_, _, _, processIO := containerManager.CreateArgsForCall(0)
+			_, _, _, _, processIO := containerManager.CreateArgsForCall(0)
 
 			actualStdin, actualStdout, actualStderr := processIO()
 			Expect(actualStdin).To(BeIdenticalTo(stdin))
@@ -134,7 +134,7 @@ var _ = Describe("Runcontainerd", func() {
 
 			It("sets garden-init as container-type in annotations if not set", func() {
 				Expect(containerManager.CreateCallCount()).To(Equal(1))
-				_, _, actualSpec, _ := containerManager.CreateArgsForCall(0)
+				_, _, _, actualSpec, _ := containerManager.CreateArgsForCall(0)
 				Expect(actualSpec.Annotations["container-type"]).To(Equal("garden-init"))
 			})
 		})
@@ -146,7 +146,7 @@ var _ = Describe("Runcontainerd", func() {
 
 			It("does not change it", func() {
 				Expect(containerManager.CreateCallCount()).To(Equal(1))
-				_, _, actualSpec, _ := containerManager.CreateArgsForCall(0)
+				_, _, _, actualSpec, _ := containerManager.CreateArgsForCall(0)
 				Expect(actualSpec.Annotations["container-type"]).To(Equal("something"))
 
 			})

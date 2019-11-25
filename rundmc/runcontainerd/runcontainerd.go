@@ -26,7 +26,7 @@ import (
 
 //go:generate counterfeiter . ContainerManager
 type ContainerManager interface {
-	Create(log lager.Logger, containerID string, spec *specs.Spec, processIO func() (io.Reader, io.Writer, io.Writer)) error
+	Create(ctx context.Context, log lager.Logger, containerID string, spec *specs.Spec, processIO func() (io.Reader, io.Writer, io.Writer)) error
 	Delete(log lager.Logger, containerID string) error
 	Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer, bool)) error
 	State(log lager.Logger, containerID string) (int, string, error)
@@ -124,14 +124,14 @@ func New(containerManager ContainerManager,
 }
 
 func (r *RunContainerd) Create(ctx context.Context, log lager.Logger, id string, bundle goci.Bndl, pio garden.ProcessIO) error {
-	_, span := trace.StartSpan(ctx, "runcontainerd.Create")
+	ctx, span := trace.StartSpan(ctx, "runcontainerd.Create")
 	defer span.End()
 
 	log.Debug("Annotations before update", lager.Data{"id": id, "Annotations": bundle.Spec.Annotations})
 	updateAnnotationsIfNeeded(&bundle)
 	log.Debug("Annotations after update", lager.Data{"id": id, "Annotations": bundle.Spec.Annotations})
 
-	err := r.containerManager.Create(log, id, &bundle.Spec, func() (io.Reader, io.Writer, io.Writer) { return pio.Stdin, pio.Stdout, pio.Stderr })
+	err := r.containerManager.Create(ctx, log, id, &bundle.Spec, func() (io.Reader, io.Writer, io.Writer) { return pio.Stdin, pio.Stdout, pio.Stderr })
 	if err != nil {
 		return err
 	}

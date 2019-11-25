@@ -53,7 +53,7 @@ type RootfsSpec struct {
 }
 
 func (v *VolumeProvider) Create(ctx context.Context, log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error) {
-	_, span := trace.StartSpan(ctx, "VolumeProvider.Create")
+	ctx, span := trace.StartSpan(ctx, "VolumeProvider.Create")
 	defer span.End()
 
 	path := spec.Image.URI
