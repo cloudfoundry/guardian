@@ -86,8 +86,10 @@ func (v *VolumeProvider) Create(ctx context.Context, log lager.Logger, spec gard
 			return specs.Spec{}, err
 		}
 	}
-
-	v.mkdirAndChown(!spec.Privileged, baseConfig)
+	err = v.mkdirAndChown(ctx, !spec.Privileged, baseConfig)
+	if err != nil {
+		return specs.Spec{}, err
+	}
 
 	return baseConfig, nil
 }
@@ -102,15 +104,21 @@ func (v *VolumeProvider) mkdirAndChown(ctx context.Context, namespaced bool, spe
 		gid = v.ContainerRootGID
 	}
 
-	v.mkdirAs(
+	err := v.mkdirAs(
 		spec.Root.Path, uid, gid, 0755, true,
 		"dev", "proc", "sys",
 	)
+	if err != nil {
+		return err
+	}
 
-	v.mkdirAs(
+	err = v.mkdirAs(
 		spec.Root.Path, uid, gid, 0777, false,
 		"tmp",
 	)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
