@@ -1,6 +1,7 @@
 package gardener
 
 import (
+	"context"
 	"errors"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -13,7 +14,7 @@ type NoopVolumizer struct{}
 
 var ErrGraphDisabled = errors.New("no image plugin configured")
 
-func (NoopVolumizer) Create(lager.Logger, string, RootfsSpec) (specs.Spec, error) {
+func (NoopVolumizer) Create(context.Context, lager.Logger, string, RootfsSpec) (specs.Spec, error) {
 	return specs.Spec{}, ErrGraphDisabled
 }
 

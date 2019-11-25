@@ -39,7 +39,7 @@ func NewVolumeProvider(creator VolumeCreator, manager VolumeDestroyMetricsGC, pr
 }
 
 type VolumeCreator interface {
-	Create(log lager.Logger, handle string, spec RootfsSpec) (specs.Spec, error)
+	Create(ctx context.Context, log lager.Logger, handle string, spec RootfsSpec) (specs.Spec, error)
 }
 
 // TODO GoRename RootfsSpec
@@ -74,7 +74,7 @@ func (v *VolumeProvider) Create(ctx context.Context, log lager.Logger, spec gard
 		baseConfig.Process = &specs.Process{}
 	} else {
 		var err error
-		baseConfig, err = v.VolumeCreator.Create(log.Session("volume-creator"), spec.Handle, RootfsSpec{
+		baseConfig, err = v.VolumeCreator.Create(ctx, log.Session("volume-creator"), spec.Handle, RootfsSpec{
 			RootFS:     rootFSURL,
 			Username:   spec.Image.Username,
 			Password:   spec.Image.Password,
@@ -92,7 +92,10 @@ func (v *VolumeProvider) Create(ctx context.Context, log lager.Logger, spec gard
 	return baseConfig, nil
 }
 
-func (v *VolumeProvider) mkdirAndChown(namespaced bool, spec specs.Spec) error {
+func (v *VolumeProvider) mkdirAndChown(ctx context.Context, namespaced bool, spec specs.Spec) error {
+	_, span := trace.StartSpan(ctx, "mkdirAndChown")
+	defer span.End()
+
 	var uid, gid int
 	if namespaced {
 		uid = v.ContainerRootUID

@@ -1,6 +1,7 @@
 package imageplugin_test
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -117,7 +118,7 @@ var _ = Describe("ImagePlugin", func() {
 			rootfsURL, err := url.Parse(rootfs)
 			Expect(err).NotTo(HaveOccurred())
 			rootfsProviderSpec = gardener.RootfsSpec{RootFS: rootfsURL, Namespaced: namespaced}
-			baseRuntimeSpec, createErr = imagePlugin.Create(fakeLogger, handle, rootfsProviderSpec)
+			baseRuntimeSpec, createErr = imagePlugin.Create(context.TODO(), fakeLogger, handle, rootfsProviderSpec)
 		})
 
 		It("calls the unprivileged command creator to generate a create command", func() {

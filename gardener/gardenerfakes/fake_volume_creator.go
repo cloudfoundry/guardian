@@ -2,6 +2,7 @@
 package gardenerfakes
 
 import (
+	"context"
 	"sync"
 
 	"code.cloudfoundry.org/guardian/gardener"
@@ -10,12 +11,13 @@ import (
 )
 
 type FakeVolumeCreator struct {
-	CreateStub        func(lager.Logger, string, gardener.RootfsSpec) (specs.Spec, error)
+	CreateStub        func(context.Context, lager.Logger, string, gardener.RootfsSpec) (specs.Spec, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
-		arg1 lager.Logger
-		arg2 string
-		arg3 gardener.RootfsSpec
+		arg1 context.Context
+		arg2 lager.Logger
+		arg3 string
+		arg4 gardener.RootfsSpec
 	}
 	createReturns struct {
 		result1 specs.Spec
@@ -29,18 +31,19 @@ type FakeVolumeCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeVolumeCreator) Create(arg1 lager.Logger, arg2 string, arg3 gardener.RootfsSpec) (specs.Spec, error) {
+func (fake *FakeVolumeCreator) Create(arg1 context.Context, arg2 lager.Logger, arg3 string, arg4 gardener.RootfsSpec) (specs.Spec, error) {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		arg1 lager.Logger
-		arg2 string
-		arg3 gardener.RootfsSpec
-	}{arg1, arg2, arg3})
-	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3})
+		arg1 context.Context
+		arg2 lager.Logger
+		arg3 string
+		arg4 gardener.RootfsSpec
+	}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3, arg4})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(arg1, arg2, arg3)
+		return fake.CreateStub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -55,17 +58,17 @@ func (fake *FakeVolumeCreator) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeVolumeCreator) CreateCalls(stub func(lager.Logger, string, gardener.RootfsSpec) (specs.Spec, error)) {
+func (fake *FakeVolumeCreator) CreateCalls(stub func(context.Context, lager.Logger, string, gardener.RootfsSpec) (specs.Spec, error)) {
 	fake.createMutex.Lock()
 	defer fake.createMutex.Unlock()
 	fake.CreateStub = stub
 }
 
-func (fake *FakeVolumeCreator) CreateArgsForCall(i int) (lager.Logger, string, gardener.RootfsSpec) {
+func (fake *FakeVolumeCreator) CreateArgsForCall(i int) (context.Context, lager.Logger, string, gardener.RootfsSpec) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	argsForCall := fake.createArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeVolumeCreator) CreateReturns(result1 specs.Spec, result2 error) {

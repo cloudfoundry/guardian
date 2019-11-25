@@ -2,6 +2,7 @@ package imageplugin
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	errorwrapper "github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 const PreloadedPlusLayerScheme = "preloaded+layer"
@@ -40,7 +42,7 @@ type ImagePlugin struct {
 	DefaultRootfs              string
 }
 
-func (p *ImagePlugin) Create(log lager.Logger, handle string, spec gardener.RootfsSpec) (specs.Spec, error) {
+func (p *ImagePlugin) Create(ctx context.Context, log lager.Logger, handle string, spec gardener.RootfsSpec) (specs.Spec, error) {
 	errs := func(err error, action string) (specs.Spec, error) {
 		return specs.Spec{}, errorwrapper.Wrap(err, action)
 	}
@@ -85,18 +87,25 @@ func (p *ImagePlugin) Create(log lager.Logger, handle string, spec gardener.Root
 	createCmd.Stdout = stdoutBuffer
 	createCmd.Stderr = NewRelogger(log)
 
+	_, span := trace.StartSpan(ctx, "ImagePlugin.Create (grootfs create)")
+
 	if err := p.CommandRunner.Run(createCmd); err != nil {
 		logData := lager.Data{"action": "create", "stdout": stdoutBuffer.String()}
 		log.Error("image-plugin-result", err, logData)
+		span.End()
 		return errs(err, fmt.Sprintf("running image plugin create: %s", stdoutBuffer.String()))
 	}
+	span.End()
 
 	var runtimeSpec specs.Spec
+	_, spanUnmarshal := trace.StartSpan(ctx, "ImagePlugin.Unmarshal")
 	if err := json.Unmarshal(stdoutBuffer.Bytes(), &runtimeSpec); err != nil {
 		logData := lager.Data{"action": "create", "stdout": stdoutBuffer.String()}
 		log.Error("image-plugin-parsing", err, logData)
+		spanUnmarshal.End()
 		return errs(err, fmt.Sprintf("parsing image plugin create: %s", stdoutBuffer.String()))
 	}
+	spanUnmarshal.End()
 
 	// Allow spec.Process.Env to be accessed without nil checks everywhere
 	if runtimeSpec.Process == nil {

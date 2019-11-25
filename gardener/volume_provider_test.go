@@ -102,7 +102,7 @@ var _ = Describe("VolumeProvider", func() {
 
 				It("calls the VolumeCreator with the correct parameters", func() {
 					Expect(volumeCreator.CreateCallCount()).To(Equal(1))
-					_, handle, rootfsSpec := volumeCreator.CreateArgsForCall(0)
+					_, _, handle, rootfsSpec := volumeCreator.CreateArgsForCall(0)
 					Expect(handle).To(Equal("some-handle"))
 
 					parsedRootFS, err := url.Parse("docker:///alpine#3.7")

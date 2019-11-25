@@ -1,6 +1,8 @@
 package gardener_test
 
 import (
+	"context"
+
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -22,7 +24,7 @@ var _ = Describe("NoopVolumizer", func() {
 
 	Describe("Create", func() {
 		It("returns ErrGraphDisabled", func() {
-			_, err := volumizer.Create(logger, "some-handle", gardener.RootfsSpec{})
+			_, err := volumizer.Create(context.TODO(), logger, "some-handle", gardener.RootfsSpec{})
 			Expect(err).To(Equal(gardener.ErrGraphDisabled))
 		})
 	})
