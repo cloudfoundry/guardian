@@ -19,7 +19,7 @@ import (
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
 	errorspkg "github.com/pkg/errors"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var CleanCommand = cli.Command{
@@ -28,7 +28,7 @@ var CleanCommand = cli.Command{
 	Description: "Cleans up unused layers",
 
 	Flags: []cli.Flag{
-		cli.Int64Flag{
+		&cli.Int64Flag{
 			Name:  "threshold-bytes",
 			Usage: "Disk usage of the store directory at which cleanup should trigger",
 		},

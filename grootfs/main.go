@@ -13,7 +13,7 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	"github.com/containers/storage/pkg/reexec"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -36,72 +36,72 @@ func main() {
 	grootfs.Usage = "I am Groot!"
 
 	grootfs.Flags = []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "config",
 			Usage: "Path to config file",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "store",
 			Usage: "Path to the store directory",
 			Value: store.DefaultStorePath,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "log-level",
 			Usage: "Set logging level <debug|info|error|fatal>",
 			Value: "fatal",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "log-file",
 			Usage: "File to write logs to. Using this option sets the log level to `info` if --log-level is not specified.",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "tardis-bin",
 			Usage: "Path to tardis bin. (If not provided will use $PATH)",
 			Value: defaultTardisBin,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "newuidmap-bin",
 			Usage: "Path to newuidmap bin. (If not provided will use $PATH)",
 			Value: defaultNewuidmapBin,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "newgidmap-bin",
 			Usage: "Path to newgidmap bin. (If not provided will use $PATH)",
 			Value: defaultNewgidmapBin,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "metron-endpoint",
 			Usage: "Metron endpoint used to send metrics",
 			Value: "",
 		},
 	}
 
-	grootfs.Commands = []cli.Command{
-		commands.InitStoreCommand,
-		commands.DeleteStoreCommand,
-		commands.GenerateVolumeSizeMetadata,
-		commands.CreateCommand,
-		commands.DeleteCommand,
-		commands.StatsCommand,
-		commands.CleanCommand,
-		commands.ListCommand,
-		commands.CapacityCommand,
+	grootfs.Commands = []*cli.Command{
+		&commands.InitStoreCommand,
+		&commands.DeleteStoreCommand,
+		&commands.GenerateVolumeSizeMetadata,
+		&commands.CreateCommand,
+		&commands.DeleteCommand,
+		&commands.StatsCommand,
+		&commands.CleanCommand,
+		&commands.ListCommand,
+		&commands.CapacityCommand,
 	}
 
 	grootfs.Before = func(ctx *cli.Context) error {
-		cfgBuilder, err := config.NewBuilder(ctx.GlobalString("config"))
+		cfgBuilder, err := config.NewBuilder(ctx.String("config"))
 		if err != nil {
 			return cli.NewExitError(err.Error(), 1)
 		}
 		ctx.App.Metadata["configBuilder"] = cfgBuilder
 
-		cfg, err := cfgBuilder.WithStorePath(ctx.GlobalString("store"), ctx.IsSet("store")).
-			WithTardisBin(ctx.GlobalString("tardis-bin"), ctx.IsSet("tardis-bin")).
-			WithMetronEndpoint(ctx.GlobalString("metron-endpoint")).
-			WithLogLevel(ctx.GlobalString("log-level"), ctx.IsSet("log-level")).
-			WithLogFile(ctx.GlobalString("log-file")).
-			WithNewuidmapBin(ctx.GlobalString("newuidmap-bin"), ctx.IsSet("newuidmap-bin")).
-			WithNewgidmapBin(ctx.GlobalString("newgidmap-bin"), ctx.IsSet("newgidmap-bin")).
+		cfg, err := cfgBuilder.WithStorePath(ctx.String("store"), ctx.IsSet("store")).
+			WithTardisBin(ctx.String("tardis-bin"), ctx.IsSet("tardis-bin")).
+			WithMetronEndpoint(ctx.String("metron-endpoint")).
+			WithLogLevel(ctx.String("log-level"), ctx.IsSet("log-level")).
+			WithLogFile(ctx.String("log-file")).
+			WithNewuidmapBin(ctx.String("newuidmap-bin"), ctx.IsSet("newuidmap-bin")).
+			WithNewgidmapBin(ctx.String("newgidmap-bin"), ctx.IsSet("newgidmap-bin")).
 			Build()
 		if err != nil {
 			return cli.NewExitError(err.Error(), 1)

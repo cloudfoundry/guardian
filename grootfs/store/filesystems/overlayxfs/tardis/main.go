@@ -5,7 +5,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis/commands"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 func main() {
@@ -20,10 +20,10 @@ func main() {
 		return nil
 	}
 
-	tardis.Commands = []cli.Command{
-		commands.LimitCommand,
-		commands.StatsCommand,
-		commands.HandleOpqWhiteoutsCommand,
+	tardis.Commands = []*cli.Command{
+		&commands.LimitCommand,
+		&commands.StatsCommand,
+		&commands.HandleOpqWhiteoutsCommand,
 	}
 
 	tardis.Run(os.Args)

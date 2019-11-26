@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/lager"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var CapacityCommand = cli.Command{

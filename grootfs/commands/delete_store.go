@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var DeleteStoreCommand = cli.Command{

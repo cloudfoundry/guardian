@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis/stats"
 	"code.cloudfoundry.org/lager"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var StatsCommand = cli.Command{
@@ -15,7 +15,7 @@ var StatsCommand = cli.Command{
 	Description: "Get stats for a volume",
 
 	Flags: []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "volume-path",
 			Usage: "Path to the volume",
 		},

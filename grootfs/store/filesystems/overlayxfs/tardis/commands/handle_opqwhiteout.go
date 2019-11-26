@@ -6,7 +6,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	"github.com/docker/docker/pkg/system"
 	errorspkg "github.com/pkg/errors"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var HandleOpqWhiteoutsCommand = cli.Command{
@@ -15,7 +15,7 @@ var HandleOpqWhiteoutsCommand = cli.Command{
 	Description: "Handle opaque whiteouts for a volume",
 
 	Flags: []cli.Flag{
-		cli.StringSliceFlag{
+		&cli.StringSliceFlag{
 			Name:  "opaque-path",
 			Usage: "Path to whiteout file",
 		},

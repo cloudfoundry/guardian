@@ -14,7 +14,7 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	errorspkg "github.com/pkg/errors"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var InitStoreCommand = cli.Command{
@@ -23,19 +23,19 @@ var InitStoreCommand = cli.Command{
 	Description: "Initialize a Store Directory",
 
 	Flags: []cli.Flag{
-		cli.StringSliceFlag{
+		&cli.StringSliceFlag{
 			Name:  "uid-mapping",
 			Usage: "UID mapping for image translation, e.g.: <Namespace UID>:<Host UID>:<Size>",
 		},
-		cli.StringSliceFlag{
+		&cli.StringSliceFlag{
 			Name:  "gid-mapping",
 			Usage: "GID mapping for image translation, e.g.: <Namespace GID>:<Host GID>:<Size>",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "rootless",
 			Usage: "The user and group to look up in /etc/sub{u,g}id for UID/GID mappings, e.g.: <username>:<group>",
 		},
-		cli.Int64Flag{
+		&cli.Int64Flag{
 			Name:  "store-size-bytes",
 			Usage: "Creates a new filesystem of the given size and mounts it to the given Store Directory",
 		},

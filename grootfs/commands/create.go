@@ -35,7 +35,7 @@ import (
 	"github.com/docker/distribution/registry/api/errcode"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	errorspkg "github.com/pkg/errors"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var CreateCommand = cli.Command{
@@ -44,51 +44,51 @@ var CreateCommand = cli.Command{
 	Description: "Creates a root filesystem for the provided image.",
 
 	Flags: []cli.Flag{
-		cli.Int64Flag{
+		&cli.Int64Flag{
 			Name:  "disk-limit-size-bytes",
 			Usage: "Inclusive disk limit (i.e: includes all layers in the filesystem)",
 		},
-		cli.StringSliceFlag{
+		&cli.StringSliceFlag{
 			Name:  "insecure-registry",
 			Usage: "Whitelist a private registry",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "exclude-image-from-quota",
 			Usage: "Set disk limit to be exclusive (i.e.: excluding image layers)",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "skip-layer-validation",
 			Usage: "Do not validate checksums and sizes of image layers. (Can only be used with oci:/// protocol images.)",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "with-clean",
 			Usage: "Clean up unused layers before creating rootfs",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "without-clean",
 			Usage: "Do NOT clean up unused layers before creating rootfs",
 		},
-		cli.Int64Flag{
+		&cli.Int64Flag{
 			Name:  "threshold-bytes",
 			Usage: "Disk usage of the store directory at which cleanup should trigger",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "with-mount",
 			Usage: "Mount the root filesystem after creation. This may require root privileges.",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  "without-mount",
 			Usage: "Do not mount the root filesystem.",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "username",
 			Usage: "Username to authenticate in image registry",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "password",
 			Usage: "Password to authenticate in image registry",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "clean-log-file",
 			Usage: "File to write the clean-on-create logs to. If not specified, stderr is used",
 		},

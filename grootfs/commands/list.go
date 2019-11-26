@@ -9,7 +9,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var ListCommand = cli.Command{

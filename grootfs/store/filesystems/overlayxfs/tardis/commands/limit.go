@@ -9,7 +9,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis/ids"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var LimitCommand = cli.Command{
@@ -18,11 +18,11 @@ var LimitCommand = cli.Command{
 	Description: "Add disk limits to the volume.",
 
 	Flags: []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "image-path",
 			Usage: "Path to the volume",
 		},
-		cli.Int64Flag{
+		&cli.Int64Flag{
 			Name:  "disk-limit-bytes",
 			Usage: "Disk limit in bytes",
 		},
