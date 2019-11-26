@@ -274,8 +274,8 @@ github.com/tedsuo/ifrit/http_server
 github.com/tedsuo/ifrit/sigmon
 # github.com/tedsuo/rata v1.0.0
 github.com/tedsuo/rata
-# github.com/urfave/cli v1.22.2
-github.com/urfave/cli
+# github.com/urfave/cli/v2 v2.0.0
+github.com/urfave/cli/v2
 # github.com/vishvananda/netlink v1.0.0
 github.com/vishvananda/netlink
 github.com/vishvananda/netlink/nl

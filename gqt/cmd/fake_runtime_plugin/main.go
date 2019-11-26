@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 func main() {
@@ -21,34 +21,34 @@ func main() {
 	fakeRuntimePlugin.Usage = "I am FakeRuntimePlugin!"
 
 	fakeRuntimePlugin.Flags = []cli.Flag{
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name: "debug",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name: "log",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name: "log-handle",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name: "log-format",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name: "image-store",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name: "root",
 		},
 	}
 
-	fakeRuntimePlugin.Commands = []cli.Command{
-		CreateCommand,
-		RunCommand,
-		DeleteCommand,
-		StateCommand,
-		EventsCommand,
-		ExecCommand,
-		ChildProcessCommand,
+	fakeRuntimePlugin.Commands = []*cli.Command{
+		&CreateCommand,
+		&RunCommand,
+		&DeleteCommand,
+		&StateCommand,
+		&EventsCommand,
+		&ExecCommand,
+		&ChildProcessCommand,
 	}
 
 	_ = fakeRuntimePlugin.Run(os.Args)
@@ -75,13 +75,13 @@ func readOutput(action string) (string, bool) {
 var CreateCommand = cli.Command{
 	Name: "create",
 	Flags: []cli.Flag{
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name: "no-new-keyring",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name: "bundle",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name: "pid-file",
 		},
 	},
@@ -100,16 +100,16 @@ var CreateCommand = cli.Command{
 var RunCommand = cli.Command{
 	Name: "run",
 	Flags: []cli.Flag{
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name: "no-new-keyring",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name: "bundle, b",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name: "pid-file",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name: "detach, d",
 		},
 	},
@@ -128,7 +128,7 @@ var RunCommand = cli.Command{
 var DeleteCommand = cli.Command{
 	Name: "delete",
 	Flags: []cli.Flag{
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name: "force, f",
 		},
 	},
@@ -157,7 +157,7 @@ var StateCommand = cli.Command{
 var EventsCommand = cli.Command{
 	Name: "events",
 	Flags: []cli.Flag{
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name: "stats",
 		},
 	},
@@ -189,15 +189,17 @@ func copyFile(source, target string) {
 var ExecCommand = cli.Command{
 	Name: "exec",
 	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "process, p",
-			Usage: "path to the process.json",
+		&cli.StringFlag{
+			Name:    "process",
+			Aliases: []string{"p"},
+			Usage:   "path to the process.json",
 		},
-		cli.BoolFlag{
-			Name:  "detach,d",
-			Usage: "detach from the container's process",
+		&cli.BoolFlag{
+			Name:    "detach",
+			Aliases: []string{"d"},
+			Usage:   "detach from the container's process",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  "pid-file",
 			Value: "",
 			Usage: "specify the file to write the process id to",
@@ -243,7 +245,7 @@ var ExecCommand = cli.Command{
 var ChildProcessCommand = cli.Command{
 	Name: "child",
 	Flags: []cli.Flag{
-		cli.IntFlag{
+		&cli.IntFlag{
 			Name: "exitcode",
 		},
 	},
