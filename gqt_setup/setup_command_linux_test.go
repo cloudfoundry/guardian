@@ -9,6 +9,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -113,6 +114,28 @@ var _ = Describe("gdn setup", func() {
 					Expect(stat.Uid).To(Equal(unprivilegedUID), "subsystem: "+subsystem.Name())
 					Expect(stat.Gid).To(Equal(unprivilegedGID))
 				}
+			})
+		})
+
+		Context("when CPU throttling is enabled", func() {
+			BeforeEach(func() {
+				if !cpuThrottlingEnabled() {
+					Skip("only relevant when CPU throttling is enabled")
+				}
+			})
+
+			It("creates the good cpu cgroup", func() {
+				path, err := cgrouper.GetCGroupPath(cgroupsRoot, "cpu", tag, false, cpuThrottlingEnabled())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(path).To(BeADirectory())
+				Expect(filepath.Base(path)).To(Equal(cgroups.GoodCgroupName))
+			})
+
+			It("creates the bad cpu cgroup", func() {
+				path, err := cgrouper.GetCGroupPath(cgroupsRoot, "cpu", tag, false, cpuThrottlingEnabled())
+				Expect(err).NotTo(HaveOccurred())
+				badCgroupPath := filepath.Join(path, "..", cgroups.BadCgroupName)
+				Expect(badCgroupPath).To(BeADirectory())
 			})
 		})
 	})
