@@ -15,7 +15,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
 
 	uuid "github.com/nu7hatch/gouuid"
 )
@@ -579,11 +578,10 @@ func runCtr(ctr, socket string, args []string) string {
 	defaultArgs := []string{"--address", socket, "--namespace", "garden"}
 	cmd := exec.Command(ctr, append(defaultArgs, args...)...)
 
-	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(session).Should(gexec.Exit(0), string(session.Err.Contents()))
+	output, err := cmd.CombinedOutput()
+	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("ctr failed: %s", string(output)))
 
-	return string(session.Out.Contents())
+	return string(output)
 }
 
 func findFilesContaining(substring string) bool {
