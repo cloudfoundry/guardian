@@ -77,13 +77,6 @@ func TestGqt(t *testing.T) {
 
 		if strings.Contains(message, "running image plugin destroy: deleting image path") {
 			io.WriteString(GinkgoWriter, fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelNode()))
-			io.WriteString(GinkgoWriter, "\nPrinting rootfs directories inodes...\n\n")
-			findOut, findErr := exec.Command("/bin/bash", "-c", fmt.Sprintf("find %s -printf '%%p %%i\n'", config.StorePath)).Output()
-			if findErr != nil {
-				io.WriteString(GinkgoWriter, findErr.Error())
-			}
-			GinkgoWriter.Write(findOut)
-
 			io.WriteString(GinkgoWriter, "\nPrinting lsof...\n\n")
 			lsofOut, lsofErr := exec.Command("lsof").Output()
 			if lsofErr != nil {
@@ -103,6 +96,15 @@ func TestGqt(t *testing.T) {
 			if len(submatches) >= 2 {
 				imagePath := submatches[1]
 				rootfsPath := filepath.Join(imagePath, "rootfs")
+
+				io.WriteString(GinkgoWriter, fmt.Sprintf("\nPrinting fuser on %s...\n\n", rootfsPath))
+				fuserOut, fuserErr := exec.Command("fuser", "-m", rootfsPath).CombinedOutput()
+				if fuserErr != nil {
+					io.WriteString(GinkgoWriter, fuserErr.Error())
+				}
+				GinkgoWriter.Write(fuserOut)
+				fmt.Fprintln(GinkgoWriter)
+
 				Eventually(getMountTable, "2m", "1s").ShouldNot(ContainSubstring(rootfsPath), "Image rootfs path %q is still a mountpoint", rootfsPath)
 			}
 		}
