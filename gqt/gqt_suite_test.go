@@ -91,6 +91,13 @@ func TestGqt(t *testing.T) {
 			}
 			io.WriteString(GinkgoWriter, mntTableOut)
 
+			io.WriteString(GinkgoWriter, "\nPrinting the process tree...\n\n")
+			psOut, psErr := exec.Command("ps", "auxf").Output()
+			if psErr != nil {
+				io.WriteString(GinkgoWriter, psErr.Error())
+			}
+			GinkgoWriter.Write(psOut)
+
 			r, _ := regexp.Compile("deleting image path '(.+)' failed")
 			submatches := r.FindStringSubmatch(message)
 			if len(submatches) >= 2 {
