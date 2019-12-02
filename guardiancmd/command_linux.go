@@ -11,6 +11,7 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/kawasaki/dns"
+	"code.cloudfoundry.org/guardian/nerdimage"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
@@ -29,7 +30,6 @@ import (
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/leases"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/pkg/process"
 	"github.com/containerd/containerd/plugin"
@@ -61,12 +61,22 @@ func (f *LinuxFactory) CommandRunner() commandrunner.CommandRunner {
 }
 
 func (f *LinuxFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
-	if f.config.Image.Plugin.Path() != "" || f.config.Image.PrivilegedPlugin.Path() != "" {
-		return f.config.wireImagePlugin(f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
+	// TODO 1: we should not be creating the client and the context here
+	// TODO 2: we should not hardcode the store directory
+	// TODO 3: we should not panic
+	containerdClient, err := containerd.New(f.config.Containerd.Socket, containerd.WithDefaultRuntime(plugin.RuntimeLinuxV1))
+	if err != nil {
+		panic(fmt.Errorf("failed to create containerd client: %+v", err))
 	}
+	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
+	// ctx = leases.WithLease(ctx, "lease-is-off")
+	return nerdimage.NewContainerdVolumizer(containerdClient, ctx, "/var/vcap/data/grootfs/store/unprivileged")
+	// if f.config.Image.Plugin.Path() != "" || f.config.Image.PrivilegedPlugin.Path() != "" {
+	// 	return f.config.wireImagePlugin(f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
+	// }
 
-	noop := gardener.NoopVolumizer{}
-	return gardener.NewVolumeProvider(noop, noop, gardener.CommandFactory(preparerootfs.Command), f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
+	// noop := gardener.NoopVolumizer{}
+	// return gardener.NewVolumeProvider(noop, noop, gardener.CommandFactory(preparerootfs.Command), f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
 }
 
 func wireEnvFunc() processes.EnvFunc {
@@ -153,7 +163,7 @@ func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, use
 		return nil, nil, nil, nil, nil, err
 	}
 	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
-	ctx = leases.WithLease(ctx, "lease-is-off")
+	// ctx = leases.WithLease(ctx, "lease-is-off")
 	nerd := nerdpkg.New(containerdClient, ctx, filepath.Join(containerdRuncRoot(), "fifo"))
 	nerdStopper := nerdpkg.NewNerdStopper(containerdClient)
 	pidGetter := &runcontainerd.PidGetter{Nerd: nerd}
