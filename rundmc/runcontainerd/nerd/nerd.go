@@ -41,6 +41,18 @@ func New(client *containerd.Client, context context.Context, ioFifoDir string) *
 func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, pio func() (io.Reader, io.Writer, io.Writer)) error {
 	log.Debug("creating-container", lager.Data{"containerID": containerID})
 	container, err := n.client.NewContainer(n.context, containerID, containerd.WithSpec(spec))
+
+	// images, err := n.client.ListImages(n.context, fmt.Sprintf(`labels."%s"`, containerID))
+	// if err != nil {
+	// 	return err
+	// }
+	// if len(images) != 1 {
+	// 	return errors.New("there is no image labeled with this container handle")
+	// }
+
+	// container, err := n.client.NewContainer(n.context, containerID,
+	// 	containerd.WithSpec(spec, oci.WithImageConfig(images[0])),
+	// 	containerd.WithNewSnapshot(containerID, images[0]))
 	if err != nil {
 		return err
 	}

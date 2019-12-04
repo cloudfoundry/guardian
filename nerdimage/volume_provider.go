@@ -18,21 +18,22 @@ import (
 	"github.com/opencontainers/image-spec/identity"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
-	"golang.org/x/sys/unix"
 )
 
 type ContainerdVolumizer struct {
 	client   *containerd.Client
 	context  context.Context
 	storeDir string
+	rootUID  int
+	rootGID  int
 }
 
-func NewContainerdVolumizer(client *containerd.Client, context context.Context, storeDir string) *ContainerdVolumizer {
-	return &ContainerdVolumizer{client: client, context: context, storeDir: storeDir}
+func NewContainerdVolumizer(client *containerd.Client, context context.Context, storeDir string, rootUID, rootGID int) *ContainerdVolumizer {
+	return &ContainerdVolumizer{client: client, context: context, storeDir: storeDir, rootUID: rootUID, rootGID: rootGID}
 }
 
 func (v ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error) {
-	image, err := v.client.Pull(v.context, spec.Image.URI, containerd.WithPullUnpack)
+	image, err := v.client.Pull(v.context, spec.Image.URI, containerd.WithPullUnpack, containerd.WithPullLabel(spec.Handle, "set"))
 	if err != nil {
 		return specs.Spec{}, err
 	}
@@ -59,22 +60,30 @@ func (v ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec)
 		return specs.Spec{}, err
 	}
 
+	if err := recursiveChown(rootfsDir, v.rootUID, v.rootGID); err != nil {
+		return specs.Spec{}, err
+	}
+
 	imgEnv, err := getImageEnvironment(v.context, image)
 	if err != nil {
 		return specs.Spec{}, err
 	}
 
+	// rootfsDir := filepath.Join("/var/vcap/data/containerd/state", spec.Handle, "rootfs")
+	// return specs.Spec{Root: &specs.Root{Path: rootfsDir}}, nil
 	return specs.Spec{Root: &specs.Root{Path: rootfsDir}, Process: &specs.Process{Env: imgEnv}}, nil
 }
 
 func (v ContainerdVolumizer) Destroy(log lager.Logger, handle string) error {
-	snapshotter := v.client.SnapshotService(containerd.DefaultSnapshotter)
-	rootfsDir := filepath.Join(v.storeDir, handle)
-	if err := unix.Unmount(rootfsDir, 0); err != nil {
-		return err
-	}
 
-	return snapshotter.Remove(v.context, handle)
+	// snapshotter := v.client.SnapshotService(containerd.DefaultSnapshotter)
+	// rootfsDir := filepath.Join(v.storeDir, handle)
+	// if err := unix.Unmount(rootfsDir, 0); err != nil {
+	// 	return err
+	// }
+
+	// return snapshotter.Remove(v.context, handle)
+	return nil
 }
 
 func (v ContainerdVolumizer) Metrics(log lager.Logger, handle string, namespaced bool) (garden.ContainerDiskStat, error) {
@@ -87,6 +96,15 @@ func (v ContainerdVolumizer) GC(log lager.Logger) error {
 
 func (v ContainerdVolumizer) Capacity(log lager.Logger) (uint64, error) {
 	return 0, nil
+}
+
+func recursiveChown(path string, uid, gid int) error {
+	return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
+		if err == nil {
+			err = os.Lchown(name, uid, gid)
+		}
+		return err
+	})
 }
 
 func getParentSnapshotID(ctx context.Context, image containerd.Image) (string, error) {
