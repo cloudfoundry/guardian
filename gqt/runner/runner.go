@@ -338,7 +338,7 @@ func (r *RunningGarden) Create(spec garden.ContainerSpec) (garden.Container, err
 		return nil, err
 	}
 
-	fmt.Fprintf(GinkgoWriter, "GQT runner created container with id %s and pid %s", container.Handle(), containerPid)
+	fmt.Fprintf(GinkgoWriter, "GQT runner created container with id %s and pid %s\n", container.Handle(), containerPid)
 	return container, nil
 }
 

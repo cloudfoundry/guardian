@@ -77,12 +77,6 @@ func TestGqt(t *testing.T) {
 
 		if strings.Contains(message, "running image plugin destroy: deleting image path") {
 			io.WriteString(GinkgoWriter, fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelNode()))
-			io.WriteString(GinkgoWriter, "\nPrinting lsof...\n\n")
-			lsofOut, lsofErr := exec.Command("lsof").Output()
-			if lsofErr != nil {
-				io.WriteString(GinkgoWriter, lsofErr.Error())
-			}
-			GinkgoWriter.Write(lsofOut)
 
 			io.WriteString(GinkgoWriter, "\nPrinting the mount table...\n\n")
 			mntTableOut, mntTableErr := getMountTable()
