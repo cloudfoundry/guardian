@@ -10,7 +10,9 @@ import (
 	"code.cloudfoundry.org/commandrunner/windows_command_runner"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki"
+	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
@@ -52,6 +54,11 @@ type NoopResolvConfigurer struct{}
 func (*NoopResolvConfigurer) Configure(log lager.Logger, cfg kawasaki.NetworkConfig, pid int) error {
 	return nil
 }
+
+type NoopService struct{}
+
+func (NoopService) Start() {}
+func (NoopService) Stop()  {}
 
 func (f *WindowsFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {
 	return &NoopResolvConfigurer{}
@@ -102,6 +109,10 @@ func (f *WindowsFactory) WireMkdirer() runrunc.Mkdirer {
 
 func (f *WindowsFactory) WireContainerd(processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger, volumizer peas.Volumizer, peaHandlesGetter runcontainerd.PeaHandlesGetter) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, peas.BundleLoader, error) {
 	return nil, nil, nil, nil, nil, errors.New("containerd not impletemented on windows")
+}
+
+func (f *WindowsFactory) WireCPUCgrouper() (rundmc.CPUCgrouper, error) {
+	return cgroups.NoopCPUCgrouper{}, nil
 }
 
 func wireEnvFunc() processes.EnvFunc {
@@ -161,4 +172,8 @@ func containerdRuncRoot() string {
 
 func (cmd *CommonCommand) computeRuncRoot() string {
 	return ""
+}
+
+func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containerizer *rundmc.Containerizer) (Service, error) {
+	return &NoopService{}, nil
 }

@@ -3,6 +3,7 @@ package rundmc
 import (
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 //go:generate counterfeiter . PeaCreator
 //go:generate counterfeiter . PeaUsernameResolver
 //go:generate counterfeiter . RuntimeStopper
+//go:generate counterfeiter . CPUCgrouper
 
 type Depot interface {
 	Destroy(log lager.Logger, handle string) error
@@ -92,6 +94,12 @@ type PeaUsernameResolver interface {
 	ResolveUser(log lager.Logger, handle string, image garden.ImageRef, username string) (int, int, error)
 }
 
+type CPUCgrouper interface {
+	CreateBadCgroup(handle string) error
+	DestroyBadCgroup(handle string) error
+	ReadBadCgroupUsage(handle string) (garden.ContainerCPUStat, error)
+}
+
 // Containerizer knows how to manage a depot of container bundles
 type Containerizer struct {
 	depot                  Depot
@@ -105,6 +113,7 @@ type Containerizer struct {
 	peaUsernameResolver    PeaUsernameResolver
 	cpuEntitlementPerShare float64
 	runtimeStopper         RuntimeStopper
+	cpuCgrouper            CPUCgrouper
 }
 
 func New(
@@ -119,6 +128,7 @@ func New(
 	peaUsernameResolver PeaUsernameResolver,
 	cpuEntitlementPerShare float64,
 	runtimeStopper RuntimeStopper,
+	cpuCgrouper CPUCgrouper,
 ) *Containerizer {
 	containerizer := &Containerizer{
 		depot:                  depot,
@@ -132,6 +142,7 @@ func New(
 		peaUsernameResolver:    peaUsernameResolver,
 		cpuEntitlementPerShare: cpuEntitlementPerShare,
 		runtimeStopper:         runtimeStopper,
+		cpuCgrouper:            cpuCgrouper,
 	}
 	return containerizer
 }
@@ -163,6 +174,11 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 	bundle, err := c.bundler.Generate(spec)
 	if err != nil {
 		log.Error("bundle-generate-failed", err)
+		return err
+	}
+
+	if err := c.cpuCgrouper.CreateBadCgroup(spec.Handle); err != nil {
+		log.Error("create-bad-cgroup-failed", err)
 		return err
 	}
 
@@ -295,7 +311,11 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 	log.Info("started")
 	defer log.Info("finished")
 
-	return c.runtime.Delete(log, handle)
+	if err := c.runtime.Delete(log, handle); err != nil {
+		return err
+	}
+
+	return c.cpuCgrouper.DestroyBadCgroup(handle)
 }
 
 func (c *Containerizer) RemoveBundle(log lager.Logger, handle string) error {
@@ -359,6 +379,17 @@ func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.Actua
 		return gardener.ActualContainerMetrics{}, err
 	}
 
+	badCpuStats, err := c.readBadCgroupUsage(handle)
+	if err != nil {
+		return gardener.ActualContainerMetrics{}, err
+	}
+
+	containerMetrics.CPU = garden.ContainerCPUStat{
+		Usage:  containerMetrics.CPU.Usage + badCpuStats.Usage,
+		User:   containerMetrics.CPU.User + badCpuStats.User,
+		System: containerMetrics.CPU.System + badCpuStats.System,
+	}
+
 	actualContainerMetrics := gardener.ActualContainerMetrics{
 		StatsContainerMetrics: containerMetrics,
 	}
@@ -374,6 +405,19 @@ func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.Actua
 	actualContainerMetrics.CPUEntitlement = calculateCPUEntitlement(getShares(bundle), c.cpuEntitlementPerShare, containerMetrics.Age)
 
 	return actualContainerMetrics, nil
+}
+
+func (c *Containerizer) readBadCgroupUsage(handle string) (garden.ContainerCPUStat, error) {
+	badCpuStats, err := c.cpuCgrouper.ReadBadCgroupUsage(handle)
+	if err == nil {
+		return badCpuStats, nil
+	}
+
+	if os.IsNotExist(err) {
+		return garden.ContainerCPUStat{}, nil
+	}
+
+	return garden.ContainerCPUStat{}, err
 }
 
 func (c *Containerizer) Shutdown() error {

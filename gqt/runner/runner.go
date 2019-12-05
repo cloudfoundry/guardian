@@ -99,6 +99,7 @@ type GdnRunnerConfig struct {
 	UseContainerdForProcesses      *bool    `flag:"use-containerd-for-processes"`
 	CPUEntitlementPerShare         *float64 `flag:"cpu-entitlement-per-share"`
 	EnableCPUThrottling            *bool    `flag:"enable-cpu-throttling"`
+	CPUThrottlingCheckInterval     *uint64  `flag:"cpu-throttling-check-interval"`
 
 	StartupExpectedToFail bool
 	StorePath             string

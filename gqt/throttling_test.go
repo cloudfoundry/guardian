@@ -1,0 +1,165 @@
+package gqt_test
+
+import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"path/filepath"
+	"strconv"
+	"strings"
+
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gqt/runner"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
+
+var _ = Describe("throttle tests", func() {
+	var (
+		client        *runner.RunningGarden
+		container     garden.Container
+		containerPort uint32
+	)
+
+	BeforeEach(func() {
+		skipIfNotCPUThrottling()
+
+		client = runner.Start(config)
+
+		var err error
+		container, err = client.Create(garden.ContainerSpec{
+			Image: garden.ImageRef{URI: "docker:///cfgarden/throttled-or-not"},
+			Limits: garden.Limits{
+				CPU: garden.CPULimits{
+					Weight: 1000,
+				},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		containerPort, _, err = container.NetIn(0, 8080)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = container.Run(garden.ProcessSpec{Path: "/go/src/app/main"}, garden.ProcessIO{})
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(func() (string, error) {
+			return httpGet(fmt.Sprintf("http://%s:%d/ping", externalIP(container), containerPort))
+		}).Should(Equal("pong"))
+	})
+
+	AfterEach(func() {
+		Expect(client.DestroyAndStop()).To(Succeed())
+	})
+
+	ensureInCgroup := func(cgroupType string) string {
+		cgroupPath := ""
+		EventuallyWithOffset(1, func() (string, error) {
+			var err error
+			cgroupPath, err = getCgroup(container, containerPort)
+			return cgroupPath, err
+		}, "10s").Should(HaveSuffix(filepath.Join(cgroupType, container.Handle())))
+
+		return getAbsoluteCgroupPath(config.Tag, cgroupPath)
+	}
+
+	It("will create both a good and a bad cgroup for that container", func() {
+		goodCgroupPath := ensureInCgroup(cgroups.GoodCgroupName)
+		badCgroup := strings.Replace(goodCgroupPath, cgroups.GoodCgroupName, cgroups.BadCgroupName, 1)
+		Expect(badCgroup).To(BeAnExistingFile())
+	})
+
+	It("will eventually move the app to the bad cgroup", func() {
+		ensureInCgroup(cgroups.GoodCgroupName)
+		Expect(spin(container, containerPort)).To(Succeed())
+		ensureInCgroup(cgroups.BadCgroupName)
+	})
+
+	It("preserves the container shares in the bad cgroup", func() {
+		goodCgroupPath := ensureInCgroup(cgroups.GoodCgroupName)
+		Expect(spin(container, containerPort)).To(Succeed())
+		badCgroupPath := ensureInCgroup(cgroups.BadCgroupName)
+
+		goodShares := readCgroupFile(goodCgroupPath, "cpu.shares")
+		badShares := readCgroupFile(badCgroupPath, "cpu.shares")
+		Expect(goodShares).To(Equal(badShares))
+
+	})
+
+	It("will delete the bad cgroup after the container gets destroyed", func() {
+		currentCgroupSubpath, err := getCgroup(container, containerPort)
+		Expect(err).NotTo(HaveOccurred())
+
+		currentCgroupPath := getAbsoluteCgroupPath(config.Tag, currentCgroupSubpath)
+
+		badCgroup := strings.Replace(currentCgroupPath, cgroups.GoodCgroupName, cgroups.BadCgroupName, 1)
+
+		Expect(client.Destroy(container.Handle())).To(Succeed())
+		Expect(badCgroup).NotTo(BeAnExistingFile())
+	})
+
+	It("CPU metrics are combined from the good and bad cgroup", func() {
+		goodCgroupPath := ensureInCgroup(cgroups.GoodCgroupName)
+		// Spinning the app should stop updating the usage in the good cgroup
+		Expect(spin(container, containerPort)).To(Succeed())
+
+		ensureInCgroup(cgroups.BadCgroupName)
+
+		goodCgroupUsage := readCgroupFile(goodCgroupPath, "cpuacct.usage")
+
+		// This value won't change in the future since the app is in the good cgroup
+		metrics, err := container.Metrics()
+		Expect(err).NotTo(HaveOccurred())
+
+		// Usage should be bigger than just the value in the metrics
+		Expect(metrics.CPUStat.Usage).To(BeNumerically(">", goodCgroupUsage))
+	})
+})
+
+func getCgroup(container garden.Container, containerPort uint32) (string, error) {
+	cgroup, err := httpGet(fmt.Sprintf("http://%s:%d/cpucgroup", externalIP(container), containerPort))
+	if err != nil {
+		return "", fmt.Errorf("cpucgroup failed: %+v", err)
+	}
+
+	return cgroup, nil
+}
+
+func spin(container garden.Container, containerPort uint32) error {
+	if _, err := httpGet(fmt.Sprintf("http://%s:%d/spin", externalIP(container), containerPort)); err != nil {
+		return fmt.Errorf("spin failed: %+v", err)
+	}
+
+	return nil
+}
+
+func httpGet(url string) (string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
+	}
+
+	return string(body), nil
+}
+
+func getAbsoluteCgroupPath(tag, cgroupSubPath string) string {
+	cgroupMountpoint := fmt.Sprintf("/tmp/cgroups-%s", tag)
+	return filepath.Join(cgroupMountpoint, "cpu", cgroupSubPath)
+}
+
+func readCgroupFile(cgroupPath, file string) int64 {
+	usageContent, err := ioutil.ReadFile(filepath.Join(cgroupPath, file))
+	Expect(err).NotTo(HaveOccurred())
+
+	usage, err := strconv.ParseInt(strings.TrimSpace(string(usageContent)), 10, 64)
+	Expect(err).NotTo(HaveOccurred())
+
+	return usage
+}

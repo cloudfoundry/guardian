@@ -35,6 +35,7 @@ var _ = Describe("Rundmc", func() {
 		fakePeaCreator          *fakes.FakePeaCreator
 		fakePeaUsernameResolver *fakes.FakePeaUsernameResolver
 		fakeRuntimeStopper      *fakes.FakeRuntimeStopper
+		fakeCPUCgrouper         *fakes.FakeCPUCgrouper
 
 		logger        lager.Logger
 		containerizer *rundmc.Containerizer
@@ -52,6 +53,7 @@ var _ = Describe("Rundmc", func() {
 		fakePeaCreator = new(fakes.FakePeaCreator)
 		fakePeaUsernameResolver = new(fakes.FakePeaUsernameResolver)
 		fakeRuntimeStopper = new(fakes.FakeRuntimeStopper)
+		fakeCPUCgrouper = new(fakes.FakeCPUCgrouper)
 		logger = lagertest.NewTestLogger("test")
 
 		bundle = goci.Bndl{Spec: specs.Spec{Version: "test-version"}}
@@ -69,6 +71,7 @@ var _ = Describe("Rundmc", func() {
 			fakePeaUsernameResolver,
 			0,
 			fakeRuntimeStopper,
+			fakeCPUCgrouper,
 		)
 	})
 
@@ -84,6 +87,17 @@ var _ = Describe("Rundmc", func() {
 
 			actualSpec := fakeBundleGenerator.GenerateArgsForCall(0)
 			Expect(actualSpec).To(Equal(spec))
+		})
+
+		It("should create a bad CPU cgroup", func() {
+			Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{
+				Handle:     "exuberant!",
+				BaseConfig: specs.Spec{Root: &specs.Root{}},
+			})).To(Succeed())
+
+			Expect(fakeCPUCgrouper.CreateBadCgroupCallCount()).To(Equal(1))
+			actualHandle := fakeCPUCgrouper.CreateBadCgroupArgsForCall(0)
+			Expect(actualHandle).To(Equal("exuberant!"))
 		})
 
 		It("should create a container with the given id", func() {
@@ -109,6 +123,16 @@ var _ = Describe("Rundmc", func() {
 			})
 		})
 
+		Context("when creating the bad cgroup fails", func() {
+			BeforeEach(func() {
+				fakeCPUCgrouper.CreateBadCgroupReturns(errors.New("BOOHOO"))
+			})
+
+			It("should propagate the error", func() {
+				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{})).To(MatchError("BOOHOO"))
+			})
+
+		})
 		Context("when the container creation fails", func() {
 			BeforeEach(func() {
 				fakeOCIRuntime.CreateReturns(errors.New("banana"))
@@ -381,6 +405,12 @@ var _ = Describe("Rundmc", func() {
 			Expect(fakeOCIRuntime.DeleteCallCount()).To(Equal(1))
 		})
 
+		It("destroys the bad cgroup", func() {
+			Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
+			Expect(fakeCPUCgrouper.DestroyBadCgroupCallCount()).To(Equal(1))
+			Expect(fakeCPUCgrouper.DestroyBadCgroupArgsForCall(0)).To(Equal("some-handle"))
+		})
+
 		Context("when the runtime fails to destroy", func() {
 			BeforeEach(func() {
 				fakeOCIRuntime.DeleteReturns(errors.New("pid not found"))
@@ -390,6 +420,17 @@ var _ = Describe("Rundmc", func() {
 				Expect(containerizer.Destroy(logger, "some-handle")).To(MatchError("pid not found"))
 			})
 		})
+
+		Context("when deleting the bad cgroup fails", func() {
+			BeforeEach(func() {
+				fakeCPUCgrouper.DestroyBadCgroupReturns(errors.New("POOH"))
+			})
+
+			It("propagates the error back", func() {
+				Expect(containerizer.Destroy(logger, "some-handle")).To(MatchError("POOH"))
+			})
+		})
+
 	})
 
 	Describe("RemoveBundle", func() {
@@ -578,11 +619,25 @@ var _ = Describe("Rundmc", func() {
 					System: 3,
 				},
 			}
-			metrics := gardener.ActualContainerMetrics{
-				StatsContainerMetrics: containerStats,
+
+			cpuStats := garden.ContainerCPUStat{
+				Usage:  1,
+				User:   2,
+				System: 3,
+			}
+
+			expectedMetrics := gardener.ActualContainerMetrics{
+				StatsContainerMetrics: gardener.StatsContainerMetrics{
+					CPU: garden.ContainerCPUStat{
+						Usage:  2,
+						User:   4,
+						System: 6,
+					},
+				},
 			}
 			fakeOCIRuntime.StatsReturns(containerStats, nil)
-			Expect(containerizer.Metrics(logger, "foo")).To(Equal(metrics))
+			fakeCPUCgrouper.ReadBadCgroupUsageReturns(cpuStats, nil)
+			Expect(containerizer.Metrics(logger, "foo")).To(Equal(expectedMetrics))
 		})
 
 		Context("when cpu entitlement per share is defined", func() {
@@ -602,6 +657,7 @@ var _ = Describe("Rundmc", func() {
 					fakePeaUsernameResolver,
 					entitlementPerSharePercent,
 					fakeRuntimeStopper,
+					fakeCPUCgrouper,
 				)
 			})
 
@@ -642,6 +698,38 @@ var _ = Describe("Rundmc", func() {
 			It("should return the error", func() {
 				_, err := containerizer.Metrics(logger, "foo")
 				Expect(err).To(MatchError("banana"))
+			})
+		})
+
+		Context("when the cpu cgrouper fails to provide bad cgroup usage", func() {
+			BeforeEach(func() {
+				fakeCPUCgrouper.ReadBadCgroupUsageReturns(garden.ContainerCPUStat{}, errors.New("potato"))
+			})
+
+			It("should return the error", func() {
+				_, err := containerizer.Metrics(logger, "foo")
+				Expect(err).To(MatchError("potato"))
+			})
+		})
+
+		Context("when the bad cgroup does not exist (an ancient container)", func() {
+			var runtimeStats gardener.StatsContainerMetrics
+
+			BeforeEach(func() {
+				fakeCPUCgrouper.ReadBadCgroupUsageReturns(garden.ContainerCPUStat{}, os.ErrNotExist)
+
+				runtimeStats = gardener.StatsContainerMetrics{
+					CPU: garden.ContainerCPUStat{
+						Usage:  1,
+						User:   2,
+						System: 3,
+					},
+				}
+				fakeOCIRuntime.StatsReturns(runtimeStats, nil)
+			})
+
+			It("returns runtime stats only", func() {
+				Expect(containerizer.Metrics(logger, "foo")).To(Equal(gardener.ActualContainerMetrics{StatsContainerMetrics: runtimeStats}))
 			})
 		})
 	})

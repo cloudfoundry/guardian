@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
@@ -14,6 +15,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
+	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
@@ -26,6 +28,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/guardian/rundmc/users"
+	"code.cloudfoundry.org/guardian/throttle"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
@@ -33,6 +36,7 @@ import (
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/pkg/process"
 	"github.com/containerd/containerd/plugin"
+	cgrouputils "github.com/opencontainers/runc/libcontainer/cgroups"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
@@ -170,6 +174,18 @@ func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, use
 	return containerdManager, peaRunner, pidGetter, privilegeChecker, peaBundleLoader, nil
 }
 
+func (f *LinuxFactory) WireCPUCgrouper() (rundmc.CPUCgrouper, error) {
+	if !f.config.CPUThrottling.Enabled {
+		return cgroups.NoopCPUCgrouper{}, nil
+	}
+
+	gardenCPUCgroupPath, err := f.config.getGardenCPUCgroup()
+	if err != nil {
+		return nil, err
+	}
+	return cgroups.NewCPUCgrouper(gardenCPUCgroupPath), nil
+}
+
 func initBindMountAndPath(initPathOnHost string) (specs.Mount, string) {
 	initPathInContainer := filepath.Join("/tmp", "garden-init")
 	return specs.Mount{
@@ -258,4 +274,37 @@ func getRuntimeDir() string {
 		return filepath.Join(runtimeDir, "runc")
 	}
 	return ""
+}
+
+func (cmd *CommonCommand) getGardenCPUCgroup() (string, error) {
+	cpuCgroupSubPath, err := cgrouputils.ParseCgroupFile("/proc/self/cgroup")
+	if err != nil {
+		return "", err
+	}
+
+	cgroupsMountpoint := gardencgroups.Root
+	gardenCgroup := gardencgroups.Garden
+
+	if cmd.Server.Tag != "" {
+		cgroupsMountpoint = filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", cmd.Server.Tag))
+		gardenCgroup = fmt.Sprintf("%s-%s", gardenCgroup, cmd.Server.Tag)
+	}
+
+	return filepath.Join(cgroupsMountpoint, "cpu", cpuCgroupSubPath["cpu"], gardenCgroup), nil
+}
+
+func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containerizer *rundmc.Containerizer) (Service, error) {
+	metricsSource := throttle.NewContainerMetricsSource(containerizer)
+	gardenCPUCgroup, err := cmd.getGardenCPUCgroup()
+	if err != nil {
+		return nil, err
+	}
+
+	enforcer := throttle.NewEnforcer(gardenCPUCgroup)
+
+	throttler := throttle.NewThrottler(metricsSource, enforcer)
+
+	ticker := time.NewTicker(time.Duration(cmd.CPUThrottling.CheckInterval) * time.Second)
+
+	return throttle.NewPollingService(log, throttler, ticker.C), nil
 }

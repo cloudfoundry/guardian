@@ -159,8 +159,8 @@ var _ = BeforeEach(func() {
 	}
 
 	if cpuThrottlingEnabled() {
-		t := true
-		config.EnableCPUThrottling = &t
+		config.EnableCPUThrottling = boolptr(true)
+		config.CPUThrottlingCheckInterval = uint64ptr(5)
 	}
 })
 
@@ -479,6 +479,12 @@ func skipIfNotContainerd() {
 func skipIfDev() {
 	if os.Getenv("LOCAL_DEV_RUN") == "true" {
 		Skip("skipping when running locally")
+	}
+}
+
+func skipIfNotCPUThrottling() {
+	if os.Getenv("CPU_THROTTLING_ENABLED") != "true" {
+		Skip("skipping as CPU throttling is not enabled")
 	}
 }
 

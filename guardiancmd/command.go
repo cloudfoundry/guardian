@@ -61,6 +61,7 @@ type GardenFactory interface {
 	WireExecRunner(runcRoot string, containerRootUID, containerRootGID uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot execrunner.ProcessDepot) runrunc.ExecRunner
 	WireRootfsFileCreator() depot.RootfsFileCreator
 	WireContainerd(*processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser, lager.Logger, peas.Volumizer, runcontainerd.PeaHandlesGetter) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *containerdprivchecker.PrivilegeChecker, peas.BundleLoader, error)
+	WireCPUCgrouper() (rundmc.CPUCgrouper, error)
 }
 
 type PidGetter interface {
@@ -76,6 +77,11 @@ type GdnCommand struct {
 	// This must be present to stop go-flags complaining, but it's not actually
 	// used. We parse this flag outside of the go-flags framework.
 	ConfigFilePath string `long:"config" description:"Config file path."`
+}
+
+type Service interface {
+	Start()
+	Stop()
 }
 
 type CommonCommand struct {
@@ -186,7 +192,8 @@ type CommonCommand struct {
 	} `group:"Containerd"`
 
 	CPUThrottling struct {
-		Enabled bool `long:"enable-cpu-throttling" description:"Enable CPU throttling."`
+		Enabled       bool   `long:"enable-cpu-throttling" description:"Enable CPU throttling."`
+		CheckInterval uint32 `long:"cpu-throttling-check-interval" default:"15" description:"How often to check which apps need to get CPU throttled or not."`
 	}
 }
 
@@ -661,7 +668,12 @@ func (cmd *CommonCommand) wireContainerizer(
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)
 	processesStopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
 
-	return rundmc.New(depot, template, ociRuntime, nstar, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper), peaCleaner, nil
+	cpuCgrouper, err := factory.WireCPUCgrouper()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return rundmc.New(depot, template, ociRuntime, nstar, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper, cpuCgrouper), peaCleaner, nil
 }
 
 func (cmd *CommonCommand) useContainerd() bool {

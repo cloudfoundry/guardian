@@ -13,6 +13,7 @@ import (
 	"code.cloudfoundry.org/guardian/bindata"
 	"code.cloudfoundry.org/guardian/kawasaki/ports"
 	"code.cloudfoundry.org/guardian/metrics"
+	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/dropsonde"
@@ -279,10 +280,18 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		logger.Error("starting-guardian-backend", err)
 		return err
 	}
+
 	if err := gardenServer.SetupBomberman(); err != nil {
 		logger.Error("setting-up-bomberman", err)
 		return err
 	}
+
+	services, err := cmd.wireServices(logger, wiring.Containerizer)
+	if err != nil {
+		return err
+	}
+
+	startServices(services)
 	if err := startServer(gardenServer, logger); err != nil {
 		return err
 	}
@@ -299,6 +308,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	if err := gardenServer.Stop(); err != nil {
 		logger.Error("stopping-garden-server", err)
 	}
+	stopServices(services)
 
 	cmd.saveProperties(logger, cmd.Containers.PropertiesPath, wiring.PropertiesManager)
 
@@ -358,6 +368,33 @@ func (cmd *ServerCommand) initializeDropsonde(log lager.Logger) {
 	err := dropsonde.Initialize(cmd.Metrics.DropsondeDestination, cmd.Metrics.DropsondeOrigin)
 	if err != nil {
 		log.Error("failed to initialize dropsonde", err)
+	}
+}
+
+func (cmd *ServerCommand) wireServices(log lager.Logger, containerizer *rundmc.Containerizer) ([]Service, error) {
+	services := []Service{}
+
+	if cmd.CPUThrottling.Enabled {
+		cpuThrottling, err := cmd.wireCpuThrottlingService(log, containerizer)
+		if err != nil {
+			return nil, err
+		}
+
+		services = append(services, cpuThrottling)
+	}
+
+	return services, nil
+}
+
+func startServices(services []Service) {
+	for _, s := range services {
+		s.Start()
+	}
+}
+
+func stopServices(services []Service) {
+	for _, s := range services {
+		s.Stop()
 	}
 }
 
