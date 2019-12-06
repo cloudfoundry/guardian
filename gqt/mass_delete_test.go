@@ -44,15 +44,20 @@ var _ = Describe("Mass delete", func() {
 			}
 		}()
 
-		wg := sync.WaitGroup{}
-		wg.Add(handlesLen)
-		for i := 0; i < handlesLen; i++ {
-			go func(index int) {
-				defer wg.Done()
+		batchSize := 10
+		batches := handlesLen / batchSize
 
-				err := client.Destroy(handles[index])
-				if err != nil {
-					errorsChan <- err
+		wg := sync.WaitGroup{}
+		wg.Add(batches)
+
+		for i := 0; i < batches; i++ {
+			go func(batchIndex int) {
+				defer wg.Done()
+				for j := 0; j < batchSize; j++ {
+					err := client.Destroy(handles[batchIndex*batchSize+j])
+					if err != nil {
+						errorsChan <- err
+					}
 				}
 			}(i)
 		}
