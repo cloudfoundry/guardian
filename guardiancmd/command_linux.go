@@ -70,7 +70,7 @@ func (f *LinuxFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 	}
 	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
 	// ctx = leases.WithLease(ctx, "lease-is-off")
-	return nerdimage.NewContainerdVolumizer(containerdClient, ctx, "/var/vcap/data/grootfs/store/unprivileged", f.uidMappings.Map(0), f.gidMappings.Map(0))
+	return nerdimage.NewContainerdVolumizer(containerdClient, ctx, f.config.Containers.DefaultRootFS, "/var/vcap/data/grootfs/store/unprivileged", f.uidMappings.Map(0), f.gidMappings.Map(0))
 	// if f.config.Image.Plugin.Path() != "" || f.config.Image.PrivilegedPlugin.Path() != "" {
 	// 	return f.config.wireImagePlugin(f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
 	// }

@@ -4,8 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -21,57 +25,126 @@ import (
 )
 
 type ContainerdVolumizer struct {
-	client   *containerd.Client
-	context  context.Context
-	storeDir string
-	rootUID  int
-	rootGID  int
+	client        *containerd.Client
+	context       context.Context
+	defaultRootfs string
+	storeDir      string
+	rootUID       int
+	rootGID       int
 }
 
-func NewContainerdVolumizer(client *containerd.Client, context context.Context, storeDir string, rootUID, rootGID int) *ContainerdVolumizer {
-	return &ContainerdVolumizer{client: client, context: context, storeDir: storeDir, rootUID: rootUID, rootGID: rootGID}
+func NewContainerdVolumizer(client *containerd.Client, context context.Context, defaultRootfs, storeDir string, rootUID, rootGID int) *ContainerdVolumizer {
+	return &ContainerdVolumizer{
+		client:        client,
+		context:       context,
+		defaultRootfs: defaultRootfs,
+		storeDir:      storeDir,
+		rootUID:       rootUID,
+		rootGID:       rootGID,
+	}
 }
 
 func (v ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error) {
-	image, err := v.client.Pull(v.context, spec.Image.URI, containerd.WithPullUnpack, containerd.WithPullLabel(spec.Handle, "set"))
-	if err != nil {
-		return specs.Spec{}, err
-	}
-
-	parentSnapshotId, err := getParentSnapshotID(v.context, image)
-	if err != nil {
-		return specs.Spec{}, err
-	}
-
 	noGarbageCollectLabel := map[string]string{
 		"containerd.io/gc.root": time.Now().UTC().Format(time.RFC3339),
 	}
-	mnts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Prepare(v.context, spec.Handle, parentSnapshotId, snapshots.WithLabels(noGarbageCollectLabel))
-	if err != nil {
-		return specs.Spec{}, err
+	switch {
+	case strings.Contains(spec.Image.URI, "docker"):
+		image, err := v.client.Pull(v.context, spec.Image.URI, containerd.WithPullUnpack, containerd.WithPullLabel(spec.Handle, "set"))
+		if err != nil {
+			return specs.Spec{}, err
+		}
+
+		parentSnapshotId, err := getParentSnapshotID(v.context, image)
+		if err != nil {
+			return specs.Spec{}, err
+		}
+
+		mnts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Prepare(v.context, spec.Handle, parentSnapshotId, snapshots.WithLabels(noGarbageCollectLabel))
+		if err != nil {
+			return specs.Spec{}, err
+		}
+
+		rootfsDir := filepath.Join(v.storeDir, spec.Handle)
+		if err := os.MkdirAll(rootfsDir, 0775); err != nil {
+			return specs.Spec{}, err
+		}
+
+		if err := mount.All(mnts, rootfsDir); err != nil {
+			return specs.Spec{}, err
+		}
+
+		if err := recursiveChown(rootfsDir, v.rootUID, v.rootGID); err != nil {
+			return specs.Spec{}, err
+		}
+
+		imgEnv, err := getImageEnvironment(v.context, image)
+		if err != nil {
+			return specs.Spec{}, err
+		}
+
+		// rootfsDir := filepath.Join("/var/vcap/data/containerd/state", spec.Handle, "rootfs")
+		// return specs.Spec{Root: &specs.Root{Path: rootfsDir}}, nil
+		return specs.Spec{Root: &specs.Root{Path: rootfsDir}, Process: &specs.Process{Env: imgEnv}}, nil
+
+	case strings.Contains(spec.Image.URI, "oci"):
+
+	default:
+		if _, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Stat(v.context, "local-rootfs"); err != nil {
+			// WHY DOES THIS NOT WORK WITH errdefs.IsNotFound(err) !?
+			if !strings.Contains(err.Error(), "not found") {
+				return specs.Spec{}, err
+			}
+
+			mnts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Prepare(v.context, "random", "", snapshots.WithLabels(noGarbageCollectLabel))
+			if err != nil {
+				return specs.Spec{}, err
+			}
+
+			tempDir, err := ioutil.TempDir(os.TempDir(), "boo")
+			if err != nil {
+				return specs.Spec{}, err
+			}
+
+			if err := mount.All(mnts, tempDir); err != nil {
+				return specs.Spec{}, err
+			}
+
+			// we could also untar the rootfs tar into this folder, this is quick hack with copy-pasted code
+			err = copyDir(v.defaultRootfs, tempDir) // unpack into layer location
+			if err != nil {
+				return specs.Spec{}, err
+			}
+
+			if err := recursiveChown(tempDir, v.rootUID, v.rootGID); err != nil {
+				return specs.Spec{}, err
+			}
+
+			if err := v.client.SnapshotService(containerd.DefaultSnapshotter).Commit(v.context, "local-rootfs", "random"); err != nil {
+				return specs.Spec{}, err
+			}
+		}
+
+		mounts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Prepare(v.context, spec.Handle, "local-rootfs", snapshots.WithLabels(noGarbageCollectLabel))
+		if err != nil {
+			return specs.Spec{}, err
+		}
+
+		rootfsDir := filepath.Join(v.storeDir, spec.Handle)
+		if err := os.MkdirAll(rootfsDir, 0775); err != nil {
+			return specs.Spec{}, err
+		}
+
+		if err := mount.All(mounts, rootfsDir); err != nil {
+			return specs.Spec{}, err
+		}
+
+		// rootfsDir := filepath.Join("/var/vcap/data/containerd/state", spec.Handle, "rootfs")
+		// return specs.Spec{Root: &specs.Root{Path: rootfsDir}}, nil
+		return specs.Spec{Root: &specs.Root{Path: rootfsDir}, Process: &specs.Process{Env: []string{}}}, nil
 	}
 
-	rootfsDir := filepath.Join(v.storeDir, spec.Handle)
-	if err := os.MkdirAll(rootfsDir, 0775); err != nil {
-		return specs.Spec{}, err
-	}
-
-	if err := mount.All(mnts, rootfsDir); err != nil {
-		return specs.Spec{}, err
-	}
-
-	if err := recursiveChown(rootfsDir, v.rootUID, v.rootGID); err != nil {
-		return specs.Spec{}, err
-	}
-
-	imgEnv, err := getImageEnvironment(v.context, image)
-	if err != nil {
-		return specs.Spec{}, err
-	}
-
-	// rootfsDir := filepath.Join("/var/vcap/data/containerd/state", spec.Handle, "rootfs")
-	// return specs.Spec{Root: &specs.Root{Path: rootfsDir}}, nil
-	return specs.Spec{Root: &specs.Root{Path: rootfsDir}, Process: &specs.Process{Env: imgEnv}}, nil
+	return specs.Spec{}, nil
 }
 
 func (v ContainerdVolumizer) Destroy(log lager.Logger, handle string) error {
@@ -142,4 +215,64 @@ func getImageEnvironment(ctx context.Context, image containerd.Image) ([]string,
 	}
 
 	return config.Env, nil
+}
+
+// Dir copies a whole directory recursively
+func copyDir(src string, dst string) error {
+	var err error
+	var fds []os.FileInfo
+	var srcinfo os.FileInfo
+
+	if srcinfo, err = os.Stat(src); err != nil {
+		return err
+	}
+
+	if err = os.MkdirAll(dst, srcinfo.Mode()); err != nil {
+		return err
+	}
+
+	if fds, err = ioutil.ReadDir(src); err != nil {
+		return err
+	}
+	for _, fd := range fds {
+		srcfp := path.Join(src, fd.Name())
+		dstfp := path.Join(dst, fd.Name())
+
+		if fd.IsDir() {
+			if err = copyDir(srcfp, dstfp); err != nil {
+				fmt.Println(err)
+			}
+		} else {
+			if err = copyFile(srcfp, dstfp); err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
+	return nil
+}
+
+// File copies a single file from src to dst
+func copyFile(src, dst string) error {
+	var err error
+	var srcfd *os.File
+	var dstfd *os.File
+	var srcinfo os.FileInfo
+
+	if srcfd, err = os.Open(src); err != nil {
+		return err
+	}
+	defer srcfd.Close()
+
+	if dstfd, err = os.Create(dst); err != nil {
+		return err
+	}
+	defer dstfd.Close()
+
+	if _, err = io.Copy(dstfd, srcfd); err != nil {
+		return err
+	}
+	if srcinfo, err = os.Stat(src); err != nil {
+		return err
+	}
+	return os.Chmod(dst, srcinfo.Mode())
 }

@@ -154,6 +154,7 @@ github.com/docker/distribution/digestset
 github.com/docker/distribution/reference
 github.com/docker/distribution/registry/api/errcode
 # github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
+github.com/docker/docker/errdefs
 github.com/docker/docker/pkg/reexec
 # github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c
 github.com/docker/go-events

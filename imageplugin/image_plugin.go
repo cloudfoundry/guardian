@@ -59,6 +59,7 @@ func (p *ImagePlugin) Create(log lager.Logger, handle string, spec gardener.Root
 		}
 	}
 
+	// OCI
 	if strings.HasPrefix(spec.RootFS.String(), fmt.Sprintf("%s:", PreloadedPlusLayerScheme)) {
 		var err error
 		spec.RootFS, err = p.ImageSpecCreator.CreateImageSpec(spec.RootFS, handle)
