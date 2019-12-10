@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -45,6 +47,49 @@ var _ = Describe("Containerd", func() {
 			tasks := listTasks("ctr", config.ContainerdSocket)
 			Expect(tasks).To(ContainSubstring(container.Handle()))
 			Expect(tasks).To(MatchRegexp(container.Handle() + `\s+\d+\s+RUNNING`))
+		})
+
+		When("containerd does not manage to get the task state", func() {
+			var freezerCgroupPath string
+
+			JustBeforeEach(func() {
+				var err error
+				cgroupsPath := filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", config.Tag), "freezer")
+				freezerCgroupPath, err = ioutil.TempDir(cgroupsPath, "shim")
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				Expect(client.Destroy("BOO")).To(Succeed())
+				Expect(syscall.Rmdir(freezerCgroupPath)).To(Succeed())
+			})
+
+			It("doesn't return a misleading error", func() {
+				container, err := client.Create(garden.ContainerSpec{Handle: "BOO"})
+				Expect(err).NotTo(HaveOccurred())
+
+				allPids := getContainerPids("ctr", config.ContainerdSocket, "BOO")
+				Expect(allPids).To(HaveLen(1))
+
+				parentPid := getParentPid(allPids[0])
+
+				freezerProcs := filepath.Join(freezerCgroupPath, "cgroup.procs")
+				Expect(ioutil.WriteFile(freezerProcs, []byte(parentPid), 0755)).To(Succeed())
+				freezerState := filepath.Join(freezerCgroupPath, "freezer.state")
+				Expect(ioutil.WriteFile(freezerState, []byte("FROZEN"), 0755)).To(Succeed())
+
+				defer func() {
+					Expect(ioutil.WriteFile(freezerState, []byte("THAWED"), 0755)).To(Succeed())
+				}()
+
+				Eventually(func() string {
+					state, err := ioutil.ReadFile(freezerState)
+					Expect(err).NotTo(HaveOccurred())
+					return string(state)
+				}).Should(ContainSubstring("FROZEN"))
+				_, infoErr := container.Info()
+				Expect(infoErr).To(HaveOccurred())
+			})
 		})
 	})
 
@@ -599,4 +644,10 @@ func psFaux() string {
 	output, err := exec.Command("ps", "faux").Output()
 	Expect(err).NotTo(HaveOccurred())
 	return string(output)
+}
+
+func getParentPid(pid string) string {
+	output, err := exec.Command("ps", "-o", "ppid=", "-p", pid).Output()
+	Expect(err).NotTo(HaveOccurred())
+	return strings.TrimSpace(string(output))
 }

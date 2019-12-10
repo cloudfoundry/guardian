@@ -125,13 +125,37 @@ func (n *Nerd) State(log lager.Logger, containerID string) (int, string, error) 
 	}
 
 	log.Debug("getting-task-status", lager.Data{"containerID": containerID})
-	status, err := task.Status(n.context)
+	status, err := n.exponentialGetState(task)
 	if err != nil {
 		return 0, "", err
 	}
 
+	if status.Status == containerd.Unknown {
+		return 0, "", errors.New("failed getting task status")
+	}
+
 	log.Debug("task-result", lager.Data{"containerID": containerID, "pid": strconv.Itoa(int(task.Pid())), "status": string(status.Status)})
 	return int(task.Pid()), string(status.Status), nil
+}
+
+func (n *Nerd) exponentialGetState(task containerd.Task) (containerd.Status, error) {
+	const timeout = 5 * time.Second
+	deadline := time.Now().Add(timeout)
+
+	for tries := 0; time.Now().Before(deadline); tries++ {
+		status, err := task.Status(n.context)
+		if err != nil {
+			return containerd.Status{}, err
+		}
+
+		if status.Status != containerd.Unknown {
+			return status, nil
+		}
+
+		time.Sleep(time.Second << uint(tries))
+	}
+
+	return containerd.Status{}, errors.New("failed getting task status")
 }
 
 func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer, bool)) error {
