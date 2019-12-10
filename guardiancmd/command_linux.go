@@ -9,6 +9,7 @@ import (
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/imageplugin"
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/kawasaki/dns"
 	"code.cloudfoundry.org/guardian/nerdimage"
@@ -70,7 +71,15 @@ func (f *LinuxFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 	}
 	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
 	// ctx = leases.WithLease(ctx, "lease-is-off")
-	return nerdimage.NewContainerdVolumizer(containerdClient, ctx, f.config.Containers.DefaultRootFS, "/var/vcap/data/grootfs/store/unprivileged", f.uidMappings.Map(0), f.gidMappings.Map(0))
+	return nerdimage.NewContainerdVolumizer(
+		containerdClient,
+		ctx,
+		f.config.Containers.DefaultRootFS,
+		"/var/vcap/data/grootfs/store/unprivileged",
+		f.uidMappings.Map(0),
+		f.gidMappings.Map(0),
+		imageplugin.NewOCIImageSpecCreator(f.config.Containers.Dir),
+	)
 	// if f.config.Image.Plugin.Path() != "" || f.config.Image.PrivilegedPlugin.Path() != "" {
 	// 	return f.config.wireImagePlugin(f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
 	// }

@@ -44,6 +44,11 @@ func (o *OCIImageSpecCreator) CreateImageSpec(rootFS *url.URL, handle string) (*
 		return nil, err
 	}
 
+	err := ioutil.WriteFile(filepath.Join(imageDir, imagespec.ImageLayoutFile), []byte(fmt.Sprintf(`{"imageLayoutVersion": "%s"}`, imagespec.ImageLayoutVersion)), 0600)
+	if err != nil {
+		return nil, err
+	}
+
 	baseLayer, topLayer, err := layers(rootFS)
 	if err != nil {
 		return nil, err

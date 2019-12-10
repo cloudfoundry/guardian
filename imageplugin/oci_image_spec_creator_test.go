@@ -120,6 +120,11 @@ var _ = Describe("OciImageSpecCreator", func() {
 		ociImagePath := filepath.Join(depotDir, handle, "image")
 		Expect(ociImagePath).To(BeADirectory())
 
+		ociLayoutPath := filepath.Join(ociImagePath, imagespec.ImageLayoutFile)
+		var ociLayout map[string]string
+		unmarshalJSONFromFile(ociLayoutPath, &ociLayout)
+		Expect(ociLayout["imageLayoutVersion"]).To(Equal(imagespec.ImageLayoutVersion))
+
 		blobsPath := filepath.Join(ociImagePath, "blobs", "sha256")
 
 		configPath := filepath.Join(blobsPath, createdConfigSHA)
