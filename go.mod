@@ -12,6 +12,7 @@ require (
 	code.cloudfoundry.org/idmapper v0.0.0-00010101000000-000000000000
 	code.cloudfoundry.org/lager v2.0.0+incompatible
 	code.cloudfoundry.org/localip v0.0.0-20170223024724-b88ad0dea95c
+	code.cloudfoundry.org/tlsconfig v0.0.0-20191126220907-6c65973656e3
 	github.com/BurntSushi/toml v0.3.1
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.1.0

@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -62,7 +61,7 @@ func (v ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec)
 		}
 		return v.containerSpecFromImage(log, image, spec.Handle)
 
-	case strings.Contains(spec.Image.URI, "oci"):
+	case strings.Contains(spec.Image.URI, "preloaded+layer"):
 		rootFSURL, err := url.Parse(spec.Image.URI)
 		if err != nil {
 			return specs.Spec{}, err
@@ -72,39 +71,46 @@ func (v ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec)
 			return specs.Spec{}, err
 		}
 
-		tarDir, err := ioutil.TempDir("", "")
+		blobstoreResolver := NewBlobstoreResolver(ociImageURL.Path, spec.Handle)
+		image, err := v.client.Pull(v.context, spec.Handle, containerd.WithPullUnpack, containerd.WithPullLabel(spec.Handle, "set"), containerd.WithResolver(blobstoreResolver))
 		if err != nil {
 			return specs.Spec{}, err
 		}
-		defer os.RemoveAll(tarDir)
-		tarPath := filepath.Join(tarDir, "image.tar")
-		err = exec.Command("tar", "-C", ociImageURL.Path, tarPath, ".").Run()
-		if err != nil {
-			return specs.Spec{}, err
-		}
+		return v.containerSpecFromImage(log, image, spec.Handle)
 
-		tarFile, err := os.OpenFile(tarPath, os.O_RDONLY, 0)
-		if err != nil {
-			return specs.Spec{}, err
-		}
-		defer tarFile.Close()
+		// tarDir, err := ioutil.TempDir("", "")
+		// if err != nil {
+		// 	return specs.Spec{}, err
+		// }
+		// defer os.RemoveAll(tarDir)
+		// tarPath := filepath.Join(tarDir, "image.tar")
+		// err = exec.Command("tar", "-C", ociImageURL.Path, tarPath, ".").Run()
+		// if err != nil {
+		// 	return specs.Spec{}, err
+		// }
 
-		images, err := v.client.Import(v.context, tarFile)
-		if err != nil {
-			return specs.Spec{}, err
-		}
+		// tarFile, err := os.OpenFile(tarPath, os.O_RDONLY, 0)
+		// if err != nil {
+		// 	return specs.Spec{}, err
+		// }
+		// defer tarFile.Close()
 
-		if len(images) != 1 {
-			return specs.Spec{}, fmt.Errorf("expected one image, received %d", len(images))
-		}
+		// images, err := v.client.Import(v.context, tarFile)
+		// if err != nil {
+		// 	return specs.Spec{}, err
+		// }
 
-		// The image returned by import is not the same type returned by client.Pull...
-		nerdImage, err := v.client.GetImage(v.context, images[0].Name)
-		if err != nil {
-			return specs.Spec{}, err
-		}
+		// if len(images) != 1 {
+		// 	return specs.Spec{}, fmt.Errorf("expected one image, received %d", len(images))
+		// }
 
-		return v.containerSpecFromImage(log, nerdImage, spec.Handle)
+		// // The image returned by import is not the same type returned by client.Pull...
+		// nerdImage, err := v.client.GetImage(v.context, images[0].Name)
+		// if err != nil {
+		// 	return specs.Spec{}, err
+		// }
+
+		// return v.containerSpecFromImage(log, nerdImage, spec.Handle)
 
 	default:
 		if _, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Stat(v.context, "local-rootfs"); err != nil {
