@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"io/ioutil"
 	"os"
 	"path"
 
@@ -21,9 +22,10 @@ var _ = Describe("Properties", func() {
 
 	BeforeEach(func() {
 		propertiesDir = tempDir("", "props")
-
 		config.PropertiesPath = path.Join(propertiesDir, "props.json")
+	})
 
+	JustBeforeEach(func() {
 		client = runner.Start(config)
 		props = garden.Properties{"somename": "somevalue"}
 
@@ -116,6 +118,26 @@ var _ = Describe("Properties", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(beforeProps).To(Equal(afterProps))
+		})
+	})
+
+	Context("when the properties file does not exist", func() {
+		BeforeEach(func() {
+			Expect(config.PropertiesPath).NotTo(BeAnExistingFile())
+		})
+
+		It("it does not fail", func() {
+			Expect(client.Ping()).To(Succeed())
+		})
+	})
+
+	Context("when the properties file is an empty file", func() {
+		BeforeEach(func() {
+			Expect(ioutil.WriteFile(config.PropertiesPath, []byte{}, 0755)).To(Succeed())
+		})
+
+		It("it does not fail", func() {
+			Expect(client.Ping()).To(Succeed())
 		})
 	})
 })

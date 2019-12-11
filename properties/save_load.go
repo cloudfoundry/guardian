@@ -12,6 +12,15 @@ func Load(path string) (*Manager, error) {
 	}
 	defer f.Close()
 
+	fileInfo, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	if fileInfo.Size() == 0 {
+		return NewManager(), nil
+	}
+
 	var mgr Manager
 	if err := json.NewDecoder(f).Decode(&mgr); err != nil {
 		return nil, err
