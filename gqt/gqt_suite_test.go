@@ -110,6 +110,38 @@ func TestGqt(t *testing.T) {
 			}
 		}
 
+		if strings.Contains(message, "failed getting task status") {
+			io.WriteString(GinkgoWriter, fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelNode()))
+
+			io.WriteString(GinkgoWriter, "\nPrinting the containerd tasks...\n\n")
+			io.WriteString(GinkgoWriter, listTasks("ctr", config.ContainerdSocket))
+
+			io.WriteString(GinkgoWriter, "\nPrinting the process tree...\n\n")
+			psOut, err := exec.Command("ps", "auxf").Output()
+			if err != nil {
+				io.WriteString(GinkgoWriter, err.Error())
+			}
+			GinkgoWriter.Write(psOut)
+
+			pids, err := exec.Command("pidof", "containerd-shim").Output()
+			if err != nil {
+				io.WriteString(GinkgoWriter, err.Error())
+			}
+
+			io.WriteString(GinkgoWriter, "\nPrinting shim pids...\n\n")
+			GinkgoWriter.Write(pids)
+
+			for _, pid := range strings.Split(string(pids), " ") {
+				io.WriteString(GinkgoWriter, fmt.Sprintf("\nPrinting shim stack trace for pid %s...\n\n", pid))
+				stack, err := exec.Command("cat", fmt.Sprintf("/proc/%s/stack", strings.TrimSpace(pid))).Output()
+				if err != nil {
+					io.WriteString(GinkgoWriter, err.Error())
+				}
+
+				GinkgoWriter.Write(stack)
+			}
+		}
+
 		Fail(message, callerSkip...)
 	})
 	SetDefaultEventuallyTimeout(5 * time.Second)

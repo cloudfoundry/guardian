@@ -130,10 +130,6 @@ func (n *Nerd) State(log lager.Logger, containerID string) (int, string, error) 
 		return 0, "", err
 	}
 
-	if status.Status == containerd.Unknown {
-		return 0, "", errors.New("failed getting task status")
-	}
-
 	log.Debug("task-result", lager.Data{"containerID": containerID, "pid": strconv.Itoa(int(task.Pid())), "status": string(status.Status)})
 	return int(task.Pid()), string(status.Status), nil
 }
