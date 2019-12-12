@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -53,6 +54,8 @@ func NewContainerdVolumizer(client *containerd.Client, context context.Context, 
 }
 
 func (v ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error) {
+	log.Info("volumizer-create-spec", lager.Data{"spec": spec})
+
 	switch {
 	case strings.Contains(spec.Image.URI, "docker"):
 		image, err := v.client.Pull(v.context, spec.Image.URI, containerd.WithPullUnpack, containerd.WithPullLabel(spec.Handle, "set"))
@@ -134,7 +137,7 @@ func (v ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec)
 			}
 
 			// we could also untar the rootfs tar into this folder, this is quick hack with copy-pasted code
-			err = copyDir(v.defaultRootfs, tempDir) // unpack into layer location
+			err = exec.Command("tar", "-x", "-f", spec.RootFSPath, "-C", tempDir).Run()
 			if err != nil {
 				return specs.Spec{}, err
 			}
