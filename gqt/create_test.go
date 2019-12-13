@@ -75,7 +75,7 @@ var _ = Describe("Creating a Container", func() {
 		Expect(contentLines).To(ConsistOf(expectedAllowedDevices))
 	})
 
-	Context("when creating fails", func() {
+	PContext("when creating fails", func() {
 		// cause Create to fail by specifying an invalid network CIDR address
 		var containerSpec = garden.ContainerSpec{
 			Network: "not-a-valid-network",
