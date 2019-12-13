@@ -185,7 +185,7 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
-		Context("when volume creation fails", func() {
+		PContext("when volume creation fails", func() {
 			BeforeEach(func() {
 				volumizer.CreateReturns(specs.Spec{}, errors.New("booom!"))
 			})
@@ -264,7 +264,7 @@ var _ = Describe("Gardener", func() {
 			Expect(spec.Hostname).To(Equal("bob"))
 		})
 
-		Context("when the containerizer fails to create the container", func() {
+		PContext("when the containerizer fails to create the container", func() {
 			BeforeEach(func() {
 				containerizer.CreateReturns(errors.New("failed to create the banana"))
 			})
