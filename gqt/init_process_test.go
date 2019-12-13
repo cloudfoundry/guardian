@@ -25,12 +25,15 @@ var _ = Describe("Init process", func() {
 	})
 
 	AfterEach(func() {
+		Expect(parentCommand.Process.Kill()).To(Succeed())
+		_, waitErr := parentCommand.Process.Wait()
+		Expect(waitErr).NotTo(HaveOccurred())
 		os.RemoveAll(tmpDir)
 	})
 
 	It("does not allow children to become zombies", func() {
 		parentCommand = exec.Command("cmd/test_init")
-		parentCommand.Start()
+		Expect(parentCommand.Start()).To(Succeed())
 
 		Eventually(countPsOccurances).Should(Equal(1))
 
