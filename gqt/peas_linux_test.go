@@ -61,16 +61,18 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		})
 
 		It("should not leak username resolving peas", func() {
-			ctr.Run(garden.ProcessSpec{
+			process, err := ctr.Run(garden.ProcessSpec{
 				User:  "alice",
 				Path:  "echo",
 				Args:  []string{"hello"},
 				Image: garden.ImageRef{URI: "raw://" + peaRootfs},
 			}, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
 
-			for _, pid := range collectPeaPids(ctr.Handle()) {
-				Eventually("/proc/"+pid, "10s").ShouldNot(BeAnExistingFile())
-			}
+			exitCode, err := process.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCode).To(Equal(0))
+			Expect(collectPeaPids(ctr.Handle())).To(BeEmpty())
 		})
 
 		Context("when using runc for peas", func() {
