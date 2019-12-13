@@ -20,7 +20,6 @@ import (
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("rootless containers", func() {
@@ -47,11 +46,9 @@ var _ = Describe("rootless containers", func() {
 			os.Environ()...,
 		)
 
-		var err error
-
-		setupProcess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(setupProcess).Should(gexec.Exit(0))
+		cmd.Stdout = GinkgoWriter
+		cmd.Stderr = GinkgoWriter
+		Expect(cmd.Run()).To(Succeed())
 
 		runcRootDir := tempDir(config.TmpDir, "runcRootDir")
 		tmpDir := tempDir(config.TmpDir, "rootlessImagePath")
