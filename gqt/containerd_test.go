@@ -500,19 +500,22 @@ var _ = Describe("Containerd", func() {
 		var container garden.Container
 
 		JustBeforeEach(func() {
-			var err error
 			restartContainerd()
-			container, err = client.Create(garden.ContainerSpec{
-				Limits: garden.Limits{
-					Memory: garden.MemoryLimits{
-						LimitInBytes: 30 * mb,
+			createContainer := func() error {
+				var err error
+				container, err = client.Create(garden.ContainerSpec{
+					Limits: garden.Limits{
+						Memory: garden.MemoryLimits{
+							LimitInBytes: 30 * mb,
+						},
 					},
-				},
-				Image: garden.ImageRef{
-					URI: "docker://cfgarden/oom",
-				},
-			})
-			Expect(err).NotTo(HaveOccurred())
+					Image: garden.ImageRef{
+						URI: "docker://cfgarden/oom",
+					},
+				})
+				return err
+			}
+			Eventually(createContainer, time.Minute).Should(Succeed())
 		})
 
 		AfterEach(func() {
