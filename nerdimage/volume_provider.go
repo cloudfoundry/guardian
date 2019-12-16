@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -34,6 +35,7 @@ type ContainerdVolumizer struct {
 	rootUID          int
 	rootGID          int
 	imageSpecCreator ImageSpecCreator
+	mutex            sync.Mutex
 }
 
 //go:generate counterfeiter . ImageSpecCreator
@@ -53,7 +55,7 @@ func NewContainerdVolumizer(client *containerd.Client, context context.Context, 
 	}
 }
 
-func (v ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error) {
+func (v *ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error) {
 	log.Info("volumizer-create-spec", lager.Data{"spec": spec})
 
 	switch {
@@ -116,39 +118,9 @@ func (v ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec)
 		// return v.containerSpecFromImage(log, nerdImage, spec.Handle)
 
 	default:
-		if _, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Stat(v.context, "local-rootfs"); err != nil {
-			// WHY DOES THIS NOT WORK WITH errdefs.IsNotFound(err) !?
-			if !strings.Contains(err.Error(), "not found") {
-				return specs.Spec{}, err
-			}
-
-			mnts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Prepare(v.context, "random", "", snapshots.WithLabels(noGarbageCollectLabel()))
-			if err != nil {
-				return specs.Spec{}, err
-			}
-
-			tempDir, err := ioutil.TempDir(os.TempDir(), "boo")
-			if err != nil {
-				return specs.Spec{}, err
-			}
-
-			if err := mount.All(mnts, tempDir); err != nil {
-				return specs.Spec{}, err
-			}
-
-			// we could also untar the rootfs tar into this folder, this is quick hack with copy-pasted code
-			err = exec.Command("tar", "-x", "-f", spec.RootFSPath, "-C", tempDir).Run()
-			if err != nil {
-				return specs.Spec{}, err
-			}
-
-			if err := recursiveChown(tempDir, v.rootUID, v.rootGID); err != nil {
-				return specs.Spec{}, err
-			}
-
-			if err := v.client.SnapshotService(containerd.DefaultSnapshotter).Commit(v.context, "local-rootfs", "random"); err != nil {
-				return specs.Spec{}, err
-			}
+		err := v.createLocalRootfs(spec)
+		if err != nil {
+			return specs.Spec{}, err
 		}
 
 		mounts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Prepare(v.context, spec.Handle, "local-rootfs", snapshots.WithLabels(noGarbageCollectLabel()))
@@ -172,7 +144,55 @@ func (v ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec)
 
 }
 
-func (v ContainerdVolumizer) containerSpecFromImage(log lager.Logger, image containerd.Image, handle string) (specs.Spec, error) {
+func (v *ContainerdVolumizer) createLocalRootfs(spec garden.ContainerSpec) error {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+
+	if _, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Stat(v.context, "local-rootfs"); err != nil {
+		// WHY DOES THIS NOT WORK WITH errdefs.IsNotFound(err) !?
+		if !strings.Contains(err.Error(), "not found") {
+			return fmt.Errorf("Stat: %w", err)
+		}
+
+		mnts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Prepare(v.context, "random", "", snapshots.WithLabels(noGarbageCollectLabel()))
+		if err != nil {
+			return fmt.Errorf("Prepare: %w", err)
+		}
+
+		tempDir, err := ioutil.TempDir(os.TempDir(), "boo")
+		if err != nil {
+			return fmt.Errorf("TempDir: %w", err)
+		}
+
+		if err := mount.All(mnts, tempDir); err != nil {
+			return fmt.Errorf("mount.All: %w", err)
+		}
+
+		// we could also untar the rootfs tar into this folder, this is quick hack with copy-pasted code
+		var rootFsPath string
+		if len(spec.RootFSPath) > 0 {
+			rootFsPath = spec.RootFSPath
+		} else {
+			rootFsPath = spec.Image.URI
+		}
+		err = exec.Command("tar", "-x", "-f", rootFsPath, "-C", tempDir).Run()
+		if err != nil {
+			return fmt.Errorf("tar -x -f %s -C %s: %w [spec: %#v]", rootFsPath, tempDir, err, spec)
+		}
+
+		if err := recursiveChown(tempDir, v.rootUID, v.rootGID); err != nil {
+			return fmt.Errorf("chown: %w", err)
+		}
+
+		if err := v.client.SnapshotService(containerd.DefaultSnapshotter).Commit(v.context, "local-rootfs", "random"); err != nil {
+			return fmt.Errorf("Commit: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (v *ContainerdVolumizer) containerSpecFromImage(log lager.Logger, image containerd.Image, handle string) (specs.Spec, error) {
 	parentSnapshotId, err := getParentSnapshotID(v.context, image)
 	if err != nil {
 		return specs.Spec{}, err
@@ -206,7 +226,7 @@ func (v ContainerdVolumizer) containerSpecFromImage(log lager.Logger, image cont
 	return specs.Spec{Root: &specs.Root{Path: rootfsDir}, Process: &specs.Process{Env: imgEnv}}, nil
 }
 
-func (v ContainerdVolumizer) Destroy(log lager.Logger, handle string) error {
+func (v *ContainerdVolumizer) Destroy(log lager.Logger, handle string) error {
 
 	// snapshotter := v.client.SnapshotService(containerd.DefaultSnapshotter)
 	// rootfsDir := filepath.Join(v.storeDir, handle)
@@ -218,15 +238,15 @@ func (v ContainerdVolumizer) Destroy(log lager.Logger, handle string) error {
 	return nil
 }
 
-func (v ContainerdVolumizer) Metrics(log lager.Logger, handle string, namespaced bool) (garden.ContainerDiskStat, error) {
+func (v *ContainerdVolumizer) Metrics(log lager.Logger, handle string, namespaced bool) (garden.ContainerDiskStat, error) {
 	return garden.ContainerDiskStat{}, nil
 }
 
-func (v ContainerdVolumizer) GC(log lager.Logger) error {
+func (v *ContainerdVolumizer) GC(log lager.Logger) error {
 	return nil
 }
 
-func (v ContainerdVolumizer) Capacity(log lager.Logger) (uint64, error) {
+func (v *ContainerdVolumizer) Capacity(log lager.Logger) (uint64, error) {
 	return 0, nil
 }
 
