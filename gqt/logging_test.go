@@ -104,7 +104,7 @@ var _ = Describe("garden server Logging", func() {
 		})
 
 		AfterEach(func() {
-			Expect(client.Stop()).To(Succeed())
+			Expect(client.DestroyAndStop()).To(Succeed())
 		})
 
 		It("logs at info level", func() {
@@ -120,6 +120,10 @@ var _ = Describe("garden server Logging", func() {
 		BeforeEach(func() {
 			config.StartupExpectedToFail = true
 			config.LogLevel = "nonsense-log-level"
+		})
+
+		AfterEach(func() {
+			Expect(client.Cleanup()).To(Succeed())
 		})
 
 		It("exits with a code of 1", func() {

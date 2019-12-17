@@ -1040,25 +1040,31 @@ var _ = Describe("IPTables Binary Flags", func() {
 			})
 		})
 
-		Context("when the path is invalid", func() {
-			BeforeEach(func() {
-				config.StartupExpectedToFail = true
-				config.IPTablesBin = "/path/to/iptables/bin"
+		Context("failures", func() {
+			AfterEach(func() {
+				Expect(client.Cleanup()).To(Succeed())
 			})
 
-			It("should fail to start the server", func() {
-				Expect(client.Ping()).To(HaveOccurred())
-			})
-		})
+			Context("when the path is invalid", func() {
+				BeforeEach(func() {
+					config.StartupExpectedToFail = true
+					config.IPTablesBin = "/path/to/iptables/bin"
+				})
 
-		Context("when the path is valid but it's not iptables", func() {
-			BeforeEach(func() {
-				config.StartupExpectedToFail = true
-				config.IPTablesBin = "/bin/ls"
+				It("should fail to start the server", func() {
+					Expect(client.Ping()).To(HaveOccurred())
+				})
 			})
 
-			It("should fail to start the server", func() {
-				Expect(client.Ping()).To(HaveOccurred())
+			Context("when the path is valid but it's not iptables", func() {
+				BeforeEach(func() {
+					config.StartupExpectedToFail = true
+					config.IPTablesBin = "/bin/ls"
+				})
+
+				It("should fail to start the server", func() {
+					Expect(client.Ping()).To(HaveOccurred())
+				})
 			})
 		})
 	})
