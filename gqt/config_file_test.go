@@ -43,6 +43,8 @@ debug-bind-port = %d
 		AfterEach(func() {
 			if !config.StartupExpectedToFail {
 				Expect(client.DestroyAndStop()).To(Succeed())
+			} else {
+				Expect(client.Cleanup()).To(Succeed())
 			}
 			Expect(os.RemoveAll(configFilePath)).To(Succeed())
 		})
