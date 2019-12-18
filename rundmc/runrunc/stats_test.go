@@ -231,7 +231,7 @@ var _ = Describe("Stats", func() {
 			Expect(theDepot.CreatedTimeCallCount()).To(Equal(1))
 
 			Expect(stats.Age).To(BeNumerically(">=", time.Hour))
-			Expect(stats.Age).To(BeNumerically("<", time.Second*3601))
+			Expect(stats.Age).To(BeNumerically("<", time.Second*3603))
 		})
 
 		Context("when the container can't be found in the depot", func() {
@@ -244,7 +244,7 @@ var _ = Describe("Stats", func() {
 				Expect(processDepot.CreatedTimeCallCount()).To(Equal(1))
 
 				Expect(stats.Age).To(BeNumerically(">=", time.Hour))
-				Expect(stats.Age).To(BeNumerically("<", time.Second*3601))
+				Expect(stats.Age).To(BeNumerically("<", time.Second*3603))
 			})
 
 			Context("when the process depot fails too", func() {
