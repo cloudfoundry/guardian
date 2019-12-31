@@ -137,7 +137,6 @@ var _ = Describe("Image Plugin", func() {
 					rootfs := createRootfs(func(string) {}, 0755)
 					Expect(copyFile(filepath.Join(rootfs, "bin", "env"),
 						filepath.Join(tmpDir, "env"))).To(Succeed())
-					Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				})
 
 				It("loads the image plugin env variables", func() {
@@ -186,7 +185,6 @@ var _ = Describe("Image Plugin", func() {
 					rootfs := createRootfs(func(string) {}, 0755)
 					Expect(copyFile(filepath.Join(rootfs, "bin", "cat"),
 						filepath.Join(tmpDir, "cat"))).To(Succeed())
-					Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				})
 
 				AfterEach(func() {
@@ -384,7 +382,6 @@ var _ = Describe("Image Plugin", func() {
 					source := filepath.Join(rootfs, "bin", "env")
 					destination := filepath.Join(tmpDir, "env")
 					Expect(copyFile(source, destination)).To(Succeed())
-					Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				})
 
 				JustBeforeEach(func() {
@@ -671,7 +668,6 @@ var _ = Describe("Image Plugin", func() {
 					rootfs := createRootfs(func(string) {}, 0755)
 					Expect(copyFile(filepath.Join(rootfs, "bin", "env"),
 						filepath.Join(tmpDir, "env"))).To(Succeed())
-					Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				})
 
 				It("loads the image.json env variables", func() {

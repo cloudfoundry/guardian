@@ -195,7 +195,10 @@ var _ = AfterEach(func() {
 		terminateContainerd()
 	}
 
-	Expect(os.RemoveAll(config.TmpDir)).To(Succeed())
+	// Windows worker is not containerised and therefore the test needs to take care to delete the temporary folder
+	if runtime.GOOS == "windows" {
+		Expect(os.RemoveAll(config.TmpDir)).To(Succeed())
+	}
 })
 
 func terminateContainerd() {

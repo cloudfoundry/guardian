@@ -253,7 +253,6 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		AfterEach(func() {
-			Expect(os.RemoveAll(filepath.Dir(rootFSPath))).To(Succeed())
 			Expect(os.RemoveAll(tmpDir)).To(Succeed())
 		})
 

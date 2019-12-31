@@ -49,7 +49,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 		})
 
 		AfterEach(func() {
-			Expect(os.RemoveAll(filepath.Dir(rootfsPath))).To(Succeed())
+			Expect(os.RemoveAll(rootfsPath)).To(Succeed())
 		})
 
 		It("does not error when creating a container from a raw rootfs", func() {

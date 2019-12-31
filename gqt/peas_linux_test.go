@@ -39,7 +39,6 @@ var _ = Describe("Partially shared containers (peas)", func() {
 
 	AfterEach(func() {
 		Expect(gdn.DestroyAndStop()).To(Succeed())
-		Expect(os.RemoveAll(filepath.Dir(peaRootfs))).To(Succeed())
 	})
 
 	It("should not leak pipes", func() {
@@ -116,31 +115,19 @@ var _ = Describe("Partially shared containers (peas)", func() {
 			})
 		})
 
-		When("providing a rootfs tar", func() {
-			var rootfs string
+		It("should not leak image dirs", func() {
+			numImageDirsBefore := numImageDirs()
 
-			BeforeEach(func() {
-				rootfs = createPeaRootfsTar()
-			})
+			process, err := ctr.Run(garden.ProcessSpec{
+				User:  "alice",
+				Path:  "echo",
+				Args:  []string{"hello"},
+				Image: garden.ImageRef{URI: createPeaRootfsTar()},
+			}, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(process.Wait()).To(Equal(0))
 
-			AfterEach(func() {
-				Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
-			})
-
-			It("should not leak image dirs", func() {
-				numImageDirsBefore := numImageDirs()
-
-				process, err := ctr.Run(garden.ProcessSpec{
-					User:  "alice",
-					Path:  "echo",
-					Args:  []string{"hello"},
-					Image: garden.ImageRef{URI: rootfs},
-				}, garden.ProcessIO{})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(process.Wait()).To(Equal(0))
-
-				Expect(numImageDirs()).To(Equal(numImageDirsBefore))
-			})
+			Expect(numImageDirs()).To(Equal(numImageDirsBefore))
 		})
 	})
 
@@ -302,10 +289,6 @@ var _ = Describe("Partially shared containers (peas)", func() {
 			_, err := testSrcFile.WriteString("test-mount")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exec.Command("chown", "4294967294", testSrcFile.Name()).Run()).To(Succeed())
-		})
-
-		AfterEach(func() {
-			Expect(os.RemoveAll(testSrcFile.Name())).To(Succeed())
 		})
 
 		Context("when we create a pea with bind mounts", func() {

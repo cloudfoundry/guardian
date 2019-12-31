@@ -166,11 +166,7 @@ var _ = Describe("Runtime Plugin", func() {
 		var networkPluginArgsFile string
 
 		BeforeEach(func() {
-			tempFile, err := ioutil.TempFile("", fmt.Sprintf("network-a-%d", GinkgoParallelNode()))
-			Expect(err).NotTo(HaveOccurred())
-
-			networkPluginArgsFile = tempFile.Name()
-
+			networkPluginArgsFile = filepath.Join(config.TmpDir, fmt.Sprintf("network-a-%d", GinkgoParallelNode()))
 			config.NetworkPluginExtraArgs = []string{"--args-file", networkPluginArgsFile}
 		})
 

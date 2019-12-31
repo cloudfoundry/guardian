@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -344,20 +343,10 @@ var _ = Describe("Containerd", func() {
 			})
 
 			Describe("pea", func() {
-				var rootfs string
-
-				BeforeEach(func() {
-					rootfs = createPeaRootfsTar()
-				})
-
-				AfterEach(func() {
-					Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
-				})
-
 				It("creates a containerd container with a running task", func() {
 					process, err := container.Run(garden.ProcessSpec{
 						ID:    "ctrd-pea-id",
-						Image: garden.ImageRef{URI: rootfs},
+						Image: garden.ImageRef{URI: createPeaRootfsTar()},
 						Path:  "/bin/sleep",
 						Args:  []string{"10"},
 						User:  "alice",
@@ -382,7 +371,7 @@ var _ = Describe("Containerd", func() {
 				It("cleans up pea-debris", func() {
 					process, err := container.Run(garden.ProcessSpec{
 						ID:    "ctrd-pea-id-2",
-						Image: garden.ImageRef{URI: rootfs},
+						Image: garden.ImageRef{URI: createPeaRootfsTar()},
 						Path:  "/bin/echo",
 						Args:  []string{"peeeeee"},
 						User:  "alice",
@@ -403,7 +392,7 @@ var _ = Describe("Containerd", func() {
 
 				It("returns the process exit code", func() {
 					process, err := container.Run(garden.ProcessSpec{
-						Image: garden.ImageRef{URI: rootfs},
+						Image: garden.ImageRef{URI: createPeaRootfsTar()},
 						Path:  "/bin/sh",
 						Args:  []string{"-c", "exit 12"},
 					}, garden.ProcessIO{})
@@ -420,7 +409,7 @@ var _ = Describe("Containerd", func() {
 						stdin := bytes.NewBufferString("hello from stdin")
 						process, err := container.Run(garden.ProcessSpec{
 							Path:  "cat",
-							Image: garden.ImageRef{URI: rootfs},
+							Image: garden.ImageRef{URI: createPeaRootfsTar()},
 						}, garden.ProcessIO{
 							Stdin:  stdin,
 							Stdout: io.MultiWriter(GinkgoWriter, stdout),
@@ -435,7 +424,7 @@ var _ = Describe("Containerd", func() {
 						process, err := container.Run(garden.ProcessSpec{
 							Path:  "/bin/echo",
 							Args:  []string{"-n", "hello world"},
-							Image: garden.ImageRef{URI: rootfs},
+							Image: garden.ImageRef{URI: createPeaRootfsTar()},
 						}, garden.ProcessIO{
 							Stdout: io.MultiWriter(GinkgoWriter, stdout),
 						})
@@ -450,7 +439,7 @@ var _ = Describe("Containerd", func() {
 						process, err := container.Run(garden.ProcessSpec{
 							Path:  "/bin/sh",
 							Args:  []string{"-c", "/bin/echo -n hello error 1>&2"},
-							Image: garden.ImageRef{URI: rootfs},
+							Image: garden.ImageRef{URI: createPeaRootfsTar()},
 						}, garden.ProcessIO{
 							Stderr: io.MultiWriter(GinkgoWriter, stderr),
 						})
@@ -466,7 +455,7 @@ var _ = Describe("Containerd", func() {
 						buffer := gbytes.NewBuffer()
 						proc, err := container.Run(garden.ProcessSpec{
 							Path:  "sh",
-							Image: garden.ImageRef{URI: rootfs},
+							Image: garden.ImageRef{URI: createPeaRootfsTar()},
 							Args: []string{"-c", `
 					trap 'exit 42' TERM
 
