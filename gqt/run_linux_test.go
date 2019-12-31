@@ -280,6 +280,7 @@ var _ = Describe("Run", func() {
 			})
 
 			AfterEach(func() {
+				Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				Expect(os.RemoveAll(target)).To(Succeed())
 			})
 

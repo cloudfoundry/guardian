@@ -74,7 +74,7 @@ var _ = Describe("Networking", func() {
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(rootFSWithoutHostsAndResolv)).To(Succeed())
+		Expect(os.RemoveAll(filepath.Dir(rootFSWithoutHostsAndResolv))).To(Succeed())
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
@@ -489,17 +489,24 @@ var _ = Describe("Networking", func() {
 	})
 
 	Context("when a network plugin path is provided at startup", func() {
-		var argsFile string
-		var stdinFile string
+		var (
+			argsFile  string
+			stdinFile string
+			tmpDir    string
+		)
 
 		BeforeEach(func() {
-			tmpDir := tempDir("", "netplugtest")
+			tmpDir = tempDir("", "netplugtest")
 
 			argsFile = path.Join(tmpDir, "args.log")
 			stdinFile = path.Join(tmpDir, "stdin.log")
 
 			config.NetworkPluginBin = binaries.NetworkPlugin
 			config.NetworkPluginExtraArgs = []string{"--args-file", argsFile, "--stdin-file", stdinFile}
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(tmpDir)).To(Succeed())
 		})
 
 		Context("and the plugin is essentially a noop", func() {
