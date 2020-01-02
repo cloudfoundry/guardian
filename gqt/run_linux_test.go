@@ -280,6 +280,7 @@ var _ = Describe("Run", func() {
 			})
 
 			AfterEach(func() {
+				Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				Expect(os.RemoveAll(target)).To(Succeed())
 			})
 
@@ -435,10 +436,7 @@ var _ = Describe("Run", func() {
 				container, err = client.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
-				fakeRuncBinPath, err := gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc_stderr", "-mod=vendor")
-				Expect(err).NotTo(HaveOccurred())
-
-				config.RuntimePluginBin = fakeRuncBinPath
+				config.RuntimePluginBin = binaries.FakeRuncStderr
 				client = restartGarden(client, config)
 			})
 
@@ -607,17 +605,20 @@ var _ = Describe("Attach", func() {
 		client    *runner.RunningGarden
 		container garden.Container
 		processID string
+		propsDir  string
 	)
 
 	BeforeEach(func() {
+		propsDir = tempDir("", "props")
 		// we need to pass --properties-path to prevent guardian from deleting containers
 		// after restarting the server
-		config.PropertiesPath = path.Join(tempDir("", "props"), "props.json")
+		config.PropertiesPath = path.Join(propsDir, "props.json")
 		client = runner.Start(config)
 	})
 
 	AfterEach(func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
+		Expect(os.RemoveAll(propsDir)).To(Succeed())
 	})
 
 	Context("when attaching to a running process", func() {

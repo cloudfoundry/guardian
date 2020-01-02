@@ -28,6 +28,7 @@ var _ = Describe("Network plugin", func() {
 		stdinFile       string
 		pluginReturn    string
 		hostNameservers []string
+		tmpDir          string
 	)
 
 	BeforeEach(func() {
@@ -35,7 +36,7 @@ var _ = Describe("Network plugin", func() {
 		containerNetwork = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelNode())
 		containerSpec = garden.ContainerSpec{}
 
-		tmpDir := tempDir("", "netplugtest")
+		tmpDir = tempDir("", "netplugtest")
 
 		argsFile = path.Join(tmpDir, "args.log")
 		stdinFile = path.Join(tmpDir, "stdin.log")
@@ -66,6 +67,7 @@ var _ = Describe("Network plugin", func() {
 
 	AfterEach(func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
+		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
 	It("executes the network plugin during container creation", func() {
@@ -310,8 +312,9 @@ var _ = Describe("Network plugin", func() {
 
 		Context("when the rootFS does not contain /etc/resolv.conf", func() {
 			var rootFSWithoutHostsAndResolv string
+
 			BeforeEach(func() {
-				rootFSWithoutHostsAndResolv := createRootfs(func(root string) {
+				rootFSWithoutHostsAndResolv = createRootfs(func(root string) {
 					Expect(os.Chmod(filepath.Join(root, "tmp"), 0777)).To(Succeed())
 					Expect(os.Remove(filepath.Join(root, "etc", "hosts"))).To(Succeed())
 					Expect(os.Remove(filepath.Join(root, "etc", "resolv.conf"))).To(Succeed())
@@ -321,7 +324,7 @@ var _ = Describe("Network plugin", func() {
 			})
 
 			AfterEach(func() {
-				Expect(os.RemoveAll(rootFSWithoutHostsAndResolv)).To(Succeed())
+				Expect(os.RemoveAll(filepath.Dir(rootFSWithoutHostsAndResolv))).To(Succeed())
 			})
 
 			It("sets the nameserver entries in the container's /etc/resolv.conf to the values supplied by the network plugin", func() {

@@ -2,6 +2,8 @@ package gqt_test
 
 import (
 	"io"
+	"os"
+	"path/filepath"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -63,6 +65,10 @@ var _ = Describe("Security", func() {
 
 					BeforeEach(func() {
 						peaRootfs = createPeaRootfsTar()
+					})
+
+					AfterEach(func() {
+						Expect(os.RemoveAll(filepath.Dir(peaRootfs))).To(Succeed())
 					})
 
 					It("should enforce the policy", func() {

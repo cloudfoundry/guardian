@@ -37,12 +37,15 @@ var _ = Describe("Streaming", func() {
 	})
 
 	Describe("StreamIn", func() {
-		var tarStream io.Reader
+		var (
+			tarStream io.Reader
+			tmpDir    string
+		)
 
 		BeforeEach(func() {
-			tmpdir := tempDir("", "some-temp-dir-parent")
+			tmpDir = tempDir("", "some-temp-dir-parent")
 
-			tgzPath := filepath.Join(tmpdir, "some.tgz")
+			tgzPath := filepath.Join(tmpDir, "some.tgz")
 
 			archiver.CreateTarGZArchive(
 				tgzPath,
@@ -63,6 +66,10 @@ var _ = Describe("Streaming", func() {
 
 			tarStream, err = gzip.NewReader(tgz)
 			Expect(err).ToNot(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(tmpDir)).To(Succeed())
 		})
 
 		It("should stream in the files", func() {

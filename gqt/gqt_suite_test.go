@@ -195,10 +195,7 @@ var _ = AfterEach(func() {
 		terminateContainerd()
 	}
 
-	// Windows worker is not containerised and therefore the test needs to take care to delete the temporary folder
-	if runtime.GOOS == "windows" {
-		Expect(os.RemoveAll(config.TmpDir)).To(Succeed())
-	}
+	Expect(os.RemoveAll(config.TmpDir)).To(Succeed())
 })
 
 func terminateContainerd() {
@@ -218,6 +215,7 @@ func getGardenBinaries() runner.Binaries {
 		ImagePlugin:   goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_image_plugin"),
 		RuntimePlugin: goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_runtime_plugin"),
 		NoopPlugin:    goCompile("code.cloudfoundry.org/guardian/gqt/cmd/noop_plugin"),
+		FakeRunc:      goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc"),
 	}
 
 	gardenBinaries.PrivilegedImagePlugin = gardenBinaries.ImagePlugin + "-priv"
@@ -226,6 +224,7 @@ func getGardenBinaries() runner.Binaries {
 	if runtime.GOOS == "linux" {
 		gardenBinaries.ExecRunner = goCompile("code.cloudfoundry.org/guardian/cmd/dadoo")
 		gardenBinaries.Socket2me = goCompile("code.cloudfoundry.org/guardian/cmd/socket2me")
+		gardenBinaries.FakeRuncStderr = goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc_stderr")
 
 		cmd := exec.Command("make")
 		runCommandInDir(cmd, "../rundmc/nstar")

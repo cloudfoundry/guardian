@@ -49,7 +49,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 		})
 
 		AfterEach(func() {
-			Expect(os.RemoveAll(rootfsPath)).To(Succeed())
+			Expect(os.RemoveAll(filepath.Dir(rootfsPath))).To(Succeed())
 		})
 
 		It("does not error when creating a container from a raw rootfs", func() {
@@ -102,8 +102,18 @@ var _ = Describe("Rootfs container create parameter", func() {
 	})
 
 	Context("with an empty rootfs", func() {
+		var tmpDir string
+
+		BeforeEach(func() {
+			tmpDir = tempDir("", "emptyrootfs")
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(tmpDir)).To(Succeed())
+		})
+
 		It("creates the container successfully", func() {
-			rootfs := filepath.Join(tempDir("", "emptyrootfs"), "empty.tar")
+			rootfs := filepath.Join(tmpDir, "empty.tar")
 			runCommand(exec.Command("tar", "cvf", rootfs, "-T", "/dev/null"))
 
 			_, err := client.Create(garden.ContainerSpec{RootFSPath: rootfs})
