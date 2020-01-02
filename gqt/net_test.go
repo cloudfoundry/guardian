@@ -40,6 +40,7 @@ var _ = Describe("Networking", func() {
 
 		extraProperties             garden.Properties
 		rootFSWithoutHostsAndResolv string
+		tmpDir                      string
 	)
 
 	BeforeEach(func() {
@@ -60,6 +61,8 @@ var _ = Describe("Networking", func() {
 		}, "60s", "2s").Should(Succeed())
 
 		exampleDotCom = ips[0]
+
+		tmpDir = tempDir("", "netplugtest")
 	})
 
 	JustBeforeEach(func() {
@@ -74,8 +77,9 @@ var _ = Describe("Networking", func() {
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(rootFSWithoutHostsAndResolv)).To(Succeed())
+		Expect(os.RemoveAll(filepath.Dir(rootFSWithoutHostsAndResolv))).To(Succeed())
 		Expect(client.DestroyAndStop()).To(Succeed())
+		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
 	It("should have a loopback interface", func() {
@@ -489,12 +493,12 @@ var _ = Describe("Networking", func() {
 	})
 
 	Context("when a network plugin path is provided at startup", func() {
-		var argsFile string
-		var stdinFile string
+		var (
+			argsFile  string
+			stdinFile string
+		)
 
 		BeforeEach(func() {
-			tmpDir := tempDir("", "netplugtest")
-
 			argsFile = path.Join(tmpDir, "args.log")
 			stdinFile = path.Join(tmpDir, "stdin.log")
 

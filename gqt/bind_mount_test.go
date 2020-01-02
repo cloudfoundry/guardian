@@ -111,17 +111,21 @@ var _ = Describe("Bind mount", func() {
 	})
 
 	Describe("when the source is a symlink", func() {
-		var tmpfsPath string
+		var (
+			tmpfsPath string
+			tmpDir    string
+		)
 
 		BeforeEach(func() {
 			dstPath = "/home/alice/adir"
-			srcPath, tmpfsPath, testFileName = createSymlinkSource()
+			srcPath, tmpfsPath, testFileName, tmpDir = createSymlinkSource()
 			mountMode = garden.BindMountModeRO
 		})
 
 		AfterEach(func() {
 			unmount(tmpfsPath)
 			Expect(os.RemoveAll(tmpfsPath)).To(Succeed())
+			Expect(os.RemoveAll(tmpDir)).To(Succeed())
 		})
 
 		It("all users can read files", func() {
@@ -316,7 +320,7 @@ func mountSourceDirToSelf(mountOptions []string, tstHostDir string) {
 	Expect(cmd.Run()).To(Succeed())
 }
 
-func createSymlinkSource() (string, string, string) {
+func createSymlinkSource() (string, string, string, string) {
 	tstHostDir := createTestHostDir()
 	tstHostDir, fileName := createTestFile(tstHostDir)
 	tmpfsPath := tempDir("/opt", "")
@@ -326,7 +330,7 @@ func createSymlinkSource() (string, string, string) {
 
 	symlinkPath := filepath.Join(tmpfsPath, "symlink-to-"+filepath.Base(tstHostDir))
 	Expect(os.Symlink(tstHostDir, symlinkPath)).To(Succeed())
-	return symlinkPath, tmpfsPath, fileName
+	return symlinkPath, tmpfsPath, fileName, tstHostDir
 }
 
 func createRWMountPointUnder(srcPath string) string {

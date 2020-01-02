@@ -98,8 +98,9 @@ var _ = Describe("Destroying a Container", func() {
 
 	Context("when container destroy fails half way through", func() {
 		var (
-			container  garden.Container
-			mountInUse string
+			container     garden.Container
+			mountInUse    string
+			tmpDirToMount string
 		)
 
 		JustBeforeEach(func() {
@@ -110,8 +111,12 @@ var _ = Describe("Destroying a Container", func() {
 			// make image deletion fail (because device or resource busy)
 			mountInUse = filepath.Join(config.StorePath, "images", container.Handle(), "mount")
 			Expect(os.MkdirAll(mountInUse, 0755)).To(Succeed())
-			tmpDirToMount := tempDir("", "toMount")
+			tmpDirToMount = tempDir("", "toMount")
 			Expect(exec.Command("mount", "--bind", tmpDirToMount, mountInUse).Run()).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(tmpDirToMount)).To(Succeed())
 		})
 
 		It("is still able to list the container so that destroy can be retried", func() {

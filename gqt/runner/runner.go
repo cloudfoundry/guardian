@@ -180,6 +180,8 @@ type Binaries struct {
 	ExecRunner            string `json:"execrunner,omitempty"`
 	NSTar                 string `json:"nstar,omitempty"`
 	Socket2me             string `json:"socket2me,omitempty"`
+	FakeRunc              string `json:"fake_runc,omitempty"`
+	FakeRuncStderr        string `json:"fake_runc_stderr,omitempty"`
 }
 
 type GardenRunner struct {
