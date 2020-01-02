@@ -73,7 +73,9 @@ var _ = Describe("Nerd", func() {
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(fifoDir)).To(Succeed())
-		Expect(os.RemoveAll(filepath.Dir(spec.Root.Path))).To(Succeed())
+		if spec != nil && spec.Root != nil {
+			Expect(os.RemoveAll(filepath.Dir(spec.Root.Path))).To(Succeed())
+		}
 	})
 
 	Describe("Create", func() {
