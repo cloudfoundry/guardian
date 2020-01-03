@@ -241,20 +241,19 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 	}
 
 	defer func() {
-		if err != nil {
-			// log := log.Session("create-failed-cleaningup", lager.Data{
-			// 	"cause": err.Error(),
-			// })
+		if err != nil && err.Error() != "Info returned error" {
+			log := log.Session("create-failed-cleaningup", lager.Data{
+				"cause": err.Error(),
+			})
 
-			// log.Info("start")
+			log.Info("start")
 
-			// err := g.destroy(log, containerSpec.Handle)
-			// if err != nil {
-			// 	log.Error("destroy-failed", err)
-			// }
+			err := g.destroy(log, containerSpec.Handle)
+			if err != nil {
+				log.Error("destroy-failed", err)
+			}
 
-			// log.Info("cleanedup")
-			log.Error("creation-failed-not-cleaning-up", err)
+			log.Info("cleanedup")
 		} else {
 			log.Info("created")
 		}
@@ -290,7 +289,8 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 
 	actualSpec, err := g.Containerizer.Info(log, containerSpec.Handle)
 	if err != nil {
-		return nil, err
+		log.Error("containerizer-info-error", err)
+		return nil, errors.New("Info returned error")
 	}
 
 	if actualSpec.Pid == 0 {
