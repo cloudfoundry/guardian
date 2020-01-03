@@ -55,8 +55,8 @@ func (f BlobstoreFetcher) Fetch(ctx context.Context, desc ocispec.Descriptor) (i
 }
 
 func createHTTPClient(certPath string) (*http.Client, error) {
-	cacert := filepath.Join(certPath, "remote-layer.cert")
-	cert := filepath.Join(certPath, "remote-layer.crt")
+	cacert := filepath.Join(certPath, "remote-layer.crt")
+	cert := filepath.Join(certPath, "remote-layer.cert")
 	key := filepath.Join(certPath, "remote-layer.key")
 
 	return createTLSHTTPClient([]CertPaths{

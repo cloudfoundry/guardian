@@ -27,22 +27,24 @@ func GenerateImageConfig(layerSHAs ...string) imagespec.Image {
 	}
 }
 
-func GenerateIndex(manifestSHA string) imagespec.Index {
+func GenerateIndex(manifestSHA string, manifestSize int64) imagespec.Index {
 	return imagespec.Index{
 		Versioned: specs.Versioned{SchemaVersion: ImageSpecSchemaVersion},
 		Manifests: []imagespec.Descriptor{{
 			Digest:    toDigest(manifestSHA),
 			MediaType: "application/vnd.oci.image.manifest.v1+json",
+			Size:      manifestSize,
 		}},
 	}
 }
 
-func GenerateManifest(layers []Layer, configSHA string) imagespec.Manifest {
+func GenerateManifest(layers []Layer, configSHA string, configSize int64) imagespec.Manifest {
 	var ociLayers []imagespec.Descriptor
 	for _, layer := range layers {
 		ociLayer := imagespec.Descriptor{
 			Digest:    toDigest(layer.SHA256),
 			MediaType: layer.MediaType,
+			Size:      layer.Size,
 		}
 
 		if layer.URL != "" {
@@ -59,8 +61,12 @@ func GenerateManifest(layers []Layer, configSHA string) imagespec.Manifest {
 
 	return imagespec.Manifest{
 		Versioned: specs.Versioned{SchemaVersion: ImageSpecSchemaVersion},
-		Config:    imagespec.Descriptor{MediaType: "application/vnd.oci.image.config.v1+json", Digest: toDigest(configSHA)},
-		Layers:    ociLayers,
+		Config: imagespec.Descriptor{
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Digest:    toDigest(configSHA),
+			Size:      configSize,
+		},
+		Layers: ociLayers,
 	}
 }
 

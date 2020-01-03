@@ -26,10 +26,10 @@ var _ = Describe("OciImageSpecCreator", func() {
 		configGenerator    func(layerSHAs ...string) imagespec.Image
 		createdConfig      = imagespec.Image{Author: "some-idiosyncratic-author-string"}
 		createdConfigSHA   string
-		manifestGenerator  func(layers []imageplugin.Layer, configSHA string) imagespec.Manifest
+		manifestGenerator  func(layers []imageplugin.Layer, configSHA string, configSize int64) imagespec.Manifest
 		createdManifest    = imagespec.Manifest{Versioned: specs.Versioned{SchemaVersion: 165}}
 		createdManifestSHA string
-		indexGenerator     func(manifestSHA string) imagespec.Index
+		indexGenerator     func(manifestSHA string, manifestSize int64) imagespec.Index
 		createdIndex       = imagespec.Index{Versioned: specs.Versioned{SchemaVersion: 42}}
 
 		creator *imageplugin.OCIImageSpecCreator
@@ -72,7 +72,7 @@ var _ = Describe("OciImageSpecCreator", func() {
 		}
 
 		createdManifestSHA = shaOf(createdManifest)
-		manifestGenerator = func(layers []imageplugin.Layer, configSHA string) imagespec.Manifest {
+		manifestGenerator = func(layers []imageplugin.Layer, configSHA string, configSize int64) imagespec.Manifest {
 			Expect(layers).To(Equal([]imageplugin.Layer{
 				{
 					SHA256:    rootFSBasePathSHA,
@@ -89,7 +89,7 @@ var _ = Describe("OciImageSpecCreator", func() {
 			return createdManifest
 		}
 
-		indexGenerator = func(manifestSHA string) imagespec.Index {
+		indexGenerator = func(manifestSHA string, manifestSize int64) imagespec.Index {
 			Expect(manifestSHA).To(Equal(createdManifestSHA))
 			return createdIndex
 		}

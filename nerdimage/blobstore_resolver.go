@@ -2,10 +2,8 @@ package nerdimage
 
 import (
 	"context"
-	"crypto/sha256"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -57,18 +55,12 @@ func (r BlobstoreResolver) Pusher(ctx context.Context, ref string) (remotes.Push
 }
 
 func shaOf(filePath string) (digest.Digest, error) {
-	hasher := sha256.New()
-	file, err := os.Open(filePath)
+	r, err := os.Open(filePath)
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
-
-	if _, err := io.Copy(hasher, file); err != nil {
-		return "", err
-	}
-
-	return digest.NewDigest(digest.SHA256, hasher), nil
+	defer r.Close()
+	return digest.FromReader(r)
 }
 
 func sizeOf(filePath string) (int64, error) {
@@ -77,5 +69,6 @@ func sizeOf(filePath string) (int64, error) {
 		return 0, err
 	}
 
-	return stat.Size(), nil
+	size := stat.Size()
+	return size, nil
 }

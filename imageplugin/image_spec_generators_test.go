@@ -40,6 +40,7 @@ var _ = Describe("GenerateManifest", func() {
 		manifest := imageplugin.GenerateManifest(
 			[]imageplugin.Layer{layerWithoutBaseDir, layerWithBaseDir},
 			"some-config-sha",
+			3,
 		)
 		Expect(manifest).To(Equal(imagespec.Manifest{
 			Versioned: specs.Versioned{SchemaVersion: imageplugin.ImageSpecSchemaVersion},
@@ -66,7 +67,7 @@ var _ = Describe("GenerateManifest", func() {
 
 var _ = Describe("GenerateIndex", func() {
 	It("creates an index", func() {
-		index := imageplugin.GenerateIndex("some-manifest-sha")
+		index := imageplugin.GenerateIndex("some-manifest-sha", 3)
 		Expect(index).To(Equal(imagespec.Index{
 			Versioned: specs.Versioned{SchemaVersion: imageplugin.ImageSpecSchemaVersion},
 			Manifests: []imagespec.Descriptor{{

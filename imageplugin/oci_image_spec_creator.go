@@ -2,23 +2,27 @@ package imageplugin
 
 import (
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
+	digest "github.com/opencontainers/go-digest"
 	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type OCIImageSpecCreator struct {
 	DepotDir             string
 	ImageConfigGenerator func(layerSHAs ...string) imagespec.Image
-	ManifestGenerator    func(layers []Layer, configSHA string) imagespec.Manifest
-	IndexGenerator       func(manifestSHA string) imagespec.Index
+	ManifestGenerator    func(layers []Layer, configSHA string, configSize int64) imagespec.Manifest
+	IndexGenerator       func(manifestSHA string, manifestSize int64) imagespec.Index
 }
 
 func NewOCIImageSpecCreator(depotDir string) *OCIImageSpecCreator {
@@ -35,6 +39,7 @@ type Layer struct {
 	SHA256    string
 	BaseDir   string
 	MediaType string
+	Size      int64
 }
 
 func (o *OCIImageSpecCreator) CreateImageSpec(rootFS *url.URL, handle string) (*url.URL, error) {
@@ -68,7 +73,7 @@ func (o *OCIImageSpecCreator) CreateImageSpec(rootFS *url.URL, handle string) (*
 		return nil, err
 	}
 
-	manifest := o.ManifestGenerator([]Layer{baseLayer, topLayer}, imageConfigSHA)
+	manifest := o.ManifestGenerator([]Layer{baseLayer, topLayer}, imageConfigSHA, int64(len(imageConfigBytes)))
 	manifestBytes, err := json.Marshal(manifest)
 	if err != nil {
 		return nil, err
@@ -78,7 +83,7 @@ func (o *OCIImageSpecCreator) CreateImageSpec(rootFS *url.URL, handle string) (*
 		return nil, err
 	}
 
-	index := o.IndexGenerator(manifestSHA)
+	index := o.IndexGenerator(manifestSHA, int64(len(manifestBytes)))
 	indexBytes, err := json.Marshal(index)
 	if err != nil {
 		return nil, err
@@ -104,6 +109,18 @@ func layers(rootFS *url.URL) (Layer, Layer, error) {
 		return errs(err)
 	}
 
+	client, err := getHTTPClientWithCerts()
+	if err != nil {
+		return errs(err)
+	}
+
+	resp, err := client.Head(topLayerURL)
+	if err != nil {
+		return errs(err)
+	}
+
+	topLayerSize := resp.ContentLength
+
 	topLayerPath, err := getQueryValue(rootFS, "layer_path")
 	if err != nil {
 		return errs(err)
@@ -118,11 +135,18 @@ func layers(rootFS *url.URL) (Layer, Layer, error) {
 	if err != nil {
 		return errs(err)
 	}
-	rootFSPathMtime := rootFSPathFile.ModTime().UnixNano()
+	// rootFSPathMtime := rootFSPathFile.ModTime().UnixNano()
+
+	// This could be extreeemely slow...
+	rootfsPathSHA, err := shaOfFile(rootFS.Path)
+	if err != nil {
+		return errs(err)
+	}
 
 	baseLayer := Layer{
-		SHA256:    shaOf([]byte(fmt.Sprintf("%s-%d", rootFS.Path, rootFSPathMtime))),
+		SHA256:    rootfsPathSHA.Hex(),
 		MediaType: "application/vnd.oci.image.layer.v1.tar",
+		Size:      rootFSPathFile.Size(),
 	}
 
 	topLayer := Layer{
@@ -130,9 +154,46 @@ func layers(rootFS *url.URL) (Layer, Layer, error) {
 		SHA256:    topLayerDigest,
 		BaseDir:   topLayerPath,
 		MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
+		Size:      topLayerSize,
 	}
 
 	return baseLayer, topLayer, nil
+}
+
+func shaOfFile(filePath string) (digest.Digest, error) {
+	r, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer r.Close()
+	return digest.FromReader(r)
+}
+
+func getHTTPClientWithCerts() (*http.Client, error) {
+	certsDir := "/var/vcap/jobs/garden/certs"
+	certFile := filepath.Join(certsDir, "remote-layer.cert")
+	keyFile := filepath.Join(certsDir, "remote-layer.key")
+	caFile := filepath.Join(certsDir, "remote-layer.crt")
+
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	caCert, err := ioutil.ReadFile(caFile)
+	if err != nil {
+		return nil, err
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      caCertPool,
+	}
+	tlsConfig.BuildNameToCertificate()
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	return &http.Client{Transport: transport}, nil
 }
 
 func getQueryValue(u *url.URL, key string) (string, error) {
