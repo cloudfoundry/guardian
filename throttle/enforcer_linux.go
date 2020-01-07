@@ -35,19 +35,32 @@ func (c CPUCgroupEnforcer) Punish(logger lager.Logger, handle string) error {
 	}
 
 	badContainerCgroupPath := filepath.Join(c.badCgroupPath, handle)
-	if err := moveContainer(handle, goodContainerCgroupPath, badContainerCgroupPath); err != nil {
+
+	if err := movePids(goodContainerCgroupPath, badContainerCgroupPath); err != nil {
+		return err
+	}
+
+	if err := copyShares(goodContainerCgroupPath, badContainerCgroupPath); err != nil {
 		return err
 	}
 
 	return writeCPUShares(c.badCgroupPath, []byte("10"))
 }
 
-func moveContainer(handle, fromCgroup, toCgroup string) error {
-	if err := movePids(fromCgroup, toCgroup); err != nil {
-		return err
+func (c CPUCgroupEnforcer) Release(logger lager.Logger, handle string) error {
+	logger = logger.Session("release", lager.Data{"handle": handle})
+	logger.Info("starting")
+	defer logger.Info("finished")
+
+	badContainerCgroupPath := filepath.Join(c.badCgroupPath, handle)
+	if !exists(logger, badContainerCgroupPath) {
+		logger.Info("bad-cgroup-does-not-exist-skip-punish", lager.Data{"handle": handle, "badContainerCgroupPath": badContainerCgroupPath})
+		return nil
 	}
 
-	return copyShares(fromCgroup, toCgroup)
+	goodContainerCgroupPath := filepath.Join(c.goodCgroupPath, handle)
+
+	return movePids(badContainerCgroupPath, goodContainerCgroupPath)
 }
 
 func movePids(fromCgroup, toCgroup string) error {
@@ -80,10 +93,6 @@ func copyShares(fromCgroup, toCgroup string) error {
 
 func writeCPUShares(cgroupPath string, shares []byte) error {
 	return ioutil.WriteFile(filepath.Join(cgroupPath, "cpu.shares"), shares, 0644)
-}
-
-func (c CPUCgroupEnforcer) Release(logger lager.Logger, handle string) error {
-	return nil
 }
 
 func exists(logger lager.Logger, cgroupPath string) bool {

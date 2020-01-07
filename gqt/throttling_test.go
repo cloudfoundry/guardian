@@ -25,6 +25,9 @@ var _ = Describe("throttle tests", func() {
 	BeforeEach(func() {
 		skipIfNotCPUThrottling()
 
+		// We want an aggressive throttling check to speed moving containers across cgroups up
+		// in order to reduce test run time
+		config.CPUThrottlingCheckInterval = uint64ptr(1)
 		client = runner.Start(config)
 
 		var err error
@@ -59,7 +62,7 @@ var _ = Describe("throttle tests", func() {
 			var err error
 			cgroupPath, err = getCgroup(container, containerPort)
 			return cgroupPath, err
-		}, "10s").Should(HaveSuffix(filepath.Join(cgroupType, container.Handle())))
+		}, "2m", "100ms").Should(HaveSuffix(filepath.Join(cgroupType, container.Handle())))
 
 		return getAbsoluteCgroupPath(config.Tag, cgroupPath)
 	}
@@ -115,6 +118,18 @@ var _ = Describe("throttle tests", func() {
 		// Usage should be bigger than just the value in the metrics
 		Expect(metrics.CPUStat.Usage).To(BeNumerically(">", goodCgroupUsage))
 	})
+
+	When("a bad application starts behaving nicely again", func() {
+		BeforeEach(func() {
+			Expect(spin(container, containerPort)).To(Succeed())
+			ensureInCgroup(cgroups.BadCgroupName)
+			Expect(unspin(container, containerPort)).To(Succeed())
+		})
+
+		It("will eventually move the app to the good cgroup", func() {
+			ensureInCgroup(cgroups.GoodCgroupName)
+		})
+	})
 })
 
 func getCgroup(container garden.Container, containerPort uint32) (string, error) {
@@ -129,6 +144,14 @@ func getCgroup(container garden.Container, containerPort uint32) (string, error)
 func spin(container garden.Container, containerPort uint32) error {
 	if _, err := httpGet(fmt.Sprintf("http://%s:%d/spin", externalIP(container), containerPort)); err != nil {
 		return fmt.Errorf("spin failed: %+v", err)
+	}
+
+	return nil
+}
+
+func unspin(container garden.Container, containerPort uint32) error {
+	if _, err := httpGet(fmt.Sprintf("http://%s:%d/unspin", externalIP(container), containerPort)); err != nil {
+		return fmt.Errorf("unspin failed: %+v", err)
 	}
 
 	return nil
