@@ -1,6 +1,7 @@
 package imageplugin
 
 import (
+	"compress/gzip"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
@@ -37,6 +38,7 @@ func NewOCIImageSpecCreator(depotDir string) *OCIImageSpecCreator {
 type Layer struct {
 	URL       string
 	SHA256    string
+	DiffID    string
 	BaseDir   string
 	MediaType string
 	Size      int64
@@ -59,7 +61,7 @@ func (o *OCIImageSpecCreator) CreateImageSpec(rootFS *url.URL, handle string) (*
 		return nil, err
 	}
 
-	imageConfig := o.ImageConfigGenerator(baseLayer.SHA256, topLayer.SHA256)
+	imageConfig := o.ImageConfigGenerator(baseLayer.DiffID, topLayer.DiffID)
 	imageConfigBytes, err := json.Marshal(imageConfig)
 	if err != nil {
 		return nil, err
@@ -114,7 +116,20 @@ func layers(rootFS *url.URL) (Layer, Layer, error) {
 		return errs(err)
 	}
 
-	resp, err := client.Head(topLayerURL)
+	resp, err := client.Get(topLayerURL)
+	if err != nil {
+		return errs(err)
+	}
+
+	uncompressedResp, err := gzip.NewReader(resp.Body)
+	if err != nil {
+		return errs(err)
+	}
+
+	defer uncompressedResp.Close()
+	defer resp.Body.Close()
+
+	topLayerDiffID, err := digest.FromReader(uncompressedResp)
 	if err != nil {
 		return errs(err)
 	}
@@ -144,7 +159,9 @@ func layers(rootFS *url.URL) (Layer, Layer, error) {
 	}
 
 	baseLayer := Layer{
-		SHA256:    rootfsPathSHA.Hex(),
+		SHA256: rootfsPathSHA.Hex(),
+		// Base layer is uncompressed anyway, so sha and diffIDs are the same
+		DiffID:    rootfsPathSHA.Hex(),
 		MediaType: "application/vnd.oci.image.layer.v1.tar",
 		Size:      rootFSPathFile.Size(),
 	}
@@ -152,6 +169,7 @@ func layers(rootFS *url.URL) (Layer, Layer, error) {
 	topLayer := Layer{
 		URL:       topLayerURL,
 		SHA256:    topLayerDigest,
+		DiffID:    topLayerDiffID.Hex(),
 		BaseDir:   topLayerPath,
 		MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
 		Size:      topLayerSize,
