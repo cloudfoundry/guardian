@@ -378,7 +378,7 @@ var _ = Describe("Gardener", func() {
 			Expect(pid).To(Equal(42))
 		})
 
-		Context("when container info cannot be retrieved", func() {
+		XContext("when container info cannot be retrieved", func() {
 			It("errors", func() {
 				containerizer.InfoReturns(spec.ActualContainerSpec{}, errors.New("boom"))
 
