@@ -1,13 +1,18 @@
 package nerdimage
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 
+	"code.cloudfoundry.org/guardian/imageplugin"
 	"code.cloudfoundry.org/tlsconfig"
 	"github.com/hashicorp/go-multierror"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -22,6 +27,7 @@ func NewBlobstoreFetcher(ociImageDir string) *BlobstoreFetcher {
 }
 
 func (f BlobstoreFetcher) Fetch(ctx context.Context, desc ocispec.Descriptor) (io.ReadCloser, error) {
+	fmt.Printf("FETCH!!! %+v\n", desc)
 	if desc.MediaType == ocispec.MediaTypeImageIndex {
 		return os.Open(filepath.Join(f.ociImageDir, "index.json"))
 	}
@@ -48,7 +54,53 @@ func (f BlobstoreFetcher) Fetch(ctx context.Context, desc ocispec.Descriptor) (i
 			continue
 		}
 
-		return resp.Body, nil
+		defer resp.Body.Close()
+
+		inputGzReader, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			fmt.Printf("err = %+v\n", err)
+			respErr = multierror.Append(respErr, err)
+			continue
+		}
+
+		inputTarGzReader := tar.NewReader(inputGzReader)
+
+		outputBuffer := bytes.NewBuffer([]byte{})
+		outputTarWriter := tar.NewWriter(outputBuffer)
+
+		err = imageplugin.InsertDirsIntoTar(inputTarGzReader, outputTarWriter, "/home/vcap")
+		if err != nil {
+			fmt.Printf("err = %+v\n", err)
+			respErr = multierror.Append(respErr, err)
+			continue
+		}
+
+		err = outputTarWriter.Close()
+		if err != nil {
+			fmt.Printf("err = %+v\n", err)
+			respErr = multierror.Append(respErr, err)
+			continue
+		}
+		ioutil.WriteFile("/tmp/fetcher.layer.tar", outputBuffer.Bytes(), 0644)
+
+		outputGzBuffer := bytes.NewBuffer([]byte{})
+		outputGzWriter := gzip.NewWriter(outputGzBuffer)
+		_, err = io.Copy(outputGzWriter, outputBuffer)
+		if err != nil {
+			fmt.Printf("err = %+v\n", err)
+			respErr = multierror.Append(respErr, err)
+			continue
+		}
+
+		err = outputGzWriter.Close()
+		if err != nil {
+			fmt.Printf("err = %+v\n", err)
+			respErr = multierror.Append(respErr, err)
+			continue
+		}
+		ioutil.WriteFile("/tmp/fetcher.layer.tar.gz", outputGzBuffer.Bytes(), 0644)
+
+		return ioutil.NopCloser(outputGzBuffer), nil
 	}
 
 	return nil, respErr

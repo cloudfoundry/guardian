@@ -1,6 +1,8 @@
 package imageplugin
 
 import (
+	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"crypto/sha256"
 	"crypto/tls"
@@ -8,6 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -97,6 +100,38 @@ func (o *OCIImageSpecCreator) CreateImageSpec(rootFS *url.URL, handle string) (*
 	return url.Parse(fmt.Sprintf("oci://%s", forwardSlashesOnly(imageDir)))
 }
 
+func InsertDirsIntoTar(r *tar.Reader, w *tar.Writer, prefix string) error {
+	for {
+		hdr, err := r.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		if hdr.Name == "./" {
+			hdr.Mode = 0755
+		}
+		hdr.Name = filepath.Join(prefix, hdr.Name)
+		err = w.WriteHeader(hdr)
+		if err != nil {
+			return err
+		}
+
+		fileContents, err := ioutil.ReadAll(r)
+		if err != nil {
+			return err
+		}
+
+		_, err = w.Write(fileContents)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func layers(rootFS *url.URL) (Layer, Layer, error) {
 	errs := func(err error) (Layer, Layer, error) {
 		return Layer{}, Layer{}, err
@@ -121,27 +156,57 @@ func layers(rootFS *url.URL) (Layer, Layer, error) {
 		return errs(err)
 	}
 
-	uncompressedResp, err := gzip.NewReader(resp.Body)
+	gunzippedInput, err := gzip.NewReader(resp.Body)
 	if err != nil {
+		fmt.Printf("err = %+v\n", err)
 		return errs(err)
 	}
 
-	defer uncompressedResp.Close()
+	tarOutputBuf := bytes.NewBuffer([]byte{})
+
+	tarReader := tar.NewReader(gunzippedInput)
+	tarWriter := tar.NewWriter(tarOutputBuf)
+	err = InsertDirsIntoTar(tarReader, tarWriter, "/home/vcap")
+	if err != nil {
+		fmt.Printf("err = %+v\n", err)
+		return errs(err)
+	}
+	fmt.Printf("transformed tar bytes length %d\n", len(tarOutputBuf.Bytes()))
+
+	err = tarWriter.Close()
+	if err != nil {
+		fmt.Printf("err = %+v\n", err)
+		return errs(err)
+	}
+
+	tarOutputBytes := tarOutputBuf.Bytes()
+
+	tgzOutputBuf := bytes.NewBuffer([]byte{})
+	gzipWriter := gzip.NewWriter(tgzOutputBuf)
+
+	_, err = io.Copy(gzipWriter, tarOutputBuf)
+	if err != nil {
+		fmt.Printf("err = %+v\n", err)
+		return errs(err)
+	}
+
+	err = gzipWriter.Close()
+	if err != nil {
+		fmt.Printf("err = %+v\n", err)
+		return errs(err)
+	}
+
+	defer gunzippedInput.Close()
 	defer resp.Body.Close()
 
-	topLayerDiffID, err := digest.FromReader(uncompressedResp)
-	if err != nil {
-		return errs(err)
-	}
-
-	topLayerSize := resp.ContentLength
+	topLayerDiffID := digest.FromBytes(tarOutputBytes)
+	ioutil.WriteFile("/tmp/spec.layer.tar", tarOutputBytes, 0644)
+	topLayerDigest := digest.FromBytes(tgzOutputBuf.Bytes())
+	ioutil.WriteFile("/tmp/spec.layer.tar.gz", tgzOutputBuf.Bytes(), 0644)
+	topLayerSize := len(tgzOutputBuf.Bytes())
+	fmt.Printf("topLayerSize = %+v\n", topLayerSize)
 
 	topLayerPath, err := getQueryValue(rootFS, "layer_path")
-	if err != nil {
-		return errs(err)
-	}
-
-	topLayerDigest, err := getQueryValue(rootFS, "layer_digest")
 	if err != nil {
 		return errs(err)
 	}
@@ -168,11 +233,11 @@ func layers(rootFS *url.URL) (Layer, Layer, error) {
 
 	topLayer := Layer{
 		URL:       topLayerURL,
-		SHA256:    topLayerDigest,
+		SHA256:    topLayerDigest.Hex(),
 		DiffID:    topLayerDiffID.Hex(),
 		BaseDir:   topLayerPath,
 		MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
-		Size:      topLayerSize,
+		Size:      int64(topLayerSize),
 	}
 
 	return baseLayer, topLayer, nil
