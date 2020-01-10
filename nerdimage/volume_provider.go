@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -180,8 +181,20 @@ func (v *ContainerdVolumizer) createLocalRootfs(spec garden.ContainerSpec) error
 			return fmt.Errorf("tar -x -f %s -C %s: %w [spec: %#v]", rootFsPath, tempDir, err, spec)
 		}
 
+		vcapPath := filepath.Join(tempDir, "home/vcap")
+		vcapStat, err := os.Stat(vcapPath)
+		if err != nil {
+			return err
+		}
+		vcapStatT := vcapStat.Sys().(*syscall.Stat_t)
+
 		if err := recursiveChown(tempDir, v.rootUID, v.rootGID); err != nil {
 			return fmt.Errorf("chown: %w", err)
+		}
+
+		fmt.Printf("chown -R %s %d:%d\n", vcapPath, int(vcapStatT.Uid), int(vcapStatT.Gid))
+		if err := recursiveChown(vcapPath, int(vcapStatT.Uid), int(vcapStatT.Gid)); err != nil {
+			return err
 		}
 
 		if err := v.client.SnapshotService(containerd.DefaultSnapshotter).Commit(v.context, "local-rootfs", "random"); err != nil {
@@ -212,7 +225,17 @@ func (v *ContainerdVolumizer) containerSpecFromImage(log lager.Logger, image con
 		return specs.Spec{}, err
 	}
 
+	vcapPath := filepath.Join(rootfsDir, "home/vcap")
+	vcapStat, err := os.Stat(vcapPath)
+	if err != nil {
+		return specs.Spec{}, err
+	}
+	vcapStatT := vcapStat.Sys().(*syscall.Stat_t)
 	if err := recursiveChown(rootfsDir, v.rootUID, v.rootGID); err != nil {
+		return specs.Spec{}, err
+	}
+	fmt.Printf("chown -R %s %d:%d\n", vcapPath, int(vcapStatT.Uid), int(vcapStatT.Gid))
+	if err := recursiveChown(vcapPath, int(vcapStatT.Uid), int(vcapStatT.Gid)); err != nil {
 		return specs.Spec{}, err
 	}
 

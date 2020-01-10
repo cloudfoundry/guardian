@@ -81,7 +81,7 @@ func (f BlobstoreFetcher) Fetch(ctx context.Context, desc ocispec.Descriptor) (i
 			respErr = multierror.Append(respErr, err)
 			continue
 		}
-		ioutil.WriteFile("/tmp/fetcher.layer.tar", outputBuffer.Bytes(), 0644)
+		// ioutil.WriteFile("/tmp/fetcher.layer.tar", outputBuffer.Bytes(), 0644)
 
 		outputGzBuffer := bytes.NewBuffer([]byte{})
 		outputGzWriter := gzip.NewWriter(outputGzBuffer)
@@ -98,7 +98,7 @@ func (f BlobstoreFetcher) Fetch(ctx context.Context, desc ocispec.Descriptor) (i
 			respErr = multierror.Append(respErr, err)
 			continue
 		}
-		ioutil.WriteFile("/tmp/fetcher.layer.tar.gz", outputGzBuffer.Bytes(), 0644)
+		// ioutil.WriteFile("/tmp/fetcher.layer.tar.gz", outputGzBuffer.Bytes(), 0644)
 
 		return ioutil.NopCloser(outputGzBuffer), nil
 	}

@@ -110,9 +110,9 @@ func InsertDirsIntoTar(r *tar.Reader, w *tar.Writer, prefix string) error {
 			return err
 		}
 
-		if hdr.Name == "./" {
-			hdr.Mode = 0755
-		}
+		// if hdr.Name == "./" {
+		// 	hdr.Mode = 0755
+		// }
 		hdr.Name = filepath.Join(prefix, hdr.Name)
 		err = w.WriteHeader(hdr)
 		if err != nil {
@@ -200,9 +200,9 @@ func layers(rootFS *url.URL) (Layer, Layer, error) {
 	defer resp.Body.Close()
 
 	topLayerDiffID := digest.FromBytes(tarOutputBytes)
-	ioutil.WriteFile("/tmp/spec.layer.tar", tarOutputBytes, 0644)
+	// ioutil.WriteFile("/tmp/spec.layer.tar", tarOutputBytes, 0644)
 	topLayerDigest := digest.FromBytes(tgzOutputBuf.Bytes())
-	ioutil.WriteFile("/tmp/spec.layer.tar.gz", tgzOutputBuf.Bytes(), 0644)
+	// ioutil.WriteFile("/tmp/spec.layer.tar.gz", tgzOutputBuf.Bytes(), 0644)
 	topLayerSize := len(tgzOutputBuf.Bytes())
 	fmt.Printf("topLayerSize = %+v\n", topLayerSize)
 
