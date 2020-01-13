@@ -19,9 +19,11 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/mount"
+	"github.com/containerd/containerd/oci"
 	"github.com/containerd/containerd/snapshots"
 	"github.com/opencontainers/image-spec/identity"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -78,7 +80,11 @@ func (v *ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec
 		}
 
 		blobstoreResolver := NewBlobstoreResolver(ociImageURL.Path, spec.Handle)
-		image, err := v.client.Pull(v.context, spec.Handle, containerd.WithPullUnpack, containerd.WithPullLabel(spec.Handle, "set"), containerd.WithResolver(blobstoreResolver))
+		image, err := v.client.Pull(v.context, spec.Handle,
+			containerd.WithPullUnpack,
+			containerd.WithPullLabel(spec.Handle, "set"),
+			containerd.WithResolver(blobstoreResolver),
+		)
 		if err != nil {
 			return specs.Spec{}, err
 		}
@@ -206,36 +212,27 @@ func (v *ContainerdVolumizer) createLocalRootfs(spec garden.ContainerSpec) error
 }
 
 func (v *ContainerdVolumizer) containerSpecFromImage(log lager.Logger, image containerd.Image, handle string) (specs.Spec, error) {
-	parentSnapshotId, err := getParentSnapshotID(v.context, image)
+
+	container, err := v.client.NewContainer(v.context, handle+"-tmp",
+		containerd.WithRemappedSnapshotView(handle, image, uint32(v.rootUID), uint32(v.rootGID)),
+		containerd.WithNewSnapshot(handle+"-snapshot", image),
+		containerd.WithNewSpec(
+			oci.WithImageConfig(image),
+			oci.WithUserNamespace(0, uint32(v.rootUID), 1),
+			oci.WithUserNamespace(1000, 1000+uint32(v.rootUID), 1),
+			oci.WithProcessArgs("/bin/sleep", "3600"),
+		),
+	)
 	if err != nil {
+		log.Error("failed-creating-container-for-volume", err)
 		return specs.Spec{}, err
 	}
 
-	mnts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Prepare(v.context, handle, parentSnapshotId, snapshots.WithLabels(noGarbageCollectLabel()))
+	fmt.Printf("container.ID() = %+v\n", container.ID())
+
+	_, err = container.NewTask(v.context, cio.NullIO)
 	if err != nil {
-		return specs.Spec{}, err
-	}
-
-	rootfsDir := filepath.Join(v.storeDir, handle)
-	if err := os.MkdirAll(rootfsDir, 0775); err != nil {
-		return specs.Spec{}, err
-	}
-
-	if err := mount.All(mnts, rootfsDir); err != nil {
-		return specs.Spec{}, err
-	}
-
-	vcapPath := filepath.Join(rootfsDir, "home/vcap")
-	vcapStat, err := os.Stat(vcapPath)
-	if err != nil {
-		return specs.Spec{}, err
-	}
-	vcapStatT := vcapStat.Sys().(*syscall.Stat_t)
-	if err := recursiveChown(rootfsDir, v.rootUID, v.rootGID); err != nil {
-		return specs.Spec{}, err
-	}
-	fmt.Printf("chown -R %s %d:%d\n", vcapPath, int(vcapStatT.Uid), int(vcapStatT.Gid))
-	if err := recursiveChown(vcapPath, int(vcapStatT.Uid), int(vcapStatT.Gid)); err != nil {
+		log.Error("failed-creating-task-for-volume", err)
 		return specs.Spec{}, err
 	}
 
@@ -244,6 +241,7 @@ func (v *ContainerdVolumizer) containerSpecFromImage(log lager.Logger, image con
 		return specs.Spec{}, err
 	}
 
+	rootfsDir := filepath.Join("/var/vcap/data/containerd/root/io.containerd.runtime.v1.linux/garden", handle, "rootfs")
 	// rootfsDir := filepath.Join("/var/vcap/data/containerd/state", spec.Handle, "rootfs")
 	// return specs.Spec{Root: &specs.Root{Path: rootfsDir}}, nil
 	return specs.Spec{Root: &specs.Root{Path: rootfsDir}, Process: &specs.Process{Env: imgEnv}}, nil
