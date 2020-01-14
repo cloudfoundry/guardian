@@ -16,21 +16,18 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.1.0
-	github.com/containerd/cgroups v0.0.0-20190226200435-dbea6f2bd416 // indirect
-	github.com/containerd/console v0.0.0-20181022165439-0650fd9eeb50 // indirect
+	github.com/containerd/cgroups v0.0.0-20200113070643-7347743e5d1e // indirect
 	github.com/containerd/containerd v1.3.1
 	github.com/containerd/continuity v0.0.0-20190827140505-75bee3e2ccb6 // indirect
 	github.com/containerd/fifo v0.0.0-20190816180239-bda0ff6ed73c // indirect
-	github.com/containerd/go-runc v0.0.0-20180907222934-5a6d9f37cfa3 // indirect
+	github.com/containerd/go-runc v0.0.0-20191213151417-8aa1fd617053 // indirect
 	github.com/containerd/ttrpc v0.0.0-20191028202541-4f1b8fe65a5c // indirect
 	github.com/containerd/typeurl v0.0.0-20190911142611-5eb25027c9fd
-	github.com/coreos/go-systemd v0.0.0-20190212144455-93d5ec2c7f76 // indirect
 	github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/eapache/go-resiliency v1.2.0
 	github.com/godbus/dbus v4.1.0+incompatible // indirect
 	github.com/gogo/googleapis v1.3.0 // indirect
-	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/jessevdk/go-flags v1.4.0
@@ -40,8 +37,8 @@ require (
 	github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936
 	github.com/mitchellh/reflectwalk v0.0.0-20170726202117-63d60e9d0dbc // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo v1.10.3
-	github.com/onsi/gomega v1.7.1
+	github.com/onsi/ginkgo v1.11.0
+	github.com/onsi/gomega v1.8.1
 	github.com/opencontainers/go-digest v1.0.0-rc1
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/opencontainers/runc v1.0.0-rc9
@@ -51,13 +48,12 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/st3v/glager v0.3.0
 	github.com/tedsuo/ifrit v0.0.0-20180410193936-e89a512c3162
-	github.com/urfave/cli/v2 v2.0.0
+	github.com/urfave/cli/v2 v2.1.1
 	github.com/vishvananda/netlink v1.0.0
 	github.com/vishvananda/netns v0.0.0-20171111001504-be1fbeda1936
 	go.etcd.io/bbolt v1.3.3 // indirect
-	golang.org/x/net v0.0.0-20191119073136-fc4aabc6c914 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
-	golang.org/x/sys v0.0.0-20191120155948-bd437916bb0e
+	golang.org/x/sys v0.0.0-20191228213918-04cbcbbfeed8
 	google.golang.org/genproto v0.0.0-20191115221424-83cc0476cb11 // indirect
 	google.golang.org/grpc v1.25.1 // indirect
 	gopkg.in/yaml.v2 v2.2.7

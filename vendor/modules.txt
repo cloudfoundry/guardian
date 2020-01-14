@@ -81,7 +81,7 @@ github.com/cloudfoundry/gosteno
 github.com/cloudfoundry/gosteno/syslog
 # github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4
 github.com/cloudfoundry/sonde-go/events
-# github.com/containerd/console v0.0.0-20181022165439-0650fd9eeb50
+# github.com/containerd/console v0.0.0-20191206165004-02ecf6a7291e
 github.com/containerd/console
 # github.com/containerd/containerd v1.3.1
 github.com/containerd/containerd
@@ -143,7 +143,7 @@ github.com/containerd/continuity/syscallx
 github.com/containerd/continuity/sysx
 # github.com/containerd/fifo v0.0.0-20190816180239-bda0ff6ed73c
 github.com/containerd/fifo
-# github.com/containerd/go-runc v0.0.0-20180907222934-5a6d9f37cfa3
+# github.com/containerd/go-runc v0.0.0-20191213151417-8aa1fd617053
 github.com/containerd/go-runc
 # github.com/containerd/ttrpc v0.0.0-20191028202541-4f1b8fe65a5c
 github.com/containerd/ttrpc
@@ -165,7 +165,7 @@ github.com/docker/go-units
 github.com/eapache/go-resiliency/retrier
 # github.com/gogo/googleapis v1.3.0
 github.com/gogo/googleapis/google/rpc
-# github.com/gogo/protobuf v1.3.1
+# github.com/gogo/protobuf v1.3.0
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
@@ -206,7 +206,7 @@ github.com/mitchellh/go-ps
 github.com/mitchellh/reflectwalk
 # github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 github.com/nu7hatch/gouuid
-# github.com/onsi/ginkgo v1.10.3
+# github.com/onsi/ginkgo v1.11.0
 github.com/onsi/ginkgo
 github.com/onsi/ginkgo/config
 github.com/onsi/ginkgo/extensions/table
@@ -226,7 +226,7 @@ github.com/onsi/ginkgo/reporters/stenographer
 github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
-# github.com/onsi/gomega v1.7.1
+# github.com/onsi/gomega v1.8.1
 github.com/onsi/gomega
 github.com/onsi/gomega/format
 github.com/onsi/gomega/gbytes
@@ -276,14 +276,14 @@ github.com/tedsuo/ifrit/http_server
 github.com/tedsuo/ifrit/sigmon
 # github.com/tedsuo/rata v1.0.0
 github.com/tedsuo/rata
-# github.com/urfave/cli/v2 v2.0.0
+# github.com/urfave/cli/v2 v2.1.1
 github.com/urfave/cli/v2
 # github.com/vishvananda/netlink v1.0.0
 github.com/vishvananda/netlink
 github.com/vishvananda/netlink/nl
 # github.com/vishvananda/netns v0.0.0-20171111001504-be1fbeda1936
 github.com/vishvananda/netns
-# golang.org/x/net v0.0.0-20191119073136-fc4aabc6c914
+# golang.org/x/net v0.0.0-20191028085509-fe3aa8a45271
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
@@ -298,7 +298,7 @@ golang.org/x/net/trace
 # golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20191120155948-bd437916bb0e
+# golang.org/x/sys v0.0.0-20191228213918-04cbcbbfeed8
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 # golang.org/x/text v0.3.2
@@ -322,6 +322,9 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
+# golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7
+golang.org/x/xerrors
+golang.org/x/xerrors/internal
 # google.golang.org/genproto v0.0.0-20191115221424-83cc0476cb11
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.25.1
