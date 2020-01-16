@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = FDescribe("CompositeRunnable", func() {
+var _ = Describe("CompositeRunnable", func() {
 	var (
 		compositeRunnable throttle.CompositeRunnable
 		firstRunnable     *throttlefakes.FakeRunnable
