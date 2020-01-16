@@ -8,6 +8,8 @@ import (
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
+	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	"code.cloudfoundry.org/guardian/kawasaki"
@@ -71,14 +73,31 @@ func (f *LinuxFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 	}
 	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
 	// ctx = leases.WithLease(ctx, "lease-is-off")
+
+	grootUidMappings := []groot.IDMappingSpec{}
+	for _, m := range f.uidMappings {
+		grootUidMappings = append(grootUidMappings, groot.IDMappingSpec{HostID: int(m.HostID), NamespaceID: int(m.ContainerID), Size: int(m.Size)})
+	}
+	grootGidMappings := []groot.IDMappingSpec{}
+	for _, m := range f.gidMappings {
+		grootGidMappings = append(grootGidMappings, groot.IDMappingSpec{HostID: int(m.HostID), NamespaceID: int(m.ContainerID), Size: int(m.Size)})
+	}
+
+	idMappings := groot.IDMappings{
+		UIDMappings: grootUidMappings,
+		GIDMappings: grootGidMappings,
+	}
+	runner := linux_command_runner.New()
+	idMapper := unpacker.NewIDMapper("/var/vcap/packages/garden-idmapper/bin/newuidmap", "/var/vcap/packages/garden-idmapper/bin/newgidmap", runner)
 	return nerdimage.NewContainerdVolumizer(
 		containerdClient,
 		ctx,
 		f.config.Containers.DefaultRootFS,
 		"/var/vcap/data/grootfs/store/unprivileged",
-		f.uidMappings.Map(0),
-		f.gidMappings.Map(0),
+		idMappings,
+		idMapper,
 		imageplugin.NewOCIImageSpecCreator(f.config.Containers.Dir),
+		f.config.Containerd.Socket,
 	)
 	// if f.config.Image.Plugin.Path() != "" || f.config.Image.PrivilegedPlugin.Path() != "" {
 	// 	return f.config.wireImagePlugin(f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))

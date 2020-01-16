@@ -17,12 +17,17 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/sandbox"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/mount"
+	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/plugin"
 	"github.com/containerd/containerd/snapshots"
+	"github.com/containers/storage/pkg/reexec"
 	"github.com/opencontainers/image-spec/identity"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -33,10 +38,11 @@ type ContainerdVolumizer struct {
 	context          context.Context
 	defaultRootfs    string
 	storeDir         string
-	rootUID          int
-	rootGID          int
+	idMappings       groot.IDMappings
+	idMapper         sandbox.IDMapper
 	imageSpecCreator ImageSpecCreator
 	mutex            sync.Mutex
+	containerdSocket string
 }
 
 //go:generate counterfeiter . ImageSpecCreator
@@ -44,15 +50,59 @@ type ImageSpecCreator interface {
 	CreateImageSpec(rootFS *url.URL, handle string) (*url.URL, error)
 }
 
-func NewContainerdVolumizer(client *containerd.Client, context context.Context, defaultRootfs, storeDir string, rootUID, rootGID int, imageSpecCreator ImageSpecCreator) *ContainerdVolumizer {
+func init() {
+	sandbox.Register("unpack-image", func(logger lager.Logger, extraFiles []*os.File, args ...string) error {
+		fmt.Printf("unpack-image.start\n")
+		defer fmt.Printf("unpack-image.end\n")
+
+		fmt.Println("unpack-image.args", args)
+		containerdAddress := args[0]
+		containerID := args[1]
+
+		client, err := containerd.New(containerdAddress, containerd.WithDefaultRuntime(plugin.RuntimeLinuxV1))
+		if err != nil {
+			fmt.Println("unpack-image.containerd.new", err)
+			return err
+		}
+
+		ctx := namespaces.WithNamespace(context.Background(), "garden")
+
+		filter := fmt.Sprintf(`labels."%s"`, containerID)
+		images, err := client.ListImages(ctx, filter)
+		if err != nil {
+			fmt.Println("unpack-image.containerd.client.list-images", err)
+			return err
+		}
+
+		if len(images) != 1 {
+			fmt.Println("unpack-image.containerd.images.length", len(images))
+			return fmt.Errorf("One image for filter %s expected, found %d", filter, len(images))
+		}
+
+		err = images[0].Unpack(ctx, containerd.DefaultSnapshotter)
+		if err != nil {
+			fmt.Println("unpack-image.image.Unpack", err)
+		}
+		return err
+	})
+
+	if reexec.Init() {
+		// prevents infinite reexec loop
+		// Details: https://medium.com/@teddyking/namespaces-in-go-reexec-3d1295b91af8
+		os.Exit(0)
+	}
+}
+
+func NewContainerdVolumizer(client *containerd.Client, context context.Context, defaultRootfs, storeDir string, idMappings groot.IDMappings, idMapper sandbox.IDMapper, imageSpecCreator ImageSpecCreator, containerdSocket string) *ContainerdVolumizer {
 	return &ContainerdVolumizer{
 		client:           client,
 		context:          context,
 		defaultRootfs:    defaultRootfs,
 		storeDir:         storeDir,
-		rootUID:          rootUID,
-		rootGID:          rootGID,
+		idMappings:       idMappings,
+		idMapper:         idMapper,
 		imageSpecCreator: imageSpecCreator,
+		containerdSocket: containerdSocket,
 	}
 }
 
@@ -78,10 +128,19 @@ func (v *ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec
 		}
 
 		blobstoreResolver := NewBlobstoreResolver(ociImageURL.Path, spec.Handle)
-		image, err := v.client.Pull(v.context, spec.Handle, containerd.WithPullUnpack, containerd.WithPullLabel(spec.Handle, "set"), containerd.WithResolver(blobstoreResolver))
+		image, err := v.client.Pull(v.context, spec.Handle, containerd.WithPullLabel(spec.Handle, "set"), containerd.WithResolver(blobstoreResolver))
 		if err != nil {
 			return specs.Spec{}, err
 		}
+
+		reexecer := sandbox.NewReexecer(log, v.idMapper, v.idMappings)
+		reexecSpec := groot.ReexecSpec{Args: []string{v.containerdSocket, spec.Handle}, CloneUserns: true}
+		reexecOut, err := reexecer.Reexec("unpack-image", reexecSpec)
+		log.Info("reeexec.stdout", lager.Data{"stdout": string(reexecOut)})
+		if err != nil {
+			return specs.Spec{}, err
+		}
+
 		return v.containerSpecFromImage(log, image, spec.Handle)
 
 		// tarDir, err := ioutil.TempDir("", "")
@@ -188,7 +247,7 @@ func (v *ContainerdVolumizer) createLocalRootfs(spec garden.ContainerSpec) error
 		}
 		vcapStatT := vcapStat.Sys().(*syscall.Stat_t)
 
-		if err := recursiveChown(tempDir, v.rootUID, v.rootGID); err != nil {
+		if err := recursiveChown(tempDir, v.idMappings.UIDMappings[0].NamespaceID, v.idMappings.GIDMappings[0].NamespaceID); err != nil {
 			return fmt.Errorf("chown: %w", err)
 		}
 
@@ -213,30 +272,7 @@ func (v *ContainerdVolumizer) containerSpecFromImage(log lager.Logger, image con
 
 	mnts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Prepare(v.context, handle, parentSnapshotId, snapshots.WithLabels(noGarbageCollectLabel()))
 	if err != nil {
-		return specs.Spec{}, err
-	}
-
-	rootfsDir := filepath.Join(v.storeDir, handle)
-	if err := os.MkdirAll(rootfsDir, 0775); err != nil {
-		return specs.Spec{}, err
-	}
-
-	if err := mount.All(mnts, rootfsDir); err != nil {
-		return specs.Spec{}, err
-	}
-
-	vcapPath := filepath.Join(rootfsDir, "home/vcap")
-	vcapStat, err := os.Stat(vcapPath)
-	if err != nil {
-		return specs.Spec{}, err
-	}
-	vcapStatT := vcapStat.Sys().(*syscall.Stat_t)
-	if err := recursiveChown(rootfsDir, v.rootUID, v.rootGID); err != nil {
-		return specs.Spec{}, err
-	}
-	fmt.Printf("chown -R %s %d:%d\n", vcapPath, int(vcapStatT.Uid), int(vcapStatT.Gid))
-	if err := recursiveChown(vcapPath, int(vcapStatT.Uid), int(vcapStatT.Gid)); err != nil {
-		return specs.Spec{}, err
+		return specs.Spec{}, fmt.Errorf("Snapshot prepare: %w", err)
 	}
 
 	imgEnv, err := getImageEnvironment(v.context, image)
@@ -246,7 +282,14 @@ func (v *ContainerdVolumizer) containerSpecFromImage(log lager.Logger, image con
 
 	// rootfsDir := filepath.Join("/var/vcap/data/containerd/state", spec.Handle, "rootfs")
 	// return specs.Spec{Root: &specs.Root{Path: rootfsDir}}, nil
-	return specs.Spec{Root: &specs.Root{Path: rootfsDir}, Process: &specs.Process{Env: imgEnv}}, nil
+	return specs.Spec{Root: &specs.Root{Path: "rootfs"}, Mounts: []specs.Mount{
+		{
+			Destination: "/",
+			Source:      mnts[0].Source,
+			Type:        mnts[0].Type,
+			Options:     mnts[0].Options,
+		},
+	}, Process: &specs.Process{Env: imgEnv}}, nil
 }
 
 func (v *ContainerdVolumizer) Destroy(log lager.Logger, handle string) error {
