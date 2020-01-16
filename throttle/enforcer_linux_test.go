@@ -93,12 +93,6 @@ var _ = Describe("Enforcer", func() {
 				Expect(pids).To(ContainElement(command.Process.Pid))
 			})
 
-			It("has low, non-default cpu.shares on the bad cgroup", func() {
-				goodShares := readCPUShares(goodCgroup)
-				badShares := readCPUShares(badCgroup)
-				Expect(goodShares).To(BeNumerically(">", badShares))
-			})
-
 			It("copies CPU shares to the bad container cgroup", func() {
 				badContainerShares := readCPUShares(badContainerCgroup)
 				Expect(badContainerShares).To(Equal(3456))

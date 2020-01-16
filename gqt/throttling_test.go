@@ -64,7 +64,7 @@ var _ = Describe("throttle tests", func() {
 			return cgroupPath, err
 		}, "2m", "100ms").Should(HaveSuffix(filepath.Join(cgroupType, container.Handle())))
 
-		return getAbsoluteCgroupPath(config.Tag, cgroupPath)
+		return getAbsoluteCPUCgroupPath(config.Tag, cgroupPath)
 	}
 
 	It("will create both a good and a bad cgroup for that container", func() {
@@ -87,14 +87,13 @@ var _ = Describe("throttle tests", func() {
 		goodShares := readCgroupFile(goodCgroupPath, "cpu.shares")
 		badShares := readCgroupFile(badCgroupPath, "cpu.shares")
 		Expect(goodShares).To(Equal(badShares))
-
 	})
 
 	It("will delete the bad cgroup after the container gets destroyed", func() {
 		currentCgroupSubpath, err := getCgroup(container, containerPort)
 		Expect(err).NotTo(HaveOccurred())
 
-		currentCgroupPath := getAbsoluteCgroupPath(config.Tag, currentCgroupSubpath)
+		currentCgroupPath := getAbsoluteCPUCgroupPath(config.Tag, currentCgroupSubpath)
 
 		badCgroup := strings.Replace(currentCgroupPath, cgroups.GoodCgroupName, cgroups.BadCgroupName, 1)
 
@@ -172,7 +171,7 @@ func httpGet(url string) (string, error) {
 	return string(body), nil
 }
 
-func getAbsoluteCgroupPath(tag, cgroupSubPath string) string {
+func getAbsoluteCPUCgroupPath(tag, cgroupSubPath string) string {
 	cgroupMountpoint := fmt.Sprintf("/tmp/cgroups-%s", tag)
 	return filepath.Join(cgroupMountpoint, "cpu", cgroupSubPath)
 }

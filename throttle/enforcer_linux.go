@@ -40,11 +40,7 @@ func (c CPUCgroupEnforcer) Punish(logger lager.Logger, handle string) error {
 		return err
 	}
 
-	if err := copyShares(goodContainerCgroupPath, badContainerCgroupPath); err != nil {
-		return err
-	}
-
-	return writeCPUShares(c.badCgroupPath, []byte("10"))
+	return copyShares(goodContainerCgroupPath, badContainerCgroupPath)
 }
 
 func (c CPUCgroupEnforcer) Release(logger lager.Logger, handle string) error {

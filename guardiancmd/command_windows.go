@@ -22,6 +22,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/privchecker"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/users"
+	"code.cloudfoundry.org/guardian/throttle"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -174,6 +175,6 @@ func (cmd *CommonCommand) computeRuncRoot() string {
 	return ""
 }
 
-func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containerizer *rundmc.Containerizer) (Service, error) {
+func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containerizer *rundmc.Containerizer, memoryProvider throttle.MemoryProvider) (Service, error) {
 	return &NoopService{}, nil
 }
