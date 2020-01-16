@@ -206,29 +206,36 @@ func (v *ContainerdVolumizer) createLocalRootfs(spec garden.ContainerSpec) error
 }
 
 func (v *ContainerdVolumizer) containerSpecFromImage(log lager.Logger, image containerd.Image, handle string) (specs.Spec, error) {
-	// parentSnapshotId, err := getParentSnapshotID(v.context, image)
-	// if err != nil {
-	// 	return specs.Spec{}, err
-	// }
-
-	// mnts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).
-	// 	Prepare(v.context, handle, parentSnapshotId, snapshots.WithLabels(noGarbageCollectLabel()))
-	// if err != nil {
-	// 	return specs.Spec{}, err
-	// }
-	dir, err := ioutil.TempDir("/tmp", handle)
+	parentSnapshotId, err := getParentSnapshotID(v.context, image)
 	if err != nil {
 		return specs.Spec{}, err
 	}
-	if err := os.Chown(dir, v.rootUID, v.rootGID); err != nil {
+
+	mnts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Prepare(v.context, handle, parentSnapshotId, snapshots.WithLabels(noGarbageCollectLabel()))
+	if err != nil {
 		return specs.Spec{}, err
 	}
 
-	etcDir := filepath.Join(dir, "etc")
-	if err := os.MkdirAll(etcDir, 0755); err != nil {
+	rootfsDir := filepath.Join(v.storeDir, handle)
+	if err := os.MkdirAll(rootfsDir, 0775); err != nil {
 		return specs.Spec{}, err
 	}
-	if err := os.Chown(etcDir, v.rootUID, v.rootGID); err != nil {
+
+	if err := mount.All(mnts, rootfsDir); err != nil {
+		return specs.Spec{}, err
+	}
+
+	vcapPath := filepath.Join(rootfsDir, "home/vcap")
+	vcapStat, err := os.Stat(vcapPath)
+	if err != nil {
+		return specs.Spec{}, err
+	}
+	vcapStatT := vcapStat.Sys().(*syscall.Stat_t)
+	if err := recursiveChown(rootfsDir, v.rootUID, v.rootGID); err != nil {
+		return specs.Spec{}, err
+	}
+	fmt.Printf("chown -R %s %d:%d\n", vcapPath, int(vcapStatT.Uid), int(vcapStatT.Gid))
+	if err := recursiveChown(vcapPath, int(vcapStatT.Uid), int(vcapStatT.Gid)); err != nil {
 		return specs.Spec{}, err
 	}
 
@@ -237,18 +244,9 @@ func (v *ContainerdVolumizer) containerSpecFromImage(log lager.Logger, image con
 		return specs.Spec{}, err
 	}
 
-	return specs.Spec{Process: &specs.Process{Env: imgEnv}, Root: &specs.Root{Path: dir}}, nil
-	// return specs.Spec{
-	// 	Root: &specs.Root{Path: "rootfs"},
-	// 	Mounts: []specs.Mount{
-	// 		{
-	// 			Destination: "/",
-	// 			Source:      mnts[0].Source,
-	// 			Options:     []string{strings.Join(mnts[0].Options, ",")},
-	// 			Type:        mnts[0].Type,
-	// 		},
-	// 	},
-	// 	Process: &specs.Process{Env: imgEnv}}, nil
+	// rootfsDir := filepath.Join("/var/vcap/data/containerd/state", spec.Handle, "rootfs")
+	// return specs.Spec{Root: &specs.Root{Path: rootfsDir}}, nil
+	return specs.Spec{Root: &specs.Root{Path: rootfsDir}, Process: &specs.Process{Env: imgEnv}}, nil
 }
 
 func (v *ContainerdVolumizer) Destroy(log lager.Logger, handle string) error {

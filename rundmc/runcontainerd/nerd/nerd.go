@@ -3,12 +3,10 @@ package nerd
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -21,7 +19,6 @@ import (
 	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/errdefs"
 	ctrdevents "github.com/containerd/containerd/events"
-	"github.com/containerd/containerd/oci"
 	"github.com/containerd/containerd/runtime/linux/runctypes"
 	"github.com/containerd/typeurl"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -42,36 +39,22 @@ func New(client *containerd.Client, context context.Context, ioFifoDir string) *
 }
 
 func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, pio func() (io.Reader, io.Writer, io.Writer)) error {
-	specJson, err := json.Marshal(*spec)
-	log.Debug("creating-container", lager.Data{"containerID": containerID, "spec": string(specJson), "error": err})
-	var container containerd.Container
-	log.Debug("spec.root.path", lager.Data{"path": spec.Root.Path})
+	log.Debug("creating-container", lager.Data{"containerID": containerID})
+	container, err := n.client.NewContainer(n.context, containerID, containerd.WithSpec(spec))
 
-	if !strings.HasPrefix(spec.Root.Path, filepath.Join("/tmp", containerID)) {
-		container, err = n.client.NewContainer(n.context, containerID, containerd.WithSpec(spec))
-		if err != nil {
-			return err
-		}
-	} else {
+	// images, err := n.client.ListImages(n.context, fmt.Sprintf(`labels."%s"`, containerID))
+	// if err != nil {
+	// 	return err
+	// }
+	// if len(images) != 1 {
+	// 	return errors.New("there is no image labeled with this container handle")
+	// }
 
-		images, err := n.client.ListImages(n.context, fmt.Sprintf(`labels."%s"`, containerID))
-		if err != nil {
-			return err
-		}
-		if len(images) != 1 {
-			return errors.New("there is no image labeled with this container handle")
-		}
-
-		container, err = n.client.NewContainer(n.context, containerID,
-			containerd.WithRemappedSnapshot(containerID, images[0], spec.Linux.UIDMappings[0].HostID, spec.Linux.GIDMappings[0].HostID),
-			// containerd.WithSpec(spec),
-			containerd.WithSpec(spec, oci.WithImageConfig(images[0])),
-		)
-		if err != nil {
-			fmt.Printf("err = %+v\n", err)
-			return err
-		}
-		fmt.Printf("container.ID() = %+v\n", container.ID())
+	// container, err := n.client.NewContainer(n.context, containerID,
+	// 	containerd.WithSpec(spec, oci.WithImageConfig(images[0])),
+	// 	containerd.WithNewSnapshot(containerID, images[0]))
+	if err != nil {
+		return err
 	}
 
 	for key, value := range spec.Annotations {
