@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/content"
@@ -28,13 +29,15 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
+const ociRootfsStore = "/var/vcap/data/nerdimage/"
+
 type ContainerdVolumizer struct {
 	client           *containerd.Client
 	context          context.Context
 	defaultRootfs    string
 	storeDir         string
-	rootUID          int
-	rootGID          int
+	uidMappings      idmapper.MappingList
+	gidMappings      idmapper.MappingList
 	imageSpecCreator ImageSpecCreator
 	mutex            sync.Mutex
 }
@@ -44,14 +47,23 @@ type ImageSpecCreator interface {
 	CreateImageSpec(rootFS *url.URL, handle string) (*url.URL, error)
 }
 
-func NewContainerdVolumizer(client *containerd.Client, context context.Context, defaultRootfs, storeDir string, rootUID, rootGID int, imageSpecCreator ImageSpecCreator) *ContainerdVolumizer {
+func NewContainerdVolumizer(client *containerd.Client, context context.Context, defaultRootfs, storeDir string, uidMappings, gidMappings idmapper.MappingList, imageSpecCreator ImageSpecCreator) *ContainerdVolumizer {
+	err := os.MkdirAll(ociRootfsStore, 0755)
+	if err != nil {
+		panic(err)
+	}
+	err = os.Lchown(ociRootfsStore, uidMappings.Map(0), gidMappings.Map(0))
+	if err != nil {
+		panic(err)
+	}
+
 	return &ContainerdVolumizer{
 		client:           client,
 		context:          context,
 		defaultRootfs:    defaultRootfs,
-		storeDir:         storeDir,
-		rootUID:          rootUID,
-		rootGID:          rootGID,
+		storeDir:         ociRootfsStore,
+		uidMappings:      uidMappings,
+		gidMappings:      gidMappings,
 		imageSpecCreator: imageSpecCreator,
 	}
 }
@@ -68,6 +80,7 @@ func (v *ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec
 		return v.containerSpecFromImage(log, image, spec.Handle)
 
 	case strings.Contains(spec.Image.URI, "preloaded+layer"):
+
 		rootFSURL, err := url.Parse(spec.Image.URI)
 		if err != nil {
 			return specs.Spec{}, err
@@ -77,8 +90,8 @@ func (v *ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec
 			return specs.Spec{}, err
 		}
 
-		blobstoreResolver := NewBlobstoreResolver(ociImageURL.Path, spec.Handle)
-		image, err := v.client.Pull(v.context, spec.Handle, containerd.WithPullUnpack, containerd.WithPullLabel(spec.Handle, "set"), containerd.WithResolver(blobstoreResolver))
+		blobstoreResolver := NewBlobstoreResolver(ociImageURL.Path, spec.Handle+"-unmapped")
+		image, err := v.client.Pull(v.context, spec.Handle+"-unmapped", containerd.WithPullUnpack, containerd.WithPullLabel(spec.Handle, "set"), containerd.WithResolver(blobstoreResolver))
 		if err != nil {
 			return specs.Spec{}, err
 		}
@@ -181,20 +194,8 @@ func (v *ContainerdVolumizer) createLocalRootfs(spec garden.ContainerSpec) error
 			return fmt.Errorf("tar -x -f %s -C %s: %w [spec: %#v]", rootFsPath, tempDir, err, spec)
 		}
 
-		vcapPath := filepath.Join(tempDir, "home/vcap")
-		vcapStat, err := os.Stat(vcapPath)
-		if err != nil {
-			return err
-		}
-		vcapStatT := vcapStat.Sys().(*syscall.Stat_t)
-
-		if err := recursiveChown(tempDir, v.rootUID, v.rootGID); err != nil {
+		if err := v.recursiveChown(tempDir); err != nil {
 			return fmt.Errorf("chown: %w", err)
-		}
-
-		fmt.Printf("chown -R %s %d:%d\n", vcapPath, int(vcapStatT.Uid), int(vcapStatT.Gid))
-		if err := recursiveChown(vcapPath, int(vcapStatT.Uid), int(vcapStatT.Gid)); err != nil {
-			return err
 		}
 
 		if err := v.client.SnapshotService(containerd.DefaultSnapshotter).Commit(v.context, "local-rootfs", "random"); err != nil {
@@ -206,12 +207,12 @@ func (v *ContainerdVolumizer) createLocalRootfs(spec garden.ContainerSpec) error
 }
 
 func (v *ContainerdVolumizer) containerSpecFromImage(log lager.Logger, image containerd.Image, handle string) (specs.Spec, error) {
-	parentSnapshotId, err := getParentSnapshotID(v.context, image)
+	parentId, err := getParentSnapshotID(v.context, image)
 	if err != nil {
 		return specs.Spec{}, err
 	}
 
-	mnts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Prepare(v.context, handle, parentSnapshotId, snapshots.WithLabels(noGarbageCollectLabel()))
+	mnts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Prepare(v.context, handle, parentId, snapshots.WithLabels(noGarbageCollectLabel()))
 	if err != nil {
 		return specs.Spec{}, err
 	}
@@ -220,23 +221,17 @@ func (v *ContainerdVolumizer) containerSpecFromImage(log lager.Logger, image con
 	if err := os.MkdirAll(rootfsDir, 0775); err != nil {
 		return specs.Spec{}, err
 	}
+	err = os.Lchown(rootfsDir, v.uidMappings.Map(0), v.gidMappings.Map(0))
+	if err != nil {
+		return specs.Spec{}, err
+	}
 
 	if err := mount.All(mnts, rootfsDir); err != nil {
 		return specs.Spec{}, err
 	}
 
-	vcapPath := filepath.Join(rootfsDir, "home/vcap")
-	vcapStat, err := os.Stat(vcapPath)
-	if err != nil {
-		return specs.Spec{}, err
-	}
-	vcapStatT := vcapStat.Sys().(*syscall.Stat_t)
-	if err := recursiveChown(rootfsDir, v.rootUID, v.rootGID); err != nil {
-		return specs.Spec{}, err
-	}
-	fmt.Printf("chown -R %s %d:%d\n", vcapPath, int(vcapStatT.Uid), int(vcapStatT.Gid))
-	if err := recursiveChown(vcapPath, int(vcapStatT.Uid), int(vcapStatT.Gid)); err != nil {
-		return specs.Spec{}, err
+	if err := v.recursiveChown(rootfsDir); err != nil {
+		return specs.Spec{}, fmt.Errorf("chown: %w", err)
 	}
 
 	imgEnv, err := getImageEnvironment(v.context, image)
@@ -244,8 +239,6 @@ func (v *ContainerdVolumizer) containerSpecFromImage(log lager.Logger, image con
 		return specs.Spec{}, err
 	}
 
-	// rootfsDir := filepath.Join("/var/vcap/data/containerd/state", spec.Handle, "rootfs")
-	// return specs.Spec{Root: &specs.Root{Path: rootfsDir}}, nil
 	return specs.Spec{Root: &specs.Root{Path: rootfsDir}, Process: &specs.Process{Env: imgEnv}}, nil
 }
 
@@ -273,10 +266,20 @@ func (v *ContainerdVolumizer) Capacity(log lager.Logger) (uint64, error) {
 	return 0, nil
 }
 
-func recursiveChown(path string, uid, gid int) error {
+func (v *ContainerdVolumizer) recursiveChown(path string) error {
+	uids := map[int]int{}
+	gids := map[int]int{}
 	return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
 		if err == nil {
-			err = os.Lchown(name, uid, gid)
+			stat := info.Sys().(*syscall.Stat_t)
+			u, g := int(stat.Uid), int(stat.Gid)
+			if _, ok := uids[u]; !ok {
+				uids[u] = v.uidMappings.Map(u)
+			}
+			if _, ok := gids[u]; !ok {
+				gids[g] = v.gidMappings.Map(g)
+			}
+			err = os.Lchown(name, uids[u], gids[g])
 		}
 		return err
 	})

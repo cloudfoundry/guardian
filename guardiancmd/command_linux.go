@@ -76,8 +76,8 @@ func (f *LinuxFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 		ctx,
 		f.config.Containers.DefaultRootFS,
 		"/var/vcap/data/grootfs/store/unprivileged",
-		f.uidMappings.Map(0),
-		f.gidMappings.Map(0),
+		f.uidMappings,
+		f.gidMappings,
 		imageplugin.NewOCIImageSpecCreator(f.config.Containers.Dir),
 	)
 	// if f.config.Image.Plugin.Path() != "" || f.config.Image.PrivilegedPlugin.Path() != "" {

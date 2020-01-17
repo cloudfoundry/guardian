@@ -65,6 +65,12 @@ func (c *Creator) Create(log lager.Logger, id string, bundle goci.Bndl, pio gard
 
 	cmd := c.runc.RunCommand(bundlePath, pidFilePath, logFilePath, id, c.runcExtraArgs)
 
+	configJson, err := ioutil.ReadFile(filepath.Join(bundlePath, "config.json"))
+	if err != nil {
+		fmt.Printf("err = %+v\n", err)
+	}
+	fmt.Printf("string(configJson) = %+v\n", string(configJson))
+
 	if pio.Stdin != nil {
 		pipeR, pipeW, err := os.Pipe()
 		if err != nil {
