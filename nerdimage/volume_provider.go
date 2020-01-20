@@ -3,7 +3,6 @@ package nerdimage
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -21,13 +20,10 @@ import (
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/mount"
-	"github.com/containerd/containerd/oci"
 	"github.com/containerd/containerd/snapshots"
-	"github.com/containerd/typeurl"
 	"github.com/opencontainers/image-spec/identity"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -100,6 +96,40 @@ func (v *ContainerdVolumizer) Create(log lager.Logger, spec garden.ContainerSpec
 			return specs.Spec{}, err
 		}
 		return v.containerSpecFromImage(log, image, spec.Handle)
+
+		// tarDir, err := ioutil.TempDir("", "")
+		// if err != nil {
+		// 	return specs.Spec{}, err
+		// }
+		// defer os.RemoveAll(tarDir)
+		// tarPath := filepath.Join(tarDir, "image.tar")
+		// err = exec.Command("tar", "-C", ociImageURL.Path, tarPath, ".").Run()
+		// if err != nil {
+		// 	return specs.Spec{}, err
+		// }
+
+		// tarFile, err := os.OpenFile(tarPath, os.O_RDONLY, 0)
+		// if err != nil {
+		// 	return specs.Spec{}, err
+		// }
+		// defer tarFile.Close()
+
+		// images, err := v.client.Import(v.context, tarFile)
+		// if err != nil {
+		// 	return specs.Spec{}, err
+		// }
+
+		// if len(images) != 1 {
+		// 	return specs.Spec{}, fmt.Errorf("expected one image, received %d", len(images))
+		// }
+
+		// // The image returned by import is not the same type returned by client.Pull...
+		// nerdImage, err := v.client.GetImage(v.context, images[0].Name)
+		// if err != nil {
+		// 	return specs.Spec{}, err
+		// }
+
+		// return v.containerSpecFromImage(log, nerdImage, spec.Handle)
 
 	default:
 		err := v.createLocalRootfs(spec)
@@ -176,88 +206,40 @@ func (v *ContainerdVolumizer) createLocalRootfs(spec garden.ContainerSpec) error
 	return nil
 }
 
-func convertMap(mappings idmapper.MappingList) []containerd.IDMapping {
-	var out []containerd.IDMapping
-	for _, mapping := range mappings {
-		out = append(out, containerd.IDMapping{HostID: mapping.HostID, ContainerID: mapping.ContainerID, Size: mapping.Size})
-	}
-	return out
-}
-
 func (v *ContainerdVolumizer) containerSpecFromImage(log lager.Logger, image containerd.Image, handle string) (specs.Spec, error) {
-	// parentId, err := getParentSnapshotID(v.context, image)
-	// if err != nil {
-	// 	return specs.Spec{}, err
-	// }
-
-	// mnts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Prepare(v.context, handle, parentId, snapshots.WithLabels(noGarbageCollectLabel()))
-	// if err != nil {
-	// 	return specs.Spec{}, err
-	// }
-	// err = mount.WithTempMount(v.context, mnts, v.recursiveChown)
-	// if err != nil {
-	// 	return specs.Spec{}, err
-	// }
-
-	container := containers.Container{}
-	err := containerd.WithUsernamespacedSnapshot(handle, image, convertMap(v.uidMappings), convertMap(v.gidMappings))(v.context, v.client, &container)
-	if err != nil {
-		return specs.Spec{}, err
-	}
-	err = containerd.WithNewSpec(oci.WithImageConfig(image))(v.context, v.client, &container)
+	parentId, err := getParentSnapshotID(v.context, image)
 	if err != nil {
 		return specs.Spec{}, err
 	}
 
-	specInt, err := typeurl.UnmarshalAny(container.Spec)
+	mnts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Prepare(v.context, handle, parentId, snapshots.WithLabels(noGarbageCollectLabel()))
 	if err != nil {
 		return specs.Spec{}, err
 	}
 
-	spec, ok := specInt.(*specs.Spec)
-	if !ok {
-		return specs.Spec{}, errors.New("failed un unmarshal spec")
+	rootfsDir := filepath.Join(v.storeDir, handle)
+	if err := os.MkdirAll(rootfsDir, 0775); err != nil {
+		return specs.Spec{}, err
+	}
+	err = os.Lchown(rootfsDir, v.uidMappings.Map(0), v.gidMappings.Map(0))
+	if err != nil {
+		return specs.Spec{}, err
 	}
 
-	specJson, _ := json.Marshal(spec)
-	fmt.Printf("specJson = %+v\n", string(specJson))
-	fmt.Printf("container = %+v\n", container)
+	if err := mount.All(mnts, rootfsDir); err != nil {
+		return specs.Spec{}, err
+	}
 
-	return *spec, nil
+	if err := v.recursiveChown(rootfsDir); err != nil {
+		return specs.Spec{}, fmt.Errorf("chown: %w", err)
+	}
 
-	// parentId, err := getParentSnapshotID(v.context, image)
-	// if err != nil {
-	// 	return specs.Spec{}, err
-	// }
+	imgEnv, err := getImageEnvironment(v.context, image)
+	if err != nil {
+		return specs.Spec{}, err
+	}
 
-	// mnts, err := v.client.SnapshotService(containerd.DefaultSnapshotter).Prepare(v.context, handle, parentId, snapshots.WithLabels(noGarbageCollectLabel()))
-	// if err != nil {
-	// 	return specs.Spec{}, err
-	// }
-
-	// rootfsDir := filepath.Join(v.storeDir, handle)
-	// if err := os.MkdirAll(rootfsDir, 0775); err != nil {
-	// 	return specs.Spec{}, err
-	// }
-	// err = os.Lchown(rootfsDir, v.uidMappings.Map(0), v.gidMappings.Map(0))
-	// if err != nil {
-	// 	return specs.Spec{}, err
-	// }
-
-	// if err := mount.All(mnts, rootfsDir); err != nil {
-	// 	return specs.Spec{}, err
-	// }
-
-	// if err := v.recursiveChown(rootfsDir); err != nil {
-	// 	return specs.Spec{}, fmt.Errorf("chown: %w", err)
-	// }
-
-	// imgEnv, err := getImageEnvironment(v.context, image)
-	// if err != nil {
-	// 	return specs.Spec{}, err
-	// }
-
-	// return specs.Spec{Root: &specs.Root{Path: rootfsDir}, Process: &specs.Process{Env: imgEnv}}, nil
+	return specs.Spec{Root: &specs.Root{Path: rootfsDir}, Process: &specs.Process{Env: imgEnv}}, nil
 }
 
 func (v *ContainerdVolumizer) Destroy(log lager.Logger, handle string) error {
