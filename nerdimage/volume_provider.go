@@ -279,6 +279,9 @@ func (v *ContainerdVolumizer) recursiveChown(path string) error {
 			if _, ok := gids[u]; !ok {
 				gids[g] = v.gidMappings.Map(g)
 			}
+			if u == uids[u] && g == gids[g] {
+				return nil
+			}
 			err = os.Lchown(name, uids[u], gids[g])
 		}
 		return err
