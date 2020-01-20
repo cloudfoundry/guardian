@@ -47,7 +47,7 @@ require (
 	github.com/st3v/glager v0.3.0
 	github.com/tedsuo/ifrit v0.0.0-20180410193936-e89a512c3162
 	github.com/urfave/cli/v2 v2.1.1
-	github.com/vishvananda/netlink v1.0.0
+	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20171111001504-be1fbeda1936
 	go.etcd.io/bbolt v1.3.3 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
