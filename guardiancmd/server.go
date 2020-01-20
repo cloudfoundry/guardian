@@ -15,6 +15,7 @@ import (
 	"code.cloudfoundry.org/guardian/metrics"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/throttle"
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/docker/docker/pkg/reexec"
@@ -286,7 +287,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		return err
 	}
 
-	services, err := cmd.wireServices(logger, wiring.Containerizer)
+	services, err := cmd.wireServices(logger, wiring.Containerizer, wiring.SysInfoProvider)
 	if err != nil {
 		return err
 	}
@@ -371,11 +372,11 @@ func (cmd *ServerCommand) initializeDropsonde(log lager.Logger) {
 	}
 }
 
-func (cmd *ServerCommand) wireServices(log lager.Logger, containerizer *rundmc.Containerizer) ([]Service, error) {
+func (cmd *ServerCommand) wireServices(log lager.Logger, containerizer *rundmc.Containerizer, memoryProvider throttle.MemoryProvider) ([]Service, error) {
 	services := []Service{}
 
 	if cmd.CPUThrottling.Enabled {
-		cpuThrottling, err := cmd.wireCpuThrottlingService(log, containerizer)
+		cpuThrottling, err := cmd.wireCpuThrottlingService(log, containerizer, memoryProvider)
 		if err != nil {
 			return nil, err
 		}

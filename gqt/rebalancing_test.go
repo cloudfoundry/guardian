@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("CPU shares rebalancing", func() {
+var _ = FDescribe("CPU shares rebalancing", func() {
 	var (
 		goodCgroupPath string
 		badCgroupPath  string
@@ -22,11 +22,11 @@ var _ = Describe("CPU shares rebalancing", func() {
 	BeforeEach(func() {
 		skipIfNotCPUThrottling()
 
-		// We want an aggressive throttling check to speed moving containers across cgroups up
-		// in order to reduce test run time
-
 		goodCgroupPath = getAbsoluteCPUCgroupPath(config.Tag, "good")
 		badCgroupPath = getAbsoluteCPUCgroupPath(config.Tag, "bad")
+
+		// We want an aggressive throttling check to speed moving containers across cgroups up
+		// in order to reduce test run time
 		config.CPUThrottlingCheckInterval = uint64ptr(1)
 		client = runner.Start(config)
 	})
@@ -36,7 +36,7 @@ var _ = Describe("CPU shares rebalancing", func() {
 	})
 
 	FIt("starts with all shares allocated to the good cgroup", func() {
-		Eventually(func() int64 { return readCgroupFile(goodCgroupPath, "cpu.shares") }).Should(Equal(2))
+		Eventually(func() int64 { return readCgroupFile(goodCgroupPath, "cpu.shares") }).Should(BeNumerically(">", 1024))
 		Eventually(func() int64 { return readCgroupFile(badCgroupPath, "cpu.shares") }).Should(Equal(2))
 	})
 

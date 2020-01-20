@@ -293,7 +293,7 @@ func (cmd *CommonCommand) getGardenCPUCgroup() (string, error) {
 	return filepath.Join(cgroupsMountpoint, "cpu", cpuCgroupSubPath["cpu"], gardenCgroup), nil
 }
 
-func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containerizer *rundmc.Containerizer) (Service, error) {
+func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containerizer *rundmc.Containerizer, memoryProvider throttle.MemoryProvider) (Service, error) {
 	metricsSource := throttle.NewContainerMetricsSource(containerizer)
 	gardenCPUCgroup, err := cmd.getGardenCPUCgroup()
 	if err != nil {
@@ -301,10 +301,9 @@ func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containeriz
 	}
 
 	enforcer := throttle.NewEnforcer(gardenCPUCgroup)
-
 	throttler := throttle.NewThrottler(metricsSource, enforcer)
-
+	sharesBalancer := throttle.NewSharesBalancer(gardenCPUCgroup, memoryProvider)
 	ticker := time.NewTicker(time.Duration(cmd.CPUThrottling.CheckInterval) * time.Second)
 
-	return throttle.NewPollingService(log, throttler, ticker.C), nil
+	return throttle.NewPollingService(log, throttle.NewCompositeRunnable(throttler, sharesBalancer), ticker.C), nil
 }
