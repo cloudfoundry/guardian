@@ -33,7 +33,7 @@ var _ = Describe("Networking Uniqueness", func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
-	It("should not allocate duplicate subnets", func() {
+	XIt("should not allocate duplicate subnets", func() {
 		skipIfDev()
 
 		ctrl := make(chan struct{})

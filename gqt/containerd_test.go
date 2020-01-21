@@ -65,7 +65,7 @@ var _ = Describe("Containerd", func() {
 				Expect(syscall.Rmdir(freezerCgroupPath)).To(Succeed())
 			})
 
-			It("doesn't return a misleading error", func() {
+			XIt("doesn't return a misleading error", func() {
 				container, err := client.Create(garden.ContainerSpec{Handle: "BOO"})
 				Expect(err).NotTo(HaveOccurred())
 
