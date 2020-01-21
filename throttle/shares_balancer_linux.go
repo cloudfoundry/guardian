@@ -19,11 +19,6 @@ type SharesBalancer struct {
 	badCgroupPath  string
 }
 
-//go:generate counterfeiter . MemoryProvider
-type MemoryProvider interface {
-	TotalMemory() (uint64, error)
-}
-
 func NewSharesBalancer(cpuCgroupPath string, memoryProvider MemoryProvider) SharesBalancer {
 	return SharesBalancer{
 		memoryProvider: memoryProvider,
