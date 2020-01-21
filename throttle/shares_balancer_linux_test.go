@@ -18,7 +18,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
-var _ = FDescribe("SharesBalancer", func() {
+var _ = Describe("SharesBalancer", func() {
 	var (
 		err                error
 		logger             *lagertest.TestLogger
@@ -93,7 +93,7 @@ var _ = FDescribe("SharesBalancer", func() {
 
 		When("the container is added to the good cgroup", func() {
 			BeforeEach(func() {
-				cgroups.WriteCgroupProc(filepath.Join(goodCgroupPath, "container"), container.Process.Pid)
+				Expect(cgroups.WriteCgroupProc(filepath.Join(goodCgroupPath, "container"), container.Process.Pid)).To(Succeed())
 			})
 
 			It("keeps everything the same", func() {
@@ -104,12 +104,25 @@ var _ = FDescribe("SharesBalancer", func() {
 
 		When("the container is added to the bad cgroup", func() {
 			BeforeEach(func() {
-				cgroups.WriteCgroupProc(filepath.Join(badCgroupPath, "container"), container.Process.Pid)
+				Expect(cgroups.WriteCgroupProc(filepath.Join(badCgroupPath, "container"), container.Process.Pid)).To(Succeed())
 			})
 
 			It("assigns the sum of the contained shares to the bad cgroup, the rest to the good cgroup", func() {
 				Expect(readCPUShares(goodCgroupPath)).To(Equal(9000))
 				Expect(readCPUShares(badCgroupPath)).To(Equal(1000))
+			})
+
+			When("the container goes back to the good cgroup", func() {
+				BeforeEach(func() {
+					Expect(sharesBalancer.Run(logger)).To(Succeed())
+					Expect(readCPUShares(badCgroupPath)).To(BeNumerically(">", 2))
+					Expect(cgroups.WriteCgroupProc(filepath.Join(goodCgroupPath, "container"), container.Process.Pid)).To(Succeed())
+				})
+
+				It("assigns the container shares back to the good cgroup", func() {
+					Expect(readCPUShares(goodCgroupPath)).To(Equal(9998))
+					Expect(readCPUShares(badCgroupPath)).To(Equal(2))
+				})
 			})
 		})
 	})
