@@ -23,9 +23,10 @@ usage() {
 
 compile_fly_cmd() {
   task_path=$1
+  image_args=("--inputs-from" "main/grootfs" "--image" "garden-ci-image")
 
   cmd="fly -t $FLY_TARGET"
-  cmd=$cmd" e -c $task_path"
+  cmd=$cmd" e -p ${image_args[@]} -c $task_path"
   cmd=$cmd" -i grootfs-git-repo=${PWD}"
   cmd=$cmd" $FLY_ARGS"
   cmd=$cmd" --"
