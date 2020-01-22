@@ -134,6 +134,29 @@ func (n *Nerd) State(log lager.Logger, containerID string) (int, string, error) 
 	return int(task.Pid()), string(status.Status), nil
 }
 
+func (n *Nerd) exponentialGetTask(container containerd.Container) (containerd.Task, error) {
+	const timeout = 5 * time.Second
+	deadline := time.Now().Add(timeout)
+
+	for tries := 0; time.Now().Before(deadline); tries++ {
+		task, err := container.Task(n.context, cio.Load)
+		if err != nil {
+			if errdefs.IsNotFound(err) {
+				return nil, runcontainerd.TaskNotFoundError{Handle: container.ID()}
+			}
+			return nil, err
+		}
+
+		if task.Pid() != 0 {
+			return task, nil
+		}
+
+		time.Sleep(time.Second << uint(tries))
+	}
+
+	return nil, errors.New("failed getting task")
+}
+
 func (n *Nerd) exponentialGetState(task containerd.Task) (containerd.Status, error) {
 	const timeout = 5 * time.Second
 	deadline := time.Now().Add(timeout)
@@ -291,15 +314,12 @@ func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (conta
 	}
 
 	log.Debug("loading-task", lager.Data{"containerID": containerID})
-	task, err := container.Task(n.context, cio.Load)
+	task, err := n.exponentialGetTask(container)
 	if err != nil {
-		if errdefs.IsNotFound(err) {
-			log.Debug("task-not-found", lager.Data{"containerID": containerID})
-			return container, nil, runcontainerd.TaskNotFoundError{Handle: containerID}
-		}
 		log.Debug("loading-task-failed", lager.Data{"containerID": containerID})
 		return nil, nil, err
 	}
+
 	return container, task, nil
 }
 

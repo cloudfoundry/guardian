@@ -88,8 +88,9 @@ var _ = Describe("Containerd", func() {
 					Expect(err).NotTo(HaveOccurred())
 					return string(state)
 				}).Should(ContainSubstring("FROZEN"))
+
 				_, infoErr := container.Info()
-				Expect(infoErr).To(HaveOccurred())
+				Expect(infoErr).To(MatchError("failed getting task"))
 			})
 		})
 	})
