@@ -7,6 +7,7 @@ import (
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/sandbox"
+	"code.cloudfoundry.org/grootfs/store/filesystems/loopback"
 	"code.cloudfoundry.org/grootfs/store/filesystems/mount"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/spec"
@@ -32,6 +33,10 @@ type internalDriver interface {
 	FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error)
 
 	Marshal(logger lager.Logger) ([]byte, error)
+}
+
+type DirectIO interface {
+	EnableDirectIO(path string) error
 }
 
 type Driver struct {
@@ -154,7 +159,9 @@ func specToDriver(spec spec.DriverSpec) (internalDriver, error) {
 		return overlayxfs.NewDriver(
 			spec.StorePath,
 			spec.SuidBinaryPath,
-			mount.RootlessUnmounter{}), nil
+			mount.RootlessUnmounter{},
+			loopback.NewNoopDirectIO(),
+		), nil
 	default:
 		return nil, errors.Errorf("invalid filesystem spec: %s not recognized", spec.Type)
 	}

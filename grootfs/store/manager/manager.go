@@ -21,7 +21,7 @@ const MinStoreSizeBytes = 1024 * 1024 * 200
 
 //go:generate counterfeiter . StoreDriver
 type StoreDriver interface {
-	ConfigureStore(logger lager.Logger, storePath string, ownerUID, ownerGID int) error
+	ConfigureStore(logger lager.Logger, storePath, backingStorePath string, ownerUID, ownerGID int) error
 	ValidateFileSystem(logger lager.Logger, path string) error
 	InitFilesystem(logger lager.Logger, filesystemPath, storePath string) error
 	DeInitFilesystem(logger lager.Logger, storePath string) error
@@ -173,7 +173,7 @@ func (m *Manager) configureStore(logger lager.Logger, ownerUID, ownerGID int) er
 		}
 	}
 
-	if err := m.storeDriver.ConfigureStore(logger, m.storePath, ownerUID, ownerGID); err != nil {
+	if err := m.storeDriver.ConfigureStore(logger, m.storePath, m.getBackingStoreFilePath(), ownerUID, ownerGID); err != nil {
 		logger.Error("store-filesystem-specific-configuration-failed", err)
 		return errorspkg.Wrap(err, "running filesystem-specific configuration")
 	}

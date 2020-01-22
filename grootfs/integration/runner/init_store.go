@@ -11,6 +11,7 @@ type InitSpec struct {
 	UIDMappings    []groot.IDMappingSpec
 	GIDMappings    []groot.IDMappingSpec
 	StoreSizeBytes int64
+	WithDirectIO   bool
 }
 
 func (r Runner) InitStore(spec InitSpec) error {
@@ -34,6 +35,10 @@ func (r Runner) InitStore(spec InitSpec) error {
 
 	if spec.StoreSizeBytes > 0 {
 		args = append(args, "--store-size-bytes", fmt.Sprintf("%d", spec.StoreSizeBytes))
+	}
+
+	if spec.WithDirectIO {
+		args = append(args, "--with-direct-io")
 	}
 
 	_, err := r.RunSubcommand("init-store", args...)

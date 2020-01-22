@@ -48,6 +48,7 @@ var _ = Describe("Driver", func() {
 		randomImageID string
 		tardisBinPath string
 		unmounter     *fakes.FakeUnmounter
+		directIO      *fakes.FakeDirectIO
 	)
 
 	BeforeEach(func() {
@@ -55,6 +56,7 @@ var _ = Describe("Driver", func() {
 		unmounter.UnmountStub = func(path string) error {
 			return unix.Unmount(path, 0)
 		}
+		directIO = new(fakes.FakeDirectIO)
 
 		tardisBinPath = filepath.Join(os.TempDir(), fmt.Sprintf("tardis-%d", rand.Int()))
 		testhelpers.CopyFile(TardisBinPath, tardisBinPath)
@@ -66,7 +68,7 @@ var _ = Describe("Driver", func() {
 		var err error
 		storePath, err = ioutil.TempDir(StorePath, "")
 		Expect(err).ToNot(HaveOccurred())
-		driver = overlayxfs.NewDriver(storePath, tardisBinPath, unmounter)
+		driver = overlayxfs.NewDriver(storePath, tardisBinPath, unmounter, directIO)
 
 		Expect(os.MkdirAll(storePath, 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(storePath, store.VolumesDirName), 0777)).To(Succeed())
@@ -160,6 +162,7 @@ var _ = Describe("Driver", func() {
 				Expect(err).To(MatchError(ContainSubstring("Mounting filesystem")))
 			})
 		})
+
 	})
 
 	Describe("MountFilesystem", func() {
@@ -620,7 +623,7 @@ var _ = Describe("Driver", func() {
 
 			Context("when tardis is not in the path", func() {
 				BeforeEach(func() {
-					driver = overlayxfs.NewDriver(storePath, "/bin/bananas", unmounter)
+					driver = overlayxfs.NewDriver(storePath, "/bin/bananas", unmounter, directIO)
 				})
 
 				It("returns an error", func() {
@@ -629,7 +632,7 @@ var _ = Describe("Driver", func() {
 				})
 
 				It("does not write quota info", func() {
-					driver.CreateImage(logger, spec)
+					_, _ = driver.CreateImage(logger, spec)
 					Expect(filepath.Join(spec.ImagePath, "image_quota")).ToNot(BeAnExistingFile())
 				})
 			})
@@ -746,6 +749,7 @@ var _ = Describe("Driver", func() {
 
 				rootfsPath := filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)
 				rootfsContent, err := ioutil.ReadDir(rootfsPath)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(rootfsContent).NotTo(BeEmpty())
 
 			})
@@ -855,8 +859,9 @@ var _ = Describe("Driver", func() {
 
 	Describe("ConfigureStore", func() {
 		const (
-			currentUID = 2001
-			currentGID = 2002
+			currentUID       = 2001
+			currentGID       = 2002
+			backingStorePath = "path/to/backingStore"
 		)
 
 		BeforeEach(func() {
@@ -866,7 +871,7 @@ var _ = Describe("Driver", func() {
 		})
 
 		It("creates a links directory", func() {
-			Expect(driver.ConfigureStore(logger, storePath, currentUID, currentGID)).To(Succeed())
+			Expect(driver.ConfigureStore(logger, storePath, backingStorePath, currentUID, currentGID)).To(Succeed())
 			stat, err := os.Stat(filepath.Join(storePath, overlayxfs.LinksDirName))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stat.IsDir()).To(BeTrue())
@@ -875,12 +880,19 @@ var _ = Describe("Driver", func() {
 		})
 
 		It("creates a whiteout device", func() {
-			Expect(driver.ConfigureStore(logger, storePath, currentUID, currentGID)).To(Succeed())
+			Expect(driver.ConfigureStore(logger, storePath, backingStorePath, currentUID, currentGID)).To(Succeed())
 
 			stat, err := os.Stat(filepath.Join(storePath, overlayxfs.WhiteoutDevice))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(currentUID)))
 			Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(currentGID)))
+		})
+
+		It("enables direct IO on the loopback device", func() {
+			Expect(driver.ConfigureStore(logger, storePath, backingStorePath, currentUID, currentGID)).To(Succeed())
+			Expect(directIO.EnableDirectIOCallCount()).To(Equal(1))
+			actualDirectIOPath := directIO.EnableDirectIOArgsForCall(0)
+			Expect(actualDirectIOPath).To(Equal(backingStorePath))
 		})
 
 		Context("when the whiteout 'device' is not a device", func() {
@@ -890,8 +902,19 @@ var _ = Describe("Driver", func() {
 			})
 
 			It("returns an error", func() {
-				err := driver.ConfigureStore(logger, storePath, currentUID, currentGID)
+				err := driver.ConfigureStore(logger, storePath, backingStorePath, currentUID, currentGID)
 				Expect(err).To(MatchError(ContainSubstring("the whiteout device file is not a valid device")))
+			})
+		})
+
+		Context("when enabling direct IO fails", func() {
+			BeforeEach(func() {
+				directIO.EnableDirectIOReturns(errors.New("lo-error"))
+			})
+
+			It("returns the error", func() {
+				err := driver.ConfigureStore(logger, storePath, backingStorePath, currentUID, currentGID)
+				Expect(err).To(MatchError(ContainSubstring("lo-error")))
 			})
 		})
 	})
@@ -1470,7 +1493,7 @@ func mustSucceed(err error) {
 		freeCmd := exec.Command("free", "-h")
 		freeCmd.Stdout = GinkgoWriter
 		freeCmd.Stderr = GinkgoWriter
-		freeCmd.Run()
+		Expect(freeCmd.Run()).To(Succeed())
 	}
 	Expect(err).NotTo(HaveOccurred(), "grootfs init-store failed. This might be because the machine is "+
 		"running out of RAM. Check the output of `free` above for more info.")

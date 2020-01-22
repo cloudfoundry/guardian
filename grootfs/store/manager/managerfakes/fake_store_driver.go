@@ -9,13 +9,14 @@ import (
 )
 
 type FakeStoreDriver struct {
-	ConfigureStoreStub        func(lager.Logger, string, int, int) error
+	ConfigureStoreStub        func(lager.Logger, string, string, int, int) error
 	configureStoreMutex       sync.RWMutex
 	configureStoreArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 string
-		arg3 int
+		arg3 string
 		arg4 int
+		arg5 int
 	}
 	configureStoreReturns struct {
 		result1 error
@@ -77,19 +78,20 @@ type FakeStoreDriver struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeStoreDriver) ConfigureStore(arg1 lager.Logger, arg2 string, arg3 int, arg4 int) error {
+func (fake *FakeStoreDriver) ConfigureStore(arg1 lager.Logger, arg2 string, arg3 string, arg4 int, arg5 int) error {
 	fake.configureStoreMutex.Lock()
 	ret, specificReturn := fake.configureStoreReturnsOnCall[len(fake.configureStoreArgsForCall)]
 	fake.configureStoreArgsForCall = append(fake.configureStoreArgsForCall, struct {
 		arg1 lager.Logger
 		arg2 string
-		arg3 int
+		arg3 string
 		arg4 int
-	}{arg1, arg2, arg3, arg4})
-	fake.recordInvocation("ConfigureStore", []interface{}{arg1, arg2, arg3, arg4})
+		arg5 int
+	}{arg1, arg2, arg3, arg4, arg5})
+	fake.recordInvocation("ConfigureStore", []interface{}{arg1, arg2, arg3, arg4, arg5})
 	fake.configureStoreMutex.Unlock()
 	if fake.ConfigureStoreStub != nil {
-		return fake.ConfigureStoreStub(arg1, arg2, arg3, arg4)
+		return fake.ConfigureStoreStub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
 		return ret.result1
@@ -104,17 +106,17 @@ func (fake *FakeStoreDriver) ConfigureStoreCallCount() int {
 	return len(fake.configureStoreArgsForCall)
 }
 
-func (fake *FakeStoreDriver) ConfigureStoreCalls(stub func(lager.Logger, string, int, int) error) {
+func (fake *FakeStoreDriver) ConfigureStoreCalls(stub func(lager.Logger, string, string, int, int) error) {
 	fake.configureStoreMutex.Lock()
 	defer fake.configureStoreMutex.Unlock()
 	fake.ConfigureStoreStub = stub
 }
 
-func (fake *FakeStoreDriver) ConfigureStoreArgsForCall(i int) (lager.Logger, string, int, int) {
+func (fake *FakeStoreDriver) ConfigureStoreArgsForCall(i int) (lager.Logger, string, string, int, int) {
 	fake.configureStoreMutex.RLock()
 	defer fake.configureStoreMutex.RUnlock()
 	argsForCall := fake.configureStoreArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
 }
 
 func (fake *FakeStoreDriver) ConfigureStoreReturns(result1 error) {

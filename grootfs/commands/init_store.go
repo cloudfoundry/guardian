@@ -8,6 +8,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/store/filesystems/loopback"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/manager"
@@ -39,6 +40,10 @@ var InitStoreCommand = cli.Command{
 			Name:  "store-size-bytes",
 			Usage: "Creates a new filesystem of the given size and mounts it to the given Store Directory",
 		},
+		&cli.BoolFlag{
+			Name:  "with-direct-io",
+			Usage: "Enable direct IO on the loopback device associated with the backing store",
+		},
 	},
 
 	Action: func(ctx *cli.Context) error {
@@ -53,6 +58,9 @@ var InitStoreCommand = cli.Command{
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		if ctx.IsSet("store-size-bytes") {
 			configBuilder = configBuilder.WithStoreSizeBytes(ctx.Int64("store-size-bytes"))
+		}
+		if ctx.IsSet("with-direct-io") {
+			configBuilder = configBuilder.WithDirectIO()
 		}
 
 		cfg, err := configBuilder.Build()
@@ -75,7 +83,11 @@ var InitStoreCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, nil)
+		var directIO overlayxfs.DirectIO = loopback.NewNoopDirectIO()
+		if cfg.Init.WithDirectIO {
+			directIO = loopback.NewDirectIO()
+		}
+		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, nil, directIO)
 
 		uidMappings, err := parseIDMappings(ctx.StringSlice("uid-mapping"))
 		if err != nil {

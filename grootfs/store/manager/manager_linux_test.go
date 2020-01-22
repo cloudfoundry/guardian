@@ -199,7 +199,7 @@ var _ = Describe("Manager", func() {
 				})
 
 				It("validates the store path with the store driver", func() {
-					manager.InitStore(logger, spec)
+					Expect(manager.InitStore(logger, spec)).To(Succeed())
 					Expect(storeDriver.ValidateFileSystemCallCount()).To(Equal(1))
 
 					_, path := storeDriver.ValidateFileSystemArgsForCall(0)
@@ -209,7 +209,7 @@ var _ = Describe("Manager", func() {
 
 			Context("when the store path folder doesn't exist", func() {
 				It("validates the store path parent with the store driver", func() {
-					manager.InitStore(logger, spec)
+					Expect(manager.InitStore(logger, spec)).To(Succeed())
 					Expect(storeDriver.ValidateFileSystemCallCount()).To(Equal(1))
 
 					_, path := storeDriver.ValidateFileSystemArgsForCall(0)
@@ -242,8 +242,9 @@ var _ = Describe("Manager", func() {
 			Expect(manager.InitStore(logger, spec)).To(Succeed())
 			Expect(storeDriver.ConfigureStoreCallCount()).To(Equal(1))
 
-			_, storePathArg, uidArg, gidArg := storeDriver.ConfigureStoreArgsForCall(0)
+			_, storePathArg, backingStorePathArg, uidArg, gidArg := storeDriver.ConfigureStoreArgsForCall(0)
 			Expect(storePathArg).To(Equal(storePath))
+			Expect(backingStorePathArg).To(Equal(storePath + ".backing-store"))
 			Expect(uidArg).To(Equal(0))
 			Expect(gidArg).To(Equal(0))
 		})
@@ -323,8 +324,9 @@ var _ = Describe("Manager", func() {
 				Expect(manager.InitStore(logger, spec)).To(Succeed())
 				Expect(storeDriver.ConfigureStoreCallCount()).To(Equal(1))
 
-				_, storePathArg, uidArg, gidArg := storeDriver.ConfigureStoreArgsForCall(0)
+				_, storePathArg, backingStorePathArg, uidArg, gidArg := storeDriver.ConfigureStoreArgsForCall(0)
 				Expect(storePathArg).To(Equal(storePath))
+				Expect(backingStorePathArg).To(Equal(storePath + ".backing-store"))
 				Expect(uidArg).To(Equal(int(GrootUID)))
 				Expect(gidArg).To(Equal(int(GrootGID)))
 			})
@@ -485,7 +487,7 @@ var _ = Describe("Manager", func() {
 				Expect(storeDriver.MountFilesystemCallCount()).To(Equal(1))
 				_, actualBackingStorePath, actualStorePath := storeDriver.MountFilesystemArgsForCall(0)
 				Expect(actualBackingStorePath).To(Equal(fmt.Sprintf("%s.backing-store", storePath)))
-				Expect(actualStorePath).To(Equal(fmt.Sprintf(storePath)))
+				Expect(actualStorePath).To(Equal(storePath))
 			})
 
 			When("the store path is already a mountpoint", func() {

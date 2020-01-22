@@ -44,11 +44,17 @@ type Unmounter interface {
 	Unmount(path string) error
 }
 
-func NewDriver(storePath, tardisBinPath string, unmounter Unmounter) *Driver {
+//go:generate counterfeiter . DirectIO
+type DirectIO interface {
+	EnableDirectIO(path string) error
+}
+
+func NewDriver(storePath, tardisBinPath string, unmounter Unmounter, directIO DirectIO) *Driver {
 	return &Driver{
 		storePath:     storePath,
 		tardisBinPath: tardisBinPath,
 		unmounter:     unmounter,
+		directIO:      directIO,
 	}
 }
 
@@ -56,6 +62,7 @@ type Driver struct {
 	storePath     string
 	tardisBinPath string
 	unmounter     Unmounter
+	directIO      DirectIO
 }
 
 func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath string) error {
@@ -63,7 +70,7 @@ func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath s
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	if err := d.mountFilesystem(filesystemPath, storePath, "remount"); err == nil {
+	if err := d.mountFilesystem(logger, filesystemPath, storePath, "remount"); err == nil {
 		return nil
 	}
 
@@ -75,7 +82,7 @@ func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath s
 }
 
 func (d *Driver) MountFilesystem(logger lager.Logger, filesystemPath, storePath string) error {
-	if err := d.mountFilesystem(filesystemPath, storePath, ""); err != nil {
+	if err := d.mountFilesystem(logger, filesystemPath, storePath, ""); err != nil {
 		return errorspkg.Wrap(err, "Mounting filesystem")
 	}
 	return nil
@@ -95,31 +102,36 @@ func (d *Driver) DeInitFilesystem(logger lager.Logger, storePath string) error {
 	return nil
 }
 
-func (d *Driver) ConfigureStore(logger lager.Logger, path string, ownerUID, ownerGID int) error {
-	logger = logger.Session("overlayxfs-configure-store", lager.Data{"path": path})
+func (d *Driver) ConfigureStore(logger lager.Logger, storePath, backingStorePath string, ownerUID, ownerGID int) error {
+	logger = logger.Session("overlayxfs-configure-store", lager.Data{"storePath": storePath, "backingStorePath": backingStorePath})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	if err := d.createWhiteoutDevice(logger, path, ownerUID, ownerGID); err != nil {
+	if err := d.createWhiteoutDevice(logger, storePath, ownerUID, ownerGID); err != nil {
 		logger.Error("creating-whiteout-device-failed", err)
 		return errorspkg.Wrap(err, "Creating whiteout device")
 	}
 
-	if err := d.validateWhiteoutDevice(path); err != nil {
+	if err := d.validateWhiteoutDevice(storePath); err != nil {
 		logger.Error("whiteout-device-validation-failed", err)
 		return errorspkg.Wrap(err, "Invalid whiteout device")
 	}
 
-	linksDir := filepath.Join(path, LinksDirName)
+	linksDir := filepath.Join(storePath, LinksDirName)
 	if err := d.createStoreDirectory(logger, linksDir, ownerUID, ownerGID); err != nil {
 		logger.Error("creating-links-directory-failed", err)
 		return errorspkg.Wrap(err, "Create links directory")
 	}
 
-	idsDir := filepath.Join(path, IDDir)
+	idsDir := filepath.Join(storePath, IDDir)
 	if err := d.createStoreDirectory(logger, idsDir, ownerUID, ownerGID); err != nil {
 		logger.Error("creating-ids-directory-failed", err)
 		return errorspkg.Wrap(err, "Create ids directory")
+	}
+
+	if err := d.directIO.EnableDirectIO(backingStorePath); err != nil {
+		logger.Error("enabling-direct-io-failed", err, lager.Data{"backingStorePath": backingStorePath})
+		return fmt.Errorf("enabling direct-io on %s: %v", backingStorePath, err)
 	}
 
 	return nil
@@ -423,11 +435,12 @@ func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath string) er
 	return nil
 }
 
-func (d *Driver) mountFilesystem(source, destination, option string) error {
+func (d *Driver) mountFilesystem(logger lager.Logger, source, destination, option string) error {
 	allOpts := strings.Trim(fmt.Sprintf("%s,loop,pquota,noatime", option), ",")
 
 	cmd := exec.Command("mount", "-o", allOpts, "-t", "xfs", source, destination)
 	if output, err := cmd.CombinedOutput(); err != nil {
+		logger.Error("mounting-fs-failed", err, lager.Data{"allOpts": allOpts, "source": source, "destination": destination})
 		return errorspkg.Errorf("%s: %s", err, string(output))
 	}
 
@@ -713,10 +726,7 @@ func (d *Driver) hasSUID() bool {
 	}
 	// If LookPath succeeds Stat cannot fail
 	stats, _ := os.Stat(path)
-	if (stats.Mode() & os.ModeSetuid) == 0 {
-		return false
-	}
-	return true
+	return (stats.Mode() & os.ModeSetuid) != 0
 }
 
 func (d *Driver) generateShortishID() (string, error) {

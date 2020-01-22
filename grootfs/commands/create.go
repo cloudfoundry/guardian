@@ -22,6 +22,7 @@ import (
 	"code.cloudfoundry.org/grootfs/sandbox"
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
+	"code.cloudfoundry.org/grootfs/store/filesystems/loopback"
 	"code.cloudfoundry.org/grootfs/store/filesystems/mount"
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
@@ -141,7 +142,7 @@ var CreateCommand = cli.Command{
 		if rootless {
 			unmounter = mount.RootlessUnmounter{}
 		}
-		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, unmounter)
+		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, unmounter, loopback.NewNoopDirectIO())
 		metricsEmitter := metrics.NewEmitter(logger, cfg.MetronEndpoint)
 
 		initLocksDir := filepath.Join("/", "var", "run")

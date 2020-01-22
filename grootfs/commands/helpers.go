@@ -23,7 +23,7 @@ type fileSystemDriver interface {
 	CreateImage(logger lager.Logger, spec image_manager.ImageDriverSpec) (groot.MountInfo, error)
 	DestroyImage(logger lager.Logger, path string) error
 	FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error)
-	ConfigureStore(logger lager.Logger, storePath string, ownerUID, ownerGID int) error
+	ConfigureStore(logger lager.Logger, storePath, backingStorePath string, ownerUID, ownerGID int) error
 	ValidateFileSystem(logger lager.Logger, path string) error
 	InitFilesystem(logger lager.Logger, filesystemPath, storePath string) error
 	MountFilesystem(logger lager.Logger, filesystemPath, storePath string) error

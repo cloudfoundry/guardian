@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
+	"code.cloudfoundry.org/grootfs/store/filesystems/loopback"
 	"code.cloudfoundry.org/grootfs/store/filesystems/mount"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/manager"
@@ -33,7 +34,7 @@ var DeleteStoreCommand = cli.Command{
 		if rootless {
 			unmounter = mount.RootlessUnmounter{}
 		}
-		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, unmounter)
+		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, unmounter, loopback.NewNoopDirectIO())
 
 		storePath := cfg.StorePath
 		manager := manager.New(storePath, nil, fsDriver, fsDriver, fsDriver, nil)
