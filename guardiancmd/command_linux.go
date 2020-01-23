@@ -2,6 +2,7 @@ package guardiancmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -303,6 +304,10 @@ func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containeriz
 	enforcer := throttle.NewEnforcer(gardenCPUCgroup)
 	throttler := throttle.NewThrottler(metricsSource, enforcer)
 	sharesBalancer := throttle.NewSharesBalancer(gardenCPUCgroup, memoryProvider)
+
+	if cmd.CPUThrottling.CheckInterval == 0 {
+		return nil, errors.New("non-positive CPU throttling checking interval")
+	}
 	ticker := time.NewTicker(time.Duration(cmd.CPUThrottling.CheckInterval) * time.Second)
 
 	return throttle.NewPollingService(log, throttle.NewCompositeRunnable(throttler, sharesBalancer), ticker.C), nil

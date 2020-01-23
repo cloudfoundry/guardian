@@ -194,7 +194,7 @@ type CommonCommand struct {
 	CPUThrottling struct {
 		Enabled       bool   `long:"enable-cpu-throttling" description:"Enable CPU throttling."`
 		CheckInterval uint32 `long:"cpu-throttling-check-interval" default:"15" description:"How often to check which apps need to get CPU throttled or not."`
-	}
+	} `group:"CPU Throttling"`
 }
 
 type commandWiring struct {
