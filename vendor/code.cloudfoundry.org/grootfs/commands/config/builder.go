@@ -40,6 +40,7 @@ type Init struct {
 	StoreSizeBytes int64 `yaml:"store_size_bytes"`
 	OwnerUser      string
 	OwnerGroup     string
+	WithDirectIO   bool `yaml:"with_direct_io"`
 }
 
 type Builder struct {
@@ -198,6 +199,11 @@ func (b *Builder) WithMount(mount bool, noMount bool) *Builder {
 
 func (b *Builder) WithStoreSizeBytes(size int64) *Builder {
 	b.config.Init.StoreSizeBytes = size
+	return b
+}
+
+func (b *Builder) WithDirectIO() *Builder {
+	b.config.Init.WithDirectIO = true
 	return b
 }
 
