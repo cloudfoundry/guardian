@@ -110,7 +110,7 @@ func TestGqt(t *testing.T) {
 			}
 		}
 
-		if strings.Contains(message, "failed getting task status") {
+		if strings.Contains(message, "failed getting task") {
 			io.WriteString(GinkgoWriter, fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelNode()))
 
 			io.WriteString(GinkgoWriter, "\nPrinting the containerd tasks...\n\n")

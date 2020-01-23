@@ -10,6 +10,8 @@ import (
 	"github.com/cloudfoundry/dropsonde/metrics"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
+	"strings"
+
 	"code.cloudfoundry.org/garden"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/lager"
@@ -241,7 +243,7 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 	}
 
 	defer func() {
-		if err != nil && err.Error() != "Info returned error" {
+		if err != nil && !strings.Contains(err.Error(), "failed getting task") {
 			log := log.Session("create-failed-cleaningup", lager.Data{
 				"cause": err.Error(),
 			})
@@ -289,8 +291,7 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 
 	actualSpec, err := g.Containerizer.Info(log, containerSpec.Handle)
 	if err != nil {
-		log.Error("containerizer-info-error", err)
-		return nil, errors.New("Info returned error")
+		return nil, err
 	}
 
 	if actualSpec.Pid == 0 {
