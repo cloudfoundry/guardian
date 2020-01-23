@@ -91,6 +91,8 @@ debug-bind-port = %d
 
 		Context("the configured checking interval is zero", func() {
 			BeforeEach(func() {
+				skipIfNotCPUThrottling()
+
 				config.CPUThrottlingCheckInterval = uint64ptr(0)
 				config.StartupExpectedToFail = true
 			})
@@ -99,7 +101,5 @@ debug-bind-port = %d
 				Eventually(client).Should(gexec.Exit(1))
 			})
 		})
-
 	})
-
 })
