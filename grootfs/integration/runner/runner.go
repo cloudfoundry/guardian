@@ -51,7 +51,8 @@ type Runner struct {
 	// Layer Checksum Validation
 	SkipLayerValidation bool
 
-	SysCredential syscall.Credential
+	SysCredential  syscall.Credential
+	StoreSizeBytes int
 }
 
 func (r Runner) StartSubcommand(subcommand string, args ...string) (*gexec.Session, error) {

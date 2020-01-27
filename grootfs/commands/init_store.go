@@ -83,9 +83,9 @@ var InitStoreCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		var directIO overlayxfs.DirectIO = loopback.NewNoopDirectIO()
+		var directIO overlayxfs.DirectIO = loopback.NewDirectIODisabler()
 		if cfg.Init.WithDirectIO {
-			directIO = loopback.NewDirectIO()
+			directIO = loopback.NewDirectIOEnabler()
 		}
 		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, nil, directIO)
 

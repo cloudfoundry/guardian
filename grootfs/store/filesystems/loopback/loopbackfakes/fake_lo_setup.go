@@ -8,6 +8,17 @@ import (
 )
 
 type FakeLoSetup struct {
+	DisableDirectIOStub        func(string) error
+	disableDirectIOMutex       sync.RWMutex
+	disableDirectIOArgsForCall []struct {
+		arg1 string
+	}
+	disableDirectIOReturns struct {
+		result1 error
+	}
+	disableDirectIOReturnsOnCall map[int]struct {
+		result1 error
+	}
 	EnableDirectIOStub        func(string) error
 	enableDirectIOMutex       sync.RWMutex
 	enableDirectIOArgsForCall []struct {
@@ -34,6 +45,66 @@ type FakeLoSetup struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeLoSetup) DisableDirectIO(arg1 string) error {
+	fake.disableDirectIOMutex.Lock()
+	ret, specificReturn := fake.disableDirectIOReturnsOnCall[len(fake.disableDirectIOArgsForCall)]
+	fake.disableDirectIOArgsForCall = append(fake.disableDirectIOArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("DisableDirectIO", []interface{}{arg1})
+	fake.disableDirectIOMutex.Unlock()
+	if fake.DisableDirectIOStub != nil {
+		return fake.DisableDirectIOStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.disableDirectIOReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeLoSetup) DisableDirectIOCallCount() int {
+	fake.disableDirectIOMutex.RLock()
+	defer fake.disableDirectIOMutex.RUnlock()
+	return len(fake.disableDirectIOArgsForCall)
+}
+
+func (fake *FakeLoSetup) DisableDirectIOCalls(stub func(string) error) {
+	fake.disableDirectIOMutex.Lock()
+	defer fake.disableDirectIOMutex.Unlock()
+	fake.DisableDirectIOStub = stub
+}
+
+func (fake *FakeLoSetup) DisableDirectIOArgsForCall(i int) string {
+	fake.disableDirectIOMutex.RLock()
+	defer fake.disableDirectIOMutex.RUnlock()
+	argsForCall := fake.disableDirectIOArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeLoSetup) DisableDirectIOReturns(result1 error) {
+	fake.disableDirectIOMutex.Lock()
+	defer fake.disableDirectIOMutex.Unlock()
+	fake.DisableDirectIOStub = nil
+	fake.disableDirectIOReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeLoSetup) DisableDirectIOReturnsOnCall(i int, result1 error) {
+	fake.disableDirectIOMutex.Lock()
+	defer fake.disableDirectIOMutex.Unlock()
+	fake.DisableDirectIOStub = nil
+	if fake.disableDirectIOReturnsOnCall == nil {
+		fake.disableDirectIOReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.disableDirectIOReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeLoSetup) EnableDirectIO(arg1 string) error {
@@ -162,6 +233,8 @@ func (fake *FakeLoSetup) FindAssociatedLoopDeviceReturnsOnCall(i int, result1 st
 func (fake *FakeLoSetup) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.disableDirectIOMutex.RLock()
+	defer fake.disableDirectIOMutex.RUnlock()
 	fake.enableDirectIOMutex.RLock()
 	defer fake.enableDirectIOMutex.RUnlock()
 	fake.findAssociatedLoopDeviceMutex.RLock()

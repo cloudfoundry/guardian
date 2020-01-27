@@ -3,12 +3,10 @@ package integration_test
 import (
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
-	"strconv"
 	"syscall"
 
 	"code.cloudfoundry.org/grootfs/groot"
@@ -29,18 +27,17 @@ var _ = Describe("Init Store", func() {
 	)
 
 	var (
-		runner    grootfsRunner.Runner
-		spec      grootfsRunner.InitSpec
-		storePath string
+		runner           grootfsRunner.Runner
+		spec             grootfsRunner.InitSpec
+		backingStoreFile string
 	)
 
 	BeforeEach(func() {
 		integration.SkipIfNonRoot(GrootfsTestUid)
 
-		storePath = filepath.Join(StorePath, strconv.Itoa(rand.Int()))
-		Expect(os.MkdirAll(storePath, 0777)).To(Succeed())
-		runner = Runner.WithStore(storePath).SkipInitStore()
 		spec = grootfsRunner.InitSpec{}
+		backingStoreFile = fmt.Sprintf("%s.backing-store", StorePath)
+		runner = Runner.WithStore(StorePath).SkipInitStore()
 	})
 
 	It("returns a newly created store path", func() {
@@ -64,29 +61,8 @@ var _ = Describe("Init Store", func() {
 		Expect(stat.Gid).To(Equal(uint32(rootGID)))
 	})
 
-	Context("when the store does not exist", func() {
-		var tmpDir string
-		var backingStoreFile string
-
-		BeforeEach(func() {
-			var err error
-			tmpDir, err = ioutil.TempDir("", "")
-			Expect(err).NotTo(HaveOccurred())
-
-			storePath = filepath.Join(tmpDir, "store")
-			Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
-			backingStoreFile = fmt.Sprintf("%s.backing-store", storePath)
-
-			runner = runner.WithStore(storePath)
-		})
-
-		AfterEach(func() {
-			_ = unix.Unmount(storePath, 0)
-			Expect(os.RemoveAll(tmpDir)).To(Succeed())
-		})
-
+	Describe("backing store file configuration", func() {
 		It("does not enable direct-io on the loopback device", func() {
-			spec.StoreSizeBytes = 500 * 1024 * 1024
 			Expect(runner.InitStore(spec)).To(Succeed())
 			loopDev, err := loopback.NewLoSetup().FindAssociatedLoopDevice(runner.StorePath + ".backing-store")
 			Expect(err).NotTo(HaveOccurred())
@@ -97,7 +73,7 @@ var _ = Describe("Init Store", func() {
 			var configFile *os.File
 
 			BeforeEach(func() {
-				storeSizeBytes := 500 * 1024 * 1024
+				storeSizeBytes := 600 * 1024 * 1024
 
 				var err error
 				configFile, err = ioutil.TempFile("", "")
@@ -106,13 +82,9 @@ var _ = Describe("Init Store", func() {
 init:
   store_size_bytes: %d
 `, storeSizeBytes)), 0644)).To(Succeed())
+				spec.StoreSizeBytes = -1
 
 				runner = runner.WithConfig(configFile.Name())
-			})
-
-			AfterEach(func() {
-				_ = unix.Unmount(storePath, 0)
-				Expect(os.RemoveAll(backingStoreFile)).To(Succeed())
 			})
 
 			It("creates the backing file with the correct size", func() {
@@ -121,18 +93,13 @@ init:
 
 				stat, err := os.Stat(backingStoreFile)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(stat.Size()).To(Equal(int64(500 * 1024 * 1024)))
+				Expect(stat.Size()).To(Equal(int64(600 * 1024 * 1024)))
 			})
 		})
 
 		Context("when --store-size-bytes is passed", func() {
 			BeforeEach(func() {
-				spec.StoreSizeBytes = 500 * 1024 * 1024
-			})
-
-			AfterEach(func() {
-				_ = unix.Unmount(storePath, 0)
-				Expect(os.RemoveAll(backingStoreFile)).To(Succeed())
+				spec.StoreSizeBytes = 600 * 1024 * 1024
 			})
 
 			It("creates the backing file with the correct size", func() {
@@ -141,7 +108,7 @@ init:
 
 				stat, err := os.Stat(backingStoreFile)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(stat.Size()).To(Equal(int64(500 * 1024 * 1024)))
+				Expect(stat.Size()).To(Equal(int64(600 * 1024 * 1024)))
 			})
 
 			It("initialises a filesystem in the backing file", func() {
@@ -171,14 +138,14 @@ init:
 			Context("but the backing store file is not mounted", func() {
 				BeforeEach(func() {
 					Expect(runner.InitStore(spec)).To(Succeed())
-					Expect(ioutil.WriteFile(filepath.Join(storePath, "test"), []byte{}, 0777)).To(Succeed())
-					Expect(syscall.Unmount(storePath, 0)).To(Succeed())
-					Eventually(queryStoreMountInfo(storePath)).Should(BeEmpty())
+					Expect(ioutil.WriteFile(filepath.Join(StorePath, "test"), []byte{}, 0777)).To(Succeed())
+					Expect(syscall.Unmount(StorePath, 0)).To(Succeed())
+					Eventually(queryStoreMountInfo(StorePath)).Should(BeEmpty())
 				})
 
 				It("remounts it", func() {
 					Expect(runner.InitStore(spec)).To(Succeed())
-					Expect(filepath.Join(storePath, "test")).To(BeAnExistingFile())
+					Expect(filepath.Join(StorePath, "test")).To(BeAnExistingFile())
 				})
 			})
 		})
@@ -195,13 +162,6 @@ init:
   with_direct_io: true`), 0644)).To(Succeed())
 
 				runner = runner.WithConfig(configFile.Name())
-				spec.StoreSizeBytes = 500 * 1024 * 1024
-			})
-
-			AfterEach(func() {
-				_ = unix.Unmount(storePath, 0)
-				Expect(os.RemoveAll(backingStoreFile)).To(Succeed())
-				Expect(os.RemoveAll(tmpDir)).To(Succeed())
 			})
 
 			It("enables direct IO on the loopback device", func() {
@@ -216,15 +176,7 @@ init:
 
 		Context("when --with-direct-io is provided", func() {
 			BeforeEach(func() {
-				runner = runner.WithStore(storePath)
-				spec.StoreSizeBytes = 500 * 1024 * 1024
 				spec.WithDirectIO = true
-			})
-
-			AfterEach(func() {
-				_ = unix.Unmount(storePath, 0)
-				Expect(os.RemoveAll(backingStoreFile)).To(Succeed())
-				Expect(os.RemoveAll(tmpDir)).To(Succeed())
 			})
 
 			It("enables direct IO on the loopback device", func() {
@@ -235,43 +187,58 @@ init:
 				Expect(err).NotTo(HaveOccurred())
 				Expect(testhelpers.IsDirectIOEnabled(loopDev)).To(BeTrue())
 			})
-		})
-	})
 
-	Context("when the store is already initialized without loopback direct IO", func() {
-		var tmpDir string
-		var backingStoreFile string
-
-		BeforeEach(func() {
-			var err error
-			tmpDir, err = ioutil.TempDir("", "")
-			Expect(err).NotTo(HaveOccurred())
-
-			storePath = filepath.Join(tmpDir, "store")
-			Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
-			backingStoreFile = fmt.Sprintf("%s.backing-store", storePath)
-			spec.StoreSizeBytes = 500 * 1024 * 1024
-			spec.WithDirectIO = false
-
-			runner = runner.WithStore(storePath)
-			Expect(runner.InitStore(spec)).To(Succeed())
 		})
 
-		AfterEach(func() {
-			_ = unix.Unmount(storePath, 0)
-			Expect(os.RemoveAll(tmpDir)).To(Succeed())
-		})
-
-		Context("when direct IO is requested", func() {
+		Context("when direct IO is already enabled", func() {
 			BeforeEach(func() {
 				spec.WithDirectIO = true
+				Expect(runner.InitStore(spec)).To(Succeed())
 			})
 
-			It("enables direct-io on the loopback device", func() {
-				Expect(runner.InitStore(spec)).To(Succeed())
-				loopDev, err := loopback.NewLoSetup().FindAssociatedLoopDevice(backingStoreFile)
+			It("does not change the direct IO flag on the loopback device", func() {
+				err := runner.InitStore(spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				loopDev, err := loopback.NewLoSetup().FindAssociatedLoopDevice(runner.StorePath + ".backing-store")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(testhelpers.IsDirectIOEnabled(loopDev)).To(BeTrue())
+			})
+
+			Context("when the store is reinitialised with direct IO disabled", func() {
+				BeforeEach(func() {
+					spec.WithDirectIO = false
+				})
+
+				It("disables direct IO on the loopback device", func() {
+					err := runner.InitStore(spec)
+					Expect(err).NotTo(HaveOccurred())
+
+					loopDev, err := loopback.NewLoSetup().FindAssociatedLoopDevice(runner.StorePath + ".backing-store")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(testhelpers.IsDirectIOEnabled(loopDev)).To(BeFalse())
+				})
+			})
+		})
+
+		Context("when the store is already initialized without loopback direct IO", func() {
+			BeforeEach(func() {
+				spec.WithDirectIO = false
+
+				Expect(runner.InitStore(spec)).To(Succeed())
+			})
+
+			Context("when direct IO is requested", func() {
+				BeforeEach(func() {
+					spec.WithDirectIO = true
+				})
+
+				It("enables direct-io on the loopback device", func() {
+					Expect(runner.InitStore(spec)).To(Succeed())
+					loopDev, err := loopback.NewLoSetup().FindAssociatedLoopDevice(backingStoreFile)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(testhelpers.IsDirectIOEnabled(loopDev)).To(BeTrue())
+				})
 			})
 		})
 	})
@@ -335,6 +302,9 @@ init:
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(runner.EnsureMounted(containerSpec)).To(Succeed())
+			defer func() {
+				Expect(syscall.Unmount(containerSpec.Root.Path, 0)).To(Succeed())
+			}()
 
 			var stat unix.Stat_t
 			Expect(unix.Stat(path.Join(containerSpec.Root.Path, "foo"), &stat)).To(Succeed())
@@ -396,19 +366,6 @@ init:
 				err := runner.InitStore(spec)
 				Expect(err).To(MatchError(ContainSubstring("error reading mappings for group 'something'")))
 			})
-		})
-	})
-
-	Context("when given a non XFS store path", func() {
-		BeforeEach(func() {
-			runner = Runner.WithStore("/mnt/ext4/grootfs")
-		})
-
-		It("returns an error", func() {
-			err := runner.InitStore(spec)
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("Store path filesystem (/mnt/ext4) is incompatible with native driver (must be XFS mountpoint)"))
-			Expect(runner.StorePath).ToNot(BeADirectory())
 		})
 	})
 

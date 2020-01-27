@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	grootfsRunner "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -40,6 +41,7 @@ var _ = Describe("GenerateVolumeSizeMetadata", func() {
 			Mount:        mountByDefault(),
 		})
 		Expect(err).ToNot(HaveOccurred())
+		Expect(Runner.InitStore(grootfsRunner.InitSpec{})).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -64,6 +66,8 @@ var _ = Describe("GenerateVolumeSizeMetadata", func() {
 				deletedMetaPath = volumeMetaFileName
 				metadataFile, err := os.Open(deletedMetaPath)
 				Expect(err).NotTo(HaveOccurred())
+				defer metadataFile.Close()
+
 				Expect(json.NewDecoder(metadataFile).Decode(&deletedVolumeMeta)).To(Succeed())
 				if deletedVolumeMeta.Size != 0 {
 					break
@@ -87,6 +91,8 @@ var _ = Describe("GenerateVolumeSizeMetadata", func() {
 			var generatedVolumeMeta base_image_puller.VolumeMeta
 			metadataFile, err := os.Open(deletedMetaPath)
 			Expect(err).NotTo(HaveOccurred())
+			defer metadataFile.Close()
+
 			Expect(json.NewDecoder(metadataFile).Decode(&generatedVolumeMeta)).To(Succeed())
 			Expect(generatedVolumeMeta.Size).To(BeNumerically("~", deletedVolumeMeta.Size, 13000))
 		})

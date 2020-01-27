@@ -160,4 +160,71 @@ var _ = Describe("LoSetupWrapper", func() {
 			})
 		})
 	})
+
+	Describe("DisableDirectIO", func() {
+		var (
+			loopDevPath string
+			enableErr   error
+		)
+
+		BeforeEach(func() {
+			loopDevPath = associatedLoopDevice
+			enableErr = loSetup.EnableDirectIO(loopDevPath)
+		})
+
+		JustBeforeEach(func() {
+			enableErr = loSetup.DisableDirectIO(loopDevPath)
+		})
+
+		It("disables direct IO on a loopback device", func() {
+			Expect(enableErr).NotTo(HaveOccurred())
+			isDirectIO, err := testhelpers.IsDirectIOEnabled(loopDevPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(isDirectIO).To(BeFalse())
+		})
+
+		When("directIO is already disabled", func() {
+			BeforeEach(func() {
+				Expect(loSetup.DisableDirectIO(loopDevPath)).To(Succeed())
+			})
+
+			It("does not fail", func() {
+				Expect(enableErr).NotTo(HaveOccurred())
+			})
+
+			It("does not change the direct-io state", func() {
+				isDirectIO, err := testhelpers.IsDirectIOEnabled(loopDevPath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(isDirectIO).To(BeFalse())
+			})
+		})
+
+		When("the file system path does not exist", func() {
+			BeforeEach(func() {
+				loopDevPath = "/does/not/exist"
+			})
+
+			It("returns a not exist error", func() {
+				Expect(os.IsNotExist(enableErr)).To(BeTrue())
+			})
+		})
+
+		When("there is no associated loopback device", func() {
+			BeforeEach(func() {
+				f, err := ioutil.TempFile("", "another-file*")
+				Expect(err).NotTo(HaveOccurred())
+				defer f.Close()
+
+				loopDevPath = f.Name()
+			})
+
+			AfterEach(func() {
+				Expect(os.RemoveAll(loopDevPath)).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				Expect(enableErr).To(MatchError(ContainSubstring("failed to set direct-io")))
+			})
+		})
+	})
 })

@@ -46,7 +46,7 @@ type Unmounter interface {
 
 //go:generate counterfeiter . DirectIO
 type DirectIO interface {
-	EnableDirectIO(path string) error
+	Configure(path string) error
 }
 
 func NewDriver(storePath, tardisBinPath string, unmounter Unmounter, directIO DirectIO) *Driver {
@@ -129,7 +129,7 @@ func (d *Driver) ConfigureStore(logger lager.Logger, storePath, backingStorePath
 		return errorspkg.Wrap(err, "Create ids directory")
 	}
 
-	if err := d.directIO.EnableDirectIO(backingStorePath); err != nil {
+	if err := d.directIO.Configure(backingStorePath); err != nil {
 		logger.Error("enabling-direct-io-failed", err, lager.Data{"backingStorePath": backingStorePath})
 		return fmt.Errorf("enabling direct-io on %s: %v", backingStorePath, err)
 	}

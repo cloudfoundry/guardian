@@ -36,7 +36,7 @@ type internalDriver interface {
 }
 
 type DirectIO interface {
-	EnableDirectIO(path string) error
+	Configure(path string) error
 }
 
 type Driver struct {

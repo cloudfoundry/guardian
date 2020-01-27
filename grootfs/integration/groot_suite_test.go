@@ -9,9 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"path"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -33,7 +31,6 @@ var (
 	Runner        runner.Runner
 	StorePath     string
 	NamespacerBin string
-	mountPath     string
 
 	GrootUsername    string
 	GrootUID         int
@@ -43,8 +40,6 @@ var (
 	GrootfsTestUid   int
 	GrootfsTestGid   int
 )
-
-const xfsMountPath = "/mnt/xfs-%d"
 
 func TestGroot(t *testing.T) {
 	var (
@@ -106,8 +101,10 @@ func TestGroot(t *testing.T) {
 	BeforeEach(func() {
 		testhelpers.ReseedRandomNumberGenerator()
 
-		mountPath = fmt.Sprintf(xfsMountPath, GinkgoParallelNode())
-		StorePath = path.Join(mountPath, "store")
+		var err error
+		StorePath, err = ioutil.TempDir("", fmt.Sprintf("store-%d", GinkgoParallelNode()))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chmod(StorePath, 0777)).To(Succeed())
 
 		RegistryUsername = os.Getenv("DOCKER_REGISTRY_USERNAME")
 		RegistryPassword = os.Getenv("DOCKER_REGISTRY_PASSWORD")
@@ -116,29 +113,27 @@ func TestGroot(t *testing.T) {
 			GrootFSBin: GrootFSBin,
 			StorePath:  StorePath,
 			TardisBin:  TardisBin,
-		}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).RunningAsUser(GrootfsTestUid, GrootfsTestGid)
+		}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).RunningAsUser(GrootfsTestUid, GrootfsTestGid).WithStoreSize(500)
 	})
 
 	AfterEach(func() {
 		testhelpers.CleanUpOverlayMounts(StorePath)
+		Expect(os.RemoveAll(fmt.Sprintf("%s.backing-store", StorePath))).To(Succeed())
 
 		err := os.RemoveAll(StorePath)
 
 		info := ""
-		if err != nil && strings.Contains(err.Error(), "unlinkat /mnt/xfs") {
-			re := regexp.MustCompile(`unlinkat (\/mnt\/xfs-[0-9]\/.*):`)
-			dirNotEmpty := re.FindAllStringSubmatch(err.Error(), -1)[0][1]
-
-			filesOut, err := exec.Command("find", dirNotEmpty, "-ls").CombinedOutput()
+		if err != nil && strings.Contains(err.Error(), fmt.Sprintf("unlinkat %s", StorePath)) {
+			filesOut, err := exec.Command("find", StorePath, "-ls").CombinedOutput()
 			Expect(err).NotTo(HaveOccurred(), string(filesOut))
 
-			lsofOut, _ := exec.Command("sh", "-c", "lsof | grep "+dirNotEmpty).CombinedOutput()
+			lsofOut, _ := exec.Command("sh", "-c", "lsof | grep "+StorePath).CombinedOutput()
 
 			mountTable, err := exec.Command("cat", "/proc/self/mountinfo").CombinedOutput()
 			Expect(err).NotTo(HaveOccurred(), string(mountTable))
 
 			info = fmt.Sprintf("DIR NOT EMPTY: %s\nFILES:\n%s\nOPEN FILES:\n%s\nMOUNT TABLE:\n%s\n",
-				dirNotEmpty, string(filesOut), string(lsofOut), string(mountTable))
+				StorePath, string(filesOut), string(lsofOut), string(mountTable))
 		}
 		Expect(err).NotTo(HaveOccurred(), info)
 	})

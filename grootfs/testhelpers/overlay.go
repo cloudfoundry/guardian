@@ -33,6 +33,9 @@ func CleanUpOverlayMounts(mountPath string) {
 	for _, point := range mountPoints {
 		Expect(ensureCleanUp(point)).To(Succeed())
 	}
+
+	// Invalid argument means that the mount path is not a mountpoint, so... whatever
+	Expect(syscall.Unmount(mountPath, 0)).To(Or(Not(HaveOccurred()), MatchError("invalid argument"), MatchError("no such file or directory")))
 }
 
 func internalMountPoints(mountPath string) []string {

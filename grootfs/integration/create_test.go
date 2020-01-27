@@ -447,30 +447,6 @@ var _ = Describe("Create", func() {
 		})
 	})
 
-	Context("when StorePath is not formatted as XFS", func() {
-		var (
-			storePath string
-			runner    runner.Runner
-		)
-
-		BeforeEach(func() {
-			var err error
-			storePath, err = ioutil.TempDir("/mnt/ext4", "")
-			Expect(err).NotTo(HaveOccurred())
-
-			runner = Runner.WithStore(storePath)
-		})
-
-		It("returns an error", func() {
-			_, err := runner.Create(groot.CreateSpec{
-				BaseImageURL: integration.String2URL(baseImagePath),
-				ID:           randomImageID,
-			})
-			errMessage := fmt.Sprintf("Store path filesystem (%s) is incompatible with native driver (must be XFS mountpoint)", storePath)
-			Expect(err).To(MatchError(ContainSubstring(errMessage)))
-		})
-	})
-
 	Describe("--config global flag", func() {
 		var (
 			cfg  config.Config
@@ -493,12 +469,13 @@ var _ = Describe("Create", func() {
 
 		Describe("store path", func() {
 			BeforeEach(func() {
-				Expect(os.Mkdir(StorePath, 0755)).To(Succeed())
-				Expect(os.Chmod(StorePath, 0755)).To(Succeed())
-				var err error
-				cfg.StorePath, err = ioutil.TempDir(StorePath, "")
-				Expect(err).NotTo(HaveOccurred())
+				cfg.StorePath = StorePath
 				Expect(os.Chmod(cfg.StorePath, 0777)).To(Succeed())
+			})
+
+			AfterEach(func() {
+				runner := Runner.WithoutStore()
+				Expect(runner.Delete(randomImageID)).To(Succeed())
 			})
 
 			It("uses the store path from the config file", func() {

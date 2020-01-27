@@ -199,3 +199,8 @@ func (r Runner) SkipLayerCheckSumValidation() Runner {
 	r.SkipLayerValidation = true
 	return r
 }
+
+func (r Runner) WithStoreSize(sizeMb int) Runner {
+	r.StoreSizeBytes = sizeMb * 1024 * 1024
+	return r
+}

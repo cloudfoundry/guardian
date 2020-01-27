@@ -890,8 +890,8 @@ var _ = Describe("Driver", func() {
 
 		It("enables direct IO on the loopback device", func() {
 			Expect(driver.ConfigureStore(logger, storePath, backingStorePath, currentUID, currentGID)).To(Succeed())
-			Expect(directIO.EnableDirectIOCallCount()).To(Equal(1))
-			actualDirectIOPath := directIO.EnableDirectIOArgsForCall(0)
+			Expect(directIO.ConfigureCallCount()).To(Equal(1))
+			actualDirectIOPath := directIO.ConfigureArgsForCall(0)
 			Expect(actualDirectIOPath).To(Equal(backingStorePath))
 		})
 
@@ -909,7 +909,7 @@ var _ = Describe("Driver", func() {
 
 		Context("when enabling direct IO fails", func() {
 			BeforeEach(func() {
-				directIO.EnableDirectIOReturns(errors.New("lo-error"))
+				directIO.ConfigureReturns(errors.New("lo-error"))
 			})
 
 			It("returns the error", func() {

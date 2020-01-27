@@ -4,17 +4,18 @@ package loopback
 type LoSetup interface {
 	FindAssociatedLoopDevice(filePath string) (string, error)
 	EnableDirectIO(loopdevPath string) error
+	DisableDirectIO(loopdevPath string) error
 }
 
-type DirectIO struct {
+type DirectIOEnabler struct {
 	LoSetup LoSetup
 }
 
-func NewDirectIO() *DirectIO {
-	return &DirectIO{LoSetup: &LoSetupWrapper{}}
+func NewDirectIOEnabler() *DirectIOEnabler {
+	return &DirectIOEnabler{LoSetup: &LoSetupWrapper{}}
 }
 
-func (io DirectIO) EnableDirectIO(path string) error {
+func (io DirectIOEnabler) Configure(path string) error {
 	loopbackDev, err := io.LoSetup.FindAssociatedLoopDevice(path)
 	if err != nil {
 		return err
@@ -23,12 +24,29 @@ func (io DirectIO) EnableDirectIO(path string) error {
 	return io.LoSetup.EnableDirectIO(loopbackDev)
 }
 
+type DirectIODisabler struct {
+	LoSetup LoSetup
+}
+
+func NewDirectIODisabler() *DirectIODisabler {
+	return &DirectIODisabler{LoSetup: &LoSetupWrapper{}}
+}
+
+func (io DirectIODisabler) Configure(path string) error {
+	loopbackDev, err := io.LoSetup.FindAssociatedLoopDevice(path)
+	if err != nil {
+		return err
+	}
+
+	return io.LoSetup.DisableDirectIO(loopbackDev)
+}
+
 type NoopDirectIO struct{}
 
 func NewNoopDirectIO() *NoopDirectIO {
 	return &NoopDirectIO{}
 }
 
-func (io NoopDirectIO) EnableDirectIO(path string) error {
+func (io NoopDirectIO) Configure(path string) error {
 	return nil
 }

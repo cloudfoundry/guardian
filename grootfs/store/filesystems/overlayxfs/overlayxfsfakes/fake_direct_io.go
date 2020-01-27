@@ -8,77 +8,77 @@ import (
 )
 
 type FakeDirectIO struct {
-	EnableDirectIOStub        func(string) error
-	enableDirectIOMutex       sync.RWMutex
-	enableDirectIOArgsForCall []struct {
+	ConfigureStub        func(string) error
+	configureMutex       sync.RWMutex
+	configureArgsForCall []struct {
 		arg1 string
 	}
-	enableDirectIOReturns struct {
+	configureReturns struct {
 		result1 error
 	}
-	enableDirectIOReturnsOnCall map[int]struct {
+	configureReturnsOnCall map[int]struct {
 		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeDirectIO) EnableDirectIO(arg1 string) error {
-	fake.enableDirectIOMutex.Lock()
-	ret, specificReturn := fake.enableDirectIOReturnsOnCall[len(fake.enableDirectIOArgsForCall)]
-	fake.enableDirectIOArgsForCall = append(fake.enableDirectIOArgsForCall, struct {
+func (fake *FakeDirectIO) Configure(arg1 string) error {
+	fake.configureMutex.Lock()
+	ret, specificReturn := fake.configureReturnsOnCall[len(fake.configureArgsForCall)]
+	fake.configureArgsForCall = append(fake.configureArgsForCall, struct {
 		arg1 string
 	}{arg1})
-	fake.recordInvocation("EnableDirectIO", []interface{}{arg1})
-	fake.enableDirectIOMutex.Unlock()
-	if fake.EnableDirectIOStub != nil {
-		return fake.EnableDirectIOStub(arg1)
+	fake.recordInvocation("Configure", []interface{}{arg1})
+	fake.configureMutex.Unlock()
+	if fake.ConfigureStub != nil {
+		return fake.ConfigureStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.enableDirectIOReturns
+	fakeReturns := fake.configureReturns
 	return fakeReturns.result1
 }
 
-func (fake *FakeDirectIO) EnableDirectIOCallCount() int {
-	fake.enableDirectIOMutex.RLock()
-	defer fake.enableDirectIOMutex.RUnlock()
-	return len(fake.enableDirectIOArgsForCall)
+func (fake *FakeDirectIO) ConfigureCallCount() int {
+	fake.configureMutex.RLock()
+	defer fake.configureMutex.RUnlock()
+	return len(fake.configureArgsForCall)
 }
 
-func (fake *FakeDirectIO) EnableDirectIOCalls(stub func(string) error) {
-	fake.enableDirectIOMutex.Lock()
-	defer fake.enableDirectIOMutex.Unlock()
-	fake.EnableDirectIOStub = stub
+func (fake *FakeDirectIO) ConfigureCalls(stub func(string) error) {
+	fake.configureMutex.Lock()
+	defer fake.configureMutex.Unlock()
+	fake.ConfigureStub = stub
 }
 
-func (fake *FakeDirectIO) EnableDirectIOArgsForCall(i int) string {
-	fake.enableDirectIOMutex.RLock()
-	defer fake.enableDirectIOMutex.RUnlock()
-	argsForCall := fake.enableDirectIOArgsForCall[i]
+func (fake *FakeDirectIO) ConfigureArgsForCall(i int) string {
+	fake.configureMutex.RLock()
+	defer fake.configureMutex.RUnlock()
+	argsForCall := fake.configureArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeDirectIO) EnableDirectIOReturns(result1 error) {
-	fake.enableDirectIOMutex.Lock()
-	defer fake.enableDirectIOMutex.Unlock()
-	fake.EnableDirectIOStub = nil
-	fake.enableDirectIOReturns = struct {
+func (fake *FakeDirectIO) ConfigureReturns(result1 error) {
+	fake.configureMutex.Lock()
+	defer fake.configureMutex.Unlock()
+	fake.ConfigureStub = nil
+	fake.configureReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeDirectIO) EnableDirectIOReturnsOnCall(i int, result1 error) {
-	fake.enableDirectIOMutex.Lock()
-	defer fake.enableDirectIOMutex.Unlock()
-	fake.EnableDirectIOStub = nil
-	if fake.enableDirectIOReturnsOnCall == nil {
-		fake.enableDirectIOReturnsOnCall = make(map[int]struct {
+func (fake *FakeDirectIO) ConfigureReturnsOnCall(i int, result1 error) {
+	fake.configureMutex.Lock()
+	defer fake.configureMutex.Unlock()
+	fake.ConfigureStub = nil
+	if fake.configureReturnsOnCall == nil {
+		fake.configureReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.enableDirectIOReturnsOnCall[i] = struct {
+	fake.configureReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -86,8 +86,8 @@ func (fake *FakeDirectIO) EnableDirectIOReturnsOnCall(i int, result1 error) {
 func (fake *FakeDirectIO) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.enableDirectIOMutex.RLock()
-	defer fake.enableDirectIOMutex.RUnlock()
+	fake.configureMutex.RLock()
+	defer fake.configureMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

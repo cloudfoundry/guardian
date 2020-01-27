@@ -35,6 +35,8 @@ func (r Runner) InitStore(spec InitSpec) error {
 
 	if spec.StoreSizeBytes > 0 {
 		args = append(args, "--store-size-bytes", fmt.Sprintf("%d", spec.StoreSizeBytes))
+	} else if spec.StoreSizeBytes == 0 {
+		args = append(args, "--store-size-bytes", fmt.Sprintf("%d", r.StoreSizeBytes))
 	}
 
 	if spec.WithDirectIO {
