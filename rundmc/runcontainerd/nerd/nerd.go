@@ -79,7 +79,7 @@ func withProcessKillLogging(log lager.Logger) func(context.Context, containerd.P
 			return err
 		}
 		log.Debug("with-process-kill.kill", lager.Data{"containerdProcess": p.ID(), "processID": p.Pid()})
-		if err := p.Kill(ctx, syscall.SIGKILL, containerd.WithKillAll); err != nil {
+		if err := p.Kill(ctx, syscall.SIGKILL); err != nil {
 			if errdefs.IsFailedPrecondition(err) || errdefs.IsNotFound(err) {
 				return nil
 			}
