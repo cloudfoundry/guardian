@@ -34,6 +34,7 @@ import (
 )
 
 var _ = Describe("Dadoo ExecRunner", func() {
+	const largeSize = 1_000_000_571
 	var (
 		fakeCommandRunner                      *fake_command_runner.FakeCommandRunner
 		fakePidGetter                          *signalsfakes.FakePidGetter
@@ -205,7 +206,8 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				}
 
 				// do some test IO (directly write to stdout and copy stdin->stderr)
-				so.WriteString("hello stdout")
+				// so.WriteString("hello stdout")
+				so.Write(bytes.Repeat([]byte{'a'}, largeSize))
 
 				// it's a trap - stdin is copied to stderr so that we can test
 				// its content further down
@@ -723,8 +725,13 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			})
 		})
 
-		It("can get stdout/err from the spawned process via named pipes", func() {
-			stdout := gbytes.NewBuffer()
+		FIt("can get stdout/err from the spawned process via named pipes", func() {
+			stdout, err := ioutil.TempFile("", "")
+			Expect(err).NotTo(HaveOccurred())
+			defer stdout.Close()
+			Expect(os.Remove(stdout.Name())).To(Succeed())
+
+			// stdout := gbytes.NewBuffer()
 			stderr := gbytes.NewBuffer()
 			process, err := runner.Run(log, processID, "some-handle", garden.ProcessIO{
 				Stdout: stdout,
@@ -734,7 +741,10 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			process.Wait()
-			Eventually(stdout).Should(gbytes.Say("hello stdout"))
+			stdoutInfo, err := stdout.Stat()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stdoutInfo.Size()).To(Equal(int64(largeSize)))
+			// Eventually(stdout).Should(gbytes.Say("hello stdout"))
 			Eventually(stderr).Should(gbytes.Say("omg"))
 		})
 
