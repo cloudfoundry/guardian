@@ -527,7 +527,7 @@ func initGrootStore(grootBin, storePath string, idMappings []string) {
 
 	initStoreArgs := []string{"--store", storePath, "init-store", "--store-size-bytes", fmt.Sprintf("%d", 2*1024*1024*1024)}
 	for _, idMapping := range idMappings {
-		initStoreArgs = append(initStoreArgs, "--uid-mapping", idMapping, "--gid-mapping", idMapping)
+		initStoreArgs = append(initStoreArgs, "--uid-mapping", idMapping, "--gid-mapping", idMapping, "--with-direct-io")
 	}
 
 	initStore := exec.Command(grootBin, initStoreArgs...)
