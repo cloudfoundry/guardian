@@ -62,11 +62,17 @@ var _ = Describe("Init Store", func() {
 	})
 
 	Describe("backing store file configuration", func() {
-		It("does not enable direct-io on the loopback device", func() {
-			Expect(runner.InitStore(spec)).To(Succeed())
-			loopDev, err := loopback.NewLoSetup().FindAssociatedLoopDevice(runner.StorePath + ".backing-store")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(testhelpers.IsDirectIOEnabled(loopDev)).To(BeFalse())
+		Context("when direct-io is not requested", func() {
+			BeforeEach(func() {
+				spec.WithoutDirectIO = true
+			})
+
+			It("does not enable direct-io on the loopback device", func() {
+				Expect(runner.InitStore(spec)).To(Succeed())
+				loopDev, err := loopback.NewLoSetup().FindAssociatedLoopDevice(runner.StorePath + ".backing-store")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(testhelpers.IsDirectIOEnabled(loopDev)).To(BeFalse())
+			})
 		})
 
 		Context("when init.store_size_bytes is passed in config", func() {
@@ -154,6 +160,7 @@ init:
 			var configFile *os.File
 
 			BeforeEach(func() {
+				spec.WithoutDirectIO = true
 				var err error
 				configFile, err = ioutil.TempFile("", "")
 				Expect(err).NotTo(HaveOccurred())
@@ -176,7 +183,7 @@ init:
 
 		Context("when --with-direct-io is provided", func() {
 			BeforeEach(func() {
-				spec.WithDirectIO = true
+				spec.WithoutDirectIO = false
 			})
 
 			It("enables direct IO on the loopback device", func() {
@@ -192,7 +199,7 @@ init:
 
 		Context("when direct IO is already enabled", func() {
 			BeforeEach(func() {
-				spec.WithDirectIO = true
+				spec.WithoutDirectIO = false
 				Expect(runner.InitStore(spec)).To(Succeed())
 			})
 
@@ -207,7 +214,7 @@ init:
 
 			Context("when the store is reinitialised with direct IO disabled", func() {
 				BeforeEach(func() {
-					spec.WithDirectIO = false
+					spec.WithoutDirectIO = true
 				})
 
 				It("disables direct IO on the loopback device", func() {
@@ -223,14 +230,14 @@ init:
 
 		Context("when the store is already initialized without loopback direct IO", func() {
 			BeforeEach(func() {
-				spec.WithDirectIO = false
+				spec.WithoutDirectIO = true
 
 				Expect(runner.InitStore(spec)).To(Succeed())
 			})
 
 			Context("when direct IO is requested", func() {
 				BeforeEach(func() {
-					spec.WithDirectIO = true
+					spec.WithoutDirectIO = false
 				})
 
 				It("enables direct-io on the loopback device", func() {
