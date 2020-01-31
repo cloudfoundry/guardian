@@ -7,11 +7,11 @@ import (
 )
 
 type InitSpec struct {
-	Rootless        string
-	UIDMappings     []groot.IDMappingSpec
-	GIDMappings     []groot.IDMappingSpec
-	StoreSizeBytes  int64
-	WithoutDirectIO bool
+	Rootless       string
+	UIDMappings    []groot.IDMappingSpec
+	GIDMappings    []groot.IDMappingSpec
+	StoreSizeBytes int64
+	WithDirectIO   bool
 }
 
 func (r Runner) InitStore(spec InitSpec) error {
@@ -39,7 +39,7 @@ func (r Runner) InitStore(spec InitSpec) error {
 		args = append(args, "--store-size-bytes", fmt.Sprintf("%d", r.StoreSizeBytes))
 	}
 
-	if !spec.WithoutDirectIO {
+	if spec.WithDirectIO {
 		args = append(args, "--with-direct-io")
 	}
 

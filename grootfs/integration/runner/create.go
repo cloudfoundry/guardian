@@ -60,9 +60,7 @@ func (r Runner) EnsureMounted(containerSpec specs.Spec) error {
 }
 
 func (r Runner) initStoreAsRoot() error {
-	spec := InitSpec{
-		StoreSizeBytes: 500 * 1024 * 1024,
-	}
+	spec := InitSpec{StoreSizeBytes: 500 * 1024 * 1024}
 
 	if r.SysCredential.Uid != 0 {
 		spec.UIDMappings = defaultIdMapping(r.SysCredential.Uid)
