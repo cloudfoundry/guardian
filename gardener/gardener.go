@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -47,6 +48,8 @@ type SysInfoProvider interface {
 
 type Containerizer interface {
 	Create(log lager.Logger, desiredContainerSpec spec.DesiredContainerSpec) error
+	CreatePea(log lager.Logger, desiredContainerSpec spec.DesiredContainerSpec) error
+
 	Handles() ([]string, error)
 
 	StreamIn(log lager.Logger, handle string, streamInSpec garden.StreamInSpec) error
@@ -326,6 +329,104 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 	return container, nil
 }
 
+func (g *Gardener) CreatePeaContainer(sandboxHandle string, peaContainerID string, peaImage garden.ImageRef, desiredPeaContainerLimits *garden.ProcessLimits, peaContainerBindMounts []garden.BindMount) (garden.Container, error) {
+	log := g.Logger.Session("create-pea", lager.Data{"sandboxHandle": sandboxHandle})
+	defer log.Info("done")
+
+	if peaContainerID == "" {
+		peaContainerID = g.UidGenerator.Generate()
+	}
+	log.Info("creating", lager.Data{"pea_container_id": peaContainerID})
+	defer log.Info("done")
+
+	sandboxSpec, err := g.Containerizer.Info(log, sandboxHandle)
+	if err != nil {
+		return nil, err
+	}
+
+	privileged := sandboxSpec.Privileged
+
+	linuxNamespaces := map[string]string{}
+	linuxNamespaces["mount"] = ""
+	linuxNamespaces["network"] = fmt.Sprintf("/proc/%d/ns/net", sandboxSpec.Pid)
+	linuxNamespaces["ipc"] = fmt.Sprintf("/proc/%d/ns/ipc", sandboxSpec.Pid)
+	linuxNamespaces["pid"] = fmt.Sprintf("/proc/%d/ns/pid", sandboxSpec.Pid)
+	linuxNamespaces["uts"] = fmt.Sprintf("/proc/%d/ns/uts", sandboxSpec.Pid)
+
+	if !privileged {
+		linuxNamespaces["user"] = fmt.Sprintf("/proc/%d/ns/user", sandboxSpec.Pid)
+	}
+
+	defer func() {
+		if err != nil {
+			log := log.Session("create-failed-cleaningup-pea", lager.Data{
+				"cause": err.Error(),
+			})
+
+			log.Info("start")
+
+			err := g.destroy(log, peaContainerID)
+			if err != nil {
+				log.Error("destroy-failed", err)
+			}
+
+			log.Info("cleanedup")
+		} else {
+			log.Info("created")
+		}
+	}()
+
+	runtimeSpec, err := g.Volumizer.Create(log, garden.ContainerSpec{
+		Handle:     peaContainerID,
+		Image:      peaImage,
+		Privileged: privileged,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	defaultBindMounts, err := g.Networker.SetupBindMounts(log, sandboxHandle, privileged, runtimeSpec.Root.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	if runtimeSpec.Windows == nil {
+		runtimeSpec.Windows = new(specs.Windows)
+	}
+
+	runtimeSpec.Windows.Network = &specs.WindowsNetwork{
+		NetworkSharedContainerName: sandboxHandle,
+	}
+
+	cgroupPath := filepath.Join(sandboxHandle, peaContainerID)
+
+	limits := garden.Limits{}
+	if desiredPeaContainerLimits != nil {
+		cgroupPath = peaContainerID
+		limits = garden.Limits{
+			CPU:    desiredPeaContainerLimits.CPU,
+			Memory: desiredPeaContainerLimits.Memory,
+		}
+	}
+
+	peaContainerSpec := spec.DesiredContainerSpec{
+		Handle:        peaContainerID,
+		BaseConfig:    runtimeSpec,
+		CgroupPath:    cgroupPath,
+		Limits:        limits,
+		Namespaces:    linuxNamespaces,
+		BindMounts:    append(peaContainerBindMounts, defaultBindMounts...),
+		Privileged:    privileged,
+		SandboxHandle: sandboxHandle,
+	}
+
+	if err := g.Containerizer.CreatePea(log, peaContainerSpec); err != nil {
+		return nil, err
+	}
+
+	return g.Lookup(peaContainerID)
+}
+
 func (g *Gardener) Lookup(handle string) (garden.Container, error) {
 	return g.lookup(handle), nil
 }
@@ -338,6 +439,8 @@ func (g *Gardener) lookup(handle string) garden.Container {
 		volumizer:       g.Volumizer,
 		networker:       g.Networker,
 		propertyManager: g.PropertyManager,
+
+		gardener: g,
 	}
 }
 

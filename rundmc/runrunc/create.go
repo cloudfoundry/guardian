@@ -49,7 +49,14 @@ func (c *Creator) Create(log lager.Logger, id string, bundle goci.Bndl, pio gard
 		log.Error("depot-create-failed", err)
 		return err
 	}
+	return c.create(log, id, bundle, pio, bundlePath)
+}
 
+func (c *Creator) CreatePea(log lager.Logger, id string, sandboxId string, bundle goci.Bndl, pio garden.ProcessIO) error {
+	return nil
+}
+
+func (c *Creator) create(log lager.Logger, id string, bundle goci.Bndl, pio garden.ProcessIO, bundlePath string) error {
 	logFilePath := filepath.Join(bundlePath, "create.log")
 	pidFilePath := filepath.Join(bundlePath, "pidfile")
 
@@ -85,7 +92,7 @@ func (c *Creator) Create(log lager.Logger, id string, bundle goci.Bndl, pio gard
 	}
 	cmd.Stdout = pio.Stdout
 	cmd.Stderr = pio.Stderr
-	err = c.commandRunner.Run(cmd)
+	err := c.commandRunner.Run(cmd)
 
 	log.Info("completing")
 	if err := processLogs(log, logFilePath, err); err != nil {

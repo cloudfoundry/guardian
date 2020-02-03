@@ -373,7 +373,7 @@ var _ = Describe("Containerd", func() {
 
 					peaProcessPid := pidFromProcessesOutput(processes, "ctrd-pea-id")
 					cmdline := readFileString(filepath.Join("/", "proc", peaProcessPid, "cmdline"))
-					Expect(cmdline).To(ContainSubstring("/bin/sleep"))
+					Expect(cmdline).To(ContainSubstring("/tmp/garden-init"))
 
 					code, err := process.Wait()
 					Expect(err).NotTo(HaveOccurred())

@@ -52,4 +52,6 @@ type DesiredContainerSpec struct {
 	Limits garden.Limits
 
 	BaseConfig specs.Spec
+
+	SandboxHandle string
 }

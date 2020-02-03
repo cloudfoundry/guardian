@@ -40,6 +40,18 @@ type FakeContainerizer struct {
 	createReturnsOnCall map[int]struct {
 		result1 error
 	}
+	CreatePeaStub        func(lager.Logger, spec.DesiredContainerSpec) error
+	createPeaMutex       sync.RWMutex
+	createPeaArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 spec.DesiredContainerSpec
+	}
+	createPeaReturns struct {
+		result1 error
+	}
+	createPeaReturnsOnCall map[int]struct {
+		result1 error
+	}
 	DestroyStub        func(lager.Logger, string) error
 	destroyMutex       sync.RWMutex
 	destroyArgsForCall []struct {
@@ -309,6 +321,67 @@ func (fake *FakeContainerizer) CreateReturnsOnCall(i int, result1 error) {
 		})
 	}
 	fake.createReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeContainerizer) CreatePea(arg1 lager.Logger, arg2 spec.DesiredContainerSpec) error {
+	fake.createPeaMutex.Lock()
+	ret, specificReturn := fake.createPeaReturnsOnCall[len(fake.createPeaArgsForCall)]
+	fake.createPeaArgsForCall = append(fake.createPeaArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 spec.DesiredContainerSpec
+	}{arg1, arg2})
+	fake.recordInvocation("CreatePea", []interface{}{arg1, arg2})
+	fake.createPeaMutex.Unlock()
+	if fake.CreatePeaStub != nil {
+		return fake.CreatePeaStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.createPeaReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeContainerizer) CreatePeaCallCount() int {
+	fake.createPeaMutex.RLock()
+	defer fake.createPeaMutex.RUnlock()
+	return len(fake.createPeaArgsForCall)
+}
+
+func (fake *FakeContainerizer) CreatePeaCalls(stub func(lager.Logger, spec.DesiredContainerSpec) error) {
+	fake.createPeaMutex.Lock()
+	defer fake.createPeaMutex.Unlock()
+	fake.CreatePeaStub = stub
+}
+
+func (fake *FakeContainerizer) CreatePeaArgsForCall(i int) (lager.Logger, spec.DesiredContainerSpec) {
+	fake.createPeaMutex.RLock()
+	defer fake.createPeaMutex.RUnlock()
+	argsForCall := fake.createPeaArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeContainerizer) CreatePeaReturns(result1 error) {
+	fake.createPeaMutex.Lock()
+	defer fake.createPeaMutex.Unlock()
+	fake.CreatePeaStub = nil
+	fake.createPeaReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeContainerizer) CreatePeaReturnsOnCall(i int, result1 error) {
+	fake.createPeaMutex.Lock()
+	defer fake.createPeaMutex.Unlock()
+	fake.CreatePeaStub = nil
+	if fake.createPeaReturnsOnCall == nil {
+		fake.createPeaReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.createPeaReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -992,6 +1065,8 @@ func (fake *FakeContainerizer) Invocations() map[string][][]interface{} {
 	defer fake.attachMutex.RUnlock()
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
+	fake.createPeaMutex.RLock()
+	defer fake.createPeaMutex.RUnlock()
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
 	fake.handlesMutex.RLock()

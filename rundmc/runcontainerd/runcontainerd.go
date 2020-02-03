@@ -138,6 +138,19 @@ func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pi
 	return nil
 }
 
+func (r *RunContainerd) CreatePea(log lager.Logger, id, sandboxId string, bundle goci.Bndl, pio garden.ProcessIO) error {
+	log.Debug("Annotations before update", lager.Data{"id": id, "Annotations": bundle.Spec.Annotations})
+	updatePeaAnnotations(&bundle, sandboxId)
+	log.Debug("Annotations after update", lager.Data{"id": id, "Annotations": bundle.Spec.Annotations})
+
+	err := r.containerManager.Create(log, id, &bundle.Spec, func() (io.Reader, io.Writer, io.Writer) { return pio.Stdin, pio.Stdout, pio.Stderr })
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func updateAnnotationsIfNeeded(bundle *goci.Bndl) {
 	if _, ok := bundle.Spec.Annotations["container-type"]; !ok {
 		if bundle.Spec.Annotations == nil {
@@ -145,6 +158,14 @@ func updateAnnotationsIfNeeded(bundle *goci.Bndl) {
 		}
 		bundle.Spec.Annotations["container-type"] = "garden-init"
 	}
+}
+
+func updatePeaAnnotations(bundle *goci.Bndl, sandboxHandle string) {
+	if bundle.Spec.Annotations == nil {
+		bundle.Spec.Annotations = make(map[string]string)
+	}
+	bundle.Spec.Annotations["container-type"] = "pea"
+	bundle.Spec.Annotations["sandbox-container"] = sandboxHandle
 }
 
 func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcessSpec garden.ProcessSpec, gardenIO garden.ProcessIO) (garden.Process, error) {

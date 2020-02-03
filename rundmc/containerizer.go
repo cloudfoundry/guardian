@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -51,6 +50,7 @@ type State struct {
 
 type OCIRuntime interface {
 	Create(log lager.Logger, id string, bundle goci.Bndl, io garden.ProcessIO) error
+	CreatePea(log lager.Logger, id, sandboxId string, bundle goci.Bndl, io garden.ProcessIO) error
 	Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, id, processId string, io garden.ProcessIO) (garden.Process, error)
 	Delete(log lager.Logger, id string) error
@@ -190,6 +190,26 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 	return nil
 }
 
+func (c *Containerizer) CreatePea(log lager.Logger, spec spec.DesiredContainerSpec) error {
+	log = log.Session("containerizer-create", lager.Data{"handle": spec.Handle})
+
+	log.Info("start")
+	defer log.Info("finished")
+
+	bundle, err := c.bundler.Generate(spec)
+	if err != nil {
+		log.Error("bundle-generate-failed", err)
+		return err
+	}
+
+	if err := c.runtime.CreatePea(log, spec.Handle, spec.SandboxHandle, bundle, garden.ProcessIO{}); err != nil {
+		log.Error("runtime-create-failed", err)
+		return err
+	}
+
+	return nil
+}
+
 // Run runs a process inside a running container
 func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	log = log.Session("run", lager.Data{"handle": handle, "path": spec.Path})
@@ -197,34 +217,7 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 	log.Info("started")
 	defer log.Info("finished")
 
-	if isPea(spec) {
-		if shouldResolveUsername(spec.User) {
-			resolvedUID, resolvedGID, err := c.peaUsernameResolver.ResolveUser(log, handle, spec.Image, spec.User)
-			if err != nil {
-				return nil, err
-			}
-
-			spec.User = fmt.Sprintf("%d:%d", resolvedUID, resolvedGID)
-		}
-
-		return c.peaCreator.CreatePea(log, spec, io, handle)
-	}
-
-	if spec.BindMounts != nil {
-		err := fmt.Errorf("Running a process with bind mounts and no image provided is not allowed")
-		log.Error("invalid-spec", err)
-		return nil, err
-	}
-
 	return c.runtime.Exec(log, handle, spec, io)
-}
-
-func isPea(spec garden.ProcessSpec) bool {
-	return spec.Image != (garden.ImageRef{})
-}
-
-func shouldResolveUsername(username string) bool {
-	return username != "" && !strings.Contains(username, ":")
 }
 
 func (c *Containerizer) Attach(log lager.Logger, handle string, processID string, io garden.ProcessIO) (garden.Process, error) {

@@ -85,6 +85,21 @@ type FakeOCIRuntime struct {
 	createReturnsOnCall map[int]struct {
 		result1 error
 	}
+	CreatePeaStub        func(lager.Logger, string, string, goci.Bndl, garden.ProcessIO) error
+	createPeaMutex       sync.RWMutex
+	createPeaArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+		arg3 string
+		arg4 goci.Bndl
+		arg5 garden.ProcessIO
+	}
+	createPeaReturns struct {
+		result1 error
+	}
+	createPeaReturnsOnCall map[int]struct {
+		result1 error
+	}
 	DeleteStub        func(lager.Logger, string) error
 	deleteMutex       sync.RWMutex
 	deleteArgsForCall []struct {
@@ -485,6 +500,70 @@ func (fake *FakeOCIRuntime) CreateReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakeOCIRuntime) CreatePea(arg1 lager.Logger, arg2 string, arg3 string, arg4 goci.Bndl, arg5 garden.ProcessIO) error {
+	fake.createPeaMutex.Lock()
+	ret, specificReturn := fake.createPeaReturnsOnCall[len(fake.createPeaArgsForCall)]
+	fake.createPeaArgsForCall = append(fake.createPeaArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+		arg3 string
+		arg4 goci.Bndl
+		arg5 garden.ProcessIO
+	}{arg1, arg2, arg3, arg4, arg5})
+	fake.recordInvocation("CreatePea", []interface{}{arg1, arg2, arg3, arg4, arg5})
+	fake.createPeaMutex.Unlock()
+	if fake.CreatePeaStub != nil {
+		return fake.CreatePeaStub(arg1, arg2, arg3, arg4, arg5)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.createPeaReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeOCIRuntime) CreatePeaCallCount() int {
+	fake.createPeaMutex.RLock()
+	defer fake.createPeaMutex.RUnlock()
+	return len(fake.createPeaArgsForCall)
+}
+
+func (fake *FakeOCIRuntime) CreatePeaCalls(stub func(lager.Logger, string, string, goci.Bndl, garden.ProcessIO) error) {
+	fake.createPeaMutex.Lock()
+	defer fake.createPeaMutex.Unlock()
+	fake.CreatePeaStub = stub
+}
+
+func (fake *FakeOCIRuntime) CreatePeaArgsForCall(i int) (lager.Logger, string, string, goci.Bndl, garden.ProcessIO) {
+	fake.createPeaMutex.RLock()
+	defer fake.createPeaMutex.RUnlock()
+	argsForCall := fake.createPeaArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
+}
+
+func (fake *FakeOCIRuntime) CreatePeaReturns(result1 error) {
+	fake.createPeaMutex.Lock()
+	defer fake.createPeaMutex.Unlock()
+	fake.CreatePeaStub = nil
+	fake.createPeaReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeOCIRuntime) CreatePeaReturnsOnCall(i int, result1 error) {
+	fake.createPeaMutex.Lock()
+	defer fake.createPeaMutex.Unlock()
+	fake.CreatePeaStub = nil
+	if fake.createPeaReturnsOnCall == nil {
+		fake.createPeaReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.createPeaReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeOCIRuntime) Delete(arg1 lager.Logger, arg2 string) error {
 	fake.deleteMutex.Lock()
 	ret, specificReturn := fake.deleteReturnsOnCall[len(fake.deleteArgsForCall)]
@@ -877,6 +956,8 @@ func (fake *FakeOCIRuntime) Invocations() map[string][][]interface{} {
 	defer fake.containerPeaHandlesMutex.RUnlock()
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
+	fake.createPeaMutex.RLock()
+	defer fake.createPeaMutex.RUnlock()
 	fake.deleteMutex.RLock()
 	defer fake.deleteMutex.RUnlock()
 	fake.eventsMutex.RLock()

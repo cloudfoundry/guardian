@@ -8,6 +8,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager"
+	uuid "github.com/nu7hatch/gouuid"
 )
 
 type container struct {
@@ -18,6 +19,8 @@ type container struct {
 	volumizer       Volumizer
 	networker       Networker
 	propertyManager PropertyManager
+
+	gardener *Gardener
 }
 
 func (c *container) Handle() string {
@@ -25,8 +28,56 @@ func (c *container) Handle() string {
 }
 
 func (c *container) Run(spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+	if isPea(spec) {
+		peaContainer, err := c.gardener.CreatePeaContainer(c.handle, spec.ID, spec.Image, spec.OverrideContainerLimits, spec.BindMounts)
+		if err != nil {
+			return nil, err
+		}
+
+		// if shouldResolveUsername(spec.User) {
+		// resolvedUID, resolvedGID, err := c.peaUsernameResolver.ResolveUser(log, handle, spec.Image, spec.User)
+		// if err != nil {
+		// 	return nil, err
+		// }
+
+		// spec.User = fmt.Sprintf("%d:%d", resolvedUID, resolvedGID)
+		// }
+
+		process, err := peaContainer.Run(peaProcessSpec(spec), io)
+		if err != nil {
+			destroyErr := c.gardener.Destroy(c.handle)
+			c.logger.Error("failed-to-destroy-pea-contianer", destroyErr)
+			return nil, err
+		}
+
+		return NewPeaProcess(c.logger, process, peaContainer.Handle(), c.gardener), nil
+		// return c.peaCreator.CreatePea(log, spec, io, handle)
+	}
+
+	if spec.BindMounts != nil {
+		err := fmt.Errorf("Running a process with bind mounts and no image provided is not allowed")
+		c.logger.Error("invalid-spec", err)
+		return nil, err
+	}
+
 	return c.containerizer.Run(c.logger, c.handle, spec, io)
 }
+
+func peaProcessSpec(spec garden.ProcessSpec) garden.ProcessSpec {
+	spec.Image = garden.ImageRef{}
+	spec.BindMounts = nil
+	id, _ := uuid.NewV4()
+	spec.ID = id.String()
+	return spec
+}
+
+func isPea(spec garden.ProcessSpec) bool {
+	return spec.Image != (garden.ImageRef{})
+}
+
+// func shouldResolveUsername(username string) bool {
+// 	return username != "" && !strings.Contains(username, ":")
+// }
 
 func (c *container) Attach(processID string, io garden.ProcessIO) (garden.Process, error) {
 	return c.containerizer.Attach(c.logger, c.handle, processID, io)
