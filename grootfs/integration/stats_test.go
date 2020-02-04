@@ -94,8 +94,10 @@ var _ = Describe("Stats", func() {
 
 			expectedStats = groot.VolumeStats{
 				DiskUsage: groot.DiskUsage{
-					TotalBytesUsed:     9445376,
-					ExclusiveBytesUsed: 4202496,
+					TotalBytesUsed:      9445376,
+					ExclusiveBytesUsed:  4202496,
+					QuotaSizeBytes:      45 * 1024 * 1024,
+					CommittedSpaceBytes: 50 * 1024 * 1024,
 				},
 			}
 		})
@@ -111,6 +113,12 @@ var _ = Describe("Stats", func() {
 				Expect(stats.DiskUsage.ExclusiveBytesUsed).To(
 					BeNumerically("~", expectedStats.DiskUsage.ExclusiveBytesUsed, 100),
 				)
+				Expect(stats.DiskUsage.QuotaSizeBytes).To(
+					BeNumerically("~", expectedStats.DiskUsage.QuotaSizeBytes, 100),
+				)
+				Expect(stats.DiskUsage.CommittedSpaceBytes).To(
+					BeNumerically("~", expectedStats.DiskUsage.CommittedSpaceBytes, 100),
+				)
 			})
 		})
 
@@ -124,6 +132,12 @@ var _ = Describe("Stats", func() {
 				)
 				Expect(stats.DiskUsage.ExclusiveBytesUsed).To(
 					BeNumerically("~", expectedStats.DiskUsage.ExclusiveBytesUsed, 100),
+				)
+				Expect(stats.DiskUsage.QuotaSizeBytes).To(
+					BeNumerically("~", expectedStats.DiskUsage.QuotaSizeBytes, 100),
+				)
+				Expect(stats.DiskUsage.CommittedSpaceBytes).To(
+					BeNumerically("~", expectedStats.DiskUsage.CommittedSpaceBytes, 100),
 				)
 			})
 		})
@@ -183,6 +197,12 @@ var _ = Describe("Stats", func() {
 				)
 				Expect(stats.DiskUsage.ExclusiveBytesUsed).To(
 					BeNumerically("~", 0, 100),
+				)
+				Expect(stats.DiskUsage.QuotaSizeBytes).To(
+					BeNumerically("~", 0, 100),
+				)
+				Expect(stats.DiskUsage.CommittedSpaceBytes).To(
+					BeNumerically("~", 5*1024*1024, 100),
 				)
 			})
 		})

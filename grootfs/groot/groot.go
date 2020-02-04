@@ -147,8 +147,10 @@ type ReexecSpec struct {
 }
 
 type DiskUsage struct {
-	TotalBytesUsed     int64 `json:"total_bytes_used"`
-	ExclusiveBytesUsed int64 `json:"exclusive_bytes_used"`
+	TotalBytesUsed      int64 `json:"total_bytes_used"`
+	ExclusiveBytesUsed  int64 `json:"exclusive_bytes_used"`
+	QuotaSizeBytes      int64 `json:"quota_size_bytes"`
+	CommittedSpaceBytes int64 `json:"committed_space_bytes"`
 }
 
 type VolumeStats struct {

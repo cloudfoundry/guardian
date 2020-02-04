@@ -22,7 +22,7 @@ func VolumeStats(logger lager.Logger, imagePath string) (groot.VolumeStats, erro
 		return groot.VolumeStats{}, errorspkg.Wrapf(err, "image path (%s) doesn't exist", imagePath)
 	}
 
-	exclusiveSize, err := listQuotaUsage(logger, imagePath)
+	exclusiveSize, quotaSize, err := listQuota(logger, imagePath)
 	if err != nil {
 		logger.Error("list-quota-usage-failed", err)
 		return groot.VolumeStats{}, errorspkg.Wrapf(err, "listing quota usage %s", imagePath)
@@ -38,13 +38,15 @@ func VolumeStats(logger lager.Logger, imagePath string) (groot.VolumeStats, erro
 
 	return groot.VolumeStats{
 		DiskUsage: groot.DiskUsage{
-			ExclusiveBytesUsed: exclusiveSize,
-			TotalBytesUsed:     volumeSize + exclusiveSize,
+			ExclusiveBytesUsed:  exclusiveSize,
+			TotalBytesUsed:      volumeSize + exclusiveSize,
+			QuotaSizeBytes:      quotaSize,
+			CommittedSpaceBytes: volumeSize + quotaSize,
 		},
 	}, nil
 }
 
-func listQuotaUsage(logger lager.Logger, imagePath string) (int64, error) {
+func listQuota(logger lager.Logger, imagePath string) (int64, int64, error) {
 	logger = logger.Session("listing-quota-usage", lager.Data{"imagePath": imagePath})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
@@ -52,10 +54,10 @@ func listQuotaUsage(logger lager.Logger, imagePath string) (int64, error) {
 	quota, err := quotapkg.Get(logger, imagePath)
 	if err != nil {
 		logger.Error("getting-quota-failed", err)
-		return 0, errorspkg.Wrapf(err, "getting quota %s", imagePath)
+		return 0, 0, errorspkg.Wrapf(err, "getting quota %s", imagePath)
 	}
 
-	return int64(quota.BCount), nil
+	return int64(quota.BCount), int64(quota.Size), nil
 }
 
 func readImageInfo(logger lager.Logger, imagePath string) (int64, error) {
