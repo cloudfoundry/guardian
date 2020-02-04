@@ -34,6 +34,9 @@ func CleanUpOverlayMounts(mountPath string) {
 		Expect(ensureCleanUp(point)).To(Succeed())
 	}
 
+	// There should be no images in the store
+	Expect(len(internalMountPoints(mountPath))).To(Equal(0), internalMountPoints)
+
 	// Invalid argument means that the mount path is not a mountpoint, so... whatever
 	Expect(syscall.Unmount(mountPath, 0)).To(Or(Not(HaveOccurred()), MatchError("invalid argument"), MatchError("no such file or directory")))
 }
