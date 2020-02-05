@@ -110,7 +110,7 @@ func TestGqt(t *testing.T) {
 			}
 		}
 
-		if strings.Contains(message, "failed getting task status") {
+		if strings.Contains(message, "failed getting task") {
 			io.WriteString(GinkgoWriter, fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelNode()))
 
 			io.WriteString(GinkgoWriter, "\nPrinting the containerd tasks...\n\n")
@@ -122,6 +122,13 @@ func TestGqt(t *testing.T) {
 				io.WriteString(GinkgoWriter, err.Error())
 			}
 			GinkgoWriter.Write(psOut)
+
+			io.WriteString(GinkgoWriter, "\nPrinting runc containers...\n\n")
+			runcOut, err := exec.Command("runc", "--root", "/run/containerd/runc/garden", "list").Output()
+			if err != nil {
+				io.WriteString(GinkgoWriter, err.Error())
+			}
+			GinkgoWriter.Write(runcOut)
 
 			pids, err := exec.Command("pidof", "containerd-shim").Output()
 			if err != nil {
