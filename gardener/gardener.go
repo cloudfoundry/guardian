@@ -723,7 +723,7 @@ func (g *Gardener) peas(log lager.Logger, sandboxId string) ([]garden.Process, e
 	processes := []garden.Process{}
 	for _, handle := range handles {
 		container := g.lookup(handle)
-		process, err := container.Attach(handle, garden.ProcessIO{})
+		process, err := container.Attach(peaProcessID(handle), garden.ProcessIO{})
 		if err != nil {
 			return nil, err
 		}

@@ -8,7 +8,6 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager"
-	uuid "github.com/nu7hatch/gouuid"
 )
 
 type container struct {
@@ -43,7 +42,7 @@ func (c *container) Run(spec garden.ProcessSpec, io garden.ProcessIO) (garden.Pr
 		// spec.User = fmt.Sprintf("%d:%d", resolvedUID, resolvedGID)
 		// }
 
-		process, err := peaContainer.Run(peaProcessSpec(spec), io)
+		process, err := peaContainer.Run(peaProcessSpec(spec, peaContainer.Handle()), io)
 		if err != nil {
 			destroyErr := c.gardener.Destroy(c.handle)
 			c.logger.Error("failed-to-destroy-pea-contianer", destroyErr)
@@ -62,12 +61,15 @@ func (c *container) Run(spec garden.ProcessSpec, io garden.ProcessIO) (garden.Pr
 	return c.containerizer.Run(c.logger, c.handle, spec, io)
 }
 
-func peaProcessSpec(spec garden.ProcessSpec) garden.ProcessSpec {
+func peaProcessSpec(spec garden.ProcessSpec, containerHandle string) garden.ProcessSpec {
 	spec.Image = garden.ImageRef{}
 	spec.BindMounts = nil
-	id, _ := uuid.NewV4()
-	spec.ID = id.String()
+	spec.ID = peaProcessID(containerHandle)
 	return spec
+}
+
+func peaProcessID(containerHandle string) string {
+	return containerHandle + "-PEA-PROCESS"
 }
 
 func isPea(spec garden.ProcessSpec) bool {
