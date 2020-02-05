@@ -119,23 +119,7 @@ func TestGroot(t *testing.T) {
 	AfterEach(func() {
 		testhelpers.CleanUpOverlayMounts(StorePath)
 		Expect(os.RemoveAll(fmt.Sprintf("%s.backing-store", StorePath))).To(Succeed())
-
-		err := os.RemoveAll(StorePath)
-
-		info := ""
-		if err != nil && strings.Contains(err.Error(), fmt.Sprintf("unlinkat %s", StorePath)) {
-			filesOut, err := exec.Command("find", StorePath, "-ls").CombinedOutput()
-			Expect(err).NotTo(HaveOccurred(), string(filesOut))
-
-			lsofOut, _ := exec.Command("sh", "-c", "lsof | grep "+StorePath).CombinedOutput()
-
-			mountTable, err := exec.Command("cat", "/proc/self/mountinfo").CombinedOutput()
-			Expect(err).NotTo(HaveOccurred(), string(mountTable))
-
-			info = fmt.Sprintf("DIR NOT EMPTY: %s\nFILES:\n%s\nOPEN FILES:\n%s\nMOUNT TABLE:\n%s\n",
-				StorePath, string(filesOut), string(lsofOut), string(mountTable))
-		}
-		Expect(err).NotTo(HaveOccurred(), info)
+		Expect(os.RemoveAll(StorePath)).To(Succeed())
 	})
 
 	RunSpecs(t, "Integration Suite")
