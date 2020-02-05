@@ -426,6 +426,10 @@ func (c *Containerizer) Handles() ([]string, error) {
 	return c.runtime.ContainerHandles()
 }
 
+func (c *Containerizer) PeaHandles(log lager.Logger, sandboxId string) ([]string, error) {
+	return c.runtime.ContainerPeaHandles(log, sandboxId)
+}
+
 func calculateCPUEntitlement(shares uint64, entitlementPerShare float64, containerAge time.Duration) uint64 {
 	return uint64(float64(shares) * (entitlementPerShare / 100) * float64(containerAge.Nanoseconds()))
 }

@@ -51,6 +51,7 @@ type Containerizer interface {
 	CreatePea(log lager.Logger, desiredContainerSpec spec.DesiredContainerSpec) error
 
 	Handles() ([]string, error)
+	PeaHandles(log lager.Logger, sandboxId string) ([]string, error)
 
 	StreamIn(log lager.Logger, handle string, streamInSpec garden.StreamInSpec) error
 	StreamOut(log lager.Logger, handle string, streamOutSpec garden.StreamOutSpec) (io.ReadCloser, error)
@@ -329,7 +330,7 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 	return container, nil
 }
 
-func (g *Gardener) CreatePeaContainer(sandboxHandle string, peaContainerID string, peaImage garden.ImageRef, desiredPeaContainerLimits *garden.ProcessLimits, peaContainerBindMounts []garden.BindMount) (garden.Container, error) {
+func (g *Gardener) createPeaContainer(sandboxHandle string, peaContainerID string, peaImage garden.ImageRef, desiredPeaContainerLimits *garden.ProcessLimits, peaContainerBindMounts []garden.BindMount) (garden.Container, error) {
 	log := g.Logger.Session("create-pea", lager.Data{"sandboxHandle": sandboxHandle})
 	defer log.Info("done")
 
@@ -659,8 +660,27 @@ func (g *Gardener) Start() error {
 }
 
 func (g *Gardener) Cleanup(log lager.Logger) error {
-	if err := g.PeaCleaner.CleanAll(log); err != nil {
-		return fmt.Errorf("clean peas: %s", err)
+	sandboxes, err := g.Containers(nil)
+	if err != nil {
+		return err
+	}
+
+	for _, sandbox := range sandboxes {
+		peas, err := g.peas(log, sandbox.Handle())
+		if err != nil {
+			log.Error("error-getting-peas", err, lager.Data{"sandboxHandle": sandbox.Handle()})
+			continue
+		}
+
+		for _, pea := range peas {
+			log.Info("pea", lager.Data{"peaId": pea.ID()})
+			go func(pea garden.Process) {
+				_, err := pea.Wait()
+				if err != nil {
+					return
+				}
+			}(pea)
+		}
 	}
 
 	handles, err := g.Containerizer.Handles()
@@ -692,4 +712,23 @@ func (g *Gardener) Cleanup(log lager.Logger) error {
 	wg.Wait()
 
 	return nil
+}
+
+func (g *Gardener) peas(log lager.Logger, sandboxId string) ([]garden.Process, error) {
+	handles, err := g.Containerizer.PeaHandles(log, sandboxId)
+	if err != nil {
+		return nil, err
+	}
+
+	processes := []garden.Process{}
+	for _, handle := range handles {
+		container := g.lookup(handle)
+		process, err := container.Attach(handle, garden.ProcessIO{})
+		if err != nil {
+			return nil, err
+		}
+		processes = append(processes, NewPeaProcess(log, process, handle, g))
+	}
+
+	return processes, nil
 }

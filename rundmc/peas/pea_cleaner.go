@@ -60,45 +60,45 @@ func (p *PeaCleaner) Clean(log lager.Logger, handle string) error {
 }
 
 func (p *PeaCleaner) CleanAll(log lager.Logger) error {
-	log = log.Session("clean-all-peas")
-	log.Info("start")
-	defer log.Info("end")
+	// log = log.Session("clean-all-peas")
+	// log.Info("start")
+	// defer log.Info("end")
 
-	sandboxHandles, err := p.Runtime.ContainerHandles()
-	if err != nil {
-		return err
-	}
+	// sandboxHandles, err := p.Runtime.ContainerHandles()
+	// if err != nil {
+	// 	return err
+	// }
 
-	for _, sandboxHandle := range sandboxHandles {
-		peaHandles, err := p.Runtime.ContainerPeaHandles(log, sandboxHandle)
-		if err != nil {
-			log.Error("error-getting-peas", err, lager.Data{"sandboxHandle": sandboxHandle})
-			continue
-		}
+	// for _, sandboxHandle := range sandboxHandles {
+	// 	peaHandles, err := p.Runtime.ContainerPeaHandles(log, sandboxHandle)
+	// 	if err != nil {
+	// 		log.Error("error-getting-peas", err, lager.Data{"sandboxHandle": sandboxHandle})
+	// 		continue
+	// 	}
 
-		for _, peaHandle := range peaHandles {
-			peaPID, err := p.PeaPidGetter.GetPeaPid(log, sandboxHandle, peaHandle)
-			if err != nil {
-				log.Error("error-getting-pea-pid", err, lager.Data{"sandboxHandle": sandboxHandle, "peaHandle": peaHandle})
-				continue
-			}
+	// 	for _, peaHandle := range peaHandles {
+	// 		peaPID, err := p.PeaPidGetter.GetPeaPid(log, sandboxHandle, peaHandle)
+	// 		if err != nil {
+	// 			log.Error("error-getting-pea-pid", err, lager.Data{"sandboxHandle": sandboxHandle, "peaHandle": peaHandle})
+	// 			continue
+	// 		}
 
-			go func(peaHandle string, peaPID int) {
-				log.Info("pea-cleaner-goroutine-started", lager.Data{"peaHandle": peaHandle, "peaPID": peaPID})
-				defer log.Info("pea-cleaner-goroutine-ended", lager.Data{"peaHandle": peaHandle, "peaPID": peaPID})
-				if err := p.Waiter.Wait(peaPID); err != nil {
-					log.Error("error-waiting-on-pea", err, lager.Data{"peaHandle": peaHandle, "peaPID": peaPID})
-					return
-				}
+	// 		go func(peaHandle string, peaPID int) {
+	// 			log.Info("pea-cleaner-goroutine-started", lager.Data{"peaHandle": peaHandle, "peaPID": peaPID})
+	// 			defer log.Info("pea-cleaner-goroutine-ended", lager.Data{"peaHandle": peaHandle, "peaPID": peaPID})
+	// 			if err := p.Waiter.Wait(peaPID); err != nil {
+	// 				log.Error("error-waiting-on-pea", err, lager.Data{"peaHandle": peaHandle, "peaPID": peaPID})
+	// 				return
+	// 			}
 
-				if err := p.Clean(log, peaHandle); err != nil {
-					log.Error("error-cleaning-up-pea", err, lager.Data{"peaHandle": peaHandle, "peaPID": peaPID})
-					return
-				}
-			}(peaHandle, peaPID)
+	// 			if err := p.Clean(log, peaHandle); err != nil {
+	// 				log.Error("error-cleaning-up-pea", err, lager.Data{"peaHandle": peaHandle, "peaPID": peaPID})
+	// 				return
+	// 			}
+	// 		}(peaHandle, peaPID)
 
-		}
-	}
+	// 	}
+	// }
 
 	return nil
 }

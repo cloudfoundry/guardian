@@ -104,6 +104,20 @@ type FakeContainerizer struct {
 		result1 gardener.ActualContainerMetrics
 		result2 error
 	}
+	PeaHandlesStub        func(lager.Logger, string) ([]string, error)
+	peaHandlesMutex       sync.RWMutex
+	peaHandlesArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+	}
+	peaHandlesReturns struct {
+		result1 []string
+		result2 error
+	}
+	peaHandlesReturnsOnCall map[int]struct {
+		result1 []string
+		result2 error
+	}
 	RemoveBundleStub        func(lager.Logger, string) error
 	removeBundleMutex       sync.RWMutex
 	removeBundleArgsForCall []struct {
@@ -630,6 +644,70 @@ func (fake *FakeContainerizer) MetricsReturnsOnCall(i int, result1 gardener.Actu
 	}{result1, result2}
 }
 
+func (fake *FakeContainerizer) PeaHandles(arg1 lager.Logger, arg2 string) ([]string, error) {
+	fake.peaHandlesMutex.Lock()
+	ret, specificReturn := fake.peaHandlesReturnsOnCall[len(fake.peaHandlesArgsForCall)]
+	fake.peaHandlesArgsForCall = append(fake.peaHandlesArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("PeaHandles", []interface{}{arg1, arg2})
+	fake.peaHandlesMutex.Unlock()
+	if fake.PeaHandlesStub != nil {
+		return fake.PeaHandlesStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.peaHandlesReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeContainerizer) PeaHandlesCallCount() int {
+	fake.peaHandlesMutex.RLock()
+	defer fake.peaHandlesMutex.RUnlock()
+	return len(fake.peaHandlesArgsForCall)
+}
+
+func (fake *FakeContainerizer) PeaHandlesCalls(stub func(lager.Logger, string) ([]string, error)) {
+	fake.peaHandlesMutex.Lock()
+	defer fake.peaHandlesMutex.Unlock()
+	fake.PeaHandlesStub = stub
+}
+
+func (fake *FakeContainerizer) PeaHandlesArgsForCall(i int) (lager.Logger, string) {
+	fake.peaHandlesMutex.RLock()
+	defer fake.peaHandlesMutex.RUnlock()
+	argsForCall := fake.peaHandlesArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeContainerizer) PeaHandlesReturns(result1 []string, result2 error) {
+	fake.peaHandlesMutex.Lock()
+	defer fake.peaHandlesMutex.Unlock()
+	fake.PeaHandlesStub = nil
+	fake.peaHandlesReturns = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeContainerizer) PeaHandlesReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.peaHandlesMutex.Lock()
+	defer fake.peaHandlesMutex.Unlock()
+	fake.PeaHandlesStub = nil
+	if fake.peaHandlesReturnsOnCall == nil {
+		fake.peaHandlesReturnsOnCall = make(map[int]struct {
+			result1 []string
+			result2 error
+		})
+	}
+	fake.peaHandlesReturnsOnCall[i] = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeContainerizer) RemoveBundle(arg1 lager.Logger, arg2 string) error {
 	fake.removeBundleMutex.Lock()
 	ret, specificReturn := fake.removeBundleReturnsOnCall[len(fake.removeBundleArgsForCall)]
@@ -1075,6 +1153,8 @@ func (fake *FakeContainerizer) Invocations() map[string][][]interface{} {
 	defer fake.infoMutex.RUnlock()
 	fake.metricsMutex.RLock()
 	defer fake.metricsMutex.RUnlock()
+	fake.peaHandlesMutex.RLock()
+	defer fake.peaHandlesMutex.RUnlock()
 	fake.removeBundleMutex.RLock()
 	defer fake.removeBundleMutex.RUnlock()
 	fake.runMutex.RLock()

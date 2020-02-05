@@ -263,6 +263,18 @@ var _ = Describe("Containerd", func() {
 						Expect(findFilesContaining(processID)).To(BeFalse())
 					})
 				})
+
+				Context("when cleanup-process-dirs-on-wait is disabled", func() {
+					BeforeEach(func() {
+						config.CleanupProcessDirsOnWait = boolptr(false)
+					})
+
+					FIt("doesn't delete the files", func() {
+						Expect(process.Wait()).To(Equal(17))
+
+						Expect(findFilesContaining(processID)).To(BeTrue())
+					})
+				})
 			})
 
 			Describe("Stdio", func() {

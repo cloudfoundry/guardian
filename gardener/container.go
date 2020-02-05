@@ -29,7 +29,7 @@ func (c *container) Handle() string {
 
 func (c *container) Run(spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	if isPea(spec) {
-		peaContainer, err := c.gardener.CreatePeaContainer(c.handle, spec.ID, spec.Image, spec.OverrideContainerLimits, spec.BindMounts)
+		peaContainer, err := c.gardener.createPeaContainer(c.handle, spec.ID, spec.Image, spec.OverrideContainerLimits, spec.BindMounts)
 		if err != nil {
 			return nil, err
 		}
@@ -51,7 +51,6 @@ func (c *container) Run(spec garden.ProcessSpec, io garden.ProcessIO) (garden.Pr
 		}
 
 		return NewPeaProcess(c.logger, process, peaContainer.Handle(), c.gardener), nil
-		// return c.peaCreator.CreatePea(log, spec, io, handle)
 	}
 
 	if spec.BindMounts != nil {
