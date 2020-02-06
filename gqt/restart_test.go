@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -313,7 +314,7 @@ var _ = Describe("Surviving Restarts", func() {
 				itAllowsTheProcessToContinueRunning := func() {
 					It("allows the container process to continue running", func() {
 						Consistently(func() string {
-							out, err := exec.Command("sh", "-c", fmt.Sprintf("ps -elf | grep 'while true; do echo %s' | grep -v grep | wc -l", container.Handle())).CombinedOutput()
+							out, err := exec.Command("sh", "-c", fmt.Sprintf("ps -elf | grep '[w]hile true; do echo %s' | wc -l", container.Handle())).CombinedOutput()
 							Expect(err).NotTo(HaveOccurred())
 							return string(out)
 						}, time.Second*2, time.Millisecond*200).Should(Equal("1\n"), "expected user process to stay alive")
@@ -327,6 +328,30 @@ var _ = Describe("Surviving Restarts", func() {
 					})
 
 					itAllowsTheProcessToContinueRunning()
+
+					Context("when the pea process terminates", func() {
+						BeforeEach(func() {
+							skipIfRunDmcForProcesses("need to use ctr to find pea containers :(")
+						})
+
+						It("removes the pea container", func() {
+							ctrOutput := func() string {
+								return listContainers("ctr", config.ContainerdSocket)
+							}
+							Expect(ctrOutput()).To(ContainSubstring(processID))
+
+							out, err := exec.Command("sh", "-c", fmt.Sprintf("ps -elf | grep '[w]hile true; do echo %s' | awk '{ print $4 }'", container.Handle())).CombinedOutput()
+							Expect(err).NotTo(HaveOccurred())
+							pid, err := strconv.Atoi(strings.TrimSpace(string(out)))
+							Expect(err).NotTo(HaveOccurred())
+							proc, err := os.FindProcess(pid)
+							Expect(err).NotTo(HaveOccurred())
+							err = proc.Kill()
+							Expect(err).NotTo(HaveOccurred())
+
+							Eventually(ctrOutput, "20s").ShouldNot(ContainSubstring(existingProc.ID()))
+						})
+					})
 				})
 
 				It("can reattach to processes that are still running", func() {
