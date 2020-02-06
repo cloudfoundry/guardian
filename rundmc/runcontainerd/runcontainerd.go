@@ -131,6 +131,7 @@ func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pi
 		return err
 	}
 
+	// TODO: move out of runtime? Does this belong in gardener?
 	if r.useContainerdForProcesses {
 		return r.cgroupManager.SetUseMemoryHierarchy(id)
 	}
@@ -160,6 +161,7 @@ func updateAnnotationsIfNeeded(bundle *goci.Bndl) {
 	}
 }
 
+// TODO: could move up to containerizer and keep all pea info out of runcontainerd
 func updatePeaAnnotations(bundle *goci.Bndl, sandboxHandle string) {
 	if bundle.Spec.Annotations == nil {
 		bundle.Spec.Annotations = make(map[string]string)

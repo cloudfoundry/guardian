@@ -269,7 +269,7 @@ var _ = Describe("Containerd", func() {
 						config.CleanupProcessDirsOnWait = boolptr(false)
 					})
 
-					FIt("doesn't delete the files", func() {
+					It("doesn't delete the files", func() {
 						Expect(process.Wait()).To(Equal(17))
 
 						Expect(findFilesContaining(processID)).To(BeTrue())

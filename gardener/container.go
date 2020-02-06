@@ -33,15 +33,6 @@ func (c *container) Run(spec garden.ProcessSpec, io garden.ProcessIO) (garden.Pr
 			return nil, err
 		}
 
-		// if shouldResolveUsername(spec.User) {
-		// resolvedUID, resolvedGID, err := c.peaUsernameResolver.ResolveUser(log, handle, spec.Image, spec.User)
-		// if err != nil {
-		// 	return nil, err
-		// }
-
-		// spec.User = fmt.Sprintf("%d:%d", resolvedUID, resolvedGID)
-		// }
-
 		process, err := peaContainer.Run(peaProcessSpec(spec, peaContainer.Handle()), io)
 		if err != nil {
 			destroyErr := c.gardener.Destroy(c.handle)
@@ -75,10 +66,6 @@ func peaProcessID(containerHandle string) string {
 func isPea(spec garden.ProcessSpec) bool {
 	return spec.Image != (garden.ImageRef{})
 }
-
-// func shouldResolveUsername(username string) bool {
-// 	return username != "" && !strings.Contains(username, ":")
-// }
 
 func (c *container) Attach(processID string, io garden.ProcessIO) (garden.Process, error) {
 	return c.containerizer.Attach(c.logger, c.handle, processID, io)
