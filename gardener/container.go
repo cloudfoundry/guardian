@@ -56,6 +56,9 @@ func peaProcessSpec(spec garden.ProcessSpec, containerHandle string) garden.Proc
 	spec.Image = garden.ImageRef{}
 	spec.BindMounts = nil
 	spec.ID = peaProcessID(containerHandle)
+	if spec.Dir == "" {
+		spec.Dir = "/"
+	}
 	return spec
 }
 
