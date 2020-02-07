@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	// Full list of file system type codes can be found here: http://man7.org/linux/man-pages/man2/statfs.2.html
 	XfsType = int64(0x58465342)
 )
 
@@ -27,7 +28,7 @@ func CheckFSPath(path string, filesystem string, mountOptions ...string) error {
 	}
 
 	if statfs.Type != fsType {
-		return errorspkg.Errorf("Store path filesystem (%s) is incompatible with native driver (must be XFS mountpoint)", path)
+		return errorspkg.Errorf("Store path filesystem (%s) is incompatible with native driver (must be XFS mountpoint); expected type (hex): %x, actual type (hex): %x", path, fsType, statfs.Type)
 	}
 
 	return checkMountOptions(path, filesystem, mountOptions...)

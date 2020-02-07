@@ -70,7 +70,9 @@ func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath s
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
+	logger.Debug("trying-to-remount-fs", lager.Data{"filesystemPath": filesystemPath, "storePath": storePath})
 	if err := d.mountFilesystem(logger, filesystemPath, storePath, "remount"); err == nil {
+		logger.Debug("remounting-fs-succeeded", lager.Data{"filesystemPath": filesystemPath, "storePath": storePath})
 		return nil
 	}
 
@@ -78,6 +80,7 @@ func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath s
 		return err
 	}
 
+	logger.Debug("mounting-just-formatted-fs", lager.Data{"filesystemPath": filesystemPath, "storePath": storePath})
 	return d.MountFilesystem(logger, filesystemPath, storePath)
 }
 

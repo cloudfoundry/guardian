@@ -90,8 +90,9 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) (err error) {
 	}
 
 	if err = m.storeDriver.ValidateFileSystem(logger, validationPath); err != nil {
-		logger.Debug(errorspkg.Wrap(err, "store-could-not-be-validated").Error())
+		logger.Debug(errorspkg.Wrap(err, "store-could-not-be-validated-will-try-to-(re)create-it").Error())
 		if spec.StoreSizeBytes <= 0 {
+			logger.Debug("cannot create the file system as the store size is not specified; bailing out")
 			return errorspkg.Wrap(err, "validating store path filesystem")
 		}
 
