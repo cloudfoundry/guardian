@@ -117,6 +117,7 @@ func TestGroot(t *testing.T) {
 	})
 
 	AfterEach(func() {
+		Expect(deleteAllImages(Runner)).To(Succeed())
 		testhelpers.CleanUpOverlayMounts(StorePath)
 		Expect(os.RemoveAll(fmt.Sprintf("%s.backing-store", StorePath))).To(Succeed())
 		Expect(os.RemoveAll(StorePath)).To(Succeed())
@@ -147,4 +148,30 @@ func runCommand(command *exec.Cmd) (string, string, error) {
 
 func getVolumesDirEntries() ([]os.FileInfo, error) {
 	return ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+}
+
+func deleteAllImages(runner runner.Runner) error {
+	imagesPath := filepath.Join(runner.StorePath, "images")
+	_, err := os.Stat(imagesPath)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to stat %s: %v", imagesPath, err)
+	}
+
+	rootfulRunner := runner.RunningAsUser(0, 0)
+	images, err := rootfulRunner.List()
+	if err != nil {
+		return fmt.Errorf("failed to list images: %v", err)
+	}
+
+	for _, img := range images {
+		imageId := filepath.Base(img.Path)
+		if err := rootfulRunner.Delete(imageId); err != nil {
+			return fmt.Errorf("failed to delete image %q: %v", imageId, err)
+		}
+	}
+
+	return nil
 }
