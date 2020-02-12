@@ -88,7 +88,7 @@ func (f *LinuxFactory) WireMkdirer() runrunc.Mkdirer {
 
 type NoopMkdirer struct{}
 
-func (NoopMkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error {
+func (NoopMkdirer) MkdirAs(spec specs.Spec, uid, gid int, mode os.FileMode, recreate bool, path ...string) error {
 	return nil
 }
 

@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"regexp"
-	"strconv"
 
 	"code.cloudfoundry.org/guardian/rundmc"
 
@@ -64,7 +62,7 @@ type Statser interface {
 
 //go:generate counterfeiter . Mkdirer
 type Mkdirer interface {
-	MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
+	MkdirAs(spec specs.Spec, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
 }
 
 //go:generate counterfeiter . PeaHandlesGetter
@@ -167,8 +165,6 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 		return nil, err
 	}
 
-	rootfsPath := filepath.Join("/proc", strconv.FormatInt(int64(containerPid), 10), "root")
-
 	hostUID := idmapper.MappingList(bundle.Spec.Linux.UIDMappings).Map(resolvedUser.Uid)
 	hostGID := idmapper.MappingList(bundle.Spec.Linux.GIDMappings).Map(resolvedUser.Gid)
 
@@ -176,7 +172,7 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 		gardenProcessSpec.Dir = resolvedUser.Home
 	}
 
-	err = r.mkdirer.MkdirAs(rootfsPath, hostUID, hostGID, 0755, false, gardenProcessSpec.Dir)
+	err = r.mkdirer.MkdirAs(bundle.Spec, hostUID, hostGID, 0755, false, gardenProcessSpec.Dir)
 	if err != nil {
 		log.Error("create-workdir-failed", err)
 		return nil, err

@@ -17,7 +17,7 @@ type UidGenerator interface {
 
 //go:generate counterfeiter . Mkdirer
 type Mkdirer interface {
-	MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
+	MkdirAs(spec specs.Spec, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
 }
 
 //go:generate counterfeiter . BundleLoader

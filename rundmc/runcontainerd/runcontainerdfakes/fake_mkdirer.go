@@ -6,13 +6,14 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type FakeMkdirer struct {
-	MkdirAsStub        func(string, int, int, os.FileMode, bool, ...string) error
+	MkdirAsStub        func(specs.Spec, int, int, os.FileMode, bool, ...string) error
 	mkdirAsMutex       sync.RWMutex
 	mkdirAsArgsForCall []struct {
-		arg1 string
+		arg1 specs.Spec
 		arg2 int
 		arg3 int
 		arg4 os.FileMode
@@ -29,11 +30,11 @@ type FakeMkdirer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeMkdirer) MkdirAs(arg1 string, arg2 int, arg3 int, arg4 os.FileMode, arg5 bool, arg6 ...string) error {
+func (fake *FakeMkdirer) MkdirAs(arg1 specs.Spec, arg2 int, arg3 int, arg4 os.FileMode, arg5 bool, arg6 ...string) error {
 	fake.mkdirAsMutex.Lock()
 	ret, specificReturn := fake.mkdirAsReturnsOnCall[len(fake.mkdirAsArgsForCall)]
 	fake.mkdirAsArgsForCall = append(fake.mkdirAsArgsForCall, struct {
-		arg1 string
+		arg1 specs.Spec
 		arg2 int
 		arg3 int
 		arg4 os.FileMode
@@ -58,13 +59,13 @@ func (fake *FakeMkdirer) MkdirAsCallCount() int {
 	return len(fake.mkdirAsArgsForCall)
 }
 
-func (fake *FakeMkdirer) MkdirAsCalls(stub func(string, int, int, os.FileMode, bool, ...string) error) {
+func (fake *FakeMkdirer) MkdirAsCalls(stub func(specs.Spec, int, int, os.FileMode, bool, ...string) error) {
 	fake.mkdirAsMutex.Lock()
 	defer fake.mkdirAsMutex.Unlock()
 	fake.MkdirAsStub = stub
 }
 
-func (fake *FakeMkdirer) MkdirAsArgsForCall(i int) (string, int, int, os.FileMode, bool, []string) {
+func (fake *FakeMkdirer) MkdirAsArgsForCall(i int) (specs.Spec, int, int, os.FileMode, bool, []string) {
 	fake.mkdirAsMutex.RLock()
 	defer fake.mkdirAsMutex.RUnlock()
 	argsForCall := fake.mkdirAsArgsForCall[i]

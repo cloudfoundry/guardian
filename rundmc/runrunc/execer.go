@@ -77,7 +77,7 @@ func (e *Execer) ExecWithBndl(log lager.Logger, sandboxHandle string, bundle goc
 		spec.Dir = user.Home
 	}
 
-	err = e.mkdirer.MkdirAs(rootfsPath, hostUID, hostGID, 0755, false, spec.Dir)
+	err = e.mkdirer.MkdirAs(bundle.Spec, hostUID, hostGID, 0755, false, spec.Dir)
 	if err != nil {
 		log.Error("create-workdir-failed", err)
 		return nil, err

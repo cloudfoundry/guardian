@@ -14,12 +14,12 @@ import (
 
 const RawRootFSScheme = "raw"
 
-type CommandFactory func(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) *exec.Cmd
+type CommandFactory func(spec specs.Spec, uid, gid int, mode os.FileMode, recreate bool, paths ...string) (*exec.Cmd, error)
 
 type VolumeProvider struct {
 	VolumeCreator VolumeCreator
 	VolumeDestroyMetricsGC
-	prepareRootfsCmd func(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) *exec.Cmd
+	prepareRootfsCmd func(spec specs.Spec, uid, gid int, mode os.FileMode, recreate bool, paths ...string) (*exec.Cmd, error)
 	commandRunner    commandrunner.CommandRunner
 	ContainerRootUID int
 	ContainerRootGID int
@@ -95,25 +95,31 @@ func (v *VolumeProvider) mkdirAndChown(namespaced bool, spec specs.Spec) error {
 	}
 
 	v.mkdirAs(
-		spec.Root.Path, uid, gid, 0755, true,
+		spec, uid, gid, 0755, true,
 		"dev", "proc", "sys",
 	)
 
 	v.mkdirAs(
-		spec.Root.Path, uid, gid, 0777, false,
+		spec, uid, gid, 0777, false,
 		"tmp",
 	)
 
 	return nil
 }
 
-func (v *VolumeProvider) mkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) error {
-	return v.commandRunner.Run(v.prepareRootfsCmd(
-		rootFSPathFile,
+func (v *VolumeProvider) mkdirAs(spec specs.Spec, uid, gid int, mode os.FileMode, recreate bool, paths ...string) error {
+	cmd, err := v.prepareRootfsCmd(
+		spec,
 		uid,
 		gid,
 		mode,
 		recreate,
 		paths...,
-	))
+	)
+	if err != nil {
+		return err
+	}
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return v.commandRunner.Run(cmd)
 }

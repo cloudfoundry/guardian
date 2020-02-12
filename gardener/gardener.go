@@ -376,7 +376,8 @@ func (g *Gardener) destroy(log lager.Logger, handle string) error {
 	}
 
 	// after metadata is deleted the container can no longer be listed by the client
-	return g.deleteContainerMetadata(log, handle)
+	// return g.deleteContainerMetadata(log, handle)
+	return nil
 }
 
 func (g *Gardener) deleteContainerMetadata(log lager.Logger, handle string) error {

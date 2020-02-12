@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 func init() {
@@ -43,7 +44,8 @@ var _ = Describe("Preparerootfs", func() {
 	})
 
 	run := func(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, args ...string) *gexec.Session {
-		cmd := preparerootfs.Command(rootfsPath, uid, gid, mode, recreate, args...)
+		cmd, err := preparerootfs.Command(specs.Spec{}, uid, gid, mode, recreate, args...)
+		Expect(err).NotTo(HaveOccurred())
 		sess, err := gexec.Start(cmd, gexec.NewPrefixedWriter("reexec-stdout: ", GinkgoWriter), gexec.NewPrefixedWriter("reexec-stderr: ", GinkgoWriter))
 		Expect(err).NotTo(HaveOccurred())
 		return sess

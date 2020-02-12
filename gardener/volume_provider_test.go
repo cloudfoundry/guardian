@@ -30,10 +30,10 @@ var _ = Describe("VolumeProvider", func() {
 	BeforeEach(func() {
 		volumeCreator = new(fakes.FakeVolumeCreator)
 		cmdRunner = new(fake_command_runner.FakeCommandRunner)
-		mkdirCommandStub = func(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) *exec.Cmd {
-			args := []string{rootfsPath, fmt.Sprintf("%d", uid), fmt.Sprintf("%d", gid), fmt.Sprintf("%#o", mode), fmt.Sprintf("%t", recreate)}
+		mkdirCommandStub = func(spec specs.Spec, uid, gid int, mode os.FileMode, recreate bool, paths ...string) (*exec.Cmd, error) {
+			args := []string{"", fmt.Sprintf("%d", uid), fmt.Sprintf("%d", gid), fmt.Sprintf("%#o", mode), fmt.Sprintf("%t", recreate)}
 			args = append(args, paths...)
-			return exec.Command("echo", args...)
+			return exec.Command("echo", args...), nil
 		}
 		volumeProvider = gardener.NewVolumeProvider(volumeCreator, nil, mkdirCommandStub, cmdRunner, 5, 5)
 		logger = lagertest.NewTestLogger("volume-provider-test")
