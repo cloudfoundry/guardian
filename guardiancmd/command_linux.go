@@ -204,23 +204,25 @@ func defaultBindMounts() []specs.Mount {
 	}
 
 	return []specs.Mount{
-		{Type: "sysfs", Source: "sysfs", Destination: "/sys", Options: []string{"nosuid", "noexec", "nodev", "ro"}},
-		{Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm", Options: []string{"rw", "nodev", "relatime"}},
-		{Type: "devpts", Source: "devpts", Destination: "/dev/pts",
+		{Destination: "/sys", Type: "sysfs", Source: "sysfs", Options: []string{"noexec", "nosuid", "nodev", "ro"}},
+		{Destination: "/dev", Type: "tmpfs", Source: "tmpfs", Options: []string{"noexec", "strictatime", "mode=755"}},
+		{Destination: "/dev/shm", Type: "tmpfs", Source: "tmpfs", Options: []string{"noexec", "nosuid", "nodev", "mode=1777"}},
+		{Destination: "/dev/mqueue", Type: "mqueue", Source: "mqueue", Options: []string{"noexec", "nosuid", "nodev"}},
+		{Destination: "/dev/pts", Type: "devpts", Source: "devpts",
 			Options: []string{"nosuid", "noexec", "newinstance", fmt.Sprintf("gid=%d", devptsGid), "ptmxmode=0666", "mode=0620"}},
 	}
 }
 
 func privilegedMounts() []specs.Mount {
 	return []specs.Mount{
-		{Type: "proc", Source: "proc", Destination: "/proc", Options: []string{"nosuid", "noexec", "nodev"}},
+		{Destination: "/proc", Type: "proc", Source: "proc", Options: []string{"nosuid", "noexec", "nodev"}},
 	}
 }
 
 func unprivilegedMounts() []specs.Mount {
 	return []specs.Mount{
-		{Type: "proc", Source: "proc", Destination: "/proc", Options: []string{"nosuid", "noexec", "nodev"}},
-		{Type: "cgroup", Source: "cgroup", Destination: "/sys/fs/cgroup", Options: []string{"ro", "nosuid", "noexec", "nodev"}},
+		{Destination: "/proc", Type: "proc", Source: "proc", Options: []string{"nosuid", "noexec", "nodev"}},
+		{Destination: "/sys/fs/cgroup", Type: "cgroup", Source: "cgroup", Options: []string{"ro", "nosuid", "noexec", "nodev"}},
 	}
 }
 

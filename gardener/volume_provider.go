@@ -82,38 +82,5 @@ func (v *VolumeProvider) Create(log lager.Logger, spec garden.ContainerSpec) (sp
 		}
 	}
 
-	v.mkdirAndChown(!spec.Privileged, baseConfig)
-
 	return baseConfig, nil
-}
-
-func (v *VolumeProvider) mkdirAndChown(namespaced bool, spec specs.Spec) error {
-	var uid, gid int
-	if namespaced {
-		uid = v.ContainerRootUID
-		gid = v.ContainerRootGID
-	}
-
-	v.mkdirAs(
-		spec.Root.Path, uid, gid, 0755, true,
-		"dev", "proc", "sys",
-	)
-
-	v.mkdirAs(
-		spec.Root.Path, uid, gid, 0777, false,
-		"tmp",
-	)
-
-	return nil
-}
-
-func (v *VolumeProvider) mkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) error {
-	return v.commandRunner.Run(v.prepareRootfsCmd(
-		rootFSPathFile,
-		uid,
-		gid,
-		mode,
-		recreate,
-		paths...,
-	))
 }

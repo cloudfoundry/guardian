@@ -119,43 +119,6 @@ var _ = Describe("VolumeProvider", func() {
 				It("returns the runtime spec from the VolumeCreator", func() {
 					Expect(runtimeSpec).To(Equal(specs.Spec{Version: "best-spec", Root: &specs.Root{Path: "/hello"}}))
 				})
-
-				Context("when the container is not usernamespaced", func() {
-					BeforeEach(func() {
-						containerSpec = garden.ContainerSpec{
-							Privileged: true,
-						}
-					})
-
-					It("would execute the correct root filesystem modifications", func() {
-						commands := cmdRunner.ExecutedCommands()
-						Expect(commands).To(HaveLen(2))
-						Expect(commands[0].Args).To(HaveLen(9))
-						Expect(commands[0].Args).To(ConsistOf("echo", "/hello", "0", "0", "0755", "true", "dev", "proc", "sys"))
-
-						Expect(commands[1].Args).To(HaveLen(7))
-						Expect(commands[1].Args).To(ConsistOf("echo", "/hello", "0", "0", "0777", "false", "tmp"))
-					})
-				})
-
-				Context("when the container is usernamespaced", func() {
-					BeforeEach(func() {
-						containerSpec = garden.ContainerSpec{
-							Privileged: false,
-						}
-					})
-
-					It("would execute the correct root filesystem modifications", func() {
-						commands := cmdRunner.ExecutedCommands()
-						Expect(commands).To(HaveLen(2))
-						Expect(commands[0].Args).To(HaveLen(9))
-						Expect(commands[0].Args).To(ConsistOf("echo", "/hello", "5", "5", "0755", "true", "dev", "proc", "sys"))
-
-						Expect(commands[1].Args).To(HaveLen(7))
-						Expect(commands[1].Args).To(ConsistOf("echo", "/hello", "5", "5", "0777", "false", "tmp"))
-					})
-				})
-
 			})
 		})
 
