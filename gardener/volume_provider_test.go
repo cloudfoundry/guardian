@@ -2,10 +2,7 @@ package gardener_test
 
 import (
 	"errors"
-	"fmt"
 	"net/url"
-	"os"
-	"os/exec"
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
@@ -20,22 +17,16 @@ import (
 
 var _ = Describe("VolumeProvider", func() {
 	var (
-		volumeCreator    *fakes.FakeVolumeCreator
-		volumeProvider   *gardener.VolumeProvider
-		cmdRunner        *fake_command_runner.FakeCommandRunner
-		mkdirCommandStub gardener.CommandFactory
-		logger           lager.Logger
+		volumeCreator  *fakes.FakeVolumeCreator
+		volumeProvider *gardener.VolumeProvider
+		cmdRunner      *fake_command_runner.FakeCommandRunner
+		logger         lager.Logger
 	)
 
 	BeforeEach(func() {
 		volumeCreator = new(fakes.FakeVolumeCreator)
 		cmdRunner = new(fake_command_runner.FakeCommandRunner)
-		mkdirCommandStub = func(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) *exec.Cmd {
-			args := []string{rootfsPath, fmt.Sprintf("%d", uid), fmt.Sprintf("%d", gid), fmt.Sprintf("%#o", mode), fmt.Sprintf("%t", recreate)}
-			args = append(args, paths...)
-			return exec.Command("echo", args...)
-		}
-		volumeProvider = gardener.NewVolumeProvider(volumeCreator, nil, mkdirCommandStub, cmdRunner, 5, 5)
+		volumeProvider = gardener.NewVolumeProvider(volumeCreator, nil, cmdRunner, 5, 5)
 		logger = lagertest.NewTestLogger("volume-provider-test")
 	})
 

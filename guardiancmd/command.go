@@ -33,7 +33,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
 	runcprivchecker "code.cloudfoundry.org/guardian/rundmc/peas/privchecker"
-	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	containerdprivchecker "code.cloudfoundry.org/guardian/rundmc/runcontainerd/privchecker"
@@ -464,7 +463,7 @@ func (cmd *CommonCommand) wireImagePlugin(commandRunner commandrunner.CommandRun
 		DefaultRootfs:              cmd.Containers.DefaultRootFS,
 	}
 
-	return gardener.NewVolumeProvider(imagePlugin, imagePlugin, gardener.CommandFactory(preparerootfs.Command), commandRunner, uid, gid)
+	return gardener.NewVolumeProvider(imagePlugin, imagePlugin, commandRunner, uid, gid)
 }
 
 func (cmd *CommonCommand) wireContainerizer(

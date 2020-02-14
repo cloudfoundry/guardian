@@ -71,7 +71,7 @@ func (f *LinuxFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 	}
 
 	noop := gardener.NoopVolumizer{}
-	return gardener.NewVolumeProvider(noop, noop, gardener.CommandFactory(preparerootfs.Command), f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
+	return gardener.NewVolumeProvider(noop, noop, f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
 }
 
 func wireEnvFunc() processes.EnvFunc {

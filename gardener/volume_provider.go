@@ -14,22 +14,20 @@ import (
 
 const RawRootFSScheme = "raw"
 
-type CommandFactory func(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) *exec.Cmd
+type CommandFactory func(ctrPID, uid, gid int, mode os.FileMode, recreate bool, paths ...string) *exec.Cmd
 
 type VolumeProvider struct {
 	VolumeCreator VolumeCreator
 	VolumeDestroyMetricsGC
-	prepareRootfsCmd func(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) *exec.Cmd
 	commandRunner    commandrunner.CommandRunner
 	ContainerRootUID int
 	ContainerRootGID int
 }
 
-func NewVolumeProvider(creator VolumeCreator, manager VolumeDestroyMetricsGC, prepareRootfsCmd CommandFactory, commandrunner commandrunner.CommandRunner, rootUID, rootGID int) *VolumeProvider {
+func NewVolumeProvider(creator VolumeCreator, manager VolumeDestroyMetricsGC, commandrunner commandrunner.CommandRunner, rootUID, rootGID int) *VolumeProvider {
 	return &VolumeProvider{
 		VolumeCreator:          creator,
 		VolumeDestroyMetricsGC: manager,
-		prepareRootfsCmd:       prepareRootfsCmd,
 		commandRunner:          commandrunner,
 		ContainerRootUID:       rootUID,
 		ContainerRootGID:       rootGID,
