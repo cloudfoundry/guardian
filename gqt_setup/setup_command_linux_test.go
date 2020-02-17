@@ -1,6 +1,7 @@
 package gqt_setup_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
@@ -65,7 +66,8 @@ var _ = Describe("gdn setup", func() {
 			mountpointCmd := exec.Command("mountpoint", "-q", cgroupsRoot+"/")
 			mountpointCmd.Stdout = GinkgoWriter
 			mountpointCmd.Stderr = GinkgoWriter
-			Expect(mountpointCmd.Run()).To(Succeed())
+
+			Expect(mountpointCmd.Run()).To(Succeed(), fmt.Sprintf("cgroupsRoot: %q,\n mounts: %s", cgroupsRoot, getMountTable()))
 		})
 
 		It("allows both OCI default and garden specific devices", func() {
@@ -145,4 +147,11 @@ func assertNotMounted(cgroupsRoot string) {
 	mountsFileContent, err := ioutil.ReadFile("/proc/self/mountinfo")
 	Expect(err).NotTo(HaveOccurred())
 	Expect(string(mountsFileContent)).NotTo(ContainSubstring(cgroupsRoot))
+}
+
+func getMountTable() string {
+	output, err := exec.Command("cat", "/proc/self/mountinfo").Output()
+	Expect(err).NotTo(HaveOccurred())
+
+	return string(output)
 }
