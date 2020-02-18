@@ -104,6 +104,10 @@ type GdnRunnerConfig struct {
 	StartupExpectedToFail bool
 	StorePath             string
 	PrivilegedStorePath   string
+
+	TCPKeepaliveTime     *int `flag:"tcp-keepalive-time"`
+	TCPKeepaliveInterval *int `flag:"tcp-keepalive-interval"`
+	TCPKeepaliveProbes   *int `flag:"tcp-keepalive-probes"`
 }
 
 func (c GdnRunnerConfig) connectionInfo() (string, string) {

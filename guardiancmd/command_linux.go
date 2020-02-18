@@ -28,6 +28,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/privchecker"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/signals"
+	"code.cloudfoundry.org/guardian/rundmc/sysctl"
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/guardian/throttle"
 	"code.cloudfoundry.org/idmapper"
@@ -249,6 +250,16 @@ func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
 func wireMounts() bundlerules.Mounts {
 	return bundlerules.Mounts{
 		MountOptionsGetter: bundlerules.UnprivilegedMountFlagsGetter,
+	}
+}
+
+func (cmd *CommonCommand) wireKernelParams() []rundmc.BundlerRule {
+	sysctl := sysctl.New()
+
+	return []rundmc.BundlerRule{
+		bundlerules.NewKernelParameter(sysctl, "net.ipv4.tcp_keepalive_time", cmd.Sysctl.TCPKeepaliveTime),
+		bundlerules.NewKernelParameter(sysctl, "net.ipv4.tcp_keepalive_intvl", cmd.Sysctl.TCPKeepaliveInterval),
+		bundlerules.NewKernelParameter(sysctl, "net.ipv4.tcp_keepalive_probes", cmd.Sysctl.TCPKeepaliveProbes),
 	}
 }
 

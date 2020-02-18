@@ -194,6 +194,12 @@ type CommonCommand struct {
 		Enabled       bool   `long:"enable-cpu-throttling" description:"Enable CPU throttling."`
 		CheckInterval uint32 `long:"cpu-throttling-check-interval" default:"15" description:"How often to check which apps need to get CPU throttled or not."`
 	} `group:"CPU Throttling"`
+
+	Sysctl struct {
+		TCPKeepaliveTime     uint32 `long:"tcp-keepalive-time" description:"The net.ipv4.tcp_keepalive_time sysctl parameter that will be used inside containers"`
+		TCPKeepaliveInterval uint32 `long:"tcp-keepalive-interval" description:"The net.ipv4.tcp_keepalive_intvl sysctl parameter that will be used inside containers"`
+		TCPKeepaliveProbes   uint32 `long:"tcp-keepalive-probes" description:"The net.ipv4.tcp_keepalive_probes sysctl parameter that will be used inside containers"`
+	} `group:"Sysctl"`
 }
 
 type commandWiring struct {
@@ -555,6 +561,9 @@ func (cmd *CommonCommand) wireContainerizer(
 			DisableSwapLimit: cmd.Limits.DisableSwapLimit,
 		},
 	}
+
+	bundleRules = append(bundleRules, cmd.wireKernelParams()...)
+
 	template := &rundmc.BundleTemplate{Rules: bundleRules}
 
 	bundleSaver := &goci.BundleSaver{}

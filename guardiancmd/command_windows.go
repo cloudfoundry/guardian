@@ -170,6 +170,10 @@ func containerdRuncRoot() string {
 	return ""
 }
 
+func (cmd *CommonCommand) wireKernelParams() []rundmc.BundlerRule {
+	return []rundmc.BundlerRule{}
+}
+
 func (cmd *CommonCommand) computeRuncRoot() string {
 	return ""
 }
