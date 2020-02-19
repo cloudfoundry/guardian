@@ -22,12 +22,29 @@ type MkdirChowner struct {
 }
 
 func (m MkdirChowner) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) error {
-	return m.CommandRunner.Run(m.Command(
+	stdout, err := os.Create("/var/vcap/data/garden/stdout")
+	if err != nil {
+		return err
+	}
+	defer stdout.Close()
+
+	stderr, err := os.Create("/var/vcap/data/garden/stderr")
+	if err != nil {
+		return err
+	}
+	defer stderr.Close()
+
+	cmd := m.Command(
 		rootFSPathFile,
 		uid,
 		gid,
 		mode,
 		recreate,
 		paths...,
-	))
+	)
+
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
+	return m.CommandRunner.Run(cmd)
 }

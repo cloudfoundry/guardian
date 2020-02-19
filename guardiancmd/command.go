@@ -681,7 +681,7 @@ func (cmd *CommonCommand) wireContainerizer(
 		return nil, nil, err
 	}
 
-	return rundmc.New(depot, template, ociRuntime, nstar, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper, cpuCgrouper), peaCleaner, nil
+	return rundmc.New(depot, template, ociRuntime, nstar, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper, cpuCgrouper, userLookupper, containersPidGetter), peaCleaner, nil
 }
 
 func (cmd *CommonCommand) useContainerd() bool {

@@ -267,6 +267,7 @@ var _ = Describe("Runcontainerd", func() {
 			fakeProcess *gardenfakes.FakeProcess
 			execProcess garden.Process
 			processIO   garden.ProcessIO
+			user        users.ExecUser
 		)
 
 		BeforeEach(func() {
@@ -300,10 +301,15 @@ var _ = Describe("Runcontainerd", func() {
 				Stdout: gbytes.NewBuffer(),
 				Stderr: gbytes.NewBuffer(),
 			}
+			user = users.ExecUser{
+				Uid:  1000,
+				Gid:  1001,
+				Home: "/home/alice",
+			}
 		})
 
 		JustBeforeEach(func() {
-			execProcess, execErr = runContainerd.Exec(logger, containerID, processSpec, processIO)
+			execProcess, execErr = runContainerd.Exec(logger, containerID, processSpec, users.ExecUser{}, processIO)
 		})
 
 		It("gets the bundle", func() {
@@ -314,12 +320,13 @@ var _ = Describe("Runcontainerd", func() {
 
 		It("delegates to execer", func() {
 			Expect(execer.ExecWithBndlCallCount()).To(Equal(1))
-			actualLogger, actualSandboxHandle, actualBundle, actualProcessSpec, actualIO := execer.ExecWithBndlArgsForCall(0)
+			actualLogger, actualSandboxHandle, actualBundle, actualProcessSpec, actualUser, actualIO := execer.ExecWithBndlArgsForCall(0)
 			Expect(actualLogger).To(Equal(logger))
 			Expect(actualSandboxHandle).To(Equal(containerID))
 			Expect(actualBundle).To(Equal(bundle))
 			Expect(actualProcessSpec).To(Equal(processSpec))
 			Expect(actualIO).To(Equal(processIO))
+			Expect(actualUser).To(Equal(user))
 			Expect(execProcess).To(Equal(fakeProcess))
 		})
 

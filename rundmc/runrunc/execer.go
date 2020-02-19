@@ -29,14 +29,16 @@ func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer
 		bundleLoader:   bundleLoader,
 		processBuilder: processBuilder,
 		mkdirer:        mkdirer,
-		userLookupper:  userLookupper,
-		execRunner:     execRunner,
-		pidGetter:      pidGetter,
+		//TODO remove
+		userLookupper: userLookupper,
+		execRunner:    execRunner,
+		//TODO remove
+		pidGetter: pidGetter,
 	}
 }
 
 // Exec a process in a bundle using 'runc exec'
-func (e *Execer) Exec(log lager.Logger, sandboxHandle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+func (e *Execer) Exec(log lager.Logger, sandboxHandle string, spec garden.ProcessSpec, user users.ExecUser, io garden.ProcessIO) (garden.Process, error) {
 	log = log.Session("exec", lager.Data{"path": spec.Path})
 
 	log.Info("start")
@@ -48,10 +50,10 @@ func (e *Execer) Exec(log lager.Logger, sandboxHandle string, spec garden.Proces
 		return nil, err
 	}
 
-	return e.ExecWithBndl(log, sandboxHandle, bundle, spec, io)
+	return e.ExecWithBndl(log, sandboxHandle, bundle, spec, user, io)
 }
 
-func (e *Execer) ExecWithBndl(log lager.Logger, sandboxHandle string, bundle goci.Bndl, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+func (e *Execer) ExecWithBndl(log lager.Logger, sandboxHandle string, bundle goci.Bndl, spec garden.ProcessSpec, user users.ExecUser, io garden.ProcessIO) (garden.Process, error) {
 	log = log.Session("exec-with-bndl", lager.Data{"path": spec.Path})
 
 	log.Info("start")
@@ -64,11 +66,6 @@ func (e *Execer) ExecWithBndl(log lager.Logger, sandboxHandle string, bundle goc
 	}
 
 	rootfsPath := filepath.Join("/proc", strconv.Itoa(ctrInitPid), "root")
-	user, err := e.userLookupper.Lookup(rootfsPath, spec.User)
-	if err != nil {
-		log.Error("user-lookup-failed", err)
-		return nil, err
-	}
 
 	hostUID := idmapper.MappingList(bundle.Spec.Linux.UIDMappings).Map(user.Uid)
 	hostGID := idmapper.MappingList(bundle.Spec.Linux.GIDMappings).Map(user.Gid)

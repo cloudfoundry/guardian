@@ -105,13 +105,6 @@ var _ = Describe("Execer", func() {
 			Expect(execErr).NotTo(HaveOccurred())
 		})
 
-		It("looks up the user", func() {
-			Expect(userLookupper.LookupCallCount()).To(Equal(1))
-			rootfsPath, username := userLookupper.LookupArgsForCall(0)
-			Expect(rootfsPath).To(Equal(filepath.Join("/proc", "1234", "root")))
-			Expect(username).To(Equal(spec.User))
-		})
-
 		It("sets up the working directory", func() {
 			Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
 			rootfsPath, hostUID, hostGID, mode, shouldRecreate, workDir := mkdirer.MkdirAsArgsForCall(0)
@@ -227,7 +220,7 @@ var _ = Describe("Execer", func() {
 
 	Describe("Exec", func() {
 		JustBeforeEach(func() {
-			_, execErr = execer.Exec(logger, id, spec, pio)
+			_, execErr = execer.Exec(logger, id, spec, users.ExecUser{}, pio)
 		})
 
 		It("loads the bundle", func() {
@@ -251,7 +244,7 @@ var _ = Describe("Execer", func() {
 
 	Describe("ExecWithBndl", func() {
 		JustBeforeEach(func() {
-			_, execErr = execer.ExecWithBndl(logger, id, bndl, spec, pio)
+			_, execErr = execer.ExecWithBndl(logger, id, bndl, spec, users.ExecUser{}, pio)
 		})
 
 		testExec()

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/dropsonde/metrics"
 )
@@ -28,6 +31,7 @@ import (
 //go:generate counterfeiter . PeaUsernameResolver
 //go:generate counterfeiter . RuntimeStopper
 //go:generate counterfeiter . CPUCgrouper
+//go:generate counterfeiter . PidGetter
 
 type Depot interface {
 	Destroy(log lager.Logger, handle string) error
@@ -51,7 +55,7 @@ type State struct {
 
 type OCIRuntime interface {
 	Create(log lager.Logger, id string, bundle goci.Bndl, io garden.ProcessIO) error
-	Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	Exec(log lager.Logger, id string, spec garden.ProcessSpec, user users.ExecUser, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, id, processId string, io garden.ProcessIO) (garden.Process, error)
 	Delete(log lager.Logger, id string) error
 	State(log lager.Logger, id string) (State, error)
@@ -100,6 +104,10 @@ type CPUCgrouper interface {
 	ReadBadCgroupUsage(handle string) (garden.ContainerCPUStat, error)
 }
 
+type PidGetter interface {
+	GetPid(log lager.Logger, containerHandle string) (int, error)
+}
+
 // Containerizer knows how to manage a depot of container bundles
 type Containerizer struct {
 	depot                  Depot
@@ -114,6 +122,8 @@ type Containerizer struct {
 	cpuEntitlementPerShare float64
 	runtimeStopper         RuntimeStopper
 	cpuCgrouper            CPUCgrouper
+	userLookupper          users.UserLookupper
+	pidGetter              PidGetter
 }
 
 func New(
@@ -129,12 +139,15 @@ func New(
 	cpuEntitlementPerShare float64,
 	runtimeStopper RuntimeStopper,
 	cpuCgrouper CPUCgrouper,
+	userLookupper users.UserLookupper,
+	pidGetter PidGetter,
 ) *Containerizer {
 	containerizer := &Containerizer{
 		depot:                  depot,
 		bundler:                bundler,
 		runtime:                runtime,
 		nstar:                  nstarRunner,
+		userLookupper:          userLookupper,
 		processesStopper:       processesStopper,
 		events:                 events,
 		states:                 states,
@@ -143,6 +156,7 @@ func New(
 		cpuEntitlementPerShare: cpuEntitlementPerShare,
 		runtimeStopper:         runtimeStopper,
 		cpuCgrouper:            cpuCgrouper,
+		pidGetter:              pidGetter,
 	}
 	return containerizer
 }
@@ -216,7 +230,19 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 		return nil, err
 	}
 
-	return c.runtime.Exec(log, handle, spec, io)
+	ctrInitPid, err := c.pidGetter.GetPid(log, handle)
+	if err != nil {
+		log.Error("read-pidfile-failed", err)
+		return nil, err
+	}
+
+	rootfsPath := filepath.Join("/proc", strconv.Itoa(ctrInitPid), "root")
+	user, err := c.userLookupper.Lookup(rootfsPath, spec.User)
+	if err != nil {
+		log.Error("user-lookup-failed", err)
+		return nil, err
+	}
+	return c.runtime.Exec(log, handle, spec, *user, io)
 }
 
 func isPea(spec garden.ProcessSpec) bool {

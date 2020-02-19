@@ -7,6 +7,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
+	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -27,14 +28,15 @@ type FakeExecer struct {
 		result1 garden.Process
 		result2 error
 	}
-	ExecWithBndlStub        func(lager.Logger, string, goci.Bndl, garden.ProcessSpec, garden.ProcessIO) (garden.Process, error)
+	ExecWithBndlStub        func(lager.Logger, string, goci.Bndl, garden.ProcessSpec, users.ExecUser, garden.ProcessIO) (garden.Process, error)
 	execWithBndlMutex       sync.RWMutex
 	execWithBndlArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 string
 		arg3 goci.Bndl
 		arg4 garden.ProcessSpec
-		arg5 garden.ProcessIO
+		arg5 users.ExecUser
+		arg6 garden.ProcessIO
 	}
 	execWithBndlReturns struct {
 		result1 garden.Process
@@ -114,7 +116,7 @@ func (fake *FakeExecer) AttachReturnsOnCall(i int, result1 garden.Process, resul
 	}{result1, result2}
 }
 
-func (fake *FakeExecer) ExecWithBndl(arg1 lager.Logger, arg2 string, arg3 goci.Bndl, arg4 garden.ProcessSpec, arg5 garden.ProcessIO) (garden.Process, error) {
+func (fake *FakeExecer) ExecWithBndl(arg1 lager.Logger, arg2 string, arg3 goci.Bndl, arg4 garden.ProcessSpec, arg5 users.ExecUser, arg6 garden.ProcessIO) (garden.Process, error) {
 	fake.execWithBndlMutex.Lock()
 	ret, specificReturn := fake.execWithBndlReturnsOnCall[len(fake.execWithBndlArgsForCall)]
 	fake.execWithBndlArgsForCall = append(fake.execWithBndlArgsForCall, struct {
@@ -122,12 +124,13 @@ func (fake *FakeExecer) ExecWithBndl(arg1 lager.Logger, arg2 string, arg3 goci.B
 		arg2 string
 		arg3 goci.Bndl
 		arg4 garden.ProcessSpec
-		arg5 garden.ProcessIO
-	}{arg1, arg2, arg3, arg4, arg5})
-	fake.recordInvocation("ExecWithBndl", []interface{}{arg1, arg2, arg3, arg4, arg5})
+		arg5 users.ExecUser
+		arg6 garden.ProcessIO
+	}{arg1, arg2, arg3, arg4, arg5, arg6})
+	fake.recordInvocation("ExecWithBndl", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6})
 	fake.execWithBndlMutex.Unlock()
 	if fake.ExecWithBndlStub != nil {
-		return fake.ExecWithBndlStub(arg1, arg2, arg3, arg4, arg5)
+		return fake.ExecWithBndlStub(arg1, arg2, arg3, arg4, arg5, arg6)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -142,17 +145,17 @@ func (fake *FakeExecer) ExecWithBndlCallCount() int {
 	return len(fake.execWithBndlArgsForCall)
 }
 
-func (fake *FakeExecer) ExecWithBndlCalls(stub func(lager.Logger, string, goci.Bndl, garden.ProcessSpec, garden.ProcessIO) (garden.Process, error)) {
+func (fake *FakeExecer) ExecWithBndlCalls(stub func(lager.Logger, string, goci.Bndl, garden.ProcessSpec, users.ExecUser, garden.ProcessIO) (garden.Process, error)) {
 	fake.execWithBndlMutex.Lock()
 	defer fake.execWithBndlMutex.Unlock()
 	fake.ExecWithBndlStub = stub
 }
 
-func (fake *FakeExecer) ExecWithBndlArgsForCall(i int) (lager.Logger, string, goci.Bndl, garden.ProcessSpec, garden.ProcessIO) {
+func (fake *FakeExecer) ExecWithBndlArgsForCall(i int) (lager.Logger, string, goci.Bndl, garden.ProcessSpec, users.ExecUser, garden.ProcessIO) {
 	fake.execWithBndlMutex.RLock()
 	defer fake.execWithBndlMutex.RUnlock()
 	argsForCall := fake.execWithBndlArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6
 }
 
 func (fake *FakeExecer) ExecWithBndlReturns(result1 garden.Process, result2 error) {

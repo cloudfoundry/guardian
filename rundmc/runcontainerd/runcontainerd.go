@@ -53,7 +53,7 @@ type ProcessBuilder interface {
 
 //go:generate counterfeiter . Execer
 type Execer interface {
-	ExecWithBndl(log lager.Logger, id string, bndl goci.Bndl, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	ExecWithBndl(log lager.Logger, id string, bndl goci.Bndl, spec garden.ProcessSpec, user users.ExecUser, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, id string, processId string, io garden.ProcessIO) (garden.Process, error)
 }
 
@@ -147,22 +147,17 @@ func updateAnnotationsIfNeeded(bundle *goci.Bndl) {
 	}
 }
 
-func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcessSpec garden.ProcessSpec, gardenIO garden.ProcessIO) (garden.Process, error) {
+func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcessSpec garden.ProcessSpec, resolvedUser users.ExecUser, gardenIO garden.ProcessIO) (garden.Process, error) {
 	bundle, err := r.getBundle(log, containerID)
 	if err != nil {
 		return nil, err
 	}
 
 	if !r.useContainerdForProcesses {
-		return r.execer.ExecWithBndl(log, containerID, bundle, gardenProcessSpec, gardenIO)
+		return r.execer.ExecWithBndl(log, containerID, bundle, gardenProcessSpec, resolvedUser, gardenIO)
 	}
 
 	containerPid, err := r.containerManager.GetContainerPID(log, containerID)
-	if err != nil {
-		return nil, err
-	}
-
-	resolvedUser, err := r.userLookupper.Lookup(fmt.Sprintf("/proc/%d/root", containerPid), gardenProcessSpec.User)
 	if err != nil {
 		return nil, err
 	}
