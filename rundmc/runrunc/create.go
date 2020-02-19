@@ -53,7 +53,12 @@ func (c *Creator) Create(log lager.Logger, id string, bundle goci.Bndl, pio gard
 }
 
 func (c *Creator) CreatePea(log lager.Logger, id string, sandboxId string, bundle goci.Bndl, pio garden.ProcessIO) error {
-	return nil
+	bundlePath, err := c.depot.CreatePea(log, sandboxId, id, bundle)
+	if err != nil {
+		log.Error("depot-create-failed", err)
+		return err
+	}
+	return c.create(log, id, bundle, pio, bundlePath)
 }
 
 func (c *Creator) create(log lager.Logger, id string, bundle goci.Bndl, pio garden.ProcessIO, bundlePath string) error {

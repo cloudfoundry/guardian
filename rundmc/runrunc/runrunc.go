@@ -33,6 +33,7 @@ type RuncBinary interface {
 //go:generate counterfeiter . Depot
 type Depot interface {
 	Create(log lager.Logger, handle string, bundle goci.Bndl) (string, error)
+	CreatePea(log lager.Logger, sandboxHandle, handle string, bundle goci.Bndl) (string, error)
 	CreatedTime(log lager.Logger, handle string) (time.Time, error)
 	Lookup(log lager.Logger, handle string) (path string, err error)
 	Load(log lager.Logger, handle string) (bundle goci.Bndl, err error)

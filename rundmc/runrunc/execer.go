@@ -51,6 +51,8 @@ func (e *Execer) Exec(log lager.Logger, sandboxHandle string, spec garden.Proces
 	return e.ExecWithBndl(log, sandboxHandle, bundle, spec, io)
 }
 
+//depot/container-id/processes/pea-id/processes/pea-process-id
+
 func (e *Execer) ExecWithBndl(log lager.Logger, sandboxHandle string, bundle goci.Bndl, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	log = log.Session("exec-with-bndl", lager.Data{"path": spec.Path})
 

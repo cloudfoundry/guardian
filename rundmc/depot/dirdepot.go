@@ -70,6 +70,31 @@ func (d *DirectoryDepot) Create(log lager.Logger, handle string, bundle goci.Bnd
 	return containerDir, nil
 }
 
+func (d *DirectoryDepot) CreatePea(log lager.Logger, sandboxHandle, handle string, bundle goci.Bndl) (string, error) {
+	log = log.Session("depot-create", lager.Data{"handle": handle})
+
+	log.Info("started")
+	defer log.Info("finished")
+
+	containerDir := d.toPeaDir(sandboxHandle, handle)
+	if err := os.MkdirAll(containerDir, 0755); err != nil {
+		log.Error("mkdir-failed", err, lager.Data{"path": containerDir})
+		return "", err
+	}
+
+	errs := func(msg string, err error) error {
+		removeOrLog(log, containerDir)
+		log.Error(msg, err, lager.Data{"path": containerDir})
+		return err
+	}
+
+	if err := d.bundleSaver.Save(bundle, containerDir); err != nil {
+		return "", errs("create-failed", err)
+	}
+
+	return containerDir, nil
+}
+
 func (d *DirectoryDepot) CreatedTime(log lager.Logger, handle string) (time.Time, error) {
 	dir, err := d.Lookup(log, handle)
 	if err != nil {
@@ -104,10 +129,38 @@ func (d *DirectoryDepot) Lookup(log lager.Logger, handle string) (string, error)
 	defer log.Debug("finished")
 
 	if _, err := os.Stat(d.toDir(handle)); err != nil {
+		if os.IsNotExist(err) {
+			peaBundlePath, err := d.lookupPea(log, handle)
+			if err != nil {
+				return "", err
+			}
+			return peaBundlePath, nil
+		}
 		return "", ErrDoesNotExist
 	}
 
 	return d.toDir(handle), nil
+}
+
+func (d *DirectoryDepot) lookupPea(log lager.Logger, peaId string) (string, error) {
+	log = log.Session("lookup", lager.Data{"peaId": peaId})
+
+	log.Debug("started")
+	defer log.Debug("finished")
+
+	sandboxDirs, err := ioutil.ReadDir(d.dir)
+	if err != nil {
+		return "", err
+	}
+
+	for _, sbDir := range sandboxDirs {
+		if _, err := os.Stat(d.toPeaDir(sbDir.Name(), peaId)); err != nil {
+			continue
+		}
+		return d.toPeaDir(sbDir.Name(), peaId), nil
+	}
+
+	return "", ErrDoesNotExist
 }
 
 func (d *DirectoryDepot) Destroy(log lager.Logger, handle string) error {
@@ -116,7 +169,12 @@ func (d *DirectoryDepot) Destroy(log lager.Logger, handle string) error {
 	log.Info("started")
 	defer log.Info("finished")
 
-	return os.RemoveAll(d.toDir(handle))
+	handlePath, err := d.Lookup(log, handle)
+	if err != nil {
+		return err
+	}
+
+	return os.RemoveAll(handlePath)
 }
 
 func (d *DirectoryDepot) GetDir() string {
@@ -138,6 +196,10 @@ func (d *DirectoryDepot) Handles() ([]string, error) {
 
 func (d *DirectoryDepot) toDir(handle string) string {
 	return filepath.Join(d.dir, handle)
+}
+
+func (d *DirectoryDepot) toPeaDir(sandboxHandle, handle string) string {
+	return filepath.Join(d.dir, sandboxHandle, "processes", handle)
 }
 
 func removeOrLog(log lager.Logger, path string) {

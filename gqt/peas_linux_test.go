@@ -17,7 +17,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 )
 
-var _ = Describe("Partially shared containers (peas)", func() {
+var _ = FDescribe("Partially shared containers (peas)", func() {
 	var (
 		gdn           *runner.RunningGarden
 		peaRootfs     string
