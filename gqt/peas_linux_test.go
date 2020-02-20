@@ -17,7 +17,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 )
 
-var _ = FDescribe("Partially shared containers (peas)", func() {
+var _ = Describe("Partially shared containers (peas)", func() {
 	var (
 		gdn           *runner.RunningGarden
 		peaRootfs     string
@@ -276,9 +276,9 @@ var _ = FDescribe("Partially shared containers (peas)", func() {
 				skipIfContainerdForProcesses("There is no process directory in the depot when processes are run via containerd")
 			})
 
-			It("should not delete pea process dir", func() {
-				Expect(processPath).To(BeADirectory())
-			})
+			// It("should not delete pea process dir", func() {
+			// 	Expect(processPath).To(BeADirectory())
+			// })
 
 			Context("when --cleanup-process-dirs-on-wait is set", func() {
 				BeforeEach(func() {

@@ -91,6 +91,7 @@ func (d *DirectoryDepot) CreatePea(log lager.Logger, sandboxHandle, handle strin
 	if err := d.bundleSaver.Save(bundle, containerDir); err != nil {
 		return "", errs("create-failed", err)
 	}
+	log.Debug("pea-created", lager.Data{"path": containerDir})
 
 	return containerDir, nil
 }
@@ -128,15 +129,13 @@ func (d *DirectoryDepot) Lookup(log lager.Logger, handle string) (string, error)
 	log.Debug("started")
 	defer log.Debug("finished")
 
+	fmt.Printf("d.toDir(handle) = %+v\n", d.toDir(handle))
 	if _, err := os.Stat(d.toDir(handle)); err != nil {
+		fmt.Printf("XXXXerr = %+v\n", err)
 		if os.IsNotExist(err) {
-			peaBundlePath, err := d.lookupPea(log, handle)
-			if err != nil {
-				return "", err
-			}
-			return peaBundlePath, nil
+			return d.lookupPea(log, handle)
 		}
-		return "", ErrDoesNotExist
+		return "", err
 	}
 
 	return d.toDir(handle), nil
@@ -170,6 +169,9 @@ func (d *DirectoryDepot) Destroy(log lager.Logger, handle string) error {
 	defer log.Info("finished")
 
 	handlePath, err := d.Lookup(log, handle)
+	if err == ErrDoesNotExist {
+		return nil
+	}
 	if err != nil {
 		return err
 	}

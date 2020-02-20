@@ -34,6 +34,7 @@ func (p peaProcess) Wait() (int, error) {
 		return -1, err
 	}
 
+	p.logger.Debug("pea-wait", lager.Data{"peaContainerHandle": p.peaContainerHandle})
 	if err := p.gardener.destroy(p.logger, p.peaContainerHandle); err != nil {
 		p.logger.Error("process-cleanup", err)
 	}

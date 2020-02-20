@@ -466,8 +466,10 @@ func (r *RunningGarden) DestroyContainers() error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("containers = %+v\n", containers)
 
 	for _, container := range containers {
+		fmt.Printf("container = %+v\n", container.Handle())
 		if destroyErr := r.Destroy(container.Handle()); destroyErr != nil {
 			err = multierror.Append(destroyErr)
 		}
