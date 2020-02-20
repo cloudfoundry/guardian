@@ -17,36 +17,27 @@ var _ = Describe("Mkdirtests", func() {
 	var (
 		tmpDir         string
 		dirToCreate    string
-		perms          string
 		stdout, stderr io.Writer
 		runerr         error
-		args           []string
+		cmd            *exec.Cmd
 	)
 
 	BeforeEach(func() {
 		var err error
 		tmpDir, err = ioutil.TempDir("", "mkdir")
+		Expect(err).NotTo(HaveOccurred())
+
 		dirToCreate = filepath.Join(tmpDir, "myNewDir")
-		perms = "0775"
 		stdout = GinkgoWriter
 		stderr = GinkgoWriter
 		runerr = nil
 
-		Expect(err).NotTo(HaveOccurred())
+		cmd = exec.Command(mkdirbinpath, dirToCreate)
+		cmd.Stdout = stdout
+		cmd.Stderr = stderr
 	})
 
 	JustBeforeEach(func() {
-		args = []string{}
-		if dirToCreate != "" {
-			args = append(args, "-path", dirToCreate)
-		}
-		if perms != "" {
-			args = append(args, "-perm", perms)
-		}
-
-		cmd := exec.Command(mkdirbinpath, args...)
-		cmd.Stdout = stdout
-		cmd.Stderr = stderr
 		runerr = cmd.Run()
 	})
 
@@ -54,46 +45,39 @@ var _ = Describe("Mkdirtests", func() {
 		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
-	When("path isn't passed", func() {
+	It("creates a valid directory path", func() {
+		Expect(runerr).NotTo(HaveOccurred())
+		Expect(dirToCreate).To(BeADirectory())
+	})
+
+	It("sets default directory permissions", func() {
+		Expect(runerr).NotTo(HaveOccurred())
+		stat, err := os.Stat(dirToCreate)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0755)))
+	})
+
+	When("path is an empty string", func() {
 		BeforeEach(func() {
-			dirToCreate = ""
-			stderr = gbytes.NewBuffer()
+			cmd.Args[1] = ""
+			cmd.Stderr = gbytes.NewBuffer()
 		})
 
-		It("fails if no argument is passed", func() {
+		It("fails", func() {
 			Expect(runerr).To(HaveOccurred())
-			Expect(stderr).To(gbytes.Say("usage"))
+			Expect(cmd.Stderr).To(gbytes.Say("usage"))
 		})
 	})
 
-	When("valid args are passed", func() {
+	When("no args are passed", func() {
 		BeforeEach(func() {
-			perms = "0700"
+			cmd.Args = cmd.Args[:0]
+			cmd.Stderr = gbytes.NewBuffer()
 		})
 
-		It("creates a valid directory path", func() {
-			Expect(runerr).NotTo(HaveOccurred())
-			Expect(dirToCreate).To(BeADirectory())
-		})
-
-		It("sets directory permissions as given", func() {
-			Expect(runerr).NotTo(HaveOccurred())
-			stat, err := os.Stat(dirToCreate)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0700)))
-		})
-	})
-
-	When("perms isn't passed", func() {
-		BeforeEach(func() {
-			perms = ""
-		})
-
-		It("sets directory permissions with the default 0755", func() {
-			Expect(runerr).NotTo(HaveOccurred())
-			stat, err := os.Stat(dirToCreate)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0755)))
+		It("fails", func() {
+			Expect(runerr).To(HaveOccurred())
+			Expect(cmd.Stderr).To(gbytes.Say("usage"))
 		})
 	})
 
@@ -102,9 +86,9 @@ var _ = Describe("Mkdirtests", func() {
 			parentDir string
 		)
 		BeforeEach(func() {
-			perms = "0750"
 			parentDir = filepath.Join(tmpDir, "parentDir")
 			dirToCreate = filepath.Join(parentDir, "anotherDir")
+			cmd.Args[1] = dirToCreate
 		})
 
 		It("creates them", func() {
@@ -113,11 +97,11 @@ var _ = Describe("Mkdirtests", func() {
 			Expect(dirToCreate).To(BeADirectory())
 		})
 
-		It("sets the perms on all created dirs", func() {
+		It("sets the default perms on all created dirs", func() {
 			Expect(runerr).NotTo(HaveOccurred())
 			stat, err := os.Stat(parentDir)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0750)))
+			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0755)))
 		})
 	})
 
@@ -131,6 +115,7 @@ var _ = Describe("Mkdirtests", func() {
 			linkToParent := filepath.Join(tmpDir, "linkToParent")
 			Expect(os.Symlink(parentDir, linkToParent)).To(Succeed())
 			dirToCreate = filepath.Join(linkToParent, "anotherDir")
+			cmd.Args[1] = dirToCreate
 		})
 
 		It("creates them", func() {

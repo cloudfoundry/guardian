@@ -1,32 +1,33 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 )
 
-const usage = "usage: mkdirer -path <path> -perm <perms>"
+const (
+	usage              = "usage: mkdirer <path>"
+	defaultPermissions = os.FileMode(0755)
+)
 
 func main() {
-	var path = flag.String("path", "", "directory path to create")
-	var perm = flag.Uint("perm", 0755, "Mode to create the directory with")
-	// var recreate = flag.Bool("recreate", false, "whether to delete the directory before (re-)creating it")
+	if len(os.Args) != 2 {
+		fmt.Fprintln(os.Stderr, usage)
+		os.Exit(1)
+	}
+	var path = os.Args[1]
 
-	flag.Parse()
-
-	if *path == "" {
+	if path == "" {
 		fmt.Fprintln(os.Stderr, usage)
 		os.Exit(1)
 	}
 
-	err := mkdir(*path, os.FileMode(*perm))
+	err := mkdir(path, defaultPermissions)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not mkdir %q: %v\n", *path, err)
+		fmt.Fprintf(os.Stderr, "could not mkdir %q: %v\n", path, err)
 		os.Exit(3)
 	}
-
 }
 
 func mkdir(path string, mode os.FileMode) error {
@@ -57,7 +58,8 @@ func isSymlink(stat os.FileInfo) bool {
 func mustReadSymlink(path string) string {
 	path, err := os.Readlink(path)
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "could not read symlink %q: %v\n", path, err)
+		os.Exit(2)
 	}
 
 	return path
