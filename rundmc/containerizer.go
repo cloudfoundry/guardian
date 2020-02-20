@@ -124,6 +124,7 @@ type Containerizer struct {
 	cpuCgrouper            CPUCgrouper
 	userLookupper          users.UserLookupper
 	pidGetter              PidGetter
+	mkdirerPath            string
 }
 
 func New(
@@ -141,6 +142,7 @@ func New(
 	cpuCgrouper CPUCgrouper,
 	userLookupper users.UserLookupper,
 	pidGetter PidGetter,
+	mkdirerPath string,
 ) *Containerizer {
 	containerizer := &Containerizer{
 		depot:                  depot,
@@ -157,6 +159,7 @@ func New(
 		runtimeStopper:         runtimeStopper,
 		cpuCgrouper:            cpuCgrouper,
 		pidGetter:              pidGetter,
+		mkdirerPath:            mkdirerPath,
 	}
 	return containerizer
 }
@@ -242,7 +245,27 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 		log.Error("user-lookup-failed", err)
 		return nil, err
 	}
+
+	if err := c.createWorkingDir(log, handle, spec.Dir); err != nil {
+		log.Error("create-working-dir-failed", err)
+		return nil, err
+	}
+
 	return c.runtime.Exec(log, handle, spec, *user, io)
+}
+
+func (c *Containerizer) createWorkingDir(log lager.Logger, handle string, path string) error {
+	mkdirSpec := garden.ProcessSpec{
+		Path: c.mkdirerPath,
+		Args: []string{path},
+		Dir:  "/",
+	}
+
+	_, err := c.runtime.Exec(log, handle, mkdirSpec, users.ExecUser{Uid: users.DefaultUID, Gid: users.DefaultGID}, garden.ProcessIO{})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func isPea(spec garden.ProcessSpec) bool {

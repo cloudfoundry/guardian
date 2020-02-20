@@ -198,6 +198,16 @@ func initBindMountAndPath(initPathOnHost string) (specs.Mount, string) {
 	}, initPathInContainer
 }
 
+func mkdirerBindMountAndPath(mkdirerPathOnHost string) (specs.Mount, string) {
+	mkdirerPathInContainer := filepath.Join("/tmp", "mkdirer")
+	return specs.Mount{
+		Type:        "bind",
+		Source:      mkdirerPathOnHost,
+		Destination: mkdirerPathInContainer,
+		Options:     []string{"bind"},
+	}, mkdirerPathInContainer
+}
+
 func defaultBindMounts() []specs.Mount {
 	devptsGid := 0
 	if runningAsRoot() {

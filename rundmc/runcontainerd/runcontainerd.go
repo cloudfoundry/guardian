@@ -1,12 +1,9 @@
 package runcontainerd
 
 import (
-	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"regexp"
-	"strconv"
 
 	"code.cloudfoundry.org/guardian/rundmc"
 
@@ -15,7 +12,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/users"
-	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	apievents "github.com/containerd/containerd/api/events"
 	uuid "github.com/nu7hatch/gouuid"
@@ -85,9 +81,7 @@ type RunContainerd struct {
 	execer                    Execer
 	statser                   Statser
 	useContainerdForProcesses bool
-	userLookupper             users.UserLookupper
 	cgroupManager             CgroupManager
-	mkdirer                   Mkdirer
 	peaHandlesGetter          PeaHandlesGetter
 	cleanupProcessDirsOnWait  bool
 	runtimeStopper            RuntimeStopper
@@ -112,9 +106,7 @@ func New(containerManager ContainerManager,
 		execer:                    execer,
 		statser:                   statser,
 		useContainerdForProcesses: useContainerdForProcesses,
-		userLookupper:             userLookupper,
 		cgroupManager:             cgroupManager,
-		mkdirer:                   mkdirer,
 		peaHandlesGetter:          peaHandlesGetter,
 		cleanupProcessDirsOnWait:  cleanupProcessDirsOnWait,
 		runtimeStopper:            runtimeStopper,
@@ -147,34 +139,19 @@ func updateAnnotationsIfNeeded(bundle *goci.Bndl) {
 	}
 }
 
-func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcessSpec garden.ProcessSpec, resolvedUser users.ExecUser, gardenIO garden.ProcessIO) (garden.Process, error) {
+func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcessSpec garden.ProcessSpec, user users.ExecUser, gardenIO garden.ProcessIO) (garden.Process, error) {
 	bundle, err := r.getBundle(log, containerID)
 	if err != nil {
 		return nil, err
 	}
 
 	if !r.useContainerdForProcesses {
-		return r.execer.ExecWithBndl(log, containerID, bundle, gardenProcessSpec, resolvedUser, gardenIO)
+		return r.execer.ExecWithBndl(log, containerID, bundle, gardenProcessSpec, user, gardenIO)
 	}
 
-	containerPid, err := r.containerManager.GetContainerPID(log, containerID)
-	if err != nil {
-		return nil, err
-	}
-
-	rootfsPath := filepath.Join("/proc", strconv.FormatInt(int64(containerPid), 10), "root")
-
-	hostUID := idmapper.MappingList(bundle.Spec.Linux.UIDMappings).Map(resolvedUser.Uid)
-	hostGID := idmapper.MappingList(bundle.Spec.Linux.GIDMappings).Map(resolvedUser.Gid)
-
+	// TOOO: Move to containerizer
 	if gardenProcessSpec.Dir == "" {
-		gardenProcessSpec.Dir = resolvedUser.Home
-	}
-
-	err = r.mkdirer.MkdirAs(rootfsPath, hostUID, hostGID, 0755, false, gardenProcessSpec.Dir)
-	if err != nil {
-		log.Error("create-workdir-failed", err)
-		return nil, err
+		gardenProcessSpec.Dir = user.Home
 	}
 
 	if gardenProcessSpec.ID == "" {
@@ -182,14 +159,14 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 		if err != nil {
 			return nil, err
 		}
-		gardenProcessSpec.ID = fmt.Sprintf("%s", randomID)
+		gardenProcessSpec.ID = randomID.String()
 	}
 
 	processIO := func() (io.Reader, io.Writer, io.Writer, bool) {
 		return gardenIO.Stdin, gardenIO.Stdout, gardenIO.Stderr, gardenProcessSpec.TTY != nil
 	}
 
-	ociProcessSpec := r.processBuilder.BuildProcess(bundle, gardenProcessSpec, resolvedUser.Uid, resolvedUser.Gid)
+	ociProcessSpec := r.processBuilder.BuildProcess(bundle, gardenProcessSpec, user.Uid, user.Gid)
 	if err = r.containerManager.Exec(log, containerID, gardenProcessSpec.ID, ociProcessSpec, processIO); err != nil {
 		if isNoSuchExecutable(err) {
 			return nil, garden.ExecutableNotFoundError{Message: err.Error()}

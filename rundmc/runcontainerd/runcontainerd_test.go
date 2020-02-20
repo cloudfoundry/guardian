@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"os"
-	"path/filepath"
 
 	"code.cloudfoundry.org/guardian/rundmc"
 
@@ -309,7 +307,7 @@ var _ = Describe("Runcontainerd", func() {
 		})
 
 		JustBeforeEach(func() {
-			execProcess, execErr = runContainerd.Exec(logger, containerID, processSpec, users.ExecUser{}, processIO)
+			execProcess, execErr = runContainerd.Exec(logger, containerID, processSpec, user, processIO)
 		})
 
 		It("gets the bundle", func() {
@@ -406,31 +404,21 @@ var _ = Describe("Runcontainerd", func() {
 				Expect(actualProcessSpec.Args).To(Equal([]string{"test-binary"}))
 			})
 
-			It("creates the process with the resolved user", func() {
-				_, actualContainerId := containerManager.GetContainerPIDArgsForCall(0)
-				Expect(actualContainerId).To(Equal("container-id"))
+			// TODO: check if other tests chekc the user uid and gid
+			// It("creates the process with the resolved user", func() {
+			// 	_, actualContainerId := containerManager.GetContainerPIDArgsForCall(0)
+			// 	Expect(actualContainerId).To(Equal("container-id"))
 
-				Expect(userLookupper.LookupCallCount()).To(Equal(1))
-				passedRootfs, passedUserId := userLookupper.LookupArgsForCall(0)
-				Expect(passedUserId).To(Equal("alice"))
-				Expect(passedRootfs).To(Equal("/proc/1234/root"))
+			// 	Expect(userLookupper.LookupCallCount()).To(Equal(1))
+			// 	passedRootfs, passedUserId := userLookupper.LookupArgsForCall(0)
+			// 	Expect(passedUserId).To(Equal("alice"))
+			// 	Expect(passedRootfs).To(Equal("/proc/1234/root"))
 
-				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-				_, _, ociProcessUid, ociProcessGid := processBuilder.BuildProcessArgsForCall(0)
-				Expect(ociProcessUid).To(Equal(1000))
-				Expect(ociProcessGid).To(Equal(1001))
-			})
-
-			It("sets up the working directory", func() {
-				Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
-				rootfsPath, hostUID, hostGID, mode, shouldRecreate, workDir := mkdirer.MkdirAsArgsForCall(0)
-				Expect(rootfsPath).To(Equal(filepath.Join("/proc", "1234", "root")))
-				Expect(hostUID).To(Equal(2000))
-				Expect(hostGID).To(Equal(2001))
-				Expect(mode).To(Equal(os.FileMode(0755)))
-				Expect(shouldRecreate).To(BeFalse())
-				Expect(workDir).To(ConsistOf(processSpec.Dir))
-			})
+			// 	Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
+			// 	_, _, ociProcessUid, ociProcessGid := processBuilder.BuildProcessArgsForCall(0)
+			// 	Expect(ociProcessUid).To(Equal(1000))
+			// 	Expect(ociProcessGid).To(Equal(1001))
+			// })
 
 			It("gets the backing process", func() {
 				Expect(processManager.GetProcessCallCount()).To(Equal(1))
@@ -468,36 +456,6 @@ var _ = Describe("Runcontainerd", func() {
 
 				It("returns a garden.ExecutableNotFoundError error", func() {
 					Expect(execErr).To(BeAssignableToTypeOf(garden.ExecutableNotFoundError{}))
-				})
-			})
-
-			Context("when creating the work dir fails", func() {
-				BeforeEach(func() {
-					mkdirer.MkdirAsReturns(errors.New("HUBABUBA"))
-				})
-
-				It("propagates the error", func() {
-					Expect(execErr).To(MatchError("HUBABUBA"))
-				})
-			})
-
-			Context("when the user lookupper fails", func() {
-				BeforeEach(func() {
-					userLookupper.LookupReturns(nil, errors.New("user-lookup-failure"))
-				})
-
-				It("returns the error", func() {
-					Expect(execErr).To(MatchError("user-lookup-failure"))
-				})
-			})
-
-			Context("when getting the container PID fails", func() {
-				BeforeEach(func() {
-					containerManager.GetContainerPIDReturns(0, errors.New("get-container-pid-failure"))
-				})
-
-				It("returns the error", func() {
-					Expect(execErr).To(MatchError("get-container-pid-failure"))
 				})
 			})
 

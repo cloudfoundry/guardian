@@ -27,6 +27,8 @@ import (
 )
 
 var _ = Describe("Rundmc", func() {
+	const mkdirerPath = "/tmp/mkdirer"
+
 	var (
 		fakeDepot               *fakes.FakeDepot
 		fakeBundleGenerator     *fakes.FakeBundleGenerator
@@ -89,6 +91,7 @@ var _ = Describe("Rundmc", func() {
 			fakeCPUCgrouper,
 			fakeUserLookupper,
 			fakePidGetter,
+			mkdirerPath,
 		)
 	})
 
@@ -173,7 +176,7 @@ var _ = Describe("Rundmc", func() {
 			Expect(execUser).To(Equal(user))
 		})
 
-		FIt("looks up the user", func() {
+		It("looks up the user", func() {
 			_, err := containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello", User: "alice"}, garden.ProcessIO{})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -188,15 +191,49 @@ var _ = Describe("Rundmc", func() {
 				fakePidGetter.GetPidReturns(0, errors.New("failed-to-look-up-pid"))
 			})
 
-			FIt("should return an error", func() {
+			It("should return an error", func() {
 				_, err := containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello", User: "alice"}, garden.ProcessIO{})
 				Expect(err).To(MatchError("failed-to-look-up-pid"))
 			})
 		})
-		// It("should create the workdir before execing", func() {
-		// 	_, err := containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello", Dir: "/some/working/dir"}, garden.ProcessIO{})
-		// })
 
+		FDescribe("working dir", func() {
+			var fakeMkdirProcess *gardenfakes.FakeProcess
+
+			BeforeEach(func() {
+				fakeMkdirProcess = new(gardenfakes.FakeProcess)
+				fakeOCIRuntime.ExecReturnsOnCall(0, fakeMkdirProcess, nil)
+			})
+
+			It("creates the workdir before execing", func() {
+				_, err := containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello", Dir: "/some/working/dir"}, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeMkdirProcess.WaitCallCount()).To(Equal(1))
+				Expect(fakeOCIRuntime.ExecCallCount()).To(Equal(2))
+				_, actualHandle, actualProcessSpec, actualUser, _ := fakeOCIRuntime.ExecArgsForCall(0)
+				Expect(actualHandle).To(Equal("some-handle"))
+				Expect(actualProcessSpec).To(Equal(garden.ProcessSpec{
+					Path: mkdirerPath,
+					Args: []string{"/some/working/dir"},
+					Dir:  "/",
+				}))
+				Expect(actualUser.Uid).To(Equal(0))
+				Expect(actualUser.Gid).To(Equal(0))
+			})
+
+			When("running the mkdir process fails", func() {
+				BeforeEach(func() {
+					fakeOCIRuntime.ExecReturnsOnCall(0, nil, errors.New("mkdir-failure"))
+				})
+
+				It("returns the error", func() {
+					_, err := containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello", Dir: "/some/working/dir"}, garden.ProcessIO{})
+					Expect(err).To(MatchError("mkdir-failure"))
+				})
+			})
+
+		})
 		Context("when process has no image", func() {
 			It("doesn't create a pea", func() {
 				_, err := containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello"}, garden.ProcessIO{})
@@ -702,6 +739,7 @@ var _ = Describe("Rundmc", func() {
 					fakeCPUCgrouper,
 					fakeUserLookupper,
 					fakePidGetter,
+					mkdirerPath,
 				)
 			})
 

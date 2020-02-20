@@ -3,14 +3,10 @@ package runrunc
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"path/filepath"
-	"strconv"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/users"
-	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	uuid "github.com/nu7hatch/gouuid"
 )
@@ -18,22 +14,14 @@ import (
 type Execer struct {
 	bundleLoader   BundleLoader
 	processBuilder ProcessBuilder
-	mkdirer        Mkdirer
-	userLookupper  users.UserLookupper
 	execRunner     ExecRunner
-	pidGetter      PidGetter
 }
 
-func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookupper users.UserLookupper, execRunner ExecRunner, pidGetter PidGetter) *Execer {
+func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, execRunner ExecRunner) *Execer {
 	return &Execer{
 		bundleLoader:   bundleLoader,
 		processBuilder: processBuilder,
-		mkdirer:        mkdirer,
-		//TODO remove
-		userLookupper: userLookupper,
-		execRunner:    execRunner,
-		//TODO remove
-		pidGetter: pidGetter,
+		execRunner:     execRunner,
 	}
 }
 
@@ -55,29 +43,12 @@ func (e *Execer) Exec(log lager.Logger, sandboxHandle string, spec garden.Proces
 
 func (e *Execer) ExecWithBndl(log lager.Logger, sandboxHandle string, bundle goci.Bndl, spec garden.ProcessSpec, user users.ExecUser, io garden.ProcessIO) (garden.Process, error) {
 	log = log.Session("exec-with-bndl", lager.Data{"path": spec.Path})
-
 	log.Info("start")
 	defer log.Info("finished")
 
-	ctrInitPid, err := e.pidGetter.GetPid(log, sandboxHandle)
-	if err != nil {
-		log.Error("read-pidfile-failed", err)
-		return nil, err
-	}
-
-	rootfsPath := filepath.Join("/proc", strconv.Itoa(ctrInitPid), "root")
-
-	hostUID := idmapper.MappingList(bundle.Spec.Linux.UIDMappings).Map(user.Uid)
-	hostGID := idmapper.MappingList(bundle.Spec.Linux.GIDMappings).Map(user.Gid)
-
+	// TOOO: Move to containerizer
 	if spec.Dir == "" {
 		spec.Dir = user.Home
-	}
-
-	err = e.mkdirer.MkdirAs(rootfsPath, hostUID, hostGID, 0755, false, spec.Dir)
-	if err != nil {
-		log.Error("create-workdir-failed", err)
-		return nil, err
 	}
 
 	preparedSpec := e.processBuilder.BuildProcess(bundle, spec, user.Uid, user.Gid)
@@ -88,7 +59,7 @@ func (e *Execer) ExecWithBndl(log lager.Logger, sandboxHandle string, bundle goc
 		if err != nil {
 			return nil, err
 		}
-		processID = fmt.Sprintf("%s", randomID)
+		processID = randomID.String()
 	}
 
 	encodedSpec, err := json.Marshal(preparedSpec)
