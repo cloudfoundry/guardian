@@ -46,6 +46,7 @@ type GdnRunnerConfig struct {
 	GrootBin                 string
 	TarBin                   string `flag:"tar-bin"`
 	InitBin                  string `flag:"init-bin"`
+	MkdirerBin               string `flag:"mkdirer-bin"`
 	RuntimePluginBin         string `flag:"runtime-plugin"`
 	ImagePluginBin           string `flag:"image-plugin"`
 	PrivilegedImagePluginBin string `flag:"privileged-image-plugin"`
@@ -186,6 +187,7 @@ type Binaries struct {
 	Socket2me             string `json:"socket2me,omitempty"`
 	FakeRunc              string `json:"fake_runc,omitempty"`
 	FakeRuncStderr        string `json:"fake_runc_stderr,omitempty"`
+	Mkdirer               string `json:"mkdirer,omitempty"`
 }
 
 type GardenRunner struct {
@@ -240,8 +242,21 @@ func DefaultGdnRunnerConfig(binaries Binaries) GdnRunnerConfig {
 	config.StorePath = filepath.Join(config.TmpDir, "groot_store")
 	config.PrivilegedStorePath = filepath.Join(config.TmpDir, "groot_privileged_store")
 
-	config.ImagePluginExtraArgs = []string{`"--store"`, config.StorePath, `"--tardis-bin"`, binaries.Tardis, `"--log-level"`, "debug"}
-	config.PrivilegedImagePluginExtraArgs = []string{`"--store"`, config.PrivilegedStorePath, `"--tardis-bin"`, binaries.Tardis, `"--log-level"`, "debug"}
+	imagePluginConfig := `
+store: %s
+tardis_bin: %s
+log_level: debug
+
+create:
+  without_mount: true
+`
+	grootfsConfigPath := filepath.Join(config.TmpDir, "grootfs-config.yml")
+	Expect(ioutil.WriteFile(grootfsConfigPath, []byte(fmt.Sprintf(imagePluginConfig, config.StorePath, binaries.Tardis)), 0755)).To(Succeed())
+	privilegedGrootfsConfigPath := filepath.Join(config.TmpDir, "privileged-grootfs-config.yml")
+	Expect(ioutil.WriteFile(privilegedGrootfsConfigPath, []byte(fmt.Sprintf(imagePluginConfig, config.PrivilegedStorePath, binaries.Tardis)), 0755)).To(Succeed())
+
+	config.ImagePluginExtraArgs = []string{`"--config"`, grootfsConfigPath}
+	config.PrivilegedImagePluginExtraArgs = []string{`"--config"`, privilegedGrootfsConfigPath}
 	config.LogLevel = "debug"
 
 	return config

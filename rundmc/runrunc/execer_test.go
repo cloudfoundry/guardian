@@ -92,17 +92,6 @@ var _ = Describe("Execer", func() {
 			Expect(execErr).NotTo(HaveOccurred())
 		})
 
-		// It("sets up the working directory", func() {
-		// 	Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
-		// 	rootfsPath, hostUID, hostGID, mode, shouldRecreate, workDir := mkdirer.MkdirAsArgsForCall(0)
-		// 	Expect(rootfsPath).To(Equal(filepath.Join("/proc", "1234", "root")))
-		// 	Expect(hostUID).To(Equal(11))
-		// 	Expect(hostGID).To(Equal(22))
-		// 	Expect(mode).To(Equal(os.FileMode(0755)))
-		// 	Expect(shouldRecreate).To(BeFalse())
-		// 	Expect(workDir).To(ConsistOf(spec.Dir))
-		// })
-
 		It("builds a process", func() {
 			Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
 			actualBundle, actualProcessSpec, actualContainerUID, actualContainerGID := processBuilder.BuildProcessArgsForCall(0)
@@ -155,44 +144,6 @@ var _ = Describe("Execer", func() {
 				Expect(actualTTY).To(BeTrue())
 			})
 		})
-
-		// Context("when a working directory is not specified", func() {
-		// 	BeforeEach(func() {
-		// 		spec.Dir = ""
-		// 	})
-
-		// 	It("defaults the workdir to the user's home when setting it up", func() {
-		// 		Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
-		// 		_, _, _, _, _, workDir := mkdirer.MkdirAsArgsForCall(0)
-		// 		Expect(workDir).To(ConsistOf(user.Home))
-		// 	})
-
-		// 	It("defaults the workdir to the user's home when building a process", func() {
-		// 		Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-		// 		_, actualProcessSpec, _, _ := processBuilder.BuildProcessArgsForCall(0)
-		// 		Expect(actualProcessSpec.Dir).To(Equal(user.Home))
-		// 	})
-		// })
-
-		// Context("when user lookup fails", func() {
-		// 	BeforeEach(func() {
-		// 		userLookupper.LookupReturns(nil, errors.New("user-lookup"))
-		// 	})
-
-		// 	It("returns an error", func() {
-		// 		Expect(execErr).To(MatchError(ContainSubstring("user-lookup")))
-		// 	})
-		// })
-
-		// Context("when preparing the working directory fails", func() {
-		// 	BeforeEach(func() {
-		// 		mkdirer.MkdirAsReturns(errors.New("mkdir"))
-		// 	})
-
-		// 	It("returns an error", func() {
-		// 		Expect(execErr).To(MatchError(ContainSubstring("mkdir")))
-		// 	})
-		// })
 
 		Context("when running the process fails", func() {
 			BeforeEach(func() {

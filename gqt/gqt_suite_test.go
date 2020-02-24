@@ -223,6 +223,7 @@ func getGardenBinaries() runner.Binaries {
 		RuntimePlugin: goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_runtime_plugin"),
 		NoopPlugin:    goCompile("code.cloudfoundry.org/guardian/gqt/cmd/noop_plugin"),
 		FakeRunc:      goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc"),
+		Mkdirer:       goCompile("code.cloudfoundry.org/guardian/cmd/mkdir"),
 	}
 
 	gardenBinaries.PrivilegedImagePlugin = gardenBinaries.ImagePlugin + "-priv"
@@ -291,6 +292,7 @@ func defaultConfig() runner.GdnRunnerConfig {
 	cfg.NSTarBin = binaries.NSTar
 	cfg.ImagePluginBin = binaries.Groot
 	cfg.PrivilegedImagePluginBin = binaries.Groot
+	cfg.MkdirerBin = binaries.Mkdirer
 
 	return cfg
 }

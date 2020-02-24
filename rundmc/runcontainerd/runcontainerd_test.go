@@ -404,21 +404,12 @@ var _ = Describe("Runcontainerd", func() {
 				Expect(actualProcessSpec.Args).To(Equal([]string{"test-binary"}))
 			})
 
-			// TODO: check if other tests chekc the user uid and gid
-			// It("creates the process with the resolved user", func() {
-			// 	_, actualContainerId := containerManager.GetContainerPIDArgsForCall(0)
-			// 	Expect(actualContainerId).To(Equal("container-id"))
-
-			// 	Expect(userLookupper.LookupCallCount()).To(Equal(1))
-			// 	passedRootfs, passedUserId := userLookupper.LookupArgsForCall(0)
-			// 	Expect(passedUserId).To(Equal("alice"))
-			// 	Expect(passedRootfs).To(Equal("/proc/1234/root"))
-
-			// 	Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-			// 	_, _, ociProcessUid, ociProcessGid := processBuilder.BuildProcessArgsForCall(0)
-			// 	Expect(ociProcessUid).To(Equal(1000))
-			// 	Expect(ociProcessGid).To(Equal(1001))
-			// })
+			It("creates the process with the specified user", func() {
+				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
+				_, _, ociProcessUid, ociProcessGid := processBuilder.BuildProcessArgsForCall(0)
+				Expect(ociProcessUid).To(Equal(1000))
+				Expect(ociProcessGid).To(Equal(1001))
+			})
 
 			It("gets the backing process", func() {
 				Expect(processManager.GetProcessCallCount()).To(Equal(1))
@@ -466,18 +457,6 @@ var _ = Describe("Runcontainerd", func() {
 
 				It("returns the error", func() {
 					Expect(execErr).To(MatchError("error-execing"))
-				})
-			})
-
-			Context("when a working directory is not specified", func() {
-				BeforeEach(func() {
-					processSpec.Dir = ""
-				})
-
-				It("sets the spec dir to the user home dir if no dir specified", func() {
-					Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-					_, actualProcessSpec, _, _ := processBuilder.BuildProcessArgsForCall(0)
-					Expect(actualProcessSpec.Dir).To(Equal("/home/alice"))
 				})
 			})
 

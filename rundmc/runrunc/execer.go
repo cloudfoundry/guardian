@@ -46,11 +46,6 @@ func (e *Execer) ExecWithBndl(log lager.Logger, sandboxHandle string, bundle goc
 	log.Info("start")
 	defer log.Info("finished")
 
-	// TOOO: Move to containerizer
-	if spec.Dir == "" {
-		spec.Dir = user.Home
-	}
-
 	preparedSpec := e.processBuilder.BuildProcess(bundle, spec, user.Uid, user.Gid)
 
 	processID := spec.ID

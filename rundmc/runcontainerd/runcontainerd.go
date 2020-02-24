@@ -149,11 +149,6 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 		return r.execer.ExecWithBndl(log, containerID, bundle, gardenProcessSpec, user, gardenIO)
 	}
 
-	// TOOO: Move to containerizer
-	if gardenProcessSpec.Dir == "" {
-		gardenProcessSpec.Dir = user.Home
-	}
-
 	if gardenProcessSpec.ID == "" {
 		randomID, err := uuid.NewV4()
 		if err != nil {

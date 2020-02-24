@@ -142,7 +142,7 @@ var _ = Describe("Bind mount", func() {
 			mountMode = garden.BindMountModeRO
 		})
 
-		It("all users can read files", func() {
+		FIt("all users can read files", func() {
 			readProcess := userReadFile(container, dstPath, testFileName, "alice")
 			Expect(readProcess.Wait()).To(Equal(0))
 		})

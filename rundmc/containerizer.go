@@ -3,6 +3,7 @@ package rundmc
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -246,6 +247,10 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 		return nil, err
 	}
 
+	if spec.Dir == "" {
+		spec.Dir = user.Home
+	}
+
 	if err := c.createWorkingDir(log, handle, spec.Dir); err != nil {
 		log.Error("create-working-dir-failed", err)
 		return nil, err
@@ -261,10 +266,23 @@ func (c *Containerizer) createWorkingDir(log lager.Logger, handle string, path s
 		Dir:  "/",
 	}
 
-	_, err := c.runtime.Exec(log, handle, mkdirSpec, users.ExecUser{Uid: users.DefaultUID, Gid: users.DefaultGID}, garden.ProcessIO{})
-	if err != nil {
-		return err
+	discardIO := garden.ProcessIO{
+		Stdout: ioutil.Discard,
+		Stderr: ioutil.Discard,
 	}
+	mkdirProcess, err := c.runtime.Exec(log, handle, mkdirSpec, users.ExecUser{Uid: users.DefaultUID, Gid: users.DefaultGID}, discardIO)
+	if err != nil {
+		return fmt.Errorf("create-working-dir-run-failed: %w", err)
+	}
+
+	exitCode, err := mkdirProcess.Wait()
+	if err != nil {
+		return fmt.Errorf("create-working-dir-wait-failed: %w", err)
+	}
+	if exitCode != 0 {
+		return fmt.Errorf("create-working-dir-failed: exit-code %d", exitCode)
+	}
+
 	return nil
 }
 
