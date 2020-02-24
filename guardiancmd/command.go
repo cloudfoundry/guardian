@@ -480,9 +480,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	cpuEntitlementPerShare float64,
 	networkDepot depot.NetworkDepot,
 ) (*rundmc.Containerizer, gardener.PeaCleaner, error) {
-	initMount, initPath := initBindMountAndPath(cmd.Bin.Init.Path())
-
-	defaultMounts := append(defaultBindMounts(), initMount)
+	defaultMounts := defaultBindMounts()
 	privilegedMounts := append(defaultMounts, privilegedMounts()...)
 	unprivilegedMounts := append(defaultMounts, unprivilegedMounts()...)
 
@@ -494,7 +492,6 @@ func (cmd *CommonCommand) wireContainerizer(
 			Inheritable: unprivilegedMaxCaps,
 			Permitted:   unprivilegedMaxCaps,
 		},
-		Args:        []string{initPath},
 		Cwd:         "/",
 		ConsoleSize: &specs.Box{},
 	}
@@ -544,6 +541,9 @@ func (cmd *CommonCommand) wireContainerizer(
 		bundlerules.Base{
 			PrivilegedBase:   privilegedBundle,
 			UnprivilegedBase: unprivilegedBundle,
+		},
+		bundlerules.Init{
+			InitPath: cmd.Bin.Init.Path(),
 		},
 		bundlerules.Namespaces{},
 		bundlerules.CGroupPath{

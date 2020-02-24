@@ -188,16 +188,6 @@ func (f *LinuxFactory) WireCPUCgrouper() (rundmc.CPUCgrouper, error) {
 	return cgroups.NewCPUCgrouper(gardenCPUCgroupPath), nil
 }
 
-func initBindMountAndPath(initPathOnHost string) (specs.Mount, string) {
-	initPathInContainer := filepath.Join("/tmp", "garden-init")
-	return specs.Mount{
-		Type:        "bind",
-		Source:      initPathOnHost,
-		Destination: initPathInContainer,
-		Options:     []string{"bind"},
-	}, initPathInContainer
-}
-
 func defaultBindMounts() []specs.Mount {
 	devptsGid := 0
 	if runningAsRoot() {

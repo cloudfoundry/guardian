@@ -70,10 +70,6 @@ var _ = Describe("Runtime Plugin", func() {
 	})
 
 	Describe("creating a pea", func() {
-		JustBeforeEach(func() {
-			argsFilepath = filepath.Join(client.TmpDir, "run-args")
-		})
-
 		// winc is currently not able to support run --detach for the pea usecase.
 		// Additional context: https://www.pivotaltracker.com/story/show/155593711.
 		Context("when run on Linux", func() {
@@ -91,17 +87,29 @@ var _ = Describe("Runtime Plugin", func() {
 				Expect(err).NotTo(HaveOccurred(), "Run")
 
 				procId := process.ID()
-				Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
+				Expect(readPluginArgs(filepath.Join(client.TmpDir, "run-args"))).To(ConsistOf(
 					binaries.RuntimePlugin,
-					"--root", getRuncRoot(),
 					"--debug",
-					"--log", MatchRegexp(`/proc/\d+/fd/4`),
+					"--log", HaveSuffix(filepath.Join("containers", handle, "processes", procId, "create.log")),
 					"--log-format", "json",
+					"--image-store", "some-image-store",
 					"run",
 					"--detach",
 					"--pid-file", HaveSuffix(filepath.Join("containers", handle, "processes", procId, "pidfile")),
 					"--no-new-keyring",
 					"--bundle", HaveSuffix(filepath.Join("containers", handle, "processes", procId)),
+					procId,
+				))
+				Expect(readPluginArgs(filepath.Join(client.TmpDir, "exec-args"))).To(ConsistOf(
+					binaries.RuntimePlugin,
+					"--root", getRuncRoot(),
+					"--debug",
+					"--log", MatchRegexp(`/proc/\d+/fd/4`),
+					"--log-format", "json",
+					"exec",
+					"--detach",
+					"-p", MatchRegexp(`/proc/\d+/fd/0`),
+					"--pid-file", HaveSuffix(filepath.Join("containers", handle, "processes", procId, "processes", procId+"-PEA-PROCESS", "pidfile")),
 					procId,
 				))
 			})
