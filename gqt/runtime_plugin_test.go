@@ -81,14 +81,14 @@ var _ = Describe("Runtime Plugin", func() {
 				onlyOnLinux()
 
 				container, err := client.Create(garden.ContainerSpec{Handle: handle})
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).ToNot(HaveOccurred(), "Create")
 
 				process, err := container.Run(garden.ProcessSpec{
 					Path:  "echo",
 					Args:  []string{"hello"},
 					Image: garden.ImageRef{URI: defaultTestRootFS},
 				}, garden.ProcessIO{})
-				Expect(err).NotTo(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred(), "Run")
 
 				procId := process.ID()
 				Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
@@ -215,7 +215,7 @@ var _ = Describe("Runtime Plugin", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			process, runErr = container.Run(garden.ProcessSpec{
-				Path: "some-idiosyncratic-binary",
+				Path: "exitcode-stdout-stderr",
 				Args: []string{fmt.Sprintf("%d", runtimePluginExitCode), stdoutContents, stderrContents},
 			}, garden.ProcessIO{
 				Stdout: io.MultiWriter(GinkgoWriter, stdout),
@@ -269,7 +269,7 @@ var _ = Describe("Runtime Plugin", func() {
 				return json.Unmarshal(readFile(processSpecFilePath), &processSpec)
 			}
 			Eventually(readProcessSpec).Should(Succeed())
-			Expect(processSpec.Args[0]).To(Equal("some-idiosyncratic-binary"))
+			Expect(processSpec.Args[0]).To(Equal("exitcode-stdout-stderr"))
 		})
 
 		Describe("runtime plugin stdio", func() {

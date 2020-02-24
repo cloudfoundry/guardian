@@ -55,19 +55,22 @@ func main() {
 }
 
 func writeArgs(action string) {
-	err := ioutil.WriteFile(filepath.Join(os.TempDir(), fmt.Sprintf("%s-args", action)), []byte(strings.Join(os.Args, " ")), 0777)
+	path := filepath.Join(os.TempDir(), fmt.Sprintf("%s-args", action))
+	bytes := []byte(strings.Join(os.Args, " "))
+	err := ioutil.WriteFile(path, bytes, 0777)
 	if err != nil {
-		panic(err)
+		fail(err, "failed to write args %v to %s", bytes, path)
 	}
 }
 
 func readOutput(action string) (string, bool) {
-	content, err := ioutil.ReadFile(filepath.Join(os.TempDir(), fmt.Sprintf("runtime-%s-output", action)))
+	path := filepath.Join(os.TempDir(), fmt.Sprintf("runtime-%s-output", action))
+	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", false
 		}
-		panic(err)
+		fail(err, "failed to read output from %s", path)
 	}
 	return string(content), true
 }
@@ -89,8 +92,10 @@ var CreateCommand = cli.Command{
 	Action: func(ctx *cli.Context) error {
 		writeArgs("create")
 
-		if err := ioutil.WriteFile(ctx.String("pid-file"), []byte(strconv.Itoa(os.Getppid())), 0777); err != nil {
-			panic(err)
+		path := ctx.String("pid-file")
+		bytes := []byte(strconv.Itoa(os.Getppid()))
+		if err := ioutil.WriteFile(path, bytes, 0777); err != nil {
+			fail(err, "failed to write pid %v to file %s", bytes, path)
 		}
 
 		return nil
@@ -117,8 +122,10 @@ var RunCommand = cli.Command{
 	Action: func(ctx *cli.Context) error {
 		writeArgs("run")
 
-		if err := ioutil.WriteFile(ctx.String("pid-file"), []byte(strconv.Itoa(os.Getppid())), 0777); err != nil {
-			panic(err)
+		path := ctx.String("pid-file")
+		bytes := []byte(strconv.Itoa(os.Getppid()))
+		if err := ioutil.WriteFile(path, bytes, 0777); err != nil {
+			fail(err, "failed to write pid %v to file %s", bytes, path)
 		}
 
 		return nil
@@ -171,18 +178,18 @@ var EventsCommand = cli.Command{
 func copyFile(source, target string) {
 	sourceFile, err := os.Open(source)
 	if err != nil {
-		panic(err)
+		fail(err, "failed to open file %s", source)
 	}
 	defer sourceFile.Close()
 
 	targetFile, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		panic(err)
+		fail(err, "failed to open file %s", target)
 	}
 	defer targetFile.Close()
 
 	if _, err := io.Copy(targetFile, sourceFile); err != nil {
-		panic(err)
+		fail(err, "failed to copy file %s to %s", source, target)
 	}
 }
 
@@ -217,20 +224,21 @@ var ExecCommand = cli.Command{
 		defer procSpecFile.Close()
 		must(json.NewDecoder(procSpecFile).Decode(&procSpec))
 
-		exitCodeStr := procSpec.Args[1]
-		exitCode, err := strconv.Atoi(exitCodeStr)
-		mustNot(err)
+		exitCode := 0
 
-		stdoutStr := procSpec.Args[2]
-		_, err = fmt.Fprintln(os.Stdout, stdoutStr)
-		mustNot(err)
+		if procSpec.Args[0] == "exitcode-stdout-stderr" {
+			exitCode, err = strconv.Atoi(procSpec.Args[1])
+			mustNot(err)
 
-		stderrStr := procSpec.Args[3]
-		_, err = fmt.Fprintln(os.Stderr, stderrStr)
-		mustNot(err)
+			_, err = fmt.Fprintln(os.Stdout, procSpec.Args[2])
+			mustNot(err)
+
+			_, err = fmt.Fprintln(os.Stderr, procSpec.Args[3])
+			mustNot(err)
+		}
 
 		// To satisfy dadoo's requirement that the runtime plugin fork SOMETHING
-		childCmd := exec.Command(os.Args[0], "child", "--exitcode", exitCodeStr)
+		childCmd := exec.Command(os.Args[0], "child", "--exitcode", fmt.Sprintf("%d", exitCode))
 		must(childCmd.Start())
 		childPid := childCmd.Process.Pid
 		must(ioutil.WriteFile(ctx.String("pid-file"), []byte(fmt.Sprintf("%d", childPid)), 0777))
@@ -257,8 +265,18 @@ var ChildProcessCommand = cli.Command{
 
 func mustNot(err error) {
 	if err != nil {
-		panic(err)
+		fail(err, "unexpected error")
 	}
 }
 
 var must = mustNot
+
+func fail(err error, msg string, args ...interface{}) {
+	fmt.Fprintf(os.Stdout, msg+": %v", append(args, err)...)
+	fmt.Fprintf(os.Stderr, msg+": %v", append(args, err)...)
+
+	tmpFile, _ := os.Create("/tmp/fake-runtime-plugin-fail")
+	fmt.Fprintf(tmpFile, msg+": %v", append(args, err)...)
+
+	panic(err)
+}

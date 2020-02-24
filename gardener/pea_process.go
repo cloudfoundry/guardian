@@ -26,6 +26,8 @@ func (p peaProcess) ID() string {
 }
 
 func (p peaProcess) Wait() (int, error) {
+	// log := p.logger.Session("pea-process.wait")
+
 	exitCode, err := p.gardenProcess.Wait()
 	if err != nil {
 		if err := p.gardener.destroy(p.logger, p.peaContainerHandle); err != nil {

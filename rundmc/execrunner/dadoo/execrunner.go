@@ -128,25 +128,25 @@ func (d *ExecRunner) runProcess(
 ) (proc garden.Process, theErr error) {
 	fd3r, fd3w, err := os.Pipe()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open fd3 pipe: %w", err)
 	}
 	defer fd3r.Close()
 
 	logr, logw, err := os.Pipe()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open log pipe: %w", err)
 	}
 	defer logr.Close()
 
 	syncr, syncw, err := os.Pipe()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open sync: %w", err)
 	}
 	defer syncr.Close()
 
 	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"), extraCleanup)
 	if err := process.mkfifos(d.containerRootHostUID, d.containerRootHostGID); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to make fifos: %w", err)
 	}
 
 	cmd := buildDadooCommand(
@@ -159,14 +159,14 @@ func (d *ExecRunner) runProcess(
 	dadooLogFilePath := filepath.Join(processPath, "..", "..", fmt.Sprintf("dadoo.%s.log", processID))
 	dadooLogFile, err := os.Create(dadooLogFilePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create dadoo log file: %w", err)
 	}
 	defer dadooLogFile.Close()
 	cmd.Stdout = dadooLogFile
 	cmd.Stderr = dadooLogFile
 
 	if err := d.commandRunner.Start(cmd); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to start: %w", err)
 	}
 	go func() {
 		// wait on spawned process to avoid zombies
@@ -182,13 +182,13 @@ func (d *ExecRunner) runProcess(
 
 	stdin, stdout, stderr, err := process.openPipes(pio)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open process io pipes: %w", err)
 	}
 
 	syncMsg := make([]byte, 1)
 	_, err = syncr.Read(syncMsg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read sync: %w", err)
 	}
 
 	process.streamData(pio, stdin, stdout, stderr)
@@ -223,7 +223,7 @@ func (d *ExecRunner) runProcess(
 	runcExitStatus := make([]byte, 1)
 	bytesRead, err := fd3r.Read(runcExitStatus)
 	if bytesRead == 0 || err != nil {
-		return nil, fmt.Errorf("failed to read runc exit code %v", err)
+		return nil, fmt.Errorf("failed to read runc exit code %w", err)
 	}
 	log.Info("runc-exit-status", lager.Data{"status": runcExitStatus[0]})
 	if runcExitStatus[0] != 0 {
