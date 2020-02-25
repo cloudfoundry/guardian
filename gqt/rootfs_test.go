@@ -30,8 +30,13 @@ var _ = Describe("Rootfs container create parameter", func() {
 	)
 
 	JustBeforeEach(func() {
-		grootfsConfPath = writeGrootConfig(config.InsecureDockerRegistry)
-		config.ImagePluginExtraArgs = append(config.ImagePluginExtraArgs, `"--config"`, grootfsConfPath)
+		grootfsConfPath = writeGrootConfig(config.ImagePluginExtraArgs, config.InsecureDockerRegistry)
+
+		if getExistingConfigPath(config.ImagePluginExtraArgs) != "" {
+			config.ImagePluginExtraArgs = []string{"--config", grootfsConfPath}
+		} else {
+			config.ImagePluginExtraArgs = append(config.ImagePluginExtraArgs, `"--config"`, grootfsConfPath)
+		}
 
 		client = runner.Start(config)
 	})
@@ -348,12 +353,16 @@ func (m *statusMatcher) NegatedFailureMessage(actual interface{}) string {
 	return fmt.Sprintf("Expected http status code not to be %d", m.expectedStatus)
 }
 
-func writeGrootConfig(insecureRegistry string) string {
-	grootConf := grootconf.Config{
-		Create: grootconf.Create{
-			InsecureRegistries: []string{insecureRegistry},
-		},
+func writeGrootConfig(pluginExtrArgs []string, insecureRegistry string) string {
+	var grootConf grootconf.Config
+
+	if configPath := getExistingConfigPath(pluginExtrArgs); configPath != "" {
+		contents, err := ioutil.ReadFile(configPath)
+		Expect(err).NotTo(HaveOccurred())
+		err = yaml.Unmarshal(contents, &grootConf)
+		Expect(err).NotTo(HaveOccurred())
 	}
+	grootConf.Create.InsecureRegistries = []string{insecureRegistry}
 	confYml, err := yaml.Marshal(grootConf)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -363,4 +372,17 @@ func writeGrootConfig(insecureRegistry string) string {
 	Expect(ioutil.WriteFile(confPath.Name(), confYml, 0600)).To(Succeed())
 
 	return confPath.Name()
+}
+
+func getExistingConfigPath(pluginExtraArgs []string) string {
+	foundConfig := false
+	for _, s := range pluginExtraArgs {
+		if foundConfig {
+			return s
+		}
+		if s == `"--config"` {
+			foundConfig = true
+		}
+	}
+	return ""
 }

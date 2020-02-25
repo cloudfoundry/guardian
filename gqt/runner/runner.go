@@ -304,7 +304,7 @@ func NewGardenRunner(config GdnRunnerConfig) *GardenRunner {
 
 func Start(config GdnRunnerConfig) *RunningGarden {
 	if runtime.GOOS == "linux" {
-		initGrootStore(config.ImagePluginBin, config.StorePath, []string{"0:4294967294:1", "1:65536:4294901758"})
+		initGrootStore(config.ImagePluginBin, config.StorePath, []string{"0:4294967294:1", "1:1:100000"})
 		initGrootStore(config.PrivilegedImagePluginBin, config.PrivilegedStorePath, nil)
 	}
 

@@ -231,7 +231,7 @@ var _ = Describe("Rundmc", func() {
 				Expect(actualHandle).To(Equal("some-handle"))
 				Expect(actualProcessSpec).To(Equal(garden.ProcessSpec{
 					Path: mkdirerPath,
-					Args: []string{"/some/working/dir"},
+					Args: []string{"-u", "1", "-g", "2", "/some/working/dir"},
 					Dir:  "/",
 				}))
 				Expect(actualUser.Uid).To(Equal(0))
@@ -277,8 +277,8 @@ var _ = Describe("Rundmc", func() {
 					Expect(runErr).NotTo(HaveOccurred())
 					Expect(fakeOCIRuntime.ExecCallCount()).To(Equal(2))
 					_, _, actualProcessSpec, _, _ := fakeOCIRuntime.ExecArgsForCall(0)
-					Expect(actualProcessSpec.Args).To(HaveLen(1))
-					Expect(actualProcessSpec.Args[0]).To(Equal("/some/home"))
+					Expect(actualProcessSpec.Args).To(HaveLen(5))
+					Expect(actualProcessSpec.Args[4]).To(Equal("/some/home"))
 				})
 
 				It("runs the process in user's home", func() {

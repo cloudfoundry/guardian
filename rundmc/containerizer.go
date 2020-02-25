@@ -251,7 +251,7 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 		spec.Dir = user.Home
 	}
 
-	if err := c.createWorkingDir(log, handle, spec.Dir); err != nil {
+	if err := c.createWorkingDir(log, handle, spec.Dir, user.Uid, user.Gid); err != nil {
 		log.Error("create-working-dir-failed", err)
 		return nil, err
 	}
@@ -259,10 +259,10 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 	return c.runtime.Exec(log, handle, spec, *user, io)
 }
 
-func (c *Containerizer) createWorkingDir(log lager.Logger, handle string, path string) error {
+func (c *Containerizer) createWorkingDir(log lager.Logger, handle, path string, uid, gid int) error {
 	mkdirSpec := garden.ProcessSpec{
 		Path: c.mkdirerPath,
-		Args: []string{path},
+		Args: []string{"-u", strconv.Itoa(uid), "-g", strconv.Itoa(gid), path},
 		Dir:  "/",
 	}
 
