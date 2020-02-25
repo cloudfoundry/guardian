@@ -125,7 +125,7 @@ func (n *Nerd) State(log lager.Logger, containerID string) (int, string, error) 
 	}
 
 	log.Debug("getting-task-status", lager.Data{"containerID": containerID})
-	status, err := n.exponentialGetState(task)
+	status, err := n.tryToGetStatus(task)
 	if err != nil {
 		return 0, "", err
 	}
@@ -134,11 +134,11 @@ func (n *Nerd) State(log lager.Logger, containerID string) (int, string, error) 
 	return int(task.Pid()), string(status.Status), nil
 }
 
-func (n *Nerd) exponentialGetTask(container containerd.Container) (containerd.Task, error) {
+func (n *Nerd) tryToGetTask(container containerd.Container) (containerd.Task, error) {
 	const timeout = 5 * time.Second
 	deadline := time.Now().Add(timeout)
 
-	for tries := 0; time.Now().Before(deadline); tries++ {
+	for time.Now().Before(deadline) {
 		task, err := container.Task(n.context, cio.Load)
 		if err != nil {
 			if errdefs.IsNotFound(err) {
@@ -151,17 +151,17 @@ func (n *Nerd) exponentialGetTask(container containerd.Container) (containerd.Ta
 			return task, nil
 		}
 
-		time.Sleep(time.Second << uint(tries))
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	return nil, errors.New("failed getting task")
 }
 
-func (n *Nerd) exponentialGetState(task containerd.Task) (containerd.Status, error) {
+func (n *Nerd) tryToGetStatus(task containerd.Task) (containerd.Status, error) {
 	const timeout = 5 * time.Second
 	deadline := time.Now().Add(timeout)
 
-	for tries := 0; time.Now().Before(deadline); tries++ {
+	for time.Now().Before(deadline) {
 		status, err := task.Status(n.context)
 		if err != nil {
 			return containerd.Status{}, err
@@ -171,7 +171,7 @@ func (n *Nerd) exponentialGetState(task containerd.Task) (containerd.Status, err
 			return status, nil
 		}
 
-		time.Sleep(time.Second << uint(tries))
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	return containerd.Status{}, errors.New("failed getting task status")
@@ -314,7 +314,7 @@ func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (conta
 	}
 
 	log.Debug("loading-task", lager.Data{"containerID": containerID})
-	task, err := n.exponentialGetTask(container)
+	task, err := n.tryToGetTask(container)
 	if err != nil {
 		log.Debug("loading-task-failed", lager.Data{"containerID": containerID})
 		return nil, nil, err
