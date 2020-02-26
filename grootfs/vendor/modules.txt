@@ -56,7 +56,7 @@ github.com/containers/image/pkg/sysregistriesv2
 github.com/containers/image/pkg/tlsclientconfig
 github.com/containers/image/transports
 github.com/containers/image/types
-# github.com/containers/storage v1.15.8
+# github.com/containers/storage v1.12.13
 github.com/containers/storage/pkg/reexec
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
 github.com/cpuguy83/go-md2man/v2/md2man
@@ -159,7 +159,7 @@ github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.1
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.0.0-rc9
+# github.com/opencontainers/runc v1.0.0-rc10
 github.com/opencontainers/runc/libcontainer/user
 # github.com/opencontainers/runtime-spec v1.0.1
 github.com/opencontainers/runtime-spec/specs-go
