@@ -13,6 +13,7 @@ require (
 	code.cloudfoundry.org/lager v2.0.0+incompatible
 	code.cloudfoundry.org/localip v0.0.0-20170223024724-b88ad0dea95c
 	github.com/BurntSushi/toml v0.3.1
+	github.com/cilium/ebpf v0.0.0-20200224172853-0b019ed01187 // indirect
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.1.0
 	github.com/containerd/console v0.0.0-20181022165439-0650fd9eeb50 // indirect
@@ -39,7 +40,7 @@ require (
 	github.com/onsi/gomega v1.9.0
 	github.com/opencontainers/go-digest v1.0.0-rc1
 	github.com/opencontainers/image-spec v1.0.1
-	github.com/opencontainers/runc v1.0.0-rc9
+	github.com/opencontainers/runc v1.0.0-rc10
 	github.com/opencontainers/runtime-spec v1.0.1
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.4.2

@@ -154,6 +154,8 @@ github.com/containerd/ttrpc
 github.com/containerd/typeurl
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
 github.com/cpuguy83/go-md2man/v2/md2man
+# github.com/cyphar/filepath-securejoin v0.2.2
+github.com/cyphar/filepath-securejoin
 # github.com/docker/distribution v2.7.1+incompatible => github.com/docker/distribution v0.0.0-20190205005809-0d3efadf0154
 github.com/docker/distribution/digestset
 github.com/docker/distribution/reference
@@ -252,9 +254,10 @@ github.com/opencontainers/go-digest
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.0.0-rc9
+# github.com/opencontainers/runc v1.0.0-rc10
 github.com/opencontainers/runc/libcontainer/cgroups
 github.com/opencontainers/runc/libcontainer/cgroups/fs
+github.com/opencontainers/runc/libcontainer/cgroups/fscommon
 github.com/opencontainers/runc/libcontainer/configs
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
