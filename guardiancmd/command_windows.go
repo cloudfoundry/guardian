@@ -2,9 +2,7 @@ package guardiancmd
 
 import (
 	"errors"
-	"os"
 	"path/filepath"
-	"strings"
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/commandrunner/windows_command_runner"
@@ -89,22 +87,6 @@ func (noopRootfsFileCreator) CreateFiles(rootFSPath string, pathsToCreate ...str
 
 func (f *WindowsFactory) CommandRunner() commandrunner.CommandRunner {
 	return f.commandRunner
-}
-
-type mkdirer struct{}
-
-func (m mkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) error {
-	for _, path := range paths {
-		volumeName := filepath.VolumeName(path)
-		if err := os.MkdirAll(filepath.Join(rootFSPathFile, strings.TrimPrefix(path, volumeName)), 0755); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (f *WindowsFactory) WireMkdirer() runrunc.Mkdirer {
-	return mkdirer{}
 }
 
 func (f *WindowsFactory) WireContainerd(processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger, volumizer peas.Volumizer, peaHandlesGetter runcontainerd.PeaHandlesGetter) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, peas.BundleLoader, error) {

@@ -2,7 +2,6 @@ package runcontainerd
 
 import (
 	"io"
-	"os"
 	"regexp"
 
 	"code.cloudfoundry.org/guardian/rundmc"
@@ -58,11 +57,6 @@ type Statser interface {
 	Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)
 }
 
-//go:generate counterfeiter . Mkdirer
-type Mkdirer interface {
-	MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
-}
-
 //go:generate counterfeiter . PeaHandlesGetter
 type PeaHandlesGetter interface {
 	ContainerPeaHandles(log lager.Logger, sandboxHandle string) ([]string, error)
@@ -95,7 +89,6 @@ func New(containerManager ContainerManager,
 	statser Statser,
 	useContainerdForProcesses bool,
 	cgroupManager CgroupManager,
-	mkdirer Mkdirer,
 	peaHandlesGetter PeaHandlesGetter,
 	cleanupProcessDirsOnWait bool,
 	runtimeStopper RuntimeStopper) *RunContainerd {

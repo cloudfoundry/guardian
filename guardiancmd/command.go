@@ -53,7 +53,6 @@ const containerdNamespace = "garden"
 
 type GardenFactory interface {
 	WireResolvConfigurer() kawasaki.DnsResolvConfigurer
-	WireMkdirer() runrunc.Mkdirer
 	CommandRunner() commandrunner.CommandRunner
 	WireVolumizer(logger lager.Logger) gardener.Volumizer
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
