@@ -218,7 +218,7 @@ var ExecCommand = cli.Command{
 		must(json.NewDecoder(procSpecFile).Decode(&procSpec))
 
 		exitCodeStr := procSpec.Args[1]
-		if procSpec.Args[0] == "/tmp/mkdirer" {
+		if strings.HasSuffix(procSpec.Args[0], "mkdir") || strings.HasSuffix(procSpec.Args[0], "mkdir.exe") {
 			exitCodeStr = "0"
 		}
 		exitCode, err := strconv.Atoi(exitCodeStr)

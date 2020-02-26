@@ -129,13 +129,25 @@ func wireMounts() bundlerules.Mounts {
 // Note - it's not possible to bind mount a single file in Windows, so we are
 // using a directory instead
 func initBindMountAndPath(initPathOnHost string) (specs.Mount, string) {
-	initPathInContainer := filepath.Join(`C:\`, "Windows", "Temp", "bin", filepath.Base(initPathOnHost))
+	initDirInContainer := filepath.Join(`C:\`, "Windows", "Temp", "bin", "init")
+	initPathInContainer := filepath.Join(initDirInContainer, filepath.Base(initPathOnHost))
 	return specs.Mount{
 		Type:        "bind",
 		Source:      filepath.Dir(initPathOnHost),
-		Destination: filepath.Dir(initPathInContainer),
+		Destination: initDirInContainer,
 		Options:     []string{"bind"},
 	}, initPathInContainer
+}
+
+func mkdirerBindMountAndPath(mkdirerPathOnHost string) (specs.Mount, string) {
+	mkdirerDirInContainer := filepath.Join(`C:\`, "Windows", "Temp", "bin", "mkdir")
+	mkdirerPathInContainer := filepath.Join(mkdirerDirInContainer, filepath.Base(mkdirerPathOnHost))
+	return specs.Mount{
+		Type:        "bind",
+		Source:      filepath.Dir(mkdirerPathOnHost),
+		Destination: mkdirerDirInContainer,
+		Options:     []string{"bind"},
+	}, mkdirerPathInContainer
 }
 
 func defaultBindMounts() []specs.Mount {

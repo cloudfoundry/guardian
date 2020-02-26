@@ -32,7 +32,6 @@ func main() {
 		os.Exit(2)
 	}
 
-	// err := os.MkdirAll(path, defaultPermissions)
 	err := mkdir(path, defaultPermissions, *user, *group)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not mkdir %q: %v\n", path, err)

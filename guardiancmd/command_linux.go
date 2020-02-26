@@ -199,7 +199,7 @@ func initBindMountAndPath(initPathOnHost string) (specs.Mount, string) {
 }
 
 func mkdirerBindMountAndPath(mkdirerPathOnHost string) (specs.Mount, string) {
-	mkdirerPathInContainer := filepath.Join("/tmp", "mkdirer")
+	mkdirerPathInContainer := filepath.Join("/tmp", "mkdir")
 	return specs.Mount{
 		Type:        "bind",
 		Source:      mkdirerPathOnHost,
