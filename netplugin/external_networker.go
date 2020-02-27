@@ -91,6 +91,10 @@ func (p *externalBinaryNetworker) SetupBindMounts(log lager.Logger, handle strin
 	return p.networkDepot.SetupBindMounts(log, handle, privileged, rootfsPath)
 }
 
+func (p *externalBinaryNetworker) SetupBindMountsForPea(log lager.Logger, handle string, sandboxHandle string, privileged bool, rootfsPath string) ([]garden.BindMount, error) {
+	return p.networkDepot.SetupBindMountsForPea(log, handle, sandboxHandle, privileged, rootfsPath)
+}
+
 func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {
 	p.configStore.Set(containerSpec.Handle, gardener.ExternalIPKey, p.externalIP.String())
 

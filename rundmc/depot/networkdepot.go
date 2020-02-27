@@ -67,6 +67,37 @@ func (d NetworkDepot) SetupBindMounts(log lager.Logger, handle string, privilege
 	return defaultBindMounts, nil
 }
 
+func (d NetworkDepot) SetupBindMountsForPea(log lager.Logger, handle string, sandboxHandle string, privileged bool, rootfsPath string) ([]garden.BindMount, error) {
+	log = log.Session("network-depot-setup-bindmounts", lager.Data{"handle": handle})
+
+	log.Info("start")
+	defer log.Info("finished")
+
+	if err := d.rootfsFileCreator.CreateFiles(rootfsPath, "/etc/hosts", "/etc/resolv.conf"); err != nil {
+		log.Error("create-rootfs-mountpoint-files-failed", err)
+		return nil, err
+	}
+
+	containerDir := d.toPeaDir(sandboxHandle, handle)
+	if err := os.MkdirAll(containerDir, 0755); err != nil {
+		log.Error("mkdir-failed", err, lager.Data{"path": containerDir})
+		return nil, err
+	}
+
+	errs := func(msg string, err error) error {
+		d.cleanupOrLog(log, handle)
+		log.Error(msg, err, lager.Data{"path": containerDir})
+		return err
+	}
+
+	defaultBindMounts, err := d.bindMountSourceCreator.Create(containerDir, !privileged)
+	if err != nil {
+		return nil, errs("create-bindmount-sources-failed", err)
+	}
+
+	return defaultBindMounts, nil
+}
+
 func (d NetworkDepot) Destroy(log lager.Logger, handle string) error {
 	log = log.Session("network-depot-destroy", lager.Data{"handle": handle})
 
@@ -78,6 +109,10 @@ func (d NetworkDepot) Destroy(log lager.Logger, handle string) error {
 
 func (d NetworkDepot) toDir(handle string) string {
 	return filepath.Join(d.dir, handle)
+}
+
+func (d NetworkDepot) toPeaDir(sandboxHandle, handle string) string {
+	return filepath.Join(d.dir, sandboxHandle, "processes", handle)
 }
 
 func (d NetworkDepot) cleanup(handle string) error {

@@ -71,6 +71,7 @@ type Containerizer interface {
 
 type Networker interface {
 	SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error)
+	SetupBindMountsForPea(log lager.Logger, handle string, sandboxHandle string, privileged bool, rootfsPath string) ([]garden.BindMount, error)
 	Network(log lager.Logger, spec garden.ContainerSpec, pid int) error
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
@@ -386,7 +387,7 @@ func (g *Gardener) createPeaContainer(sandboxHandle string, peaContainerID strin
 		return nil, err
 	}
 
-	defaultBindMounts, err := g.Networker.SetupBindMounts(log, sandboxHandle, privileged, runtimeSpec.Root.Path)
+	defaultBindMounts, err := g.Networker.SetupBindMountsForPea(log, peaContainerID, sandboxHandle, privileged, runtimeSpec.Root.Path)
 	if err != nil {
 		return nil, err
 	}
