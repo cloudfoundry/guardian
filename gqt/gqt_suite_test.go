@@ -436,6 +436,7 @@ func createRootfs(modifyRootfs func(string), perm os.FileMode) string {
 	runCommand(exec.Command("tar", "xf", defaultTestRootFS, "-C", unpackedRootfs))
 
 	Expect(os.Chmod(tmpDir, perm)).To(Succeed())
+	Expect(exec.Command("chown", "-R", "4294967294:4294967294", tmpDir).Run()).To(Succeed())
 	modifyRootfs(unpackedRootfs)
 
 	return unpackedRootfs
