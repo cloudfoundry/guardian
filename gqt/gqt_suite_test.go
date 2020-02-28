@@ -105,8 +105,6 @@ func TestGqt(t *testing.T) {
 				}
 				GinkgoWriter.Write(fuserOut)
 				fmt.Fprintln(GinkgoWriter)
-
-				Eventually(getMountTable, "2m", "1s").ShouldNot(ContainSubstring(rootfsPath), "Image rootfs path %q is still a mountpoint", rootfsPath)
 			}
 		}
 
