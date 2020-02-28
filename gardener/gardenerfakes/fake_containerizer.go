@@ -28,6 +28,18 @@ type FakeContainerizer struct {
 		result1 garden.Process
 		result2 error
 	}
+	CheckExistsStub        func(lager.Logger, string) error
+	checkExistsMutex       sync.RWMutex
+	checkExistsArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+	}
+	checkExistsReturns struct {
+		result1 error
+	}
+	checkExistsReturnsOnCall map[int]struct {
+		result1 error
+	}
 	CreateStub        func(lager.Logger, spec.DesiredContainerSpec) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
@@ -276,6 +288,67 @@ func (fake *FakeContainerizer) AttachReturnsOnCall(i int, result1 garden.Process
 		result1 garden.Process
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeContainerizer) CheckExists(arg1 lager.Logger, arg2 string) error {
+	fake.checkExistsMutex.Lock()
+	ret, specificReturn := fake.checkExistsReturnsOnCall[len(fake.checkExistsArgsForCall)]
+	fake.checkExistsArgsForCall = append(fake.checkExistsArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("CheckExists", []interface{}{arg1, arg2})
+	fake.checkExistsMutex.Unlock()
+	if fake.CheckExistsStub != nil {
+		return fake.CheckExistsStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.checkExistsReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeContainerizer) CheckExistsCallCount() int {
+	fake.checkExistsMutex.RLock()
+	defer fake.checkExistsMutex.RUnlock()
+	return len(fake.checkExistsArgsForCall)
+}
+
+func (fake *FakeContainerizer) CheckExistsCalls(stub func(lager.Logger, string) error) {
+	fake.checkExistsMutex.Lock()
+	defer fake.checkExistsMutex.Unlock()
+	fake.CheckExistsStub = stub
+}
+
+func (fake *FakeContainerizer) CheckExistsArgsForCall(i int) (lager.Logger, string) {
+	fake.checkExistsMutex.RLock()
+	defer fake.checkExistsMutex.RUnlock()
+	argsForCall := fake.checkExistsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeContainerizer) CheckExistsReturns(result1 error) {
+	fake.checkExistsMutex.Lock()
+	defer fake.checkExistsMutex.Unlock()
+	fake.CheckExistsStub = nil
+	fake.checkExistsReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeContainerizer) CheckExistsReturnsOnCall(i int, result1 error) {
+	fake.checkExistsMutex.Lock()
+	defer fake.checkExistsMutex.Unlock()
+	fake.CheckExistsStub = nil
+	if fake.checkExistsReturnsOnCall == nil {
+		fake.checkExistsReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.checkExistsReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeContainerizer) Create(arg1 lager.Logger, arg2 spec.DesiredContainerSpec) error {
@@ -1141,6 +1214,8 @@ func (fake *FakeContainerizer) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.attachMutex.RLock()
 	defer fake.attachMutex.RUnlock()
+	fake.checkExistsMutex.RLock()
+	defer fake.checkExistsMutex.RUnlock()
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	fake.createPeaMutex.RLock()

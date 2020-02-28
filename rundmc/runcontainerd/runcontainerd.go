@@ -67,11 +67,6 @@ type Mkdirer interface {
 	MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
 }
 
-//go:generate counterfeiter . PeaHandlesGetter
-type PeaHandlesGetter interface {
-	ContainerPeaHandles(log lager.Logger, sandboxHandle string) ([]string, error)
-}
-
 type ContainerFilter struct {
 	Label        string
 	Value        string
@@ -88,7 +83,6 @@ type RunContainerd struct {
 	userLookupper             users.UserLookupper
 	cgroupManager             CgroupManager
 	mkdirer                   Mkdirer
-	peaHandlesGetter          PeaHandlesGetter
 	cleanupProcessDirsOnWait  bool
 	runtimeStopper            RuntimeStopper
 }
@@ -102,7 +96,6 @@ func New(containerManager ContainerManager,
 	useContainerdForProcesses bool,
 	cgroupManager CgroupManager,
 	mkdirer Mkdirer,
-	peaHandlesGetter PeaHandlesGetter,
 	cleanupProcessDirsOnWait bool,
 	runtimeStopper RuntimeStopper) *RunContainerd {
 	return &RunContainerd{
@@ -115,7 +108,6 @@ func New(containerManager ContainerManager,
 		userLookupper:             userLookupper,
 		cgroupManager:             cgroupManager,
 		mkdirer:                   mkdirer,
-		peaHandlesGetter:          peaHandlesGetter,
 		cleanupProcessDirsOnWait:  cleanupProcessDirsOnWait,
 		runtimeStopper:            runtimeStopper,
 	}
@@ -326,9 +318,6 @@ func (r *RunContainerd) ContainerHandles() ([]string, error) {
 }
 
 func (r *RunContainerd) ContainerPeaHandles(log lager.Logger, sandboxHandle string) ([]string, error) {
-	if r.peaHandlesGetter != nil {
-		return r.peaHandlesGetter.ContainerPeaHandles(log, sandboxHandle)
-	}
 	return r.containerManager.BundleIDs(
 		ContainerFilter{
 			Label:        "container-type",

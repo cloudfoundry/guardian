@@ -82,6 +82,12 @@ func (d *DirectoryDepot) CreatePea(log lager.Logger, sandboxHandle, handle strin
 		return "", err
 	}
 
+	processDir := d.toPeaProcessDir(sandboxHandle, handle)
+	if err := os.MkdirAll(processDir, 0755); err != nil {
+		log.Error("mkdir-failed", err, lager.Data{"path": containerDir})
+		return "", err
+	}
+
 	errs := func(msg string, err error) error {
 		removeOrLog(log, containerDir)
 		log.Error(msg, err, lager.Data{"path": containerDir})
@@ -202,6 +208,10 @@ func (d *DirectoryDepot) toDir(handle string) string {
 
 func (d *DirectoryDepot) toPeaDir(sandboxHandle, handle string) string {
 	return filepath.Join(d.dir, sandboxHandle, "processes", handle)
+}
+
+func (d *DirectoryDepot) toPeaProcessDir(sandboxHandle, handle string) string {
+	return filepath.Join(d.dir, sandboxHandle, "processes", handle, "processes", handle+"-PEA-PROCESS")
 }
 
 func removeOrLog(log lager.Logger, path string) {

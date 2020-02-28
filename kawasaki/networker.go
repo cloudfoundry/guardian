@@ -88,7 +88,6 @@ type FirewallOpener interface {
 //go:generate counterfeiter . NetworkDepot
 type NetworkDepot interface {
 	SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error)
-	SetupBindMountsForPea(log lager.Logger, handle string, sandboxHandle string, privileged bool, rootfsPath string) ([]garden.BindMount, error)
 	Destroy(log lager.Logger, handle string) error
 }
 
@@ -132,10 +131,6 @@ func New(
 
 func (n *Networker) SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error) {
 	return n.networkDepot.SetupBindMounts(log, handle, privileged, rootfsPath)
-}
-
-func (n *Networker) SetupBindMountsForPea(log lager.Logger, handle string, sandboxHandle string, privileged bool, rootfsPath string) ([]garden.BindMount, error) {
-	return n.networkDepot.SetupBindMountsForPea(log, handle, sandboxHandle, privileged, rootfsPath)
 }
 
 func (n *Networker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {

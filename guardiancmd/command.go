@@ -59,7 +59,7 @@ type GardenFactory interface {
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
 	WireExecRunner(runcRoot string, containerRootUID, containerRootGID uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot execrunner.ProcessDepot) runrunc.ExecRunner
 	WireRootfsFileCreator() depot.RootfsFileCreator
-	WireContainerd(*processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser, lager.Logger, peas.Volumizer, runcontainerd.PeaHandlesGetter) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *containerdprivchecker.PrivilegeChecker, peas.BundleLoader, error)
+	WireContainerd(*processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser, lager.Logger, peas.Volumizer) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *containerdprivchecker.PrivilegeChecker, peas.BundleLoader, error)
 	WireCPUCgrouper() (rundmc.CPUCgrouper, error)
 }
 
@@ -609,15 +609,10 @@ func (cmd *CommonCommand) wireContainerizer(
 		var err error
 		var peaRunner *runcontainerd.RunContainerPea
 		var peaBundleLoader peas.BundleLoader
-		var peaHandlesGetter runcontainerd.PeaHandlesGetter
-
-		if !cmd.Containerd.UseContainerdForProcesses {
-			peaHandlesGetter = bundleManager
-		}
 
 		var nerdPidGetter PidGetter
 		var runContainerd *runcontainerd.RunContainerd
-		runContainerd, peaRunner, nerdPidGetter, privilegeChecker, peaBundleLoader, err = factory.WireContainerd(processBuilder, userLookupper, wireExecerFunc, statser, log, volumizer, peaHandlesGetter)
+		runContainerd, peaRunner, nerdPidGetter, privilegeChecker, peaBundleLoader, err = factory.WireContainerd(processBuilder, userLookupper, wireExecerFunc, statser, log, volumizer)
 		if err != nil {
 			return nil, nil, err
 		}

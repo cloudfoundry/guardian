@@ -169,7 +169,7 @@ var _ = Describe("Surviving Restarts", func() {
 
 				Context("with runc", func() {
 					BeforeEach(func() {
-						skipIfContainerdForProcesses("not relevant to containerd peas")
+						skipIfContainerd()
 					})
 
 					It("destroys the pea container", func() {
@@ -182,7 +182,7 @@ var _ = Describe("Surviving Restarts", func() {
 						skipIfRunDmcForProcesses("not relevant to runc peas")
 					})
 
-					It("destroys the peacontainer", func() {
+					It("destroys the pea container", func() {
 						ctrOutput := func() string {
 							return listContainers("ctr", config.ContainerdSocket)
 						}

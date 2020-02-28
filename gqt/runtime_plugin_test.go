@@ -131,14 +131,27 @@ var _ = Describe("Runtime Plugin", func() {
 				_, _ = process.Wait()
 
 				procId := process.ID()
-				Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
+				Expect(readPluginArgs(filepath.Join(client.TmpDir, "run-args"))).To(ConsistOf(
 					binaries.RuntimePlugin,
 					"--debug",
-					"--log-handle", MatchRegexp(`\d+`),
+					"--log", HaveSuffix(filepath.Join("containers", handle, "processes", procId, "create.log")),
 					"--log-format", "json",
+					"--image-store", "some-image-store",
 					"run",
-					"--pid-file", HaveSuffix(filepath.Join("containers", handle, "processes", procId, "pidfile")),
+					"--detach",
+					"--no-new-keyring",
 					"--bundle", HaveSuffix(filepath.Join("containers", handle, "processes", procId)),
+					"--pid-file", HaveSuffix(filepath.Join("containers", handle, "processes", procId, "pidfile")),
+					procId,
+				))
+				Expect(readPluginArgs(filepath.Join(client.TmpDir, "exec-args"))).To(ConsistOf(
+					binaries.RuntimePlugin,
+					"--debug",
+					"--log-handle", MatchRegexp(`\d`),
+					"--log-format", "json",
+					"exec",
+					"-p", MatchRegexp(".*"),
+					"--pid-file", MatchRegexp(".*"),
 					procId,
 				))
 			})

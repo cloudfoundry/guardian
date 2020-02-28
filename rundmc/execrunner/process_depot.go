@@ -37,7 +37,7 @@ func (d ProcessDirDepot) CreateProcessDir(log lager.Logger, sandboxHandle, proce
 		return "", errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
 	}
 
-	if err := os.MkdirAll(processPath, 0700); err != nil {
+	if err := os.MkdirAll(processPath, 0755); err != nil {
 		return "", err
 	}
 

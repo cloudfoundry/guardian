@@ -359,7 +359,7 @@ func (n *Nerd) OOMEvents(log lager.Logger) <-chan *apievents.TaskOOM {
 }
 
 func (n *Nerd) Spec(log lager.Logger, containerID string) (*specs.Spec, error) {
-	container, _, err := n.loadContainerAndTask(log, containerID)
+	container, err := n.loadContainer(log, containerID)
 	if err != nil {
 		return nil, err
 	}

@@ -63,6 +63,7 @@ type Containerizer interface {
 	RemoveBundle(log lager.Logger, handle string) error
 
 	Info(log lager.Logger, handle string) (spec.ActualContainerSpec, error)
+	CheckExists(log lager.Logger, handle string) error
 	Metrics(log lager.Logger, handle string) (ActualContainerMetrics, error)
 	WatchRuntimeEvents(log lager.Logger) error
 
@@ -71,7 +72,6 @@ type Containerizer interface {
 
 type Networker interface {
 	SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error)
-	SetupBindMountsForPea(log lager.Logger, handle string, sandboxHandle string, privileged bool, rootfsPath string) ([]garden.BindMount, error)
 	Network(log lager.Logger, spec garden.ContainerSpec, pid int) error
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
@@ -387,7 +387,7 @@ func (g *Gardener) createPeaContainer(sandboxHandle string, peaContainerID strin
 		return nil, err
 	}
 
-	defaultBindMounts, err := g.Networker.SetupBindMountsForPea(log, peaContainerID, sandboxHandle, privileged, runtimeSpec.Root.Path)
+	defaultBindMounts, err := g.Networker.SetupBindMounts(log, sandboxHandle, privileged, runtimeSpec.Root.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -452,13 +452,9 @@ func (g *Gardener) Destroy(handle string) error {
 	log.Info("start")
 	defer log.Info("finished")
 
-	handles, err := g.Containerizer.Handles()
+	err := g.Containerizer.CheckExists(log, handle)
 	if err != nil {
 		return err
-	}
-
-	if !exists(handles, handle) {
-		return garden.ContainerNotFoundError{Handle: handle}
 	}
 
 	return g.destroy(log, handle)

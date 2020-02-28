@@ -321,6 +321,11 @@ func (c *Containerizer) RemoveBundle(log lager.Logger, handle string) error {
 	return c.runtime.RemoveBundle(log, handle)
 }
 
+func (c *Containerizer) CheckExists(log lager.Logger, handle string) error {
+	_, _, err := c.runtime.BundleInfo(log, handle)
+	return err
+}
+
 func (c *Containerizer) Info(log lager.Logger, handle string) (spec.ActualContainerSpec, error) {
 	bundlePath, bundle, err := c.runtime.BundleInfo(log, handle)
 	if err != nil {
