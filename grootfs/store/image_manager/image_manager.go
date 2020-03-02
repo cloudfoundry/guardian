@@ -63,6 +63,8 @@ func (b *ImageManager) Create(logger lager.Logger, spec groot.ImageSpec) (groot.
 
 	imagePath := b.imagePath(spec.ID)
 	imageRootFSPath := filepath.Join(imagePath, "rootfs")
+	imageWorkdirPath := filepath.Join(imagePath, "workdir")
+	imageDiffPath := filepath.Join(imagePath, "diff")
 
 	var err error
 	defer func() {
@@ -106,6 +108,8 @@ func (b *ImageManager) Create(logger lager.Logger, spec groot.ImageSpec) (groot.
 	if err := b.setOwnership(spec,
 		imagePath,
 		imageRootFSPath,
+		imageWorkdirPath,
+		imageDiffPath,
 	); err != nil {
 		logger.Error("setting-permission-failed", err, lager.Data{"imageDriverSpec": imageDriverSpec})
 		return groot.ImageInfo{}, err
