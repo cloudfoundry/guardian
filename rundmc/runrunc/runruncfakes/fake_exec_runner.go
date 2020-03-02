@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 )
@@ -47,17 +46,16 @@ type FakeExecRunner struct {
 		result1 garden.Process
 		result2 error
 	}
-	RunPeaStub        func(lager.Logger, string, goci.Bndl, string, garden.ProcessIO, bool, io.Reader, func() error) (garden.Process, error)
+	RunPeaStub        func(lager.Logger, string, string, garden.ProcessIO, bool, io.Reader, func() error) (garden.Process, error)
 	runPeaMutex       sync.RWMutex
 	runPeaArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 string
-		arg3 goci.Bndl
-		arg4 string
-		arg5 garden.ProcessIO
-		arg6 bool
-		arg7 io.Reader
-		arg8 func() error
+		arg3 string
+		arg4 garden.ProcessIO
+		arg5 bool
+		arg6 io.Reader
+		arg7 func() error
 	}
 	runPeaReturns struct {
 		result1 garden.Process
@@ -206,23 +204,22 @@ func (fake *FakeExecRunner) RunReturnsOnCall(i int, result1 garden.Process, resu
 	}{result1, result2}
 }
 
-func (fake *FakeExecRunner) RunPea(arg1 lager.Logger, arg2 string, arg3 goci.Bndl, arg4 string, arg5 garden.ProcessIO, arg6 bool, arg7 io.Reader, arg8 func() error) (garden.Process, error) {
+func (fake *FakeExecRunner) RunPea(arg1 lager.Logger, arg2 string, arg3 string, arg4 garden.ProcessIO, arg5 bool, arg6 io.Reader, arg7 func() error) (garden.Process, error) {
 	fake.runPeaMutex.Lock()
 	ret, specificReturn := fake.runPeaReturnsOnCall[len(fake.runPeaArgsForCall)]
 	fake.runPeaArgsForCall = append(fake.runPeaArgsForCall, struct {
 		arg1 lager.Logger
 		arg2 string
-		arg3 goci.Bndl
-		arg4 string
-		arg5 garden.ProcessIO
-		arg6 bool
-		arg7 io.Reader
-		arg8 func() error
-	}{arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8})
-	fake.recordInvocation("RunPea", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8})
+		arg3 string
+		arg4 garden.ProcessIO
+		arg5 bool
+		arg6 io.Reader
+		arg7 func() error
+	}{arg1, arg2, arg3, arg4, arg5, arg6, arg7})
+	fake.recordInvocation("RunPea", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6, arg7})
 	fake.runPeaMutex.Unlock()
 	if fake.RunPeaStub != nil {
-		return fake.RunPeaStub(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+		return fake.RunPeaStub(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -237,17 +234,17 @@ func (fake *FakeExecRunner) RunPeaCallCount() int {
 	return len(fake.runPeaArgsForCall)
 }
 
-func (fake *FakeExecRunner) RunPeaCalls(stub func(lager.Logger, string, goci.Bndl, string, garden.ProcessIO, bool, io.Reader, func() error) (garden.Process, error)) {
+func (fake *FakeExecRunner) RunPeaCalls(stub func(lager.Logger, string, string, garden.ProcessIO, bool, io.Reader, func() error) (garden.Process, error)) {
 	fake.runPeaMutex.Lock()
 	defer fake.runPeaMutex.Unlock()
 	fake.RunPeaStub = stub
 }
 
-func (fake *FakeExecRunner) RunPeaArgsForCall(i int) (lager.Logger, string, goci.Bndl, string, garden.ProcessIO, bool, io.Reader, func() error) {
+func (fake *FakeExecRunner) RunPeaArgsForCall(i int) (lager.Logger, string, string, garden.ProcessIO, bool, io.Reader, func() error) {
 	fake.runPeaMutex.RLock()
 	defer fake.runPeaMutex.RUnlock()
 	argsForCall := fake.runPeaArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6, argsForCall.arg7, argsForCall.arg8
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6, argsForCall.arg7
 }
 
 func (fake *FakeExecRunner) RunPeaReturns(result1 garden.Process, result2 error) {

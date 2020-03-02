@@ -32,7 +32,7 @@ type ExecRunner interface {
 		pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 	) (garden.Process, error)
 	RunPea(
-		log lager.Logger, processID string, bundle goci.Bndl, sandboxHandle string,
+		log lager.Logger, processID, sandboxHandle string,
 		pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 	) (garden.Process, error)
 	Attach(log lager.Logger, sandboxHandle, processID string, io garden.ProcessIO) (garden.Process, error)

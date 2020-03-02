@@ -22,24 +22,22 @@ import (
 )
 
 type WindowsExecRunner struct {
-	runtimePath     string
-	commandRunner   commandrunner.CommandRunner
-	processes       map[string]*process
-	processMux      *sync.Mutex
-	bundleSaver     depot.BundleSaver
-	bundleLookupper depot.BundleLookupper
-	processDepot    ProcessDepot
+	runtimePath   string
+	commandRunner commandrunner.CommandRunner
+	processes     map[string]*process
+	processMux    *sync.Mutex
+	bundleSaver   depot.BundleSaver
+	processDepot  ProcessDepot
 }
 
-func NewWindowsExecRunner(runtimePath string, commandRunner commandrunner.CommandRunner, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot ProcessDepot) *WindowsExecRunner {
+func NewWindowsExecRunner(runtimePath string, commandRunner commandrunner.CommandRunner, bundleSaver depot.BundleSaver, processDepot ProcessDepot) *WindowsExecRunner {
 	return &WindowsExecRunner{
-		runtimePath:     runtimePath,
-		commandRunner:   commandRunner,
-		processes:       map[string]*process{},
-		processMux:      new(sync.Mutex),
-		bundleSaver:     bundleSaver,
-		bundleLookupper: bundleLookupper,
-		processDepot:    processDepot,
+		runtimePath:   runtimePath,
+		commandRunner: commandRunner,
+		processes:     map[string]*process{},
+		processMux:    new(sync.Mutex),
+		bundleSaver:   bundleSaver,
+		processDepot:  processDepot,
 	}
 }
 

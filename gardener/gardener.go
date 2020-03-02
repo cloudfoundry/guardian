@@ -27,7 +27,6 @@ import (
 //go:generate counterfeiter . Restorer
 //go:generate counterfeiter . Starter
 //go:generate counterfeiter . BulkStarter
-//go:generate counterfeiter . PeaCleaner
 //go:generate counterfeiter . Sleeper
 
 const ContainerIPKey = "garden.network.container-ip"
@@ -118,11 +117,6 @@ type Restorer interface {
 	Restore(logger lager.Logger, handles []string) []string
 }
 
-type PeaCleaner interface {
-	CleanAll(logger lager.Logger) error
-	Clean(logger lager.Logger, handle string) error
-}
-
 type Sleeper func(time.Duration)
 
 type UidGeneratorFunc func() string
@@ -175,8 +169,6 @@ type Gardener struct {
 
 	Restorer Restorer
 
-	PeaCleaner PeaCleaner
-
 	AllowPrivilgedContainers bool
 }
 
@@ -189,7 +181,6 @@ func New(
 	containerizer Containerizer,
 	propertyManager PropertyManager,
 	restorer Restorer,
-	peaCleaner PeaCleaner,
 	logger lager.Logger,
 	maxContainers uint64,
 	allowPrivilegedContainers bool,
@@ -205,7 +196,6 @@ func New(
 		PropertyManager:          propertyManager,
 		MaxContainers:            maxContainers,
 		Restorer:                 restorer,
-		PeaCleaner:               peaCleaner,
 		AllowPrivilgedContainers: allowPrivilegedContainers,
 		Logger:                   logger,
 

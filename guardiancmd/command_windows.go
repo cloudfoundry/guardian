@@ -15,10 +15,8 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
-	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
-	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/privchecker"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/guardian/throttle"
@@ -73,7 +71,7 @@ func (f *WindowsFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 	return gardener.NewVolumeProvider(noop, noop, f.commandRunner, 0, 0)
 }
 
-func (f *WindowsFactory) WireExecRunner(runcRoot string, _, _ uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot execrunner.ProcessDepot) runrunc.ExecRunner {
+func (f *WindowsFactory) WireExecRunner(runcRoot string, _, _ uint32, bundleSaver depot.BundleSaver, processDepot execrunner.ProcessDepot) runrunc.ExecRunner {
 	return execrunner.NewWindowsExecRunner(f.config.Runtime.Plugin, f.commandRunner, bundleSaver, bundleLookupper, processDepot)
 }
 
@@ -107,8 +105,8 @@ func (f *WindowsFactory) WireMkdirer() runrunc.Mkdirer {
 	return mkdirer{}
 }
 
-func (f *WindowsFactory) WireContainerd(processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger, volumizer peas.Volumizer) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, peas.BundleLoader, error) {
-	return nil, nil, nil, nil, nil, errors.New("containerd not impletemented on windows")
+func (f *WindowsFactory) WireContainerd(processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger) (*runcontainerd.RunContainerd, error) {
+	return nil, errors.New("containerd not impletemented on windows")
 }
 
 func (f *WindowsFactory) WireCPUCgrouper() (rundmc.CPUCgrouper, error) {

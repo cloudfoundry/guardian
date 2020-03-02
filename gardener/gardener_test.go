@@ -25,7 +25,6 @@ var _ = Describe("Gardener", func() {
 		containerizer   *fakes.FakeContainerizer
 		uidGenerator    *fakes.FakeUidGenerator
 		bulkStarter     *fakes.FakeBulkStarter
-		peaCleaner      *fakes.FakePeaCleaner
 		sysinfoProvider *fakes.FakeSysInfoProvider
 		propertyManager *fakes.FakePropertyManager
 		restorer        *fakes.FakeRestorer
@@ -41,7 +40,6 @@ var _ = Describe("Gardener", func() {
 		containerizer = new(fakes.FakeContainerizer)
 		uidGenerator = new(fakes.FakeUidGenerator)
 		bulkStarter = new(fakes.FakeBulkStarter)
-		peaCleaner = new(fakes.FakePeaCleaner)
 		networker = new(fakes.FakeNetworker)
 		volumizer = new(fakes.FakeVolumizer)
 		sysinfoProvider = new(fakes.FakeSysInfoProvider)
@@ -64,7 +62,6 @@ var _ = Describe("Gardener", func() {
 			containerizer,
 			propertyManager,
 			restorer,
-			peaCleaner,
 			logger,
 			0,
 			false,
@@ -826,21 +823,6 @@ var _ = Describe("Gardener", func() {
 			containerizer.HandlesReturns([]string{}, errors.New("banana"))
 			Expect(gdnr.Start()).To(MatchError("cleanup: banana"))
 		})
-
-		It("should cleanup peas", func() {
-			Expect(gdnr.Start()).To(Succeed())
-			Expect(peaCleaner.CleanAllCallCount()).To(Equal(1))
-		})
-
-		Context("when the bulk starter fails", func() {
-			BeforeEach(func() {
-				peaCleaner.CleanAllReturns(errors.New("bam"))
-			})
-
-			It("returns the error", func() {
-				Expect(gdnr.Start()).To(MatchError(ContainSubstring("bam")))
-			})
-		})
 	})
 
 	Describe("listing containers", func() {
@@ -1085,11 +1067,6 @@ var _ = Describe("Gardener", func() {
 			Expect(cleanupErr).NotTo(HaveOccurred())
 		})
 
-		It("cleans all peas", func() {
-			Expect(peaCleaner.CleanAllCallCount()).To(Equal(1))
-			actualLogger := peaCleaner.CleanAllArgsForCall(0)
-			Expect(actualLogger).To(Equal(logger))
-		})
 
 		It("tries to restore all handles", func() {
 			Expect(restorer.RestoreCallCount()).To(Equal(1))
@@ -1143,24 +1120,6 @@ var _ = Describe("Gardener", func() {
 			Expect(logger.LogMessages()).ToNot(ContainElement(ContainSubstring("failed to remove container")))
 		})
 
-		Context("when pea cleanup fails", func() {
-			BeforeEach(func() {
-				peaCleaner.CleanAllReturns(errors.New("pea-cleanup-failure"))
-			})
-
-			It("returns the error", func() {
-				Expect(cleanupErr).To(MatchError("clean peas: pea-cleanup-failure"))
-			})
-
-			It("exits", func() {
-				Expect(restorer.RestoreCallCount()).To(Equal(0))
-				Expect(containerizer.DestroyCallCount()).To(Equal(0))
-				Expect(networker.DestroyCallCount()).To(Equal(0))
-				Expect(volumizer.DestroyCallCount()).To(Equal(0))
-				Expect(propertyManager.DestroyKeySpaceCallCount()).To(Equal(0))
-				Expect(containerizer.RemoveBundleCallCount()).To(Equal(0))
-			})
-		})
 
 		Context("when retrieving the list of handles fails", func() {
 			BeforeEach(func() {

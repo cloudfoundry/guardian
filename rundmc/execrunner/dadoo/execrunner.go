@@ -19,7 +19,6 @@ import (
 	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
-	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/lager"
 )
@@ -36,15 +35,13 @@ type ExecRunner struct {
 	containerRootHostUID     uint32
 	containerRootHostGID     uint32
 	bundleSaver              depot.BundleSaver
-	bundleLookupper          depot.BundleLookupper
 	processDepot             execrunner.ProcessDepot
 }
 
 func NewExecRunner(
 	dadooPath, runcPath, runcRoot string, signallerFactory *signals.SignallerFactory,
 	commandRunner commandrunner.CommandRunner, shouldCleanup bool, containerRootHostUID, containerRootHostGID uint32,
-	bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper,
-	processDepot execrunner.ProcessDepot,
+	bundleSaver depot.BundleSaver, processDepot execrunner.ProcessDepot,
 ) *ExecRunner {
 	return &ExecRunner{
 		dadooPath:                dadooPath,
@@ -58,7 +55,6 @@ func NewExecRunner(
 		containerRootHostUID:     containerRootHostUID,
 		containerRootHostGID:     containerRootHostGID,
 		bundleSaver:              bundleSaver,
-		bundleLookupper:          bundleLookupper,
 		processDepot:             processDepot,
 	}
 }
@@ -67,59 +63,59 @@ func (d *ExecRunner) Run(
 	log lager.Logger, processID, sandboxHandle string,
 	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 ) (proc garden.Process, theErr error) {
-	log = log.Session("execrunner", lager.Data{"id": processID})
+	log = log.Session("exec", lager.Data{"id": processID})
 
 	log.Info("start")
 	defer log.Info("done")
 
 	processPath, err := d.processDepot.CreateProcessDir(log, sandboxHandle, processID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed-to-create-process-dir: %w", err)
 	}
+
+	return d.runInProcessPath(log, processID, sandboxHandle, processPath,
+		pio, tty, procJSON, extraCleanup)
+}
+
+func (d *ExecRunner) RunPea(
+	log lager.Logger, processID, sandboxHandle string,
+	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
+) (proc garden.Process, theErr error) {
+	log = log.Session("exec", lager.Data{"id": processID})
+
+	log.Info("start")
+	defer log.Info("done")
+
+	processPath, err := d.processDepot.CreatePeaProcessDir(log, sandboxHandle, processID)
+	if err != nil {
+		return nil, fmt.Errorf("failed-to-create-process-dir for processID %q: %w", processID, err)
+	}
+
+	return d.runInProcessPath(log, processID, sandboxHandle, processPath,
+		pio, tty, procJSON, extraCleanup)
+}
+
+func (d *ExecRunner) runInProcessPath(
+	log lager.Logger, processID, sandboxHandle, processPath string,
+	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
+) (proc garden.Process, theErr error) {
+	log = log.Session("execrunner-run-in-process-path", lager.Data{"id": processID})
+
+	log.Info("start")
+	defer log.Info("done")
 
 	defer func() {
 		if theErr == nil {
 			return
 		}
 
+		log.Error("run-failed-rolling-back: %w", theErr, lager.Data{"processID": processID, "sandboxHandle": sandboxHandle})
 		if err := os.RemoveAll(processPath); err != nil {
 			log.Info("failed-to-remove-process-dir: "+err.Error(), lager.Data{"process_id": processID})
 		}
 	}()
 
 	return d.runProcess(log, "exec", processID, processPath, sandboxHandle, pio, tty, procJSON, extraCleanup)
-}
-
-func (d *ExecRunner) RunPea(
-	log lager.Logger, processID string, processBundle goci.Bndl, sandboxHandle string,
-	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
-) (proc garden.Process, theErr error) {
-	log = log.Session("execrunner", lager.Data{"id": processID})
-
-	log.Info("start")
-	defer log.Info("done")
-
-	processPath, err := d.processDepot.CreateProcessDir(log, sandboxHandle, processID)
-	if err != nil {
-		return nil, err
-	}
-
-	err = d.bundleSaver.Save(processBundle, processPath)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if theErr == nil {
-			return
-		}
-
-		if err := os.RemoveAll(processPath); err != nil {
-			log.Info("failed-to-remove-process-dir: "+err.Error(), lager.Data{"process_id": processID})
-		}
-	}()
-
-	return d.runProcess(log, "run", processID, processPath, sandboxHandle, pio, tty, procJSON, extraCleanup)
 }
 
 func (d *ExecRunner) runProcess(

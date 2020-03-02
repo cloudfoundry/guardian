@@ -9,6 +9,21 @@ import (
 )
 
 type FakeProcessDepot struct {
+	CreatePeaProcessDirStub        func(lager.Logger, string, string) (string, error)
+	createPeaProcessDirMutex       sync.RWMutex
+	createPeaProcessDirArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 string
+		arg3 string
+	}
+	createPeaProcessDirReturns struct {
+		result1 string
+		result2 error
+	}
+	createPeaProcessDirReturnsOnCall map[int]struct {
+		result1 string
+		result2 error
+	}
 	CreateProcessDirStub        func(lager.Logger, string, string) (string, error)
 	createProcessDirMutex       sync.RWMutex
 	createProcessDirArgsForCall []struct {
@@ -41,6 +56,71 @@ type FakeProcessDepot struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeProcessDepot) CreatePeaProcessDir(arg1 lager.Logger, arg2 string, arg3 string) (string, error) {
+	fake.createPeaProcessDirMutex.Lock()
+	ret, specificReturn := fake.createPeaProcessDirReturnsOnCall[len(fake.createPeaProcessDirArgsForCall)]
+	fake.createPeaProcessDirArgsForCall = append(fake.createPeaProcessDirArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 string
+		arg3 string
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("CreatePeaProcessDir", []interface{}{arg1, arg2, arg3})
+	fake.createPeaProcessDirMutex.Unlock()
+	if fake.CreatePeaProcessDirStub != nil {
+		return fake.CreatePeaProcessDirStub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.createPeaProcessDirReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeProcessDepot) CreatePeaProcessDirCallCount() int {
+	fake.createPeaProcessDirMutex.RLock()
+	defer fake.createPeaProcessDirMutex.RUnlock()
+	return len(fake.createPeaProcessDirArgsForCall)
+}
+
+func (fake *FakeProcessDepot) CreatePeaProcessDirCalls(stub func(lager.Logger, string, string) (string, error)) {
+	fake.createPeaProcessDirMutex.Lock()
+	defer fake.createPeaProcessDirMutex.Unlock()
+	fake.CreatePeaProcessDirStub = stub
+}
+
+func (fake *FakeProcessDepot) CreatePeaProcessDirArgsForCall(i int) (lager.Logger, string, string) {
+	fake.createPeaProcessDirMutex.RLock()
+	defer fake.createPeaProcessDirMutex.RUnlock()
+	argsForCall := fake.createPeaProcessDirArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeProcessDepot) CreatePeaProcessDirReturns(result1 string, result2 error) {
+	fake.createPeaProcessDirMutex.Lock()
+	defer fake.createPeaProcessDirMutex.Unlock()
+	fake.CreatePeaProcessDirStub = nil
+	fake.createPeaProcessDirReturns = struct {
+		result1 string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeProcessDepot) CreatePeaProcessDirReturnsOnCall(i int, result1 string, result2 error) {
+	fake.createPeaProcessDirMutex.Lock()
+	defer fake.createPeaProcessDirMutex.Unlock()
+	fake.CreatePeaProcessDirStub = nil
+	if fake.createPeaProcessDirReturnsOnCall == nil {
+		fake.createPeaProcessDirReturnsOnCall = make(map[int]struct {
+			result1 string
+			result2 error
+		})
+	}
+	fake.createPeaProcessDirReturnsOnCall[i] = struct {
+		result1 string
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeProcessDepot) CreateProcessDir(arg1 lager.Logger, arg2 string, arg3 string) (string, error) {
@@ -176,6 +256,8 @@ func (fake *FakeProcessDepot) LookupProcessDirReturnsOnCall(i int, result1 strin
 func (fake *FakeProcessDepot) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.createPeaProcessDirMutex.RLock()
+	defer fake.createPeaProcessDirMutex.RUnlock()
 	fake.createProcessDirMutex.RLock()
 	defer fake.createProcessDirMutex.RUnlock()
 	fake.lookupProcessDirMutex.RLock()

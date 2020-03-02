@@ -24,7 +24,6 @@ import (
 //go:generate counterfeiter . ProcessesStopper
 //go:generate counterfeiter . StateStore
 //go:generate counterfeiter . PeaCreator
-//go:generate counterfeiter . PeaUsernameResolver
 //go:generate counterfeiter . RuntimeStopper
 //go:generate counterfeiter . CPUCgrouper
 
@@ -90,10 +89,6 @@ type StateStore interface {
 	IsStopped(handle string) bool
 }
 
-type PeaUsernameResolver interface {
-	ResolveUser(log lager.Logger, handle string, image garden.ImageRef, username string) (int, int, error)
-}
-
 type CPUCgrouper interface {
 	CreateBadCgroup(handle string) error
 	DestroyBadCgroup(handle string) error
@@ -109,8 +104,6 @@ type Containerizer struct {
 	nstar                  NstarRunner
 	events                 EventStore
 	states                 StateStore
-	peaCreator             PeaCreator
-	peaUsernameResolver    PeaUsernameResolver
 	cpuEntitlementPerShare float64
 	runtimeStopper         RuntimeStopper
 	cpuCgrouper            CPUCgrouper
@@ -124,8 +117,6 @@ func New(
 	processesStopper ProcessesStopper,
 	events EventStore,
 	states StateStore,
-	peaCreator PeaCreator,
-	peaUsernameResolver PeaUsernameResolver,
 	cpuEntitlementPerShare float64,
 	runtimeStopper RuntimeStopper,
 	cpuCgrouper CPUCgrouper,
@@ -138,8 +129,6 @@ func New(
 		processesStopper:       processesStopper,
 		events:                 events,
 		states:                 states,
-		peaCreator:             peaCreator,
-		peaUsernameResolver:    peaUsernameResolver,
 		cpuEntitlementPerShare: cpuEntitlementPerShare,
 		runtimeStopper:         runtimeStopper,
 		cpuCgrouper:            cpuCgrouper,

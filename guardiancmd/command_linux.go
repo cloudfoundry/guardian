@@ -20,12 +20,10 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
-	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	nerdpkg "code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
-	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/privchecker"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/guardian/rundmc/sysctl"
@@ -93,7 +91,7 @@ func (NoopMkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode
 	return nil
 }
 
-func (f *LinuxFactory) WireExecRunner(runcRoot string, containerRootHostUID, containerRootHostGID uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot execrunner.ProcessDepot) runrunc.ExecRunner {
+func (f *LinuxFactory) WireExecRunner(runcRoot string, containerRootHostUID, containerRootHostGID uint32, bundleSaver depot.BundleSaver, processDepot execrunner.ProcessDepot) runrunc.ExecRunner {
 	return dadoo.NewExecRunner(
 		f.config.Bin.Dadoo.Path(),
 		f.config.Runtime.Plugin,
@@ -104,7 +102,6 @@ func (f *LinuxFactory) WireExecRunner(runcRoot string, containerRootHostUID, con
 		containerRootHostUID,
 		containerRootHostGID,
 		bundleSaver,
-		bundleLookupper,
 		processDepot,
 	)
 }
@@ -153,10 +150,10 @@ func (f *LinuxFactory) WireRootfsFileCreator() depot.RootfsFileCreator {
 	return preparerootfs.SymlinkRefusingFileCreator{}
 }
 
-func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger, volumizer peas.Volumizer) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, peas.BundleLoader, error) {
+func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger) (*runcontainerd.RunContainerd, error) {
 	containerdClient, err := containerd.New(f.config.Containerd.Socket, containerd.WithDefaultRuntime(plugin.RuntimeLinuxV1))
 	if err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, err
 	}
 	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
 	ctx = leases.WithLease(ctx, "lease-is-off")
@@ -168,12 +165,7 @@ func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, use
 
 	containerdManager := runcontainerd.New(nerd, nerd, processBuilder, userLookupper, wireExecer(pidGetter), statser, f.config.Containerd.UseContainerdForProcesses, cgroupManager, f.WireMkdirer(), f.config.Containers.CleanupProcessDirsOnWait, nerdStopper)
 
-	peaRunner := runcontainerd.NewRunContainerPea(containerdManager, nerd, volumizer, f.config.Containers.CleanupProcessDirsOnWait)
-
-	privilegeChecker := &privchecker.PrivilegeChecker{ContainerManager: nerd, Log: log}
-	peaBundleLoader := runcontainerd.NewBndlLoader(nerd)
-
-	return containerdManager, peaRunner, pidGetter, privilegeChecker, peaBundleLoader, nil
+	return containerdManager, nil
 }
 
 func (f *LinuxFactory) WireCPUCgrouper() (rundmc.CPUCgrouper, error) {

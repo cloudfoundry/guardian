@@ -101,7 +101,13 @@ func (e *Execer) ExecWithBndl(log lager.Logger, sandboxHandle string, bundle goc
 		return nil, err // this could *almost* be a panic: a valid spec should always encode (but out of caution we'll error)
 	}
 
-	return e.execRunner.Run(
+	if spec.Image == (garden.ImageRef{}) {
+		return e.execRunner.Run(
+			log, processID, sandboxHandle, io, preparedSpec.Terminal, bytes.NewReader(encodedSpec), nil,
+		)
+	}
+
+	return e.execRunner.RunPea(
 		log, processID, sandboxHandle, io, preparedSpec.Terminal, bytes.NewReader(encodedSpec), nil,
 	)
 }

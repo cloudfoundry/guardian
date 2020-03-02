@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"code.cloudfoundry.org/guardian/rundmc/depot"
@@ -15,6 +16,7 @@ import (
 //go:generate counterfeiter . ProcessDepot
 type ProcessDepot interface {
 	CreateProcessDir(log lager.Logger, sandboxHandle, processID string) (string, error)
+	CreatePeaProcessDir(log lager.Logger, sandboxHandle, peaProcessId string) (string, error)
 	LookupProcessDir(log lager.Logger, sandboxHandle, processID string) (string, error)
 }
 
@@ -37,11 +39,41 @@ func (d ProcessDirDepot) CreateProcessDir(log lager.Logger, sandboxHandle, proce
 		return "", errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
 	}
 
-	if err := os.MkdirAll(processPath, 0755); err != nil {
+	if err := os.MkdirAll(processPath, 0700); err != nil {
 		return "", err
 	}
 
 	return processPath, nil
+}
+
+func (d ProcessDirDepot) CreatePeaProcessDir(log lager.Logger, sandboxHandle, processID string) (string, error) {
+	peaId := strings.TrimSuffix(processID, "-PEA-PROCESS")
+	bundlePath, err := d.bundleLookupper.Lookup(log, sandboxHandle)
+	if err != nil {
+		return "", fmt.Errorf("failed-to-lookup-bundle for process ID %q, peaId %q: %v", processID, peaId, err)
+	}
+
+	peaPath := filepath.Join(bundlePath, "processes", peaId)
+	// if err := os.MkdirAll(peaPath, 0700); err != nil {
+	// 	return "", err
+	// }
+
+	peaProcessesPath := filepath.Join(peaPath, "processes")
+	if err := os.MkdirAll(peaProcessesPath, 0700); err != nil {
+		return "", err
+	}
+
+	peaProcessPath := filepath.Join(peaProcessesPath, processID)
+	if _, err := os.Stat(peaProcessPath); err == nil {
+		return "", errors.New(fmt.Sprintf("process ID %q already in use", processID))
+	}
+
+	if err := os.MkdirAll(peaProcessPath, 0700); err != nil {
+		return "", err
+	}
+
+	return peaProcessPath, nil
+
 }
 
 func (d ProcessDirDepot) LookupProcessDir(log lager.Logger, sandboxHandle, processID string) (string, error) {

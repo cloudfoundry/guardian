@@ -25,17 +25,16 @@ import (
 
 var _ = Describe("Rundmc", func() {
 	var (
-		fakeDepot               *fakes.FakeDepot
-		fakeBundleGenerator     *fakes.FakeBundleGenerator
-		fakeOCIRuntime          *fakes.FakeOCIRuntime
-		fakeNstarRunner         *fakes.FakeNstarRunner
-		fakeProcessesStopper    *fakes.FakeProcessesStopper
-		fakeEventStore          *fakes.FakeEventStore
-		fakeStateStore          *fakes.FakeStateStore
-		fakePeaCreator          *fakes.FakePeaCreator
-		fakePeaUsernameResolver *fakes.FakePeaUsernameResolver
-		fakeRuntimeStopper      *fakes.FakeRuntimeStopper
-		fakeCPUCgrouper         *fakes.FakeCPUCgrouper
+		fakeDepot            *fakes.FakeDepot
+		fakeBundleGenerator  *fakes.FakeBundleGenerator
+		fakeOCIRuntime       *fakes.FakeOCIRuntime
+		fakeNstarRunner      *fakes.FakeNstarRunner
+		fakeProcessesStopper *fakes.FakeProcessesStopper
+		fakeEventStore       *fakes.FakeEventStore
+		fakeStateStore       *fakes.FakeStateStore
+		fakePeaCreator       *fakes.FakePeaCreator
+		fakeRuntimeStopper   *fakes.FakeRuntimeStopper
+		fakeCPUCgrouper      *fakes.FakeCPUCgrouper
 
 		logger        lager.Logger
 		containerizer *rundmc.Containerizer
@@ -50,8 +49,6 @@ var _ = Describe("Rundmc", func() {
 		fakeProcessesStopper = new(fakes.FakeProcessesStopper)
 		fakeEventStore = new(fakes.FakeEventStore)
 		fakeStateStore = new(fakes.FakeStateStore)
-		fakePeaCreator = new(fakes.FakePeaCreator)
-		fakePeaUsernameResolver = new(fakes.FakePeaUsernameResolver)
 		fakeRuntimeStopper = new(fakes.FakeRuntimeStopper)
 		fakeCPUCgrouper = new(fakes.FakeCPUCgrouper)
 		logger = lagertest.NewTestLogger("test")
@@ -67,8 +64,6 @@ var _ = Describe("Rundmc", func() {
 			fakeProcessesStopper,
 			fakeEventStore,
 			fakeStateStore,
-			fakePeaCreator,
-			fakePeaUsernameResolver,
 			0,
 			fakeRuntimeStopper,
 			fakeCPUCgrouper,
@@ -210,48 +205,49 @@ var _ = Describe("Rundmc", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			Describe("Username resolving", func() {
-				Context("when user is not specified", func() {
-					It("does not try to resolve the user", func() {
-						_, err := containerizer.Run(logger, "some-handle", processSpec, pio)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(fakePeaUsernameResolver.ResolveUserCallCount()).To(Equal(0))
-					})
-				})
+			// TODO: username resolution is moved to container.go
+			// Describe("Username resolving", func() {
+			// 	Context("when user is not specified", func() {
+			// 		It("does not try to resolve the user", func() {
+			// 			_, err := containerizer.Run(logger, "some-handle", processSpec, pio)
+			// 			Expect(err).NotTo(HaveOccurred())
+			// 			Expect(fakePeaUsernameResolver.ResolveUserCallCount()).To(Equal(0))
+			// 		})
+			// 	})
 
-				Context("when user is specified as uid:gid", func() {
-					BeforeEach(func() {
-						processSpec.User = "1:2"
-					})
+			// 	Context("when user is specified as uid:gid", func() {
+			// 		BeforeEach(func() {
+			// 			processSpec.User = "1:2"
+			// 		})
 
-					It("does not try to resolve the user", func() {
-						_, err := containerizer.Run(logger, "some-handle", processSpec, pio)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(fakePeaUsernameResolver.ResolveUserCallCount()).To(Equal(0))
-					})
-				})
+			// 		It("does not try to resolve the user", func() {
+			// 			_, err := containerizer.Run(logger, "some-handle", processSpec, pio)
+			// 			Expect(err).NotTo(HaveOccurred())
+			// 			Expect(fakePeaUsernameResolver.ResolveUserCallCount()).To(Equal(0))
+			// 		})
+			// 	})
 
-				Context("when user is specified as username", func() {
-					BeforeEach(func() {
-						processSpec.User = "foobar"
-					})
+			// 	Context("when user is specified as username", func() {
+			// 		BeforeEach(func() {
+			// 			processSpec.User = "foobar"
+			// 		})
 
-					It("resolves username to uid:gid", func() {
-						fakePeaUsernameResolver.ResolveUserReturns(1, 2, nil)
+			// 		It("resolves username to uid:gid", func() {
+			// 			fakePeaUsernameResolver.ResolveUserReturns(1, 2, nil)
 
-						_, err := containerizer.Run(logger, "some-handle", processSpec, pio)
-						Expect(err).NotTo(HaveOccurred())
+			// 			_, err := containerizer.Run(logger, "some-handle", processSpec, pio)
+			// 			Expect(err).NotTo(HaveOccurred())
 
-						Expect(fakePeaUsernameResolver.ResolveUserCallCount()).To(Equal(1))
-						_, _, _, resolverInputUsername := fakePeaUsernameResolver.ResolveUserArgsForCall(0)
-						Expect(resolverInputUsername).To(Equal("foobar"))
+			// 			Expect(fakePeaUsernameResolver.ResolveUserCallCount()).To(Equal(1))
+			// 			_, _, _, resolverInputUsername := fakePeaUsernameResolver.ResolveUserArgsForCall(0)
+			// 			Expect(resolverInputUsername).To(Equal("foobar"))
 
-						Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(1))
-						_, createdPeaProcessSpec, _, _ := fakePeaCreator.CreatePeaArgsForCall(0)
-						Expect(createdPeaProcessSpec.User).To(Equal("1:2"))
-					})
-				})
-			})
+			// 			Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(1))
+			// 			_, createdPeaProcessSpec, _, _ := fakePeaCreator.CreatePeaArgsForCall(0)
+			// 			Expect(createdPeaProcessSpec.User).To(Equal("1:2"))
+			// 		})
+			// 	})
+			// })
 		})
 	})
 
@@ -653,8 +649,6 @@ var _ = Describe("Rundmc", func() {
 					fakeProcessesStopper,
 					fakeEventStore,
 					fakeStateStore,
-					fakePeaCreator,
-					fakePeaUsernameResolver,
 					entitlementPerSharePercent,
 					fakeRuntimeStopper,
 					fakeCPUCgrouper,

@@ -145,7 +145,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 	})
 
 	Describe("process limits", func() {
-		It("should not leak cgroups", func() {
+		FIt("should not leak cgroups", func() {
 			stdout := gbytes.NewBuffer()
 			process, err := ctr.Run(garden.ProcessSpec{
 				ID:                      "pea-process",
