@@ -189,13 +189,12 @@ var _ = Describe("Run", func() {
 	})
 
 	lsofFileHandlesOnProcessPipes := func(processID string) string {
-
 		grepProcID := exec.Command("grep", processID)
 		lsof := exec.Command("lsof")
 
 		lsofOutPipe, err := lsof.StdoutPipe()
-		defer lsofOutPipe.Close()
 		Expect(err).NotTo(HaveOccurred())
+		defer lsofOutPipe.Close()
 
 		stdoutBuf := gbytes.NewBuffer()
 		grepProcID.Stdin = lsofOutPipe
@@ -204,7 +203,7 @@ var _ = Describe("Run", func() {
 
 		Expect(lsof.Run()).To(Succeed())
 
-		grepProcID.Wait()
+		_ = grepProcID.Wait()
 
 		return string(stdoutBuf.Contents())
 	}

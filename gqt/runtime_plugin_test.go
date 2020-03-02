@@ -264,12 +264,15 @@ var _ = Describe("Runtime Plugin", func() {
 			processSpecFilePath := filepath.Join(client.TmpDir, "exec-process-spec")
 			Eventually(processSpecFilePath).Should(BeAnExistingFile())
 
-			var processSpec specs.Process
-			readProcessSpec := func() error {
-				return json.Unmarshal(readFile(processSpecFilePath), &processSpec)
+			readProcessSpecArg := func() (string, error) {
+				var processSpec specs.Process
+				if err := json.Unmarshal(readFile(processSpecFilePath), &processSpec); err != nil {
+					return "", err
+				}
+
+				return processSpec.Args[0], nil
 			}
-			Eventually(readProcessSpec).Should(Succeed())
-			Expect(processSpec.Args[0]).To(Equal("some-idiosyncratic-binary"))
+			Eventually(readProcessSpecArg).Should(Equal("some-idiosyncratic-binary"))
 		})
 
 		Describe("runtime plugin stdio", func() {
