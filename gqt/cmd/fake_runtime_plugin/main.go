@@ -218,16 +218,21 @@ var ExecCommand = cli.Command{
 		must(json.NewDecoder(procSpecFile).Decode(&procSpec))
 
 		exitCodeStr := procSpec.Args[1]
+		if strings.HasSuffix(procSpec.Args[0], "mkdir") || strings.HasSuffix(procSpec.Args[0], "mkdir.exe") {
+			exitCodeStr = "0"
+		}
 		exitCode, err := strconv.Atoi(exitCodeStr)
 		mustNot(err)
 
-		stdoutStr := procSpec.Args[2]
-		_, err = fmt.Fprintln(os.Stdout, stdoutStr)
-		mustNot(err)
+		if len(procSpec.Args) == 4 {
+			stdoutStr := procSpec.Args[2]
+			_, err = fmt.Fprintln(os.Stdout, stdoutStr)
+			mustNot(err)
 
-		stderrStr := procSpec.Args[3]
-		_, err = fmt.Fprintln(os.Stderr, stderrStr)
-		mustNot(err)
+			stderrStr := procSpec.Args[3]
+			_, err = fmt.Fprintln(os.Stderr, stderrStr)
+			mustNot(err)
+		}
 
 		// To satisfy dadoo's requirement that the runtime plugin fork SOMETHING
 		childCmd := exec.Command(os.Args[0], "child", "--exitcode", exitCodeStr)

@@ -53,7 +53,6 @@ const containerdNamespace = "garden"
 
 type GardenFactory interface {
 	WireResolvConfigurer() kawasaki.DnsResolvConfigurer
-	WireMkdirer() runrunc.Mkdirer
 	CommandRunner() commandrunner.CommandRunner
 	WireVolumizer(logger lager.Logger) gardener.Volumizer
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
@@ -125,6 +124,7 @@ type CommonCommand struct {
 		IPTables        FileFlag `long:"iptables-bin"  default:"/sbin/iptables" description:"path to the iptables binary"`
 		IPTablesRestore FileFlag `long:"iptables-restore-bin"  default:"/sbin/iptables-restore" description:"path to the iptables-restore binary"`
 		Init            FileFlag `long:"init-bin"       description:"Path execute as pid 1 inside each container."`
+		Mkdirer         FileFlag `long:"mkdirer-bin"       description:"Path to the mkdirer binary, which is put inside each container."`
 	} `group:"Binary Tools"`
 
 	Runtime struct {
@@ -481,8 +481,9 @@ func (cmd *CommonCommand) wireContainerizer(
 	networkDepot depot.NetworkDepot,
 ) (*rundmc.Containerizer, gardener.PeaCleaner, error) {
 	initMount, initPath := initBindMountAndPath(cmd.Bin.Init.Path())
+	mkdirerMount, mkdirerPath := mkdirerBindMountAndPath(cmd.Bin.Mkdirer.Path())
 
-	defaultMounts := append(defaultBindMounts(), initMount)
+	defaultMounts := append(defaultBindMounts(), initMount, mkdirerMount)
 	privilegedMounts := append(defaultMounts, privilegedMounts()...)
 	unprivilegedMounts := append(defaultMounts, unprivilegedMounts()...)
 
@@ -590,7 +591,7 @@ func (cmd *CommonCommand) wireContainerizer(
 
 	var execRunner runrunc.ExecRunner = factory.WireExecRunner(runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)), bundleSaver, depot, processDepot)
 	wireExecerFunc := func(pidGetter runrunc.PidGetter) *runrunc.Execer {
-		return runrunc.NewExecer(depot, processBuilder, factory.WireMkdirer(), userLookupper, execRunner, pidGetter)
+		return runrunc.NewExecer(depot, processBuilder, execRunner)
 	}
 
 	statser := runrunc.NewStatser(runcLogRunner, runcBinary, depot, processDepot)
@@ -681,7 +682,7 @@ func (cmd *CommonCommand) wireContainerizer(
 		return nil, nil, err
 	}
 
-	return rundmc.New(depot, template, ociRuntime, nstar, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper, cpuCgrouper), peaCleaner, nil
+	return rundmc.New(depot, template, ociRuntime, nstar, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper, cpuCgrouper, userLookupper, containersPidGetter, mkdirerPath), peaCleaner, nil
 }
 
 func (cmd *CommonCommand) useContainerd() bool {

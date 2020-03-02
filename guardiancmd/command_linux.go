@@ -79,20 +79,6 @@ func wireEnvFunc() processes.EnvFunc {
 	return processes.UnixEnvFor
 }
 
-func (f *LinuxFactory) WireMkdirer() runrunc.Mkdirer {
-	if runningAsRoot() {
-		return bundlerules.MkdirChowner{Command: preparerootfs.Command, CommandRunner: f.commandRunner}
-	}
-
-	return NoopMkdirer{}
-}
-
-type NoopMkdirer struct{}
-
-func (NoopMkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error {
-	return nil
-}
-
 func (f *LinuxFactory) WireExecRunner(runcRoot string, containerRootHostUID, containerRootHostGID uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot execrunner.ProcessDepot) runrunc.ExecRunner {
 	return dadoo.NewExecRunner(
 		f.config.Bin.Dadoo.Path(),
@@ -166,7 +152,7 @@ func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, use
 
 	cgroupManager := runcontainerd.NewCgroupManager(containerdRuncRoot(), containerdNamespace)
 
-	containerdManager := runcontainerd.New(nerd, nerd, processBuilder, userLookupper, wireExecer(pidGetter), statser, f.config.Containerd.UseContainerdForProcesses, cgroupManager, f.WireMkdirer(), peaHandlesGetter, f.config.Containers.CleanupProcessDirsOnWait, nerdStopper)
+	containerdManager := runcontainerd.New(nerd, nerd, processBuilder, userLookupper, wireExecer(pidGetter), statser, f.config.Containerd.UseContainerdForProcesses, cgroupManager, peaHandlesGetter, f.config.Containers.CleanupProcessDirsOnWait, nerdStopper)
 
 	peaRunner := runcontainerd.NewRunContainerPea(containerdManager, nerd, volumizer, f.config.Containers.CleanupProcessDirsOnWait)
 
@@ -196,6 +182,16 @@ func initBindMountAndPath(initPathOnHost string) (specs.Mount, string) {
 		Destination: initPathInContainer,
 		Options:     []string{"bind"},
 	}, initPathInContainer
+}
+
+func mkdirerBindMountAndPath(mkdirerPathOnHost string) (specs.Mount, string) {
+	mkdirerPathInContainer := filepath.Join("/tmp", "mkdir")
+	return specs.Mount{
+		Type:        "bind",
+		Source:      mkdirerPathOnHost,
+		Destination: mkdirerPathInContainer,
+		Options:     []string{"bind"},
+	}, mkdirerPathInContainer
 }
 
 func defaultBindMounts() []specs.Mount {

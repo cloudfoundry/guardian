@@ -6,14 +6,12 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	fakes "code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
 	"code.cloudfoundry.org/guardian/rundmc/users"
-	"code.cloudfoundry.org/guardian/rundmc/users/usersfakes"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,11 +22,8 @@ var _ = Describe("Execer", func() {
 	var (
 		bundleLoader       *fakes.FakeBundleLoader
 		processBuilder     *fakes.FakeProcessBuilder
-		mkdirer            *fakes.FakeMkdirer
-		userLookupper      *usersfakes.FakeUserLookupper
 		processIDGenerator *fakes.FakeUidGenerator
 		execRunner         *fakes.FakeExecRunner
-		pidGetter          *fakes.FakePidGetter
 
 		execer *runrunc.Execer
 
@@ -39,7 +34,7 @@ var _ = Describe("Execer", func() {
 		spec       garden.ProcessSpec
 		pio        = garden.ProcessIO{Stdin: bytes.NewBufferString("some-stdin")}
 
-		user = &users.ExecUser{
+		user = users.ExecUser{
 			Uid:  1,
 			Gid:  2,
 			Home: "/some/home",
@@ -78,21 +73,13 @@ var _ = Describe("Execer", func() {
 		bundleLoader.LoadReturns(bndl, nil)
 		processBuilder = new(fakes.FakeProcessBuilder)
 		processBuilder.BuildProcessReturns(preparedProc)
-		mkdirer = new(fakes.FakeMkdirer)
-		userLookupper = new(usersfakes.FakeUserLookupper)
-		userLookupper.LookupReturns(user, nil)
 		processIDGenerator = new(fakes.FakeUidGenerator)
 		execRunner = new(fakes.FakeExecRunner)
-		pidGetter = new(fakes.FakePidGetter)
-		pidGetter.GetPidReturns(1234, nil)
 
 		execer = runrunc.NewExecer(
 			bundleLoader,
 			processBuilder,
-			mkdirer,
-			userLookupper,
 			execRunner,
-			pidGetter,
 		)
 	})
 
@@ -103,24 +90,6 @@ var _ = Describe("Execer", func() {
 	testExec := func() {
 		It("succeeds", func() {
 			Expect(execErr).NotTo(HaveOccurred())
-		})
-
-		It("looks up the user", func() {
-			Expect(userLookupper.LookupCallCount()).To(Equal(1))
-			rootfsPath, username := userLookupper.LookupArgsForCall(0)
-			Expect(rootfsPath).To(Equal(filepath.Join("/proc", "1234", "root")))
-			Expect(username).To(Equal(spec.User))
-		})
-
-		It("sets up the working directory", func() {
-			Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
-			rootfsPath, hostUID, hostGID, mode, shouldRecreate, workDir := mkdirer.MkdirAsArgsForCall(0)
-			Expect(rootfsPath).To(Equal(filepath.Join("/proc", "1234", "root")))
-			Expect(hostUID).To(Equal(11))
-			Expect(hostGID).To(Equal(22))
-			Expect(mode).To(Equal(os.FileMode(0755)))
-			Expect(shouldRecreate).To(BeFalse())
-			Expect(workDir).To(ConsistOf(spec.Dir))
 		})
 
 		It("builds a process", func() {
@@ -176,44 +145,6 @@ var _ = Describe("Execer", func() {
 			})
 		})
 
-		Context("when a working directory is not specified", func() {
-			BeforeEach(func() {
-				spec.Dir = ""
-			})
-
-			It("defaults the workdir to the user's home when setting it up", func() {
-				Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
-				_, _, _, _, _, workDir := mkdirer.MkdirAsArgsForCall(0)
-				Expect(workDir).To(ConsistOf(user.Home))
-			})
-
-			It("defaults the workdir to the user's home when building a process", func() {
-				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-				_, actualProcessSpec, _, _ := processBuilder.BuildProcessArgsForCall(0)
-				Expect(actualProcessSpec.Dir).To(Equal(user.Home))
-			})
-		})
-
-		Context("when user lookup fails", func() {
-			BeforeEach(func() {
-				userLookupper.LookupReturns(nil, errors.New("user-lookup"))
-			})
-
-			It("returns an error", func() {
-				Expect(execErr).To(MatchError(ContainSubstring("user-lookup")))
-			})
-		})
-
-		Context("when preparing the working directory fails", func() {
-			BeforeEach(func() {
-				mkdirer.MkdirAsReturns(errors.New("mkdir"))
-			})
-
-			It("returns an error", func() {
-				Expect(execErr).To(MatchError(ContainSubstring("mkdir")))
-			})
-		})
-
 		Context("when running the process fails", func() {
 			BeforeEach(func() {
 				execRunner.RunReturns(nil, errors.New("run"))
@@ -227,7 +158,7 @@ var _ = Describe("Execer", func() {
 
 	Describe("Exec", func() {
 		JustBeforeEach(func() {
-			_, execErr = execer.Exec(logger, id, spec, pio)
+			_, execErr = execer.Exec(logger, id, spec, user, pio)
 		})
 
 		It("loads the bundle", func() {
@@ -251,7 +182,7 @@ var _ = Describe("Execer", func() {
 
 	Describe("ExecWithBndl", func() {
 		JustBeforeEach(func() {
-			_, execErr = execer.ExecWithBndl(logger, id, bndl, spec, pio)
+			_, execErr = execer.ExecWithBndl(logger, id, bndl, spec, user, pio)
 		})
 
 		testExec()

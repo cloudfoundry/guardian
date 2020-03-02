@@ -221,6 +221,7 @@ func getGardenBinaries() runner.Binaries {
 		RuntimePlugin: goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_runtime_plugin"),
 		NoopPlugin:    goCompile("code.cloudfoundry.org/guardian/gqt/cmd/noop_plugin"),
 		FakeRunc:      goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc"),
+		Mkdirer:       goCompile("code.cloudfoundry.org/guardian/cmd/mkdir"),
 	}
 
 	gardenBinaries.PrivilegedImagePlugin = gardenBinaries.ImagePlugin + "-priv"
@@ -289,6 +290,7 @@ func defaultConfig() runner.GdnRunnerConfig {
 	cfg.NSTarBin = binaries.NSTar
 	cfg.ImagePluginBin = binaries.Groot
 	cfg.PrivilegedImagePluginBin = binaries.Groot
+	cfg.MkdirerBin = binaries.Mkdirer
 
 	return cfg
 }
@@ -432,6 +434,7 @@ func createRootfs(modifyRootfs func(string), perm os.FileMode) string {
 	runCommand(exec.Command("tar", "xf", defaultTestRootFS, "-C", unpackedRootfs))
 
 	Expect(os.Chmod(tmpDir, perm)).To(Succeed())
+	Expect(exec.Command("chown", "-R", "4294967294:4294967294", tmpDir).Run()).To(Succeed())
 	modifyRootfs(unpackedRootfs)
 
 	return unpackedRootfs
