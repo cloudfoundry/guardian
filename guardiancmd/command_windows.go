@@ -75,16 +75,6 @@ func (f *WindowsFactory) WireExecRunner(runcRoot string, _, _ uint32, bundleSave
 	return execrunner.NewWindowsExecRunner(f.config.Runtime.Plugin, f.commandRunner, bundleSaver, bundleLookupper, processDepot)
 }
 
-func (f *WindowsFactory) WireRootfsFileCreator() depot.RootfsFileCreator {
-	return noopRootfsFileCreator{}
-}
-
-type noopRootfsFileCreator struct{}
-
-func (noopRootfsFileCreator) CreateFiles(rootFSPath string, pathsToCreate ...string) error {
-	return nil
-}
-
 func (f *WindowsFactory) CommandRunner() commandrunner.CommandRunner {
 	return f.commandRunner
 }

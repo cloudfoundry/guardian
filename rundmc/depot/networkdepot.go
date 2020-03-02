@@ -13,25 +13,17 @@ type BindMountSourceCreator interface {
 	Create(containerDir string, privileged bool) ([]garden.BindMount, error)
 }
 
-//go:generate counterfeiter . RootfsFileCreator
-type RootfsFileCreator interface {
-	CreateFiles(rootFSPath string, pathsToCreate ...string) error
-}
-
 type NetworkDepot struct {
 	dir                    string
-	rootfsFileCreator      RootfsFileCreator
 	bindMountSourceCreator BindMountSourceCreator
 }
 
 func NewNetworkDepot(
 	dir string,
-	rootfsFileCreator RootfsFileCreator,
 	bindMountSourceCreator BindMountSourceCreator,
 ) NetworkDepot {
 	return NetworkDepot{
 		dir:                    dir,
-		rootfsFileCreator:      rootfsFileCreator,
 		bindMountSourceCreator: bindMountSourceCreator,
 	}
 }
@@ -41,11 +33,6 @@ func (d NetworkDepot) SetupBindMounts(log lager.Logger, handle string, privilege
 
 	log.Info("start")
 	defer log.Info("finished")
-
-	if err := d.rootfsFileCreator.CreateFiles(rootfsPath, "/etc/hosts", "/etc/resolv.conf"); err != nil {
-		log.Error("create-rootfs-mountpoint-files-failed", err)
-		return nil, err
-	}
 
 	containerDir := d.toDir(handle)
 	if err := os.MkdirAll(containerDir, 0755); err != nil {
