@@ -83,6 +83,8 @@ var _ = Describe("Driver", func() {
 		spec = image_manager.ImageDriverSpec{
 			ImagePath: imagePath,
 			Mount:     true,
+			OwnerUID:  123,
+			OwnerGID:  456,
 		}
 	})
 
@@ -379,21 +381,30 @@ var _ = Describe("Driver", func() {
 			})
 		})
 
-		It("uses the correct permissions to the internal folders", func() {
+		It("uses the correct permissions and ownerships for the internal folders", func() {
 			_, err := driver.CreateImage(logger, spec)
 			Expect(err).ToNot(HaveOccurred())
 
 			stat, err := os.Stat(filepath.Join(spec.ImagePath, overlayxfs.UpperDir))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0755)))
+			uid, gid := getUidAndGid(stat)
+			Expect(uid).To(Equal(123))
+			Expect(gid).To(Equal(456))
 
 			stat, err = os.Stat(filepath.Join(spec.ImagePath, overlayxfs.WorkDir))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0755)))
+			uid, gid = getUidAndGid(stat)
+			Expect(uid).To(Equal(123))
+			Expect(gid).To(Equal(456))
 
 			stat, err = os.Stat(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0755)))
+			uid, gid = getUidAndGid(stat)
+			Expect(uid).To(Equal(123))
+			Expect(gid).To(Equal(456))
 		})
 
 		Context("when Mount is false", func() {
@@ -1497,4 +1508,11 @@ func mustSucceed(err error) {
 	}
 	Expect(err).NotTo(HaveOccurred(), "grootfs init-store failed. This might be because the machine is "+
 		"running out of RAM. Check the output of `free` above for more info.")
+}
+
+func getUidAndGid(fileInfo os.FileInfo) (int, int) {
+	unixFileInfo, ok := fileInfo.Sys().(*syscall.Stat_t)
+	Expect(ok).To(BeTrue(), "failed to cast fileInfo.Sys()")
+
+	return int(unixFileInfo.Uid), int(unixFileInfo.Gid)
 }

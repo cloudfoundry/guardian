@@ -102,6 +102,8 @@ var _ = Describe("Image", func() {
 					Author: "Groot",
 					Config: specsv1.ImageConfig{},
 				},
+				OwnerUID: 123,
+				OwnerGID: 456,
 			}
 			image, err := imageManager.Create(logger, imageSpec)
 			Expect(err).NotTo(HaveOccurred())
@@ -109,6 +111,8 @@ var _ = Describe("Image", func() {
 			_, spec := fakeImageDriver.CreateImageArgsForCall(0)
 			Expect(spec.BaseVolumeIDs).To(Equal(imageSpec.BaseVolumeIDs))
 			Expect(spec.ImagePath).To(Equal(image.Path))
+			Expect(spec.OwnerUID).To(Equal(123))
+			Expect(spec.OwnerGID).To(Equal(456))
 		})
 
 		Context("when mounting is skipped", func() {

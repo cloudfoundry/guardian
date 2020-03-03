@@ -285,7 +285,7 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_manager.ImageDriver
 		"rootfs":   rootfsDir,
 	}
 
-	if err := d.createImageDirectories(logger, directories); err != nil {
+	if err := d.createImageDirectories(logger, directories, spec.OwnerUID, spec.OwnerGID); err != nil {
 		return groot.MountInfo{}, err
 	}
 
@@ -450,7 +450,7 @@ func (d *Driver) mountFilesystem(logger lager.Logger, source, destination, optio
 	return nil
 }
 
-func (d *Driver) createImageDirectories(logger lager.Logger, directories map[string]string) error {
+func (d *Driver) createImageDirectories(logger lager.Logger, directories map[string]string, ownerUID, ownerGID int) error {
 	for name, directory := range directories {
 		if err := os.Mkdir(directory, 0755); err != nil {
 			logger.Error(fmt.Sprintf("creating-%s-folder-failed", name), err)
@@ -460,6 +460,11 @@ func (d *Driver) createImageDirectories(logger lager.Logger, directories map[str
 		if err := os.Chmod(directory, 0755); err != nil {
 			logger.Error(fmt.Sprintf("chmoding-%s-folder-failed", name), err)
 			return errorspkg.Wrapf(err, "chmoding %s folder", name)
+		}
+
+		if err := os.Chown(directory, ownerUID, ownerGID); err != nil {
+			logger.Error(fmt.Sprintf("chowning-%s-folder-failed", name), err)
+			return errorspkg.Wrapf(err, "chowning %s folder", name)
 		}
 	}
 
