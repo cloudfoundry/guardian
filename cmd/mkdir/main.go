@@ -19,7 +19,6 @@ func main() {
 	flag.Parse()
 
 	args := flag.Args()
-	fmt.Printf("args = %+v\n", args)
 
 	if len(args) != 1 {
 		fmt.Fprintln(os.Stderr, usage)
@@ -34,11 +33,9 @@ func main() {
 
 	err := mkdir(path, defaultPermissions, *user, *group)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not mkdir %q: %v\n", path, err)
+		fmt.Fprintf(os.Stderr, "could not set permissions on %q: %v\n", path, err)
 		os.Exit(3)
 	}
-	fmt.Printf("stdout")
-	fmt.Fprintf(os.Stderr, "stderr")
 }
 
 func mkdir(path string, mode os.FileMode, user int, group int) error {
