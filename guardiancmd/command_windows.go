@@ -178,6 +178,6 @@ func (cmd *CommonCommand) computeRuncRoot() string {
 	return ""
 }
 
-func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containerizer *rundmc.Containerizer, memoryProvider throttle.MemoryProvider) (Service, error) {
+func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containerizer *rundmc.Containerizer, memoryProvider throttle.MemoryProvider, cpuEntitlementPerShare float64) (Service, error) {
 	return &NoopService{}, nil
 }

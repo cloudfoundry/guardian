@@ -51,7 +51,7 @@ var _ = Describe("SharesBalancer", func() {
 		memoryProvider = new(throttlefakes.FakeMemoryProvider)
 		memoryProvider.TotalMemoryReturns(10000*throttle.MB, nil)
 
-		sharesBalancer = throttle.NewSharesBalancer(thisTestCgroupPath, memoryProvider)
+		sharesBalancer = throttle.NewSharesBalancer(thisTestCgroupPath, memoryProvider, 0.5)
 	})
 
 	AfterEach(func() {
@@ -107,9 +107,9 @@ var _ = Describe("SharesBalancer", func() {
 				Expect(cgroups.WriteCgroupProc(filepath.Join(badCgroupPath, "container"), container.Process.Pid)).To(Succeed())
 			})
 
-			It("assigns the sum of the contained shares to the bad cgroup, the rest to the good cgroup", func() {
-				Expect(readCPUShares(goodCgroupPath)).To(Equal(9000))
-				Expect(readCPUShares(badCgroupPath)).To(Equal(1000))
+			It("assigns the adjusted sum of the contained shares to the bad cgroup, the rest to the good cgroup", func() {
+				Expect(readCPUShares(goodCgroupPath)).To(Equal(9500))
+				Expect(readCPUShares(badCgroupPath)).To(Equal(500))
 			})
 
 			When("the container goes back to the good cgroup", func() {

@@ -287,7 +287,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		return err
 	}
 
-	services, err := cmd.wireServices(logger, wiring.Containerizer, wiring.SysInfoProvider)
+	services, err := cmd.wireServices(logger, wiring.Containerizer, wiring.SysInfoProvider, wiring.CpuEntitlementPerShare)
 	if err != nil {
 		return err
 	}
@@ -372,11 +372,11 @@ func (cmd *ServerCommand) initializeDropsonde(log lager.Logger) {
 	}
 }
 
-func (cmd *ServerCommand) wireServices(log lager.Logger, containerizer *rundmc.Containerizer, memoryProvider throttle.MemoryProvider) ([]Service, error) {
+func (cmd *ServerCommand) wireServices(log lager.Logger, containerizer *rundmc.Containerizer, memoryProvider throttle.MemoryProvider, cpuEntitlementPerShare float64) ([]Service, error) {
 	services := []Service{}
 
 	if cmd.CPUThrottling.Enabled {
-		cpuThrottling, err := cmd.wireCpuThrottlingService(log, containerizer, memoryProvider)
+		cpuThrottling, err := cmd.wireCpuThrottlingService(log, containerizer, memoryProvider, cpuEntitlementPerShare)
 		if err != nil {
 			return nil, err
 		}

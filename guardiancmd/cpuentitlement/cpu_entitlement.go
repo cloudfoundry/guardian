@@ -19,3 +19,11 @@ func (c Calculator) CalculateDefaultEntitlementPerShare() (float64, error) {
 
 	return float64(cpuCores*100) / float64(memory/1024/1024), nil
 }
+
+func (c Calculator) CalculateEntitlementMultiplier(effectiveCPUEntitlementPerShare float64) (float64, error) {
+	defaultCPUEntitlementPerShare, err := c.CalculateDefaultEntitlementPerShare()
+	if err != nil {
+		return 0, err
+	}
+	return effectiveCPUEntitlementPerShare / defaultCPUEntitlementPerShare, nil
+}

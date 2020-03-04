@@ -11,6 +11,7 @@ import (
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/guardiancmd/cpuentitlement"
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/kawasaki/dns"
 	"code.cloudfoundry.org/guardian/rundmc"
@@ -30,6 +31,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/guardian/rundmc/sysctl"
 	"code.cloudfoundry.org/guardian/rundmc/users"
+	"code.cloudfoundry.org/guardian/sysinfo"
 	"code.cloudfoundry.org/guardian/throttle"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
@@ -307,16 +309,24 @@ func (cmd *CommonCommand) getGardenCPUCgroup() (string, error) {
 	return filepath.Join(cgroupsMountpoint, "cpu", cpuCgroupSubPath["cpu"], gardenCgroup), nil
 }
 
-func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containerizer *rundmc.Containerizer, memoryProvider throttle.MemoryProvider) (Service, error) {
+func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containerizer *rundmc.Containerizer, memoryProvider throttle.MemoryProvider, cpuEntitlementPerShare float64) (Service, error) {
 	metricsSource := throttle.NewContainerMetricsSource(containerizer)
 	gardenCPUCgroup, err := cmd.getGardenCPUCgroup()
 	if err != nil {
 		return nil, err
 	}
 
+	sysInfoProvider := sysinfo.NewResourcesProvider(cmd.Containers.Dir)
+	cpuEntitlementCalculator := cpuentitlement.Calculator{SysInfoProvider: sysInfoProvider}
+	sharesMultiplier, err := cpuEntitlementCalculator.CalculateEntitlementMultiplier(cpuEntitlementPerShare)
+	if err != nil {
+		log.Error("failed-to-compute-cpu-share-multiplier", err)
+		return nil, err
+	}
+
 	enforcer := throttle.NewEnforcer(gardenCPUCgroup)
 	throttler := throttle.NewThrottler(metricsSource, enforcer)
-	sharesBalancer := throttle.NewSharesBalancer(gardenCPUCgroup, memoryProvider)
+	sharesBalancer := throttle.NewSharesBalancer(gardenCPUCgroup, memoryProvider, sharesMultiplier)
 
 	if cmd.CPUThrottling.CheckInterval == 0 {
 		return nil, errors.New("non-positive CPU throttling checking interval")

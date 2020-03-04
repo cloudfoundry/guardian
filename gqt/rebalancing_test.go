@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
+	"code.cloudfoundry.org/guardian/sysinfo"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -27,6 +28,9 @@ var _ = Describe("CPU shares rebalancing", func() {
 		// We want an aggressive throttling check to speed moving containers across cgroups up
 		// in order to reduce test run time
 		config.CPUThrottlingCheckInterval = uint64ptr(1)
+	})
+
+	JustBeforeEach(func() {
 		client = runner.Start(config)
 		var err error
 		goodCgroupPath, err = cgrouper.GetCGroupPath(client.CgroupsRootPath(), "cpu", strconv.Itoa(GinkgoParallelNode()), false, cpuThrottlingEnabled())
@@ -52,7 +56,7 @@ var _ = Describe("CPU shares rebalancing", func() {
 			goodCgroupInitialShares int64
 		)
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			Eventually(func() int64 { return readCgroupFile(badCgroupPath, "cpu.shares") }).Should(Equal(int64(2)))
 			goodCgroupInitialShares = readCgroupFile(goodCgroupPath, "cpu.shares")
 
@@ -83,7 +87,7 @@ var _ = Describe("CPU shares rebalancing", func() {
 		})
 
 		When("the application is punished to the bad cgroup", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				Expect(spin(container, containerPort)).To(Succeed())
 				ensureInCgroup(container, containerPort, cgroups.BadCgroupName)
 			})
@@ -94,7 +98,7 @@ var _ = Describe("CPU shares rebalancing", func() {
 			})
 
 			When("the application is released back to the good cgroup", func() {
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					Expect(unspin(container, containerPort)).To(Succeed())
 					ensureInCgroup(container, containerPort, cgroups.GoodCgroupName)
 				})
@@ -102,6 +106,24 @@ var _ = Describe("CPU shares rebalancing", func() {
 				It("redistributes the container shares to the good cgroup", func() {
 					Eventually(func() int64 { return readCgroupFile(goodCgroupPath, "cpu.shares") }).Should(Equal(goodCgroupInitialShares))
 					Eventually(func() int64 { return readCgroupFile(badCgroupPath, "cpu.shares") }).Should(Equal(int64(2)))
+				})
+			})
+
+			When("cpu-entitlement-per-share is explicitly set", func() {
+				BeforeEach(func() {
+					resourcesProvider := sysinfo.NewResourcesProvider(config.DepotDir)
+					memoryInBytes, err := resourcesProvider.TotalMemory()
+					Expect(err).NotTo(HaveOccurred())
+					memoryInMbs := memoryInBytes / 1024 / 1024
+					cpuCores, err := resourcesProvider.CPUCores()
+					Expect(err).NotTo(HaveOccurred())
+
+					defaultEntitlementPerShare := float64(100*cpuCores) / float64(memoryInMbs)
+					config.CPUEntitlementPerShare = float64ptr(2 * defaultEntitlementPerShare)
+				})
+
+				It("sets the bad cgroup shares proportionally", func() {
+					Expect(readCgroupFile(badCgroupPath, "cpu.shares")).To(BeNumerically("~", 2000, 1))
 				})
 			})
 		})

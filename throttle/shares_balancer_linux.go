@@ -17,13 +17,15 @@ type SharesBalancer struct {
 	memoryProvider MemoryProvider
 	goodCgroupPath string
 	badCgroupPath  string
+	multiplier     float64
 }
 
-func NewSharesBalancer(cpuCgroupPath string, memoryProvider MemoryProvider) SharesBalancer {
+func NewSharesBalancer(cpuCgroupPath string, memoryProvider MemoryProvider, multiplier float64) SharesBalancer {
 	return SharesBalancer{
 		memoryProvider: memoryProvider,
 		goodCgroupPath: filepath.Join(cpuCgroupPath, gardencgroups.GoodCgroupName),
 		badCgroupPath:  filepath.Join(cpuCgroupPath, gardencgroups.BadCgroupName),
+		multiplier:     multiplier,
 	}
 }
 
@@ -38,6 +40,8 @@ func (b SharesBalancer) Run(logger lager.Logger) error {
 	if err != nil {
 		return err
 	}
+
+	badShares = uint64(float64(badShares) * b.multiplier)
 
 	if badShares == 0 {
 		badShares = 2

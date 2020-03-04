@@ -203,17 +203,18 @@ type CommonCommand struct {
 }
 
 type commandWiring struct {
-	Containerizer     *rundmc.Containerizer
-	PortPool          *ports.PortPool
-	Networker         gardener.Networker
-	Restorer          gardener.Restorer
-	Volumizer         gardener.Volumizer
-	Starter           gardener.BulkStarter
-	PeaCleaner        gardener.PeaCleaner
-	PropertiesManager *properties.Manager
-	UidGenerator      gardener.UidGeneratorFunc
-	SysInfoProvider   gardener.SysInfoProvider
-	Logger            lager.Logger
+	Containerizer          *rundmc.Containerizer
+	PortPool               *ports.PortPool
+	Networker              gardener.Networker
+	Restorer               gardener.Restorer
+	Volumizer              gardener.Volumizer
+	Starter                gardener.BulkStarter
+	PeaCleaner             gardener.PeaCleaner
+	PropertiesManager      *properties.Manager
+	UidGenerator           gardener.UidGeneratorFunc
+	SysInfoProvider        gardener.SysInfoProvider
+	Logger                 lager.Logger
+	CpuEntitlementPerShare float64
 }
 
 func (cmd *CommonCommand) createGardener(wiring *commandWiring) *gardener.Gardener {
@@ -293,17 +294,18 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 	}
 
 	return &commandWiring{
-		Containerizer:     containerizer,
-		Networker:         networker,
-		PortPool:          portPool,
-		Restorer:          restorer,
-		Volumizer:         volumizer,
-		Starter:           bulkStarter,
-		PeaCleaner:        peaCleaner,
-		PropertiesManager: propManager,
-		UidGenerator:      wireUIDGenerator(),
-		SysInfoProvider:   sysInfoProvider,
-		Logger:            logger,
+		Containerizer:          containerizer,
+		Networker:              networker,
+		PortPool:               portPool,
+		Restorer:               restorer,
+		Volumizer:              volumizer,
+		Starter:                bulkStarter,
+		PeaCleaner:             peaCleaner,
+		PropertiesManager:      propManager,
+		UidGenerator:           wireUIDGenerator(),
+		SysInfoProvider:        sysInfoProvider,
+		Logger:                 logger,
+		CpuEntitlementPerShare: cpuEntitlementPerShare,
 	}, nil
 }
 
