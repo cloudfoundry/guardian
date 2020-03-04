@@ -60,6 +60,14 @@ func goCompile(mainPackagePath string, buildArgs ...string) string {
 	return bin
 }
 
+func staticCompile(mainPackagePath string, buildArgs ...string) string {
+	buildArgs = append(buildArgs, "-mod=vendor")
+	env := []string{"CGO_ENABLED=0"}
+	bin, err := gexec.BuildWithEnvironment(mainPackagePath, env, buildArgs...)
+	Expect(err).NotTo(HaveOccurred())
+	return bin
+}
+
 type runnerBinaries struct {
 	Garden runner.Binaries
 }
@@ -221,7 +229,7 @@ func getGardenBinaries() runner.Binaries {
 		RuntimePlugin: goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_runtime_plugin"),
 		NoopPlugin:    goCompile("code.cloudfoundry.org/guardian/gqt/cmd/noop_plugin"),
 		FakeRunc:      goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc"),
-		Mkdirer:       goCompile("code.cloudfoundry.org/guardian/cmd/mkdir"),
+		Mkdirer:       staticCompile("code.cloudfoundry.org/guardian/cmd/mkdir"),
 	}
 
 	gardenBinaries.PrivilegedImagePlugin = gardenBinaries.ImagePlugin + "-priv"
