@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 
 	"code.cloudfoundry.org/guardian/rundmc"
 
@@ -37,6 +39,7 @@ var _ = Describe("Runcontainerd", func() {
 		processBuilder   *runcontainerdfakes.FakeProcessBuilder
 		userLookupper    *usersfakes.FakeUserLookupper
 		cgroupManager    *runcontainerdfakes.FakeCgroupManager
+		mkdirer          *runcontainerdfakes.FakeMkdirer
 		peaHandlesGetter *runcontainerdfakes.FakePeaHandlesGetter
 		runtimeStopper   *runcontainerdfakes.FakeRuntimeStopper
 	)
@@ -51,11 +54,12 @@ var _ = Describe("Runcontainerd", func() {
 		processBuilder = new(runcontainerdfakes.FakeProcessBuilder)
 		userLookupper = new(usersfakes.FakeUserLookupper)
 		cgroupManager = new(runcontainerdfakes.FakeCgroupManager)
+		mkdirer = new(runcontainerdfakes.FakeMkdirer)
 		runtimeStopper = new(runcontainerdfakes.FakeRuntimeStopper)
 
 		processManager.GetProcessReturns(backingProcess, nil)
 
-		runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, nil, false, runtimeStopper)
+		runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, nil, false, runtimeStopper)
 	})
 
 	Describe("Create", func() {
@@ -149,7 +153,7 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("when using containerd for processes", func() {
 			BeforeEach(func() {
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, nil, false, runtimeStopper)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, false, runtimeStopper)
 			})
 
 			It("sets the container to use the memory hierarchy", func() {
@@ -263,7 +267,6 @@ var _ = Describe("Runcontainerd", func() {
 			fakeProcess *gardenfakes.FakeProcess
 			execProcess garden.Process
 			processIO   garden.ProcessIO
-			user        users.ExecUser
 		)
 
 		BeforeEach(func() {
@@ -297,15 +300,10 @@ var _ = Describe("Runcontainerd", func() {
 				Stdout: gbytes.NewBuffer(),
 				Stderr: gbytes.NewBuffer(),
 			}
-			user = users.ExecUser{
-				Uid:  1000,
-				Gid:  1001,
-				Home: "/home/alice",
-			}
 		})
 
 		JustBeforeEach(func() {
-			execProcess, execErr = runContainerd.Exec(logger, containerID, processSpec, user, processIO)
+			execProcess, execErr = runContainerd.Exec(logger, containerID, processSpec, processIO)
 		})
 
 		It("gets the bundle", func() {
@@ -316,13 +314,12 @@ var _ = Describe("Runcontainerd", func() {
 
 		It("delegates to execer", func() {
 			Expect(execer.ExecWithBndlCallCount()).To(Equal(1))
-			actualLogger, actualSandboxHandle, actualBundle, actualProcessSpec, actualUser, actualIO := execer.ExecWithBndlArgsForCall(0)
+			actualLogger, actualSandboxHandle, actualBundle, actualProcessSpec, actualIO := execer.ExecWithBndlArgsForCall(0)
 			Expect(actualLogger).To(Equal(logger))
 			Expect(actualSandboxHandle).To(Equal(containerID))
 			Expect(actualBundle).To(Equal(bundle))
 			Expect(actualProcessSpec).To(Equal(processSpec))
 			Expect(actualIO).To(Equal(processIO))
-			Expect(actualUser).To(Equal(user))
 			Expect(execProcess).To(Equal(fakeProcess))
 		})
 
@@ -357,7 +354,7 @@ var _ = Describe("Runcontainerd", func() {
 
 				containerManager.GetContainerPIDReturns(1234, nil)
 				containerManager.ExecReturns(nil)
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, nil, false, runtimeStopper)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, false, runtimeStopper)
 			})
 
 			It("passes the logger through", func() {
@@ -402,11 +399,30 @@ var _ = Describe("Runcontainerd", func() {
 				Expect(actualProcessSpec.Args).To(Equal([]string{"test-binary"}))
 			})
 
-			It("creates the process with the specified user", func() {
+			It("creates the process with the resolved user", func() {
+				_, actualContainerId := containerManager.GetContainerPIDArgsForCall(0)
+				Expect(actualContainerId).To(Equal("container-id"))
+
+				Expect(userLookupper.LookupCallCount()).To(Equal(1))
+				passedRootfs, passedUserId := userLookupper.LookupArgsForCall(0)
+				Expect(passedUserId).To(Equal("alice"))
+				Expect(passedRootfs).To(Equal("/proc/1234/root"))
+
 				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
 				_, _, ociProcessUid, ociProcessGid := processBuilder.BuildProcessArgsForCall(0)
 				Expect(ociProcessUid).To(Equal(1000))
 				Expect(ociProcessGid).To(Equal(1001))
+			})
+
+			It("sets up the working directory", func() {
+				Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
+				rootfsPath, hostUID, hostGID, mode, shouldRecreate, workDir := mkdirer.MkdirAsArgsForCall(0)
+				Expect(rootfsPath).To(Equal(filepath.Join("/proc", "1234", "root")))
+				Expect(hostUID).To(Equal(2000))
+				Expect(hostGID).To(Equal(2001))
+				Expect(mode).To(Equal(os.FileMode(0755)))
+				Expect(shouldRecreate).To(BeFalse())
+				Expect(workDir).To(ConsistOf(processSpec.Dir))
 			})
 
 			It("gets the backing process", func() {
@@ -448,6 +464,36 @@ var _ = Describe("Runcontainerd", func() {
 				})
 			})
 
+			Context("when creating the work dir fails", func() {
+				BeforeEach(func() {
+					mkdirer.MkdirAsReturns(errors.New("HUBABUBA"))
+				})
+
+				It("propagates the error", func() {
+					Expect(execErr).To(MatchError("HUBABUBA"))
+				})
+			})
+
+			Context("when the user lookupper fails", func() {
+				BeforeEach(func() {
+					userLookupper.LookupReturns(nil, errors.New("user-lookup-failure"))
+				})
+
+				It("returns the error", func() {
+					Expect(execErr).To(MatchError("user-lookup-failure"))
+				})
+			})
+
+			Context("when getting the container PID fails", func() {
+				BeforeEach(func() {
+					containerManager.GetContainerPIDReturns(0, errors.New("get-container-pid-failure"))
+				})
+
+				It("returns the error", func() {
+					Expect(execErr).To(MatchError("get-container-pid-failure"))
+				})
+			})
+
 			Context("when containerManager returns an error", func() {
 				BeforeEach(func() {
 					containerManager.ExecReturns(errors.New("error-execing"))
@@ -455,6 +501,18 @@ var _ = Describe("Runcontainerd", func() {
 
 				It("returns the error", func() {
 					Expect(execErr).To(MatchError("error-execing"))
+				})
+			})
+
+			Context("when a working directory is not specified", func() {
+				BeforeEach(func() {
+					processSpec.Dir = ""
+				})
+
+				It("sets the spec dir to the user home dir if no dir specified", func() {
+					Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
+					_, actualProcessSpec, _, _ := processBuilder.BuildProcessArgsForCall(0)
+					Expect(actualProcessSpec.Dir).To(Equal("/home/alice"))
 				})
 			})
 
@@ -514,7 +572,7 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("when using containerd for processes", func() {
 			BeforeEach(func() {
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, nil, false, runtimeStopper)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, false, runtimeStopper)
 			})
 
 			It("returns a process wired to the process manager", func() {
@@ -774,7 +832,7 @@ var _ = Describe("Runcontainerd", func() {
 			BeforeEach(func() {
 				peaHandlesGetter = new(runcontainerdfakes.FakePeaHandlesGetter)
 				peaHandlesGetter.ContainerPeaHandlesReturns([]string{"apple", "apple2"}, nil)
-				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, peaHandlesGetter, false, runtimeStopper)
+				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, false, cgroupManager, mkdirer, peaHandlesGetter, false, runtimeStopper)
 			})
 
 			It("returns the list of bundleIDs", func() {

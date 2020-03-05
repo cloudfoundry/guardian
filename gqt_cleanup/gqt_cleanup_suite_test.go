@@ -101,7 +101,6 @@ func defaultConfig() runner.GdnRunnerConfig {
 	cfg.NSTarBin = binaries.NSTar
 	cfg.ImagePluginBin = binaries.Groot
 	cfg.PrivilegedImagePluginBin = binaries.Groot
-	cfg.MkdirerBin = binaries.Mkdirer
 
 	return cfg
 }
@@ -125,8 +124,7 @@ func goCompile(mainPackagePath string, buildArgs ...string) string {
 
 func getGardenBinaries() runner.Binaries {
 	gardenBinaries := runner.Binaries{
-		Gdn:     compileGdn(),
-		Mkdirer: goCompile("code.cloudfoundry.org/guardian/cmd/mkdir"),
+		Gdn: compileGdn(),
 	}
 
 	if runtime.GOOS == "linux" {

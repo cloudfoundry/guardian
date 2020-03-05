@@ -46,7 +46,6 @@ type GdnRunnerConfig struct {
 	GrootBin                 string
 	TarBin                   string `flag:"tar-bin"`
 	InitBin                  string `flag:"init-bin"`
-	MkdirerBin               string `flag:"mkdirer-bin"`
 	RuntimePluginBin         string `flag:"runtime-plugin"`
 	ImagePluginBin           string `flag:"image-plugin"`
 	PrivilegedImagePluginBin string `flag:"privileged-image-plugin"`
@@ -187,7 +186,6 @@ type Binaries struct {
 	Socket2me             string `json:"socket2me,omitempty"`
 	FakeRunc              string `json:"fake_runc,omitempty"`
 	FakeRuncStderr        string `json:"fake_runc_stderr,omitempty"`
-	Mkdirer               string `json:"mkdirer,omitempty"`
 }
 
 type GardenRunner struct {
