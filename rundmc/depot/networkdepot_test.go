@@ -19,6 +19,7 @@ var _ = Describe("NetworkDepot", func() {
 	var (
 		dir                    string
 		bindMountSourceCreator *fakes.FakeBindMountSourceCreator
+		rootfsFileCreator      *fakes.FakeRootfsFileCreator
 		logger                 lager.Logger
 		networkDepot           depot.NetworkDepot
 	)
@@ -28,8 +29,9 @@ var _ = Describe("NetworkDepot", func() {
 		dir, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 		logger = lagertest.NewTestLogger("test")
+		rootfsFileCreator = new(fakes.FakeRootfsFileCreator)
 		bindMountSourceCreator = new(fakes.FakeBindMountSourceCreator)
-		networkDepot = depot.NewNetworkDepot(dir, bindMountSourceCreator)
+		networkDepot = depot.NewNetworkDepot(dir, rootfsFileCreator, bindMountSourceCreator)
 	})
 
 	AfterEach(func() {
@@ -52,6 +54,23 @@ var _ = Describe("NetworkDepot", func() {
 
 		It("succeeds", func() {
 			Expect(setupErr).NotTo(HaveOccurred())
+		})
+
+		It("creates the rootfs files", func() {
+			Expect(rootfsFileCreator.CreateFilesCallCount()).To(Equal(1))
+			actualRootfsPath, actualFiles := rootfsFileCreator.CreateFilesArgsForCall(0)
+			Expect(actualRootfsPath).To(Equal("/path/to/rootfs"))
+			Expect(actualFiles).To(ConsistOf("/etc/hosts", "/etc/resolv.conf"))
+		})
+
+		Context("when creating the rootfs files fails", func() {
+			BeforeEach(func() {
+				rootfsFileCreator.CreateFilesReturns(errors.New("failed"))
+			})
+
+			It("returns the error", func() {
+				Expect(setupErr).To(MatchError("failed"))
+			})
 		})
 
 		It("creates container directory", func() {

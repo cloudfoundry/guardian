@@ -21,6 +21,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
+	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	nerdpkg "code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
@@ -146,6 +147,10 @@ func (f *LinuxFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {
 		ResolvFilePath:    "/etc/resolv.conf",
 		DepotDir:          f.config.Containers.Dir,
 	}
+}
+
+func (f *LinuxFactory) WireRootfsFileCreator() depot.RootfsFileCreator {
+	return preparerootfs.SymlinkRefusingFileCreator{}
 }
 
 func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger, volumizer peas.Volumizer, peaHandlesGetter runcontainerd.PeaHandlesGetter) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, peas.BundleLoader, error) {

@@ -58,6 +58,7 @@ type GardenFactory interface {
 	WireVolumizer(logger lager.Logger) gardener.Volumizer
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
 	WireExecRunner(runcRoot string, containerRootUID, containerRootGID uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot execrunner.ProcessDepot) runrunc.ExecRunner
+	WireRootfsFileCreator() depot.RootfsFileCreator
 	WireContainerd(*processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser, lager.Logger, peas.Volumizer, runcontainerd.PeaHandlesGetter) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *containerdprivchecker.PrivilegeChecker, peas.BundleLoader, error)
 	WireCPUCgrouper() (rundmc.CPUCgrouper, error)
 }
@@ -247,6 +248,7 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 	uidMappings, gidMappings := cmd.idMappings()
 	networkDepot := depot.NewNetworkDepot(
 		cmd.Containers.Dir,
+		factory.WireRootfsFileCreator(),
 		wireBindMountSourceCreator(uidMappings, gidMappings),
 	)
 
