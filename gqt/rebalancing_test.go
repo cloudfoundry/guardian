@@ -123,7 +123,7 @@ var _ = Describe("CPU shares rebalancing", func() {
 				})
 
 				It("sets the bad cgroup shares proportionally", func() {
-					Expect(readCgroupFile(badCgroupPath, "cpu.shares")).To(BeNumerically("~", 2000, 1))
+					Eventually(readCgroupFile(badCgroupPath, "cpu.shares")).Should(BeNumerically("~", 2000, 1))
 				})
 			})
 		})
