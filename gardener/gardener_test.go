@@ -65,6 +65,7 @@ var _ = Describe("Gardener", func() {
 			logger,
 			0,
 			false,
+			nil,
 		)
 		gdnr.Sleep = sleeper.Spy
 	})

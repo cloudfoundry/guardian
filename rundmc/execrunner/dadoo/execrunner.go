@@ -70,39 +70,8 @@ func (d *ExecRunner) Run(
 
 	processPath, err := d.processDepot.CreateProcessDir(log, sandboxHandle, processID)
 	if err != nil {
-		return nil, fmt.Errorf("failed-to-create-process-dir: %w", err)
-	}
-
-	return d.runInProcessPath(log, processID, sandboxHandle, processPath,
-		pio, tty, procJSON, extraCleanup)
-}
-
-func (d *ExecRunner) RunPea(
-	log lager.Logger, processID, sandboxHandle string,
-	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
-) (proc garden.Process, theErr error) {
-	log = log.Session("exec", lager.Data{"id": processID})
-
-	log.Info("start")
-	defer log.Info("done")
-
-	processPath, err := d.processDepot.CreatePeaProcessDir(log, sandboxHandle, processID)
-	if err != nil {
 		return nil, fmt.Errorf("failed-to-create-process-dir for processID %q: %w", processID, err)
 	}
-
-	return d.runInProcessPath(log, processID, sandboxHandle, processPath,
-		pio, tty, procJSON, extraCleanup)
-}
-
-func (d *ExecRunner) runInProcessPath(
-	log lager.Logger, processID, sandboxHandle, processPath string,
-	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
-) (proc garden.Process, theErr error) {
-	log = log.Session("execrunner-run-in-process-path", lager.Data{"id": processID})
-
-	log.Info("start")
-	defer log.Info("done")
 
 	defer func() {
 		if theErr == nil {

@@ -39,7 +39,6 @@ func (c *container) Run(spec garden.ProcessSpec, io garden.ProcessIO) (garden.Pr
 			c.logger.Error("failed-to-destroy-pea-container", destroyErr)
 			return nil, err
 		}
-
 		return NewPeaProcess(c.logger, process, peaContainer.Handle(), c.gardener), nil
 	}
 

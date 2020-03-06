@@ -117,6 +117,10 @@ type Restorer interface {
 	Restore(logger lager.Logger, handles []string) []string
 }
 
+type PeaProcessDepot interface {
+	CreateProcessDir(log lager.Logger, sandboxHandle, processID string) (string, error)
+}
+
 type Sleeper func(time.Duration)
 
 type UidGeneratorFunc func() string
@@ -170,6 +174,8 @@ type Gardener struct {
 	Restorer Restorer
 
 	AllowPrivilgedContainers bool
+
+	PeaProcessDepot PeaProcessDepot
 }
 
 func New(
@@ -184,6 +190,7 @@ func New(
 	logger lager.Logger,
 	maxContainers uint64,
 	allowPrivilegedContainers bool,
+	peaProcessDepot PeaProcessDepot,
 ) *Gardener {
 
 	gdnr := Gardener{
@@ -198,6 +205,7 @@ func New(
 		Restorer:                 restorer,
 		AllowPrivilgedContainers: allowPrivilegedContainers,
 		Logger:                   logger,
+		PeaProcessDepot:          peaProcessDepot,
 
 		Sleep: time.Sleep,
 	}
@@ -410,6 +418,10 @@ func (g *Gardener) createPeaContainer(sandboxHandle string, peaContainerID strin
 		BindMounts:    append(peaContainerBindMounts, defaultBindMounts...),
 		Privileged:    privileged,
 		SandboxHandle: sandboxHandle,
+	}
+
+	if _, err := g.PeaProcessDepot.CreateProcessDir(log, sandboxHandle, peaContainerID); err != nil {
+		return nil, err
 	}
 
 	if err := g.Containerizer.CreatePea(log, peaContainerSpec); err != nil {

@@ -31,10 +31,6 @@ type ExecRunner interface {
 		log lager.Logger, processID, sandboxHandle string,
 		pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 	) (garden.Process, error)
-	RunPea(
-		log lager.Logger, processID, sandboxHandle string,
-		pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
-	) (garden.Process, error)
 	Attach(log lager.Logger, sandboxHandle, processID string, io garden.ProcessIO) (garden.Process, error)
 }
 

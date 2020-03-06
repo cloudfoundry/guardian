@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"code.cloudfoundry.org/guardian/rundmc/depot"
@@ -16,7 +15,6 @@ import (
 //go:generate counterfeiter . ProcessDepot
 type ProcessDepot interface {
 	CreateProcessDir(log lager.Logger, sandboxHandle, processID string) (string, error)
-	CreatePeaProcessDir(log lager.Logger, sandboxHandle, peaProcessId string) (string, error)
 	LookupProcessDir(log lager.Logger, sandboxHandle, processID string) (string, error)
 }
 
@@ -46,34 +44,18 @@ func (d ProcessDirDepot) CreateProcessDir(log lager.Logger, sandboxHandle, proce
 	return processPath, nil
 }
 
-func (d ProcessDirDepot) CreatePeaProcessDir(log lager.Logger, sandboxHandle, processID string) (string, error) {
-	peaId := strings.TrimSuffix(processID, "-PEA-PROCESS")
-	bundlePath, err := d.bundleLookupper.Lookup(log, sandboxHandle)
+func (d ProcessDirDepot) CreatePeaDir(log lager.Logger, sandboxHandle, peaID, peaProcessID string) (string, error) {
+	sandboxPath, err := d.bundleLookupper.Lookup(log, sandboxHandle)
 	if err != nil {
-		return "", fmt.Errorf("failed-to-lookup-bundle for process ID %q, peaId %q: %v", processID, peaId, err)
+		return "", fmt.Errorf("failed-to-lookup-sandbox-dir for %q: %v", sandboxHandle, err)
 	}
 
-	peaPath := filepath.Join(bundlePath, "processes", peaId)
-	// if err := os.MkdirAll(peaPath, 0700); err != nil {
-	// 	return "", err
-	// }
-
-	peaProcessesPath := filepath.Join(peaPath, "processes")
-	if err := os.MkdirAll(peaProcessesPath, 0700); err != nil {
-		return "", err
-	}
-
-	peaProcessPath := filepath.Join(peaProcessesPath, processID)
-	if _, err := os.Stat(peaProcessPath); err == nil {
-		return "", errors.New(fmt.Sprintf("process ID %q already in use", processID))
-	}
-
+	peaProcessPath := filepath.Join(sandboxPath, "processes", peaID, "processes", peaProcessID)
 	if err := os.MkdirAll(peaProcessPath, 0700); err != nil {
 		return "", err
 	}
 
 	return peaProcessPath, nil
-
 }
 
 func (d ProcessDirDepot) LookupProcessDir(log lager.Logger, sandboxHandle, processID string) (string, error) {
@@ -85,6 +67,7 @@ func (d ProcessDirDepot) LookupProcessDir(log lager.Logger, sandboxHandle, proce
 	processPath := filepath.Join(bundlePath, "processes", processID)
 	if _, err := os.Stat(processPath); err != nil {
 		if os.IsNotExist(err) {
+			// TODO: make LookupProcessDir smarter, it should be able to also lookup pea process dirs, e.g. depot/sandbox/processes/peaId/processes/processId
 			return "", fmt.Errorf("process %s not found", processID)
 		}
 		return "", err

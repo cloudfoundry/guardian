@@ -210,6 +210,7 @@ type commandWiring struct {
 	UidGenerator      gardener.UidGeneratorFunc
 	SysInfoProvider   gardener.SysInfoProvider
 	Logger            lager.Logger
+	PeaProcessDepot   gardener.PeaProcessDepot
 }
 
 func (cmd *CommonCommand) createGardener(wiring *commandWiring) *gardener.Gardener {
@@ -224,6 +225,7 @@ func (cmd *CommonCommand) createGardener(wiring *commandWiring) *gardener.Garden
 		wiring.Logger,
 		cmd.Limits.MaxContainers,
 		!cmd.Containers.DisablePrivilgedContainers,
+		wiring.PeaProcessDepot,
 	)
 }
 
@@ -287,6 +289,15 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 		return nil, err
 	}
 
+	bundleSaver := &goci.BundleSaver{}
+	bndlLoader := &goci.BndlLoader{}
+	depot := cmd.wireDepot(bundleSaver, bndlLoader)
+
+	var peaProcessDepot gardener.PeaProcessDepot = execrunner.NewProcessDirDepot(depot)
+	if cmd.Containerd.UseContainerdForProcesses {
+		peaProcessDepot = gardener.NoopPeaProcessDepot{}
+	}
+
 	return &commandWiring{
 		Containerizer:     containerizer,
 		Networker:         networker,
@@ -298,6 +309,7 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 		UidGenerator:      wireUIDGenerator(),
 		SysInfoProvider:   sysInfoProvider,
 		Logger:            logger,
+		PeaProcessDepot:   peaProcessDepot,
 	}, nil
 }
 
