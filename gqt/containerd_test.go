@@ -91,6 +91,12 @@ var _ = Describe("Containerd", func() {
 
 				_, infoErr := container.Info()
 				Expect(infoErr).To(MatchError("failed getting task"))
+
+				By("retrying a reasonable number of times", func() {
+					for i := 1; i <= 5; i++ {
+						Expect(client).To(gbytes.Say("retrying"), fmt.Sprintf("Failed waiting for #%d retry", i))
+					}
+				})
 			})
 		})
 	})

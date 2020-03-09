@@ -119,26 +119,28 @@ func (n *Nerd) Delete(log lager.Logger, containerID string) error {
 }
 
 func (n *Nerd) State(log lager.Logger, containerID string) (int, string, error) {
+	log = log.Session("state", lager.Data{"containerID": containerID})
+
 	_, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
 		return 0, "", err
 	}
 
-	log.Debug("getting-task-status", lager.Data{"containerID": containerID})
-	status, err := n.tryToGetStatus(task)
+	log.Debug("getting-task-status")
+	status, err := n.tryToGetStatus(log, task)
 	if err != nil {
 		return 0, "", err
 	}
 
-	log.Debug("task-result", lager.Data{"containerID": containerID, "pid": strconv.Itoa(int(task.Pid())), "status": string(status.Status)})
+	log.Debug("task-result", lager.Data{"pid": strconv.Itoa(int(task.Pid())), "status": string(status.Status)})
 	return int(task.Pid()), string(status.Status), nil
 }
 
-func (n *Nerd) tryToGetTask(container containerd.Container) (containerd.Task, error) {
-	const timeout = 5 * time.Second
-	deadline := time.Now().Add(timeout)
+func (n *Nerd) tryToGetTask(log lager.Logger, container containerd.Container) (containerd.Task, error) {
+	log = log.Session("try-to-get-task")
 
-	for time.Now().Before(deadline) {
+	const retries = 5
+	for i := 0; i < retries; i++ {
 		task, err := container.Task(n.context, cio.Load)
 		if err != nil {
 			if errdefs.IsNotFound(err) {
@@ -151,17 +153,18 @@ func (n *Nerd) tryToGetTask(container containerd.Container) (containerd.Task, er
 			return task, nil
 		}
 
+		log.Info("retrying-after-pid-0-response", lager.Data{"retry-number": i + 1})
 		time.Sleep(500 * time.Millisecond)
 	}
 
 	return nil, errors.New("failed getting task")
 }
 
-func (n *Nerd) tryToGetStatus(task containerd.Task) (containerd.Status, error) {
-	const timeout = 5 * time.Second
-	deadline := time.Now().Add(timeout)
+func (n *Nerd) tryToGetStatus(log lager.Logger, task containerd.Task) (containerd.Status, error) {
+	log = log.Session("try-to-get-status", lager.Data{"taskID": task.ID()})
 
-	for time.Now().Before(deadline) {
+	const retries = 5
+	for i := 0; i < retries; i++ {
 		status, err := task.Status(n.context)
 		if err != nil {
 			return containerd.Status{}, err
@@ -171,6 +174,7 @@ func (n *Nerd) tryToGetStatus(task containerd.Task) (containerd.Status, error) {
 			return status, nil
 		}
 
+		log.Info("retrying-after-status-unknown-response", lager.Data{"retry-number": i + 1})
 		time.Sleep(500 * time.Millisecond)
 	}
 
@@ -314,7 +318,7 @@ func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (conta
 	}
 
 	log.Debug("loading-task", lager.Data{"containerID": containerID})
-	task, err := n.tryToGetTask(container)
+	task, err := n.tryToGetTask(log, container)
 	if err != nil {
 		log.Debug("loading-task-failed", lager.Data{"containerID": containerID})
 		return nil, nil, err
