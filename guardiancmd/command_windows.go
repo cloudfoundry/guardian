@@ -72,7 +72,7 @@ func (f *WindowsFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 }
 
 func (f *WindowsFactory) WireExecRunner(runcRoot string, _, _ uint32, bundleSaver depot.BundleSaver, processDepot execrunner.ProcessDepot) runrunc.ExecRunner {
-	return execrunner.NewWindowsExecRunner(f.config.Runtime.Plugin, f.commandRunner, bundleSaver, bundleLookupper, processDepot)
+	return execrunner.NewWindowsExecRunner(f.config.Runtime.Plugin, f.commandRunner, bundleSaver, processDepot)
 }
 
 func (f *WindowsFactory) WireRootfsFileCreator() depot.RootfsFileCreator {
@@ -122,18 +122,6 @@ func wireMounts() bundlerules.Mounts {
 		return []string{}, nil
 	}
 	return bundlerules.Mounts{MountOptionsGetter: noopMountOptionsGetter}
-}
-
-// Note - it's not possible to bind mount a single file in Windows, so we are
-// using a directory instead
-func initBindMountAndPath(initPathOnHost string) (specs.Mount, string) {
-	initPathInContainer := filepath.Join(`C:\`, "Windows", "Temp", "bin", filepath.Base(initPathOnHost))
-	return specs.Mount{
-		Type:        "bind",
-		Source:      filepath.Dir(initPathOnHost),
-		Destination: filepath.Dir(initPathInContainer),
-		Options:     []string{"bind"},
-	}, initPathInContainer
 }
 
 func defaultBindMounts() []specs.Mount {

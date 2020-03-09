@@ -52,7 +52,6 @@ var _ = Describe("WindowsExecRunner", func() {
 		waitBeforeStdoutWrite bool
 		proceed               chan struct{}
 		bundleSaver           *depotfakes.FakeBundleSaver
-		bundleLookupper       *depotfakes.FakeBundleLookupper
 		processDepot          *execrunnerfakes.FakeProcessDepot
 	)
 
@@ -61,15 +60,13 @@ var _ = Describe("WindowsExecRunner", func() {
 		logger = lagertest.NewTestLogger("test-execrunner-windows")
 
 		bundleSaver = new(depotfakes.FakeBundleSaver)
-		bundleLookupper = new(depotfakes.FakeBundleLookupper)
 		processDepot = new(execrunnerfakes.FakeProcessDepot)
 
 		var err error
 		bundlePath, err = ioutil.TempDir("", "dadooexecrunnerbundle")
 		Expect(err).NotTo(HaveOccurred())
-		bundleLookupper.LookupReturns(bundlePath, nil)
 
-		execRunner = execrunner.NewWindowsExecRunner(runtimePath, cmdRunner, bundleSaver, bundleLookupper, processDepot)
+		execRunner = execrunner.NewWindowsExecRunner(runtimePath, cmdRunner, bundleSaver, processDepot)
 		processID = "process-id"
 		processPath = filepath.Join(bundlePath, "processes", processID)
 		Expect(os.MkdirAll(processPath, 0700)).To(Succeed())
