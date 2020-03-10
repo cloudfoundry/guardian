@@ -83,7 +83,6 @@ var _ = Describe("CPU shares rebalancing", func() {
 
 			containerGoodCgroupPath = ensureInCgroup(container, containerPort, cgroups.GoodCgroupName)
 			containerBadCgroupPath = strings.Replace(containerGoodCgroupPath, cgroups.GoodCgroupName, cgroups.BadCgroupName, 1)
-			fmt.Println(containerBadCgroupPath)
 		})
 
 		When("the application is punished to the bad cgroup", func() {
