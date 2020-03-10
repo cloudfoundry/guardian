@@ -418,33 +418,55 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			})
 
 			Context("when runc tries to exec a non-existent binary", func() {
+				var expectedMessage string
+
+				verifyNotFoundError := func(message string) {
+					_, err := runner.Run(log, processID, "some-handle", defaultProcessIO(), false, nil, nil)
+					expectedErr := garden.ExecutableNotFoundError{Message: message}
+					Expect(err).To(MatchError(expectedErr))
+				}
+
 				Context("when the binary is not on the $PATH", func() {
+
 					BeforeEach(func() {
+						expectedMessage = `starting container process caused "exec: \"potato\": executable file not found in $PATH"`
 						dadooWritesLogs = `{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"starting container process caused \"exec: \\\"potato\\\": executable file not found in $PATH\""}`
 					})
 
-					It("Returns a garden.RequestedBinaryNotFoundError error", func() {
-						_, err := runner.Run(log, processID, "some-handle", defaultProcessIO(), false, nil, nil)
+					It("Returns a garden.ExecutableNotFoundError error", func() {
+						verifyNotFoundError(expectedMessage)
+					})
 
-						message := `starting container process caused "exec: \"potato\": executable file not found in $PATH"`
-						expectedErr := garden.ExecutableNotFoundError{Message: message}
+					Context("when the log file ends with additional debug log", func() {
+						BeforeEach(func() {
+							dadooWritesLogs = fmt.Sprintf("%s\n%s", dadooWritesLogs, `{"time":"2016-03-02T13:56:39Z", "level":"debug", "msg":"log pipe has been closed: EOF"}`)
+						})
 
-						Expect(err).To(MatchError(expectedErr))
+						It("Returns a garden.ExecutableNotFoundError error", func() {
+							verifyNotFoundError(expectedMessage)
+						})
 					})
 				})
 
 				Context("when a fully qualified binary does not exist", func() {
+
 					BeforeEach(func() {
+						expectedMessage = `starting container process caused "exec: \"/bin/potato\": stat /bin/potato: no such file or directory"`
 						dadooWritesLogs = `{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"starting container process caused \"exec: \\\"/bin/potato\\\": stat /bin/potato: no such file or directory\""}`
 					})
 
-					It("Returns a garden.RequestedBinaryNotFoundError error", func() {
-						_, err := runner.Run(log, processID, "some-handle", defaultProcessIO(), false, nil, nil)
+					It("Returns a garden.ExecutableNotFoundError error", func() {
+						verifyNotFoundError(expectedMessage)
+					})
 
-						message := `starting container process caused "exec: \"/bin/potato\": stat /bin/potato: no such file or directory"`
-						expectedErr := garden.ExecutableNotFoundError{Message: message}
+					Context("when the log file ends with additional debug log", func() {
+						BeforeEach(func() {
+							dadooWritesLogs = fmt.Sprintf("%s\n%s", dadooWritesLogs, `{"time":"2016-03-02T13:56:39Z", "level":"debug", "msg":"log pipe has been closed: EOF"}`)
+						})
 
-						Expect(err).To(MatchError(expectedErr))
+						It("Returns a garden.ExecutableNotFoundError error", func() {
+							verifyNotFoundError(expectedMessage)
+						})
 					})
 				})
 			})

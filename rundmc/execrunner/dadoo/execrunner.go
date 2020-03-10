@@ -193,30 +193,32 @@ func (d *ExecRunner) runProcess(
 
 	process.streamData(pio, stdin, stdout, stderr)
 
-	doneReadingRuncLogs := make(chan []byte)
-	go func(log lager.Logger, logs io.Reader, logTag string, done chan<- []byte) {
+	doneReadingRuncLogs := make(chan string)
+	go func(log lager.Logger, logs io.Reader, logTag string, done chan<- string) {
 		scanner := bufio.NewScanner(logs)
-
-		nextLogLine := []byte("")
+		lastError := ""
 		for scanner.Scan() {
-			nextLogLine = scanner.Bytes()
-			logging.ForwardRuncLogsToLager(log, logTag, nextLogLine)
+			nextLogLine := scanner.Bytes()
+			logLine := logging.ForwardRuncLogsToLager(log, logTag, nextLogLine)
+			if logLine.IsError() {
+				lastError = logLine.Msg
+			}
 		}
-		done <- nextLogLine
+		done <- lastError
 	}(log, logr, "runc", doneReadingRuncLogs)
 
 	defer func() {
-		lastLogLine := <-doneReadingRuncLogs
+		lastErrorMessage := <-doneReadingRuncLogs
 		if theErr == nil {
 			return
 		}
 
-		if isNoSuchExecutable(lastLogLine) {
-			theErr = garden.ExecutableNotFoundError{Message: logging.MsgFromLastLogLine(lastLogLine)}
+		if isNoSuchExecutable(lastErrorMessage) {
+			theErr = garden.ExecutableNotFoundError{Message: lastErrorMessage}
 			return
 		}
 
-		theErr = logging.WrapWithErrorFromLastLogLine("runc exec", theErr, lastLogLine)
+		theErr = logging.WrapWithErrorFromLastMessage("runc exec", theErr, lastErrorMessage)
 	}()
 
 	log.Info("read-exit-fd")
@@ -233,11 +235,11 @@ func (d *ExecRunner) runProcess(
 	return process, nil
 }
 
-func isNoSuchExecutable(logLine []byte) bool {
-	noSuchFile := regexp.MustCompile(`starting container process caused \\"exec: .*: stat .*: no such file or directory`)
-	executableNotFound := regexp.MustCompile(`starting container process caused \\"exec: .*: executable file not found in \$PATH`)
+func isNoSuchExecutable(logLine string) bool {
+	noSuchFile := regexp.MustCompile(`starting container process caused \"exec: .*: stat .*: no such file or directory`)
+	executableNotFound := regexp.MustCompile(`starting container process caused \"exec: .*: executable file not found in \$PATH`)
 
-	return noSuchFile.Match(logLine) || executableNotFound.Match(logLine)
+	return noSuchFile.MatchString(logLine) || executableNotFound.MatchString(logLine)
 }
 
 func buildDadooCommand(tty bool, dadooPath, dadooRunMode, runcPath, runcRoot, processID, processPath, sandboxHandle string, extraFiles []*os.File, stdin io.Reader) *exec.Cmd {

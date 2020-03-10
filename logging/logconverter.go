@@ -8,25 +8,34 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type logLine struct {
+type LogLine struct {
 	Msg   string
 	Level string
 }
 
-func ForwardRuncLogsToLager(log lager.Logger, tag string, logfileContent []byte) {
+func (l LogLine) IsError() bool {
+	return l.Level == "error" || l.Level == "fatal"
+}
+
+func ForwardRuncLogsToLager(log lager.Logger, tag string, logfileContent []byte) LogLine {
+	lastErrorLine := LogLine{}
 	lines := bytes.Split(logfileContent, []byte("\n"))
 	for _, line := range lines {
 		if len(line) == 0 {
 			continue
 		}
-
-		var parsedLine logLine
+		var parsedLine LogLine
 		if err := json.Unmarshal(line, &parsedLine); err != nil {
-			log.Info("error-parsing-runc-log-file", lager.Data{"message": string(line)})
+			log.Info("error-parsing-runc-log-file", lager.Data{"message": string(line), "error": err.Error()})
 			continue
 		}
 		log.Debug(tag, lager.Data{"message": parsedLine.Msg})
+		if parsedLine.IsError() {
+			lastErrorLine = parsedLine
+		}
 	}
+
+	return lastErrorLine
 }
 
 type WrappedError struct {
@@ -40,7 +49,11 @@ func (e WrappedError) Error() string {
 }
 
 func WrapWithErrorFromLastLogLine(tag string, originalError error, logfileContent []byte) error {
-	return WrappedError{Underlying: originalError, tag: tag, lastRuncLogLine: MsgFromLastLogLine(logfileContent)}
+	return WrapWithErrorFromLastMessage(tag, originalError, MsgFromLastLogLine(logfileContent))
+}
+
+func WrapWithErrorFromLastMessage(tag string, originalError error, lastMessage string) error {
+	return WrappedError{Underlying: originalError, tag: tag, lastRuncLogLine: lastMessage}
 }
 
 func MsgFromLastLogLine(logFileContent []byte) string {
@@ -51,13 +64,13 @@ func MsgFromLastLogLine(logFileContent []byte) string {
 			continue
 		}
 
-		var logLine logLine
+		var logLine LogLine
 		err := json.Unmarshal(lines[i], &logLine)
 		if err != nil {
 			continue
 		}
 
-		if logLine.Level == "error" || logLine.Level == "fatal" {
+		if logLine.IsError() {
 			return string(logLine.Msg)
 		}
 	}

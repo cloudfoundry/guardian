@@ -14,8 +14,9 @@ import (
 
 var _ = Describe("FowardRuncLogsToLager", func() {
 	var (
-		runcLogs   []byte
-		lagerLines []string
+		runcLogs      []byte
+		lagerLines    []string
+		lastErrorLine logging.LogLine
 	)
 
 	JustBeforeEach(func() {
@@ -26,7 +27,7 @@ var _ = Describe("FowardRuncLogsToLager", func() {
 			lager.DEBUG,
 		))
 
-		logging.ForwardRuncLogsToLager(logger, "a-tag", runcLogs)
+		lastErrorLine = logging.ForwardRuncLogsToLager(logger, "a-tag", runcLogs)
 
 		lagerLines = strings.Split(lagerLogs.String(), "\n")
 	})
@@ -46,6 +47,35 @@ var _ = Describe("FowardRuncLogsToLager", func() {
 
 		It("prefixes the lines with the supplied tag", func() {
 			Expect(lagerLines[0]).To(ContainSubstring("a-tag"))
+		})
+
+		It("returns an empty error log line", func() {
+			Expect(lastErrorLine).To(Equal(logging.LogLine{}))
+		})
+
+		Context("when there are errors", func() {
+			BeforeEach(func() {
+				runcLogs = []byte(`{"msg":"message 1"}
+{"msg":"message 2", "level":"error"}
+{"msg":"message 3"}`)
+			})
+
+			It("returns the last error log line", func() {
+				Expect(lastErrorLine.Level).To(Equal("error"))
+				Expect(lastErrorLine.Msg).To(Equal("message 2"))
+			})
+
+			Context("when there is a fatal error", func() {
+				BeforeEach(func() {
+					runcLogs = []byte(`{"msg":"message 1"}
+{"msg":"message 2", "level":"fatal"}
+{"msg":"message 3"}`)
+				})
+				It("returns the last error log line", func() {
+					Expect(lastErrorLine.Level).To(Equal("fatal"))
+					Expect(lastErrorLine.Msg).To(Equal("message 2"))
+				})
+			})
 		})
 	})
 
