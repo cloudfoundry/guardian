@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
@@ -51,8 +50,6 @@ var _ = Describe("CPU shares rebalancing", func() {
 		var (
 			container               garden.Container
 			containerPort           uint32
-			containerGoodCgroupPath string
-			containerBadCgroupPath  string
 			goodCgroupInitialShares int64
 		)
 
@@ -80,9 +77,6 @@ var _ = Describe("CPU shares rebalancing", func() {
 			Eventually(func() (string, error) {
 				return httpGet(fmt.Sprintf("http://%s:%d/ping", externalIP(container), containerPort))
 			}).Should(Equal("pong"))
-
-			containerGoodCgroupPath = ensureInCgroup(container, containerPort, cgroups.GoodCgroupName)
-			containerBadCgroupPath = strings.Replace(containerGoodCgroupPath, cgroups.GoodCgroupName, cgroups.BadCgroupName, 1)
 		})
 
 		When("the application is punished to the bad cgroup", func() {
