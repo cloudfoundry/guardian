@@ -31,7 +31,6 @@ type execState interface {
 	Delete(context.Context) error
 	Kill(context.Context, uint32, bool) error
 	SetExited(int)
-	Status(context.Context) (string, error)
 }
 
 type execCreatedState struct {
@@ -83,10 +82,6 @@ func (s *execCreatedState) SetExited(status int) {
 	}
 }
 
-func (s *execCreatedState) Status(ctx context.Context) (string, error) {
-	return "created", nil
-}
-
 type execRunningState struct {
 	p *execProcess
 }
@@ -125,10 +120,6 @@ func (s *execRunningState) SetExited(status int) {
 	}
 }
 
-func (s *execRunningState) Status(ctx context.Context) (string, error) {
-	return "running", nil
-}
-
 type execStoppedState struct {
 	p *execProcess
 }
@@ -165,8 +156,4 @@ func (s *execStoppedState) Kill(ctx context.Context, sig uint32, all bool) error
 
 func (s *execStoppedState) SetExited(status int) {
 	// no op
-}
-
-func (s *execStoppedState) Status(ctx context.Context) (string, error) {
-	return "stopped", nil
 }

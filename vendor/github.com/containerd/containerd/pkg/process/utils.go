@@ -27,7 +27,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/containerd/containerd/errdefs"
@@ -39,6 +38,8 @@ import (
 const (
 	// RuncRoot is the path to the root runc state directory
 	RuncRoot = "/run/containerd/runc"
+	// StoppedPID is the pid assigned after a container has run and stopped
+	StoppedPID = -1
 	// InitPidFile name of the file that contains the init pid
 	InitPidFile = "init.pid"
 )
@@ -55,18 +56,10 @@ func (s *safePid) get() int {
 	return s.pid
 }
 
-type atomicBool int32
-
-func (ab *atomicBool) set(b bool) {
-	if b {
-		atomic.StoreInt32((*int32)(ab), 1)
-	} else {
-		atomic.StoreInt32((*int32)(ab), 0)
-	}
-}
-
-func (ab *atomicBool) get() bool {
-	return atomic.LoadInt32((*int32)(ab)) == 1
+func (s *safePid) set(pid int) {
+	s.Lock()
+	s.pid = pid
+	s.Unlock()
 }
 
 // TODO(mlaventure): move to runc package?
