@@ -8,8 +8,11 @@ import (
 	"syscall"
 
 	"code.cloudfoundry.org/grootfs/store/filesystems/mount"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"golang.org/x/sys/unix"
 )
 
@@ -18,6 +21,7 @@ var _ = Describe("Rootful Unmounter", func() {
 		tmpDir        string
 		mountDestPath string
 		mountSrcPath  string
+		logger        lager.Logger
 
 		unmounter  mount.RootfulUnmounter
 		unmountErr error
@@ -34,6 +38,8 @@ var _ = Describe("Rootful Unmounter", func() {
 		mountDestPath = filepath.Join(tmpDir, "mntdest")
 		Expect(os.MkdirAll(mountDestPath, 755)).To(Succeed())
 
+		logger = lagertest.NewTestLogger("rootful-unmounter")
+
 		unmounter = mount.RootfulUnmounter{}
 	})
 
@@ -42,7 +48,7 @@ var _ = Describe("Rootful Unmounter", func() {
 	})
 
 	JustBeforeEach(func() {
-		unmountErr = unmounter.Unmount(mountDestPath)
+		unmountErr = unmounter.Unmount(logger, mountDestPath)
 	})
 
 	When("the directory to unmount is mounted", func() {
@@ -80,6 +86,12 @@ var _ = Describe("Rootful Unmounter", func() {
 
 			It("fails with busy error", func() {
 				Expect(unmountErr).To(MatchError(unix.EBUSY))
+			})
+
+			It("logs the retries", func() {
+				for i := 0; i < 50; i++ {
+					Expect(logger).To(gbytes.Say("retrying"))
+				}
 			})
 		})
 	})

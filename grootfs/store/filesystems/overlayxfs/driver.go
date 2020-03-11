@@ -41,7 +41,7 @@ const (
 
 //go:generate counterfeiter . Unmounter
 type Unmounter interface {
-	Unmount(path string) error
+	Unmount(log lager.Logger, path string) error
 }
 
 //go:generate counterfeiter . DirectIO
@@ -92,11 +92,7 @@ func (d *Driver) MountFilesystem(logger lager.Logger, filesystemPath, storePath 
 }
 
 func (d *Driver) DeInitFilesystem(logger lager.Logger, storePath string) error {
-	if err := unix.Unmount(storePath, 0); err != nil {
-		if err == unix.ENOENT || err == unix.EINVAL {
-			logger.Debug("store-is-not-a-mountpoint", lager.Data{"storePath": storePath, "umountErr": err.Error()})
-			return nil
-		}
+	if err := d.unmounter.Unmount(logger, storePath); err != nil {
 		logger.Error("unmounting-store-path-failed", err, lager.Data{"storePath": storePath})
 		return errorspkg.Wrapf(err, "unmounting store path")
 	}
@@ -785,7 +781,7 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_manager.ImageDri
 }
 
 func (d *Driver) ensureImageDestroyed(logger lager.Logger, imagePath string) error {
-	if err := d.unmounter.Unmount(filepath.Join(imagePath, RootfsDir)); err != nil {
+	if err := d.unmounter.Unmount(logger, filepath.Join(imagePath, RootfsDir)); err != nil {
 		return errorspkg.Wrapf(err, "unmount rootfs path %q failed", filepath.Join(imagePath, RootfsDir))
 	}
 	return os.RemoveAll(imagePath)

@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strconv"
 	"syscall"
@@ -21,6 +20,7 @@ import (
 	fakes "code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/overlayxfsfakes"
 	"code.cloudfoundry.org/grootfs/store/image_manager"
 	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/docker/docker/pkg/system"
 	. "github.com/onsi/ginkgo"
@@ -53,7 +53,7 @@ var _ = Describe("Driver", func() {
 
 	BeforeEach(func() {
 		unmounter = new(fakes.FakeUnmounter)
-		unmounter.UnmountStub = func(path string) error {
+		unmounter.UnmountStub = func(log lager.Logger, path string) error {
 			return unix.Unmount(path, 0)
 		}
 		directIO = new(fakes.FakeDirectIO)
@@ -240,25 +240,18 @@ var _ = Describe("Driver", func() {
 
 		It("succcesfully unmounts a filesystem", func() {
 			Expect(driver.DeInitFilesystem(logger, deinitStorePath)).To(Succeed())
-			Expect(testhelpers.XFSMountPoints()).NotTo(ContainElement(deinitStorePath))
+			Expect(unmounter.UnmountCallCount()).To(Equal(1))
+			_, path := unmounter.UnmountArgsForCall(0)
+			Expect(path).To(Equal(deinitStorePath))
 		})
 
-		Context("when the store path is not a mountpoint", func() {
-			var newPath string
+		Context("when the unmount returns an error", func() {
 			BeforeEach(func() {
-				newPath = path.Join(deinitStorePath, "milkyway")
-				Expect(os.MkdirAll(newPath, 0755)).To(Succeed())
+				unmounter.UnmountReturns(errors.New("unmount-failed"))
 			})
 
-			It("succcesfully unmounts a filesystem", func() {
-				Expect(driver.DeInitFilesystem(logger, newPath)).To(Succeed())
-				Expect(testhelpers.XFSMountPoints()).To(ContainElement(deinitStorePath))
-			})
-		})
-
-		Context("when the store path does not exist", func() {
-			It("succcesfully unmounts a filesystem", func() {
-				Expect(driver.DeInitFilesystem(logger, "does/not/exist")).NotTo(HaveOccurred())
+			It("returns the error", func() {
+				Expect(driver.DeInitFilesystem(logger, "some/path")).To(MatchError(ContainSubstring("unmount-failed")))
 			})
 		})
 	})
@@ -707,7 +700,7 @@ var _ = Describe("Driver", func() {
 		It("unmounts the rootfs dir", func() {
 			Expect(driver.DestroyImage(logger, spec.ImagePath)).To(Succeed())
 			Expect(unmounter.UnmountCallCount()).To(Equal(1))
-			unmountPath := unmounter.UnmountArgsForCall(0)
+			_, unmountPath := unmounter.UnmountArgsForCall(0)
 			Expect(unmountPath).To(Equal(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)))
 		})
 

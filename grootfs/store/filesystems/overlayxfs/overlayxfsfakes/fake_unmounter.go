@@ -5,13 +5,15 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
+	"code.cloudfoundry.org/lager"
 )
 
 type FakeUnmounter struct {
-	UnmountStub        func(string) error
+	UnmountStub        func(lager.Logger, string) error
 	unmountMutex       sync.RWMutex
 	unmountArgsForCall []struct {
-		arg1 string
+		arg1 lager.Logger
+		arg2 string
 	}
 	unmountReturns struct {
 		result1 error
@@ -23,16 +25,17 @@ type FakeUnmounter struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeUnmounter) Unmount(arg1 string) error {
+func (fake *FakeUnmounter) Unmount(arg1 lager.Logger, arg2 string) error {
 	fake.unmountMutex.Lock()
 	ret, specificReturn := fake.unmountReturnsOnCall[len(fake.unmountArgsForCall)]
 	fake.unmountArgsForCall = append(fake.unmountArgsForCall, struct {
-		arg1 string
-	}{arg1})
-	fake.recordInvocation("Unmount", []interface{}{arg1})
+		arg1 lager.Logger
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("Unmount", []interface{}{arg1, arg2})
 	fake.unmountMutex.Unlock()
 	if fake.UnmountStub != nil {
-		return fake.UnmountStub(arg1)
+		return fake.UnmountStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
@@ -47,17 +50,17 @@ func (fake *FakeUnmounter) UnmountCallCount() int {
 	return len(fake.unmountArgsForCall)
 }
 
-func (fake *FakeUnmounter) UnmountCalls(stub func(string) error) {
+func (fake *FakeUnmounter) UnmountCalls(stub func(lager.Logger, string) error) {
 	fake.unmountMutex.Lock()
 	defer fake.unmountMutex.Unlock()
 	fake.UnmountStub = stub
 }
 
-func (fake *FakeUnmounter) UnmountArgsForCall(i int) string {
+func (fake *FakeUnmounter) UnmountArgsForCall(i int) (lager.Logger, string) {
 	fake.unmountMutex.RLock()
 	defer fake.unmountMutex.RUnlock()
 	argsForCall := fake.unmountArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeUnmounter) UnmountReturns(result1 error) {

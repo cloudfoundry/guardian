@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+
+	"code.cloudfoundry.org/lager"
 )
 
 type RootlessUnmounter struct {
 }
 
-func (u RootlessUnmounter) Unmount(path string) error {
+func (u RootlessUnmounter) Unmount(log lager.Logger, path string) error {
 	mounted, err := isMountPoint(path)
 	if err != nil {
 		return err

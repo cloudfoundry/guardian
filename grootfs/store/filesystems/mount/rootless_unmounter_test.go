@@ -8,6 +8,8 @@ import (
 	"syscall"
 
 	"code.cloudfoundry.org/grootfs/store/filesystems/mount"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -20,6 +22,7 @@ var _ = Describe("Rootless Unmounter", func() {
 
 		unmounter  mount.RootlessUnmounter
 		unmountErr error
+		logger     lager.Logger
 	)
 
 	BeforeEach(func() {
@@ -34,6 +37,7 @@ var _ = Describe("Rootless Unmounter", func() {
 		Expect(os.MkdirAll(mountDestPath, 755)).To(Succeed())
 
 		unmounter = mount.RootlessUnmounter{}
+		logger = lagertest.NewTestLogger("rootless-unmounter")
 	})
 
 	AfterEach(func() {
@@ -41,7 +45,7 @@ var _ = Describe("Rootless Unmounter", func() {
 	})
 
 	JustBeforeEach(func() {
-		unmountErr = unmounter.Unmount(mountDestPath)
+		unmountErr = unmounter.Unmount(logger, mountDestPath)
 	})
 
 	When("the directory to unmount is mounted", func() {
