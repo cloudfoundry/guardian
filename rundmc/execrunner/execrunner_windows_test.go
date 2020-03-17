@@ -84,7 +84,7 @@ var _ = Describe("WindowsExecRunner", func() {
 		}
 	})
 
-	setupCommandRunner := func(runner *fake_command_runner.FakeCommandRunner, startErrors, waitErrors, waitBeforeWrite bool, exitCode int, block chan struct{}) {
+	setupCommandRunner := func(runner *fake_command_runner.FakeCommandRunner, waitLogs string, startErrors, waitErrors, waitBeforeWrite bool, exitCode int, block chan struct{}) {
 		pio := []*os.File{}
 		runner.WhenStarting(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
 			if startErrors {
@@ -109,8 +109,8 @@ var _ = Describe("WindowsExecRunner", func() {
 				return errors.New("couldn't wait for process")
 			}
 
-			if logs != "" {
-				_, err := pio[3].Write([]byte(logs))
+			if waitLogs != "" {
+				_, err := pio[3].Write([]byte(waitLogs))
 				Expect(err).NotTo(HaveOccurred())
 				pio[3].Close()
 			}
@@ -133,7 +133,7 @@ var _ = Describe("WindowsExecRunner", func() {
 	}
 
 	JustBeforeEach(func() {
-		setupCommandRunner(cmdRunner, wincStartErrors, wincWaitErrors, waitBeforeStdoutWrite, wincExitCode, proceed)
+		setupCommandRunner(cmdRunner, logs, wincStartErrors, wincWaitErrors, waitBeforeStdoutWrite, wincExitCode, proceed)
 	})
 
 	AfterEach(func() {
