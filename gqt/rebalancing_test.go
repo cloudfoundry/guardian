@@ -116,7 +116,7 @@ var _ = Describe("CPU shares rebalancing", func() {
 				})
 
 				It("sets the bad cgroup shares proportionally", func() {
-					Eventually(readCgroupFile(badCgroupPath, "cpu.shares"), "5s").Should(BeNumerically("~", 2000, 1))
+					Eventually(func() int64 { return readCgroupFile(badCgroupPath, "cpu.shares") }, "5s").Should(BeNumerically("~", 2000, 1))
 				})
 			})
 		})
