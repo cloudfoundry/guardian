@@ -200,6 +200,9 @@ func (e *WindowsExecRunner) runProcess(
 	proc.exitMutex.Lock()
 
 	go func() {
+		// the streamLogs go func will only exit once this handle is closed
+		defer syscall.CloseHandle(childLogW)
+		defer proc.exitMutex.Unlock()
 		if err := e.commandRunner.Wait(cmd); err != nil {
 			if exitErr, ok := err.(*exec.ExitError); ok {
 				if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
@@ -213,9 +216,6 @@ func (e *WindowsExecRunner) runProcess(
 				proc.exitErr = err
 			}
 		}
-		// the streamLogs go func will only exit once this handle is closed
-		syscall.CloseHandle(childLogW)
-		proc.exitMutex.Unlock()
 	}()
 
 	return proc, nil
