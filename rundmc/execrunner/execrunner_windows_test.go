@@ -120,9 +120,13 @@ var _ = Describe("WindowsExecRunner", func() {
 				time.Sleep(time.Millisecond * 500)
 			}
 
-			_, _ = pio[1].Write([]byte("hello stdout"))
+			if _, err := pio[1].Write([]byte("hello stdout")); err != nil {
+				return err
+			}
 
-			io.Copy(pio[2], pio[0])
+			if _, err := io.Copy(pio[2], pio[0]); err != nil {
+				return err
+			}
 
 			if exitCode != 0 {
 				return exitWith(exitCode).Run()
