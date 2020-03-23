@@ -118,30 +118,50 @@ func (e *WindowsExecRunner) RunPea(
 func (e *WindowsExecRunner) runProcess(
 	log lager.Logger, runMode string, runtimeExtraArgs []string, processID, processPath string,
 	pio garden.ProcessIO, extraCleanup func() error,
-) (garden.Process, error) {
+) (_ garden.Process, err error) {
 	logR, logW, err := os.Pipe()
 	if err != nil {
 		return nil, errors.Wrap(err, "creating log pipe")
 	}
-	defer logW.Close()
+
+	defer func() {
+		if err != nil {
+			logW.Close()
+		}
+	}()
 
 	stdinR, stdinW, err := os.Pipe()
 	if err != nil {
 		return nil, errors.Wrap(err, "creating stdin pipe")
 	}
-	defer stdinR.Close()
+
+	defer func() {
+		if err != nil {
+			stdinR.Close()
+		}
+	}()
 
 	stdoutR, stdoutW, err := os.Pipe()
 	if err != nil {
 		return nil, errors.Wrap(err, "creating stdout pipe")
 	}
-	defer stdoutW.Close()
+
+	defer func() {
+		if err != nil {
+			stdoutW.Close()
+		}
+	}()
 
 	stderrR, stderrW, err := os.Pipe()
 	if err != nil {
 		return nil, errors.Wrap(err, "creating stderr pipe")
 	}
-	defer stderrW.Close()
+
+	defer func() {
+		if err != nil {
+			stderrW.Close()
+		}
+	}()
 
 	var childLogW syscall.Handle
 
@@ -200,6 +220,13 @@ func (e *WindowsExecRunner) runProcess(
 	proc.exitMutex.Lock()
 
 	go func() {
+		defer func() {
+			logW.Close()
+			stdinR.Close()
+			stdoutW.Close()
+			stderrW.Close()
+		}()
+
 		// the streamLogs go func will only exit once this handle is closed
 		defer syscall.CloseHandle(childLogW)
 		defer proc.exitMutex.Unlock()
