@@ -518,22 +518,19 @@ var _ = Describe("Containerd", func() {
 		var container garden.Container
 
 		JustBeforeEach(func() {
-			restartContainerd()
-			createContainer := func() error {
-				var err error
-				container, err = client.Create(garden.ContainerSpec{
-					Limits: garden.Limits{
-						Memory: garden.MemoryLimits{
-							LimitInBytes: 30 * mb,
-						},
+			restartContainerd(client)
+			var err error
+			container, err = client.Create(garden.ContainerSpec{
+				Limits: garden.Limits{
+					Memory: garden.MemoryLimits{
+						LimitInBytes: 30 * mb,
 					},
-					Image: garden.ImageRef{
-						URI: "docker://cfgarden/oom",
-					},
-				})
-				return err
-			}
-			Eventually(createContainer, time.Minute).Should(Succeed())
+				},
+				Image: garden.ImageRef{
+					URI: "docker://cfgarden/oom",
+				},
+			})
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		AfterEach(func() {
@@ -577,7 +574,7 @@ var _ = Describe("Containerd", func() {
 		})
 
 		It("does not leak containerd client sockets", func() {
-			restartContainerd()
+			restartContainerd(client)
 			Eventually(
 				func() string {
 					out, err := exec.Command("/bin/bash", "-c", fmt.Sprintf("ps aux | grep -E '[c]ontainerd-shim.*%s' | awk '{print $2}' | xargs -I {} sh -c 'ss -xp | grep {} | wc -l'", container.Handle())).CombinedOutput()

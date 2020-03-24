@@ -534,9 +534,20 @@ func startContainerd(runDir string) *os.Process {
 	return containerdrunner.NewContainerdProcess(runDir, containerdConfig)
 }
 
-func restartContainerd() {
+func restartContainerd(client *runner.RunningGarden) {
 	terminateContainerd()
 	containerdProcess = startContainerd(containerdRunDir)
+	waitForContainerd(client)
+}
+
+//We need this because the containerd client needs time
+//to recover its connections after containerd restarts
+func waitForContainerd(client *runner.RunningGarden) {
+	Eventually(func() error {
+		_, err := client.Containers(garden.Properties{})
+		return err
+	}).Should(Succeed())
+
 }
 
 func numGoRoutines(client *runner.RunningGarden) int {
