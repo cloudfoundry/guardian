@@ -42,7 +42,7 @@ require (
 	github.com/opencontainers/runc v1.0.0-rc10
 	github.com/opencontainers/runtime-spec v1.0.1
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.4.2
+	github.com/sirupsen/logrus v1.5.0
 	github.com/spf13/pflag v1.0.5
 	github.com/st3v/glager v0.3.0
 	github.com/tedsuo/ifrit v0.0.0-20180410193936-e89a512c3162
