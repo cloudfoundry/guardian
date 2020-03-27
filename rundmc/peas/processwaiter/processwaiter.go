@@ -2,8 +2,6 @@ package processwaiter
 
 import (
 	"time"
-
-	ps "github.com/mitchellh/go-ps"
 )
 
 //go:generate counterfeiter . ProcessWaiter
@@ -16,13 +14,10 @@ func (w ProcessWaiter) Wait(pid int) error {
 
 func WaitOnProcess(pid int) error {
 	for {
-		process, err := ps.FindProcess(pid)
-		if err != nil {
-			return err
-		}
-		if process == nil {
+		if !isProcessAlive(pid) {
 			return nil
 		}
+
 		time.Sleep(time.Millisecond * 200)
 	}
 }
