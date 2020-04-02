@@ -58,7 +58,8 @@ var _ = Describe("Dadoo", func() {
 		cp, err := gexec.Start(exec.Command("tar", "-xf", os.Getenv("GARDEN_TEST_ROOTFS"), "-C", rootfsPath), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(cp.Wait().ExitCode()).To(Equal(0), func() string {
+		// increasing wait timeout to 60s so we instead fail on exit code value and get the debug info
+		Expect(cp.Wait("60s").ExitCode()).To(Equal(0), func() string {
 			lscmd := exec.Command("ls", "-l", filepath.Join(rootfsPath, "bin"))
 			out, _ := lscmd.CombinedOutput()
 			return fmt.Sprintf("Failed to untar rootfs.tar into %s. Contents of ./bin/:\n%s", rootfsPath, string(out))
