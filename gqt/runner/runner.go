@@ -305,29 +305,42 @@ func Start(config GdnRunnerConfig) *RunningGarden {
 	gdn.Client = client.New(connection.New(runner.connectionInfo()))
 
 	if !config.StartupExpectedToFail {
-		Eventually(gdn.Ping, time.Minute).Should(Succeed(), "Gdn is taking too long to start\n%s", func() string {
-			ip, err := localip.LocalIP()
-			if err != nil {
-				ip = "Error getting local ip: " + err.Error()
-			}
+		Expect(func() error {
+			until := time.Now().Add(60 * time.Second)
+			for time.Now().Before(until) {
+				if runner.Runner.ExitCode() == -1 {
+					if err := gdn.Ping(); err == nil {
+						return nil
+					}
+					time.Sleep(10 * time.Millisecond)
+				} else {
+					ip, err := localip.LocalIP()
+					if err != nil {
+						return err
+					}
 
-			interfaces, err := net.Interfaces()
-			if err != nil {
-				return fmt.Sprintf("\nLOCAL IP: %s\nLIST OF NET INTERFACES:\nError listing net interfaces: %s", ip, err.Error())
-			}
+					interfaces, err := net.Interfaces()
+					if err != nil {
+						return err
+					}
 
-			ifaces := []string{}
-			for _, iface := range interfaces {
-				addrs, err := iface.Addrs()
-				if err != nil {
-					continue
-				}
-				for _, addr := range addrs {
-					ifaces = append(ifaces, addr.String())
+					ifaces := []string{}
+					for _, iface := range interfaces {
+						addrs, err := iface.Addrs()
+						if err != nil {
+							continue
+						}
+						for _, addr := range addrs {
+							ifaces = append(ifaces, addr.String())
+						}
+					}
+					return fmt.Errorf(
+						"gdn terminated unexpectedly. Network debug info:\nLOCAL IP: %s\nLIST OF NET INTERFACES:\n%s\n",
+						ip, strings.Join(ifaces, "\n"))
 				}
 			}
-			return fmt.Sprintf("\nLOCAL IP: %s\nLIST OF NET INTERFACES:\n%s\n", ip, strings.Join(ifaces, "\n"))
-		}())
+			return fmt.Errorf("Gdn is taking too long to start")
+		}()).NotTo(HaveOccurred())
 	}
 
 	return gdn
