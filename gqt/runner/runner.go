@@ -22,6 +22,7 @@ import (
 	"code.cloudfoundry.org/garden/client"
 	"code.cloudfoundry.org/garden/client/connection"
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
+	"code.cloudfoundry.org/guardian/kawasaki/mtu"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	"code.cloudfoundry.org/localip"
@@ -300,6 +301,12 @@ func Start(config GdnRunnerConfig) *RunningGarden {
 		logger:       lagertest.NewTestLogger("garden-runner"),
 	}
 
+	// Delete this once https://www.pivotaltracker.com/story/show/172128896 gets resolved
+	localIP, err := localip.LocalIP()
+	Expect(err).ToNot(HaveOccurred())
+	_, mtuErr := mtu.MTU(localIP)
+	//
+
 	gdn.process = ifrit.Invoke(runner)
 	gdn.Pid = runner.Command.Process.Pid
 	gdn.Client = client.New(connection.New(runner.connectionInfo()))
@@ -314,11 +321,6 @@ func Start(config GdnRunnerConfig) *RunningGarden {
 					}
 					time.Sleep(10 * time.Millisecond)
 				} else {
-					ip, err := localip.LocalIP()
-					if err != nil {
-						return err
-					}
-
 					interfaces, err := net.Interfaces()
 					if err != nil {
 						return err
@@ -335,8 +337,9 @@ func Start(config GdnRunnerConfig) *RunningGarden {
 						}
 					}
 					return fmt.Errorf(
-						"gdn terminated unexpectedly. Network debug info:\nLOCAL IP: %s\nLIST OF NET INTERFACES:\n%s\n",
-						ip, strings.Join(ifaces, "\n"))
+						"gdn terminated unexpectedly. Succeeded before starting gdn: %t\nNetwork debug info:\nLOCAL IP: %s\nLIST OF NET INTERFACES:\n%s\n",
+						mtuErr == nil,
+						localIP, strings.Join(ifaces, "\n"))
 				}
 			}
 			return fmt.Errorf("Gdn is taking too long to start")
