@@ -1,6 +1,6 @@
 // +build linux
 
-package fscommon
+package fs
 
 import (
 	"errors"
@@ -18,7 +18,7 @@ var (
 
 // Saturates negative values at zero and returns a uint64.
 // Due to kernel bugs, some of the memory cgroup stats can be negative.
-func ParseUint(s string, base, bitSize int) (uint64, error) {
+func parseUint(s string, base, bitSize int) (uint64, error) {
 	value, err := strconv.ParseUint(s, base, bitSize)
 	if err != nil {
 		intValue, intErr := strconv.ParseInt(s, base, bitSize)
@@ -38,11 +38,11 @@ func ParseUint(s string, base, bitSize int) (uint64, error) {
 
 // Parses a cgroup param and returns as name, value
 //  i.e. "io_service_bytes 1234" will return as io_service_bytes, 1234
-func GetCgroupParamKeyValue(t string) (string, uint64, error) {
+func getCgroupParamKeyValue(t string) (string, uint64, error) {
 	parts := strings.Fields(t)
 	switch len(parts) {
 	case 2:
-		value, err := ParseUint(parts[1], 10, 64)
+		value, err := parseUint(parts[1], 10, 64)
 		if err != nil {
 			return "", 0, fmt.Errorf("unable to convert param value (%q) to uint64: %v", parts[1], err)
 		}
@@ -54,7 +54,7 @@ func GetCgroupParamKeyValue(t string) (string, uint64, error) {
 }
 
 // Gets a single uint64 value from the specified cgroup file.
-func GetCgroupParamUint(cgroupPath, cgroupFile string) (uint64, error) {
+func getCgroupParamUint(cgroupPath, cgroupFile string) (uint64, error) {
 	fileName := filepath.Join(cgroupPath, cgroupFile)
 	contents, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -65,7 +65,7 @@ func GetCgroupParamUint(cgroupPath, cgroupFile string) (uint64, error) {
 		return math.MaxUint64, nil
 	}
 
-	res, err := ParseUint(trimmed, 10, 64)
+	res, err := parseUint(trimmed, 10, 64)
 	if err != nil {
 		return res, fmt.Errorf("unable to parse %q as a uint from Cgroup file %q", string(contents), fileName)
 	}
@@ -73,7 +73,7 @@ func GetCgroupParamUint(cgroupPath, cgroupFile string) (uint64, error) {
 }
 
 // Gets a string value from the specified cgroup file
-func GetCgroupParamString(cgroupPath, cgroupFile string) (string, error) {
+func getCgroupParamString(cgroupPath, cgroupFile string) (string, error) {
 	contents, err := ioutil.ReadFile(filepath.Join(cgroupPath, cgroupFile))
 	if err != nil {
 		return "", err
