@@ -863,15 +863,23 @@ var _ = Describe("Driver", func() {
 
 	Describe("ConfigureStore", func() {
 		const (
-			currentUID       = 2001
-			currentGID       = 2002
-			backingStorePath = "path/to/backingStore"
+			currentUID = 2001
+			currentGID = 2002
+		)
+
+		var (
+			backingStorePath string
 		)
 
 		BeforeEach(func() {
 			var err error
 			storePath, err = ioutil.TempDir(storePath, "configure-store-test")
 			Expect(err).ToNot(HaveOccurred())
+
+			backingStoreFile, err := ioutil.TempFile(storePath, "backing-store-test")
+			Expect(err).ToNot(HaveOccurred())
+
+			backingStorePath = backingStoreFile.Name()
 		})
 
 		It("creates a links directory", func() {
@@ -897,6 +905,17 @@ var _ = Describe("Driver", func() {
 			Expect(directIO.ConfigureCallCount()).To(Equal(1))
 			actualDirectIOPath := directIO.ConfigureArgsForCall(0)
 			Expect(actualDirectIOPath).To(Equal(backingStorePath))
+		})
+
+		Context("when the backing store path does not exist", func() {
+			BeforeEach(func() {
+				Expect(os.Remove(backingStorePath)).To(Succeed())
+			})
+
+			It("does not attempt to configure direct io", func() {
+				Expect(driver.ConfigureStore(logger, storePath, backingStorePath, currentUID, currentGID)).To(Succeed())
+				Expect(directIO.ConfigureCallCount()).To(Equal(0))
+			})
 		})
 
 		Context("when the whiteout 'device' is not a device", func() {

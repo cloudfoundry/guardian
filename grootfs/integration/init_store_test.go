@@ -228,23 +228,42 @@ init:
 			})
 		})
 
-		Context("when the store is already initialized without loopback direct IO", func() {
-			BeforeEach(func() {
-				spec.WithoutDirectIO = true
-
+		Context("when the store is already initialized", func() {
+			JustBeforeEach(func() {
 				Expect(runner.InitStore(spec)).To(Succeed())
 			})
 
-			Context("when direct IO is requested", func() {
+			Context("when direct IO is not enabled on the loop device", func() {
 				BeforeEach(func() {
-					spec.WithoutDirectIO = false
+					spec.WithoutDirectIO = true
 				})
 
-				It("enables direct-io on the loopback device", func() {
+				Context("when direct IO is requested", func() {
+					BeforeEach(func() {
+						spec.WithoutDirectIO = false
+					})
+
+					It("enables direct-io on the loopback device", func() {
+						Expect(runner.InitStore(spec)).To(Succeed())
+						loopDev, err := loopback.NewLoSetup().FindAssociatedLoopDevice(backingStoreFile)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(testhelpers.IsDirectIOEnabled(loopDev)).To(BeTrue())
+					})
+				})
+			})
+
+			Context("when the backing file does not exist", func() {
+				JustBeforeEach(func() {
+					Expect(os.RemoveAll(backingStoreFile)).To(Succeed())
+				})
+
+				It("does succesfully reinit the store", func() {
 					Expect(runner.InitStore(spec)).To(Succeed())
-					loopDev, err := loopback.NewLoSetup().FindAssociatedLoopDevice(backingStoreFile)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(testhelpers.IsDirectIOEnabled(loopDev)).To(BeTrue())
+				})
+
+				It("does not create a backing store file", func() {
+					Expect(runner.InitStore(spec)).To(Succeed())
+					Expect(backingStoreFile).NotTo(BeAnExistingFile())
 				})
 			})
 		})

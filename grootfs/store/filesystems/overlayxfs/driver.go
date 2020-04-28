@@ -128,6 +128,16 @@ func (d *Driver) ConfigureStore(logger lager.Logger, storePath, backingStorePath
 		return errorspkg.Wrap(err, "Create ids directory")
 	}
 
+	if _, err := os.Stat(backingStorePath); err != nil {
+		if os.IsNotExist(err) {
+			logger.Info("backing store file does not exist", lager.Data{"backingStorePath": backingStorePath})
+			return nil
+		}
+
+		logger.Error("stat-backing-file-failed", err, lager.Data{"backingStorePath": backingStorePath})
+		return err
+	}
+
 	if err := d.directIO.Configure(backingStorePath); err != nil {
 		logger.Error("enabling-direct-io-failed", err, lager.Data{"backingStorePath": backingStorePath})
 		return fmt.Errorf("enabling direct-io on %s: %v", backingStorePath, err)
