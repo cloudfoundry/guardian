@@ -135,7 +135,7 @@ var _ = Describe("Limits", func() {
 			cgroupType = "devices"
 		})
 
-		itAllowsOnlyCertainDevices := func() {
+		itAllowsOnlyCertainDevices := func(privileged bool) {
 			It("only allows certain devices", func() {
 				content := readFileString(filepath.Join(cgroupPath, "devices.list"))
 				expectedAllowedDevices := []string{
@@ -145,28 +145,31 @@ var _ = Describe("Limits", func() {
 					"c 1:9 rwm",
 					"c 1:5 rwm",
 					"c 1:7 rwm",
-					"c 10:229 rwm",
 					"c *:* m",
 					"b *:* m",
-					"c 5:1 rwm",
 					"c 136:* rwm",
 					"c 5:2 rwm",
 					"c 10:200 rwm",
 				}
+
+				if privileged {
+					expectedAllowedDevices = append(expectedAllowedDevices, "c 10:229 rwm")
+				}
+
 				contentLines := strings.Split(strings.TrimSpace(content), "\n")
 				Expect(contentLines).To(HaveLen(len(expectedAllowedDevices)))
 				Expect(contentLines).To(ConsistOf(expectedAllowedDevices))
 			})
 		}
 
-		itAllowsOnlyCertainDevices()
+		itAllowsOnlyCertainDevices(false)
 
 		Context("in a privileged container", func() {
 			BeforeEach(func() {
 				privileged = true
 			})
 
-			itAllowsOnlyCertainDevices()
+			itAllowsOnlyCertainDevices(true)
 		})
 	})
 })

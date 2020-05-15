@@ -409,7 +409,6 @@ var _ = Describe("Surviving Restarts", func() {
 						"c 10:229 rwm",
 						"c *:* m",
 						"b *:* m",
-						"c 5:1 rwm",
 						"c 136:* rwm",
 						"c 5:2 rwm",
 						"c 10:200 rwm",
