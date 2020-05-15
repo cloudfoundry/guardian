@@ -211,8 +211,8 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 }
 
 func isNoSuchExecutable(err error) bool {
-	noSuchFile := regexp.MustCompile(`starting container process caused \"exec: .*: stat .*: no such file or directory`)
-	executableNotFound := regexp.MustCompile(`starting container process caused \"exec: .*: executable file not found in \$PATH`)
+	noSuchFile := regexp.MustCompile(`starting container process caused: exec: .*: stat .*: no such file or directory`)
+	executableNotFound := regexp.MustCompile(`starting container process caused: exec: .*: executable file not found in \$PATH`)
 
 	return noSuchFile.MatchString(err.Error()) || executableNotFound.MatchString(err.Error())
 }
