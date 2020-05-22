@@ -55,6 +55,10 @@ func main() {
 			Usage: "File to write logs to. Using this option sets the log level to `info` if --log-level is not specified.",
 		},
 		&cli.StringFlag{
+			Name:  "log-timestamp-format",
+			Usage: "The format to use for timestamps in logs. Can be 'unix-epoch' or 'rfc3339'",
+		},
+		&cli.StringFlag{
 			Name:  "tardis-bin",
 			Usage: "Path to tardis bin. (If not provided will use $PATH)",
 			Value: defaultTardisBin,
@@ -100,6 +104,7 @@ func main() {
 			WithMetronEndpoint(ctx.String("metron-endpoint")).
 			WithLogLevel(ctx.String("log-level"), ctx.IsSet("log-level")).
 			WithLogFile(ctx.String("log-file")).
+			WithLogTimestampFormat(ctx.String("log-timestamp-format")).
 			WithNewuidmapBin(ctx.String("newuidmap-bin"), ctx.IsSet("newuidmap-bin")).
 			WithNewgidmapBin(ctx.String("newgidmap-bin"), ctx.IsSet("newgidmap-bin")).
 			Build()
@@ -108,7 +113,7 @@ func main() {
 		}
 
 		lagerLogLevel := translateLogLevel(cfg.LogLevel)
-		logger, err := configureLogger(lagerLogLevel, cfg.LogFile)
+		logger, err := configureLogger(lagerLogLevel, cfg.LogFile, cfg.LogTimestampFormat)
 		if err != nil {
 			return err
 		}
@@ -144,7 +149,7 @@ func translateLogLevel(logLevel string) lager.LogLevel {
 	}
 }
 
-func configureLogger(logLevel lager.LogLevel, logFile string) (lager.Logger, error) {
+func configureLogger(logLevel lager.LogLevel, logFile, logTimestampFormat string) (lager.Logger, error) {
 	logWriter := os.Stderr
 	if logFile != "" {
 		var err error
@@ -159,7 +164,11 @@ func configureLogger(logLevel lager.LogLevel, logFile string) (lager.Logger, err
 	}
 
 	logger := lager.NewLogger("grootfs")
-	logger.RegisterSink(lager.NewWriterSink(logWriter, logLevel))
+	if logTimestampFormat == "rfc3339" {
+		logger.RegisterSink(lager.NewPrettySink(logWriter, logLevel))
+	} else {
+		logger.RegisterSink(lager.NewWriterSink(logWriter, logLevel))
+	}
 
 	return logger, nil
 }

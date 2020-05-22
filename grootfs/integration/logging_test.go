@@ -34,6 +34,47 @@ var _ = Describe("Logging", func() {
 		Eventually(buffer).Should(gbytes.Say("no such file or directory"))
 	})
 
+	Describe("timestamp format", func() {
+		var (
+			buffer *gbytes.Buffer
+		)
+
+		BeforeEach(func() {
+			buffer = gbytes.NewBuffer()
+			Runner = Runner.WithStderr(buffer).WithLogLevel(lager.DEBUG)
+		})
+
+		JustBeforeEach(func() {
+			Runner.Create(spec)
+		})
+
+		Context("when format is rfc3339", func() {
+			BeforeEach(func() {
+				Runner = Runner.WithLogTimestampFormat("rfc3339")
+			})
+
+			It("logs timestamps with rfc3339 format", func() {
+				Expect(buffer).To(gbytes.Say(`"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{9}Z"`))
+			})
+		})
+
+		Context("when format is unix-epoch", func() {
+			BeforeEach(func() {
+				Runner = Runner.WithLogTimestampFormat("unix-epoch")
+			})
+
+			It("logs timestamps with seconds since 1970 format", func() {
+				Expect(buffer).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
+			})
+		})
+
+		Context("when format is not passed", func() {
+			It("defaults to unix epoch", func() {
+				Expect(buffer).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
+			})
+		})
+	})
+
 	Describe("--log-level and --log-file flags", func() {
 		Context("when the --log-file is not set", func() {
 			Context("and --log-level is set", func() {

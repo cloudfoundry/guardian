@@ -85,6 +85,11 @@ func (r Runner) WithMetronEndpoint(host net.IP, port uint16) Runner {
 // Logging
 ///////////////////////////////////////////////////////////////////////////////
 
+func (r Runner) WithLogTimestampFormat(format string) Runner {
+	r.LogTimestampFormat = format
+	return r
+}
+
 func (r Runner) WithLogLevel(level lager.LogLevel) Runner {
 	r.LogLevel = level
 	r.LogLevelSet = true
