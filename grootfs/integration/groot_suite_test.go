@@ -39,13 +39,10 @@ var (
 	RegistryPassword string
 	GrootfsTestUid   int
 	GrootfsTestGid   int
+	TardisBin        string
 )
 
 func TestGroot(t *testing.T) {
-	var (
-		TardisBin string
-	)
-
 	RegisterFailHandler(Fail)
 
 	SynchronizedBeforeSuite(func() []byte {

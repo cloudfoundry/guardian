@@ -23,7 +23,7 @@ var StatsCommand = cli.Command{
 
 	Action: func(ctx *cli.Context) error {
 		logger := lager.NewLogger("tardis")
-		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
+		logger.RegisterSink(createLoggingSink(os.Stderr, lager.DEBUG, ctx.String("log-timestamp-format")))
 
 		volumeStats, err := stats.VolumeStats(
 			logger,

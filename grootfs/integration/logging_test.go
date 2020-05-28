@@ -3,6 +3,7 @@ package integration_test
 import (
 	"io/ioutil"
 	"os"
+	"os/exec"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
@@ -14,7 +15,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 )
 
-var _ = Describe("Logging", func() {
+var _ = Describe("GrootFS logging", func() {
 	var spec groot.CreateSpec
 
 	BeforeEach(func() {
@@ -218,6 +219,101 @@ var _ = Describe("Logging", func() {
 
 			It("writes clean after create entries to stderr", func() {
 				Expect(stderr).To(gbytes.Say("groot-cleaning"))
+			})
+		})
+	})
+})
+
+var _ = Describe("Tardis logging", func() {
+	var (
+		cmd    *exec.Cmd
+		stdout *gbytes.Buffer
+		stderr *gbytes.Buffer
+	)
+
+	BeforeEach(func() {
+		stdout = gbytes.NewBuffer()
+		stderr = gbytes.NewBuffer()
+		cmd = exec.Command(TardisBin)
+		cmd.Stdout = stdout
+		cmd.Stderr = stderr
+	})
+
+	JustBeforeEach(func() {
+		_ = cmd.Run()
+	})
+
+	Describe("tardis stats", func() {
+		BeforeEach(func() {
+			cmd.Args = []string{TardisBin, "stats", "--volume-path", "/tmp"}
+		})
+
+		It("logs using unix timestamps", func() {
+			Expect(stderr).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
+		})
+
+		When("the specified logging timestamp format is anything else", func() {
+			BeforeEach(func() {
+				cmd.Args = []string{TardisBin, "--log-timestamp-format", "rfc3339", "stats", "--volume-path", "/tmp"}
+			})
+
+			It("logs using RFC3339 timestamps", func() {
+				Expect(stderr).To(gbytes.Say(`"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{9}Z"`))
+			})
+		})
+
+		When("the specified logging timestamp format is anything else", func() {
+			BeforeEach(func() {
+				cmd.Args = []string{TardisBin, "--log-timestamp-format", "invalidlog", "stats", "--volume-path", "/tmp"}
+			})
+
+			It("logs using unix timestamps", func() {
+				Expect(stderr).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
+			})
+		})
+	})
+
+	Describe("tardis limit", func() {
+		BeforeEach(func() {
+			cmd.Args = []string{TardisBin, "limit", "--disk-limit-bytes", "102400", "--image-path", "/tmp"}
+		})
+
+		It("logs using unix timestamps", func() {
+			Expect(stdout).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
+			Expect(stderr).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
+		})
+
+		When("the specified logging timestamp format is anything else", func() {
+			BeforeEach(func() {
+				cmd.Args = []string{
+					TardisBin,
+					"--log-timestamp-format", "rfc3339",
+					"limit",
+					"--disk-limit-bytes", "102400",
+					"--image-path", "/tmp",
+				}
+			})
+
+			It("logs using RFC3339 timestamps", func() {
+				Expect(stdout).To(gbytes.Say(`"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{9}Z"`))
+				Expect(stderr).To(gbytes.Say(`"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{9}Z"`))
+			})
+		})
+
+		When("the specified logging timestamp format is anything else", func() {
+			BeforeEach(func() {
+				cmd.Args = []string{
+					TardisBin,
+					"--log-timestamp-format", "invalidlog",
+					"limit",
+					"--disk-limit-bytes", "102400",
+					"--image-path", "/tmp",
+				}
+			})
+
+			It("logs using unix timestamps", func() {
+				Expect(stdout).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
+				Expect(stderr).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
 			})
 		})
 	})
