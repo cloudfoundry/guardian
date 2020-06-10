@@ -24,7 +24,7 @@ import (
 
 //go:generate counterfeiter . ContainerManager
 type ContainerManager interface {
-	Create(log lager.Logger, containerID string, spec *specs.Spec, processIO func() (io.Reader, io.Writer, io.Writer)) error
+	Create(log lager.Logger, containerID string, spec *specs.Spec, containerRootUID, containerRootGID uint32, processIO func() (io.Reader, io.Writer, io.Writer)) error
 	Delete(log lager.Logger, containerID string) error
 	Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer, bool)) error
 	State(log lager.Logger, containerID string) (int, string, error)
@@ -126,7 +126,10 @@ func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pi
 	updateAnnotationsIfNeeded(&bundle)
 	log.Debug("Annotations after update", lager.Data{"id": id, "Annotations": bundle.Spec.Annotations})
 
-	err := r.containerManager.Create(log, id, &bundle.Spec, func() (io.Reader, io.Writer, io.Writer) { return pio.Stdin, pio.Stdout, pio.Stderr })
+	containerRootUID := idmapper.MappingList(bundle.Spec.Linux.UIDMappings).Map(0)
+	containerRootGID := idmapper.MappingList(bundle.Spec.Linux.GIDMappings).Map(0)
+
+	err := r.containerManager.Create(log, id, &bundle.Spec, uint32(containerRootUID), uint32(containerRootGID), func() (io.Reader, io.Writer, io.Writer) { return pio.Stdin, pio.Stdout, pio.Stderr })
 	if err != nil {
 		return err
 	}

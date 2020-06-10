@@ -25,13 +25,15 @@ type FakeContainerManager struct {
 		result1 []string
 		result2 error
 	}
-	CreateStub        func(lager.Logger, string, *specs.Spec, func() (io.Reader, io.Writer, io.Writer)) error
+	CreateStub        func(lager.Logger, string, *specs.Spec, uint32, uint32, func() (io.Reader, io.Writer, io.Writer)) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 string
 		arg3 *specs.Spec
-		arg4 func() (io.Reader, io.Writer, io.Writer)
+		arg4 uint32
+		arg5 uint32
+		arg6 func() (io.Reader, io.Writer, io.Writer)
 	}
 	createReturns struct {
 		result1 error
@@ -200,19 +202,21 @@ func (fake *FakeContainerManager) BundleIDsReturnsOnCall(i int, result1 []string
 	}{result1, result2}
 }
 
-func (fake *FakeContainerManager) Create(arg1 lager.Logger, arg2 string, arg3 *specs.Spec, arg4 func() (io.Reader, io.Writer, io.Writer)) error {
+func (fake *FakeContainerManager) Create(arg1 lager.Logger, arg2 string, arg3 *specs.Spec, arg4 uint32, arg5 uint32, arg6 func() (io.Reader, io.Writer, io.Writer)) error {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		arg1 lager.Logger
 		arg2 string
 		arg3 *specs.Spec
-		arg4 func() (io.Reader, io.Writer, io.Writer)
-	}{arg1, arg2, arg3, arg4})
-	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3, arg4})
+		arg4 uint32
+		arg5 uint32
+		arg6 func() (io.Reader, io.Writer, io.Writer)
+	}{arg1, arg2, arg3, arg4, arg5, arg6})
+	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(arg1, arg2, arg3, arg4)
+		return fake.CreateStub(arg1, arg2, arg3, arg4, arg5, arg6)
 	}
 	if specificReturn {
 		return ret.result1
@@ -227,17 +231,17 @@ func (fake *FakeContainerManager) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeContainerManager) CreateCalls(stub func(lager.Logger, string, *specs.Spec, func() (io.Reader, io.Writer, io.Writer)) error) {
+func (fake *FakeContainerManager) CreateCalls(stub func(lager.Logger, string, *specs.Spec, uint32, uint32, func() (io.Reader, io.Writer, io.Writer)) error) {
 	fake.createMutex.Lock()
 	defer fake.createMutex.Unlock()
 	fake.CreateStub = stub
 }
 
-func (fake *FakeContainerManager) CreateArgsForCall(i int) (lager.Logger, string, *specs.Spec, func() (io.Reader, io.Writer, io.Writer)) {
+func (fake *FakeContainerManager) CreateArgsForCall(i int) (lager.Logger, string, *specs.Spec, uint32, uint32, func() (io.Reader, io.Writer, io.Writer)) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	argsForCall := fake.createArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6
 }
 
 func (fake *FakeContainerManager) CreateReturns(result1 error) {
