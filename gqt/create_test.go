@@ -407,7 +407,7 @@ var _ = Describe("Creating a Container", func() {
 		It("should return an error when the cpu shares is invalid", func() {
 			_, err := createContainerWithCpuConfig(1, 0)
 
-			Expect(err.Error()).To(ContainSubstring("The minimum allowed cpu-shares is 2"))
+			Expect(err.Error()).To(ContainSubstring("minimum allowed cpu-shares is 2"))
 		})
 
 		It("should use the default weight value when neither the cpu share or weight are set", func() {
