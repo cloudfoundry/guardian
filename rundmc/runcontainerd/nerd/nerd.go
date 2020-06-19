@@ -423,8 +423,8 @@ func (n *Nerd) RemoveBundle(log lager.Logger, handle string) error {
 func WithUIDAndGID(uid, gid uint32) containerd.NewTaskOpts {
 	return func(ctx context.Context, c *containerd.Client, ti *containerd.TaskInfo) error {
 		return updateTaskInfoCreateOptions(ti, func(opts *runctypes.CreateOptions) error {
-			opts.IoUid = 1
-			opts.IoGid = 1
+			opts.IoUid = uid
+			opts.IoGid = gid
 			return nil
 		})
 	}

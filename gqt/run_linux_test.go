@@ -70,6 +70,11 @@ var _ = Describe("Run", func() {
 			ttySpec("test", "-t", "1"),
 			should(gexec.Exit(0)),
 		),
+
+		Entry("can write to /dev/stdout",
+			spec("sh", "-c", "echo foo > /dev/stdout"),
+			should(gexec.Exit(0), gbytes.Say("foo")),
+		),
 	)
 
 	Describe("when we wait for process", func() {
