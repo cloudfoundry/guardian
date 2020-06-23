@@ -224,11 +224,40 @@ var _ = Describe("Run", func() {
 			Args: []string{
 				"ohai",
 			},
-		}, garden.ProcessIO{})
+		}, garden.ProcessIO{
+			Stdin:  gbytes.NewBuffer(),
+			Stdout: gbytes.NewBuffer(),
+			Stderr: gbytes.NewBuffer(),
+		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(process.Wait()).To(Equal(0))
 
 		Expect(lsofFileHandlesOnProcessPipes(process.ID())).To(BeEmpty())
+	})
+
+	Context("when asking for a TTY", func() {
+		It("does not leak FIFOs", func() {
+			client = runner.Start(config)
+
+			container, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			process, err := container.Run(garden.ProcessSpec{
+				Path: "echo",
+				Args: []string{"hello"},
+				TTY:  &garden.TTYSpec{},
+			}, garden.ProcessIO{
+				Stdin:  gbytes.NewBuffer(),
+				Stdout: gbytes.NewBuffer(),
+				Stderr: gbytes.NewBuffer(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(process.Wait()).To(Equal(0))
+			Eventually(func() string {
+				return lsofFileHandlesOnProcessPipes(process.ID())
+			}, "1m").Should(BeEmpty())
+		})
 	})
 
 	Describe("security", func() {

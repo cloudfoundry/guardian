@@ -257,10 +257,13 @@ func noTTYProcessIO(initProcessIO func() (io.Reader, io.Writer, io.Writer)) func
 func withProcessIO(processIO func() (io.Reader, io.Writer, io.Writer, bool), ioFifoDir string) cio.Opt {
 	return func(opt *cio.Streams) {
 		stdin, stdout, stderr, hasTTY := processIO()
-		cio.WithStreams(orEmpty(stdin), orDiscard(stdout), orDiscard(stderr))(opt)
+
 		cio.WithFIFODir(ioFifoDir)(opt)
 		if hasTTY {
 			cio.WithTerminal(opt)
+			cio.WithStreams(orEmpty(stdin), orDiscard(stdout), nil)(opt)
+		} else {
+			cio.WithStreams(orEmpty(stdin), orDiscard(stdout), orDiscard(stderr))(opt)
 		}
 	}
 }
