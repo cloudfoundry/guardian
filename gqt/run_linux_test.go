@@ -13,171 +13,149 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
-	"github.com/onsi/gomega/types"
 	"golang.org/x/sys/unix"
 )
 
 var _ = Describe("Run", func() {
-	var client *runner.RunningGarden
+	var (
+		client        *runner.RunningGarden
+		container     garden.Container
+		processSpec   garden.ProcessSpec
+		containerSpec garden.ContainerSpec
+		out           *gbytes.Buffer
+		exitCode      int
+		propsDir      string
+		processID     string
+		processPath   string
+	)
+
+	BeforeEach(func() {
+		out = gbytes.NewBuffer()
+		containerSpec = garden.ContainerSpec{}
+		processSpec = makeSpec("/bin/sh", "-c", "echo hello; exit 12")
+		propsDir = tempDir("", "props")
+		// we need to pass --properties-path to prevent guardian from deleting containers
+		// after restarting the server
+		config.PropertiesPath = path.Join(propsDir, "props.json")
+	})
 
 	AfterEach(func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
+		Expect(os.RemoveAll(propsDir)).To(Succeed())
 	})
 
-	DescribeTable("running a process",
-		func(spec garden.ProcessSpec, matchers ...func(actual interface{})) {
-			client = runner.Start(config)
-			container, err := client.Create(garden.ContainerSpec{})
-			Expect(err).NotTo(HaveOccurred())
-
-			out := gbytes.NewBuffer()
-			proc, err := container.Run(
-				spec,
-				garden.ProcessIO{
-					Stdout: io.MultiWriter(GinkgoWriter, out),
-					Stderr: io.MultiWriter(GinkgoWriter, out),
-				})
-			Expect(err).NotTo(HaveOccurred())
-
-			exitCode, err := proc.Wait()
-			Expect(err).NotTo(HaveOccurred())
-
-			for _, m := range matchers {
-				m(&process{exitCode, out})
-			}
-		},
-
-		Entry("with an absolute path",
-			spec("/bin/sh", "-c", "echo hello; exit 12"),
-			should(gbytes.Say("hello"), gexec.Exit(12)),
-		),
-
-		Entry("with a path to be found in a regular user's path",
-			spec("sh", "-c", "echo potato; exit 24"),
-			should(gbytes.Say("potato"), gexec.Exit(24)),
-		),
-
-		Entry("without a TTY",
-			spec("test", "-t", "1"),
-			should(gexec.Exit(1)),
-		),
-
-		Entry("with a TTY",
-			ttySpec("test", "-t", "1"),
-			should(gexec.Exit(0)),
-		),
-
-		Entry("can write to /dev/stdout",
-			spec("sh", "-c", "echo foo > /dev/stdout"),
-			should(gexec.Exit(0), gbytes.Say("foo")),
-		),
-	)
-
-	Describe("when we wait for process", func() {
-		var (
-			container   garden.Container
-			process     garden.Process
-			processPath string
-		)
-
-		JustBeforeEach(func() {
-			client = runner.Start(config)
-			var err error
-			container, err = client.Create(garden.ContainerSpec{})
-			Expect(err).NotTo(HaveOccurred())
-
-			process, err = container.Run(garden.ProcessSpec{
-				Path: "/bin/sh",
-				Args: []string{"-c", "exit 13"},
-			}, garden.ProcessIO{})
-			Expect(err).NotTo(HaveOccurred())
-
-			code, err := process.Wait()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(code).To(Equal(13))
-
-			processPath = filepath.Join(client.DepotDir, container.Handle(), "processes", process.ID())
-		})
-
-		Context("when --cleanup-process-dirs-on-wait is not set (default)", func() {
-			Context("not using containerd for processes", func() {
-				BeforeEach(func() {
-					skipIfContainerdForProcesses("There is no processes directory in the depot when running processes with containerd")
-				})
-
-				It("does not delete the process directory", func() {
-					Expect(processPath).To(BeADirectory())
-				})
-			})
-
-			Context("using containerd for processes", func() {
-				BeforeEach(func() {
-					skipIfRunDmcForProcesses("Processes not managed by containerd")
-				})
-
-				It("can re-attach to the process", func() {
-					_, err := container.Attach(process.ID(), garden.ProcessIO{})
-					Expect(err).ToNot(HaveOccurred())
-				})
-			})
-
-			Context("when we reattach", func() {
-				It("can be Waited for again", func() {
-					reattachedProcess, err := container.Attach(process.ID(), garden.ProcessIO{})
-					Expect(err).NotTo(HaveOccurred())
-
-					code, err := reattachedProcess.Wait()
-					Expect(err).NotTo(HaveOccurred())
-					Expect(code).To(Equal(13))
-				})
-			})
-		})
-
-		Context("when --cleanup-process-dirs-on-wait is set", func() {
-			BeforeEach(func() {
-				config.CleanupProcessDirsOnWait = boolptr(true)
-			})
-
-			Context("not using containerd for processes", func() {
-				BeforeEach(func() {
-					skipIfContainerdForProcesses("There is no processes directory in the depot when running processes with containerd")
-				})
-				It("deletes the process directory", func() {
-					Expect(processPath).NotTo(BeAnExistingFile())
-				})
-			})
-
-			Context("using containerd for processes", func() {
-				BeforeEach(func() {
-					skipIfRunDmcForProcesses("Processes not managed by containerd")
-				})
-
-				It("deletes the process metadata", func() {
-					_, err := container.Attach(process.ID(), garden.ProcessIO{})
-					Expect(err).To(HaveOccurred())
-					Expect(err).To(BeAssignableToTypeOf(garden.ProcessNotFoundError{}))
-				})
-			})
-		})
-	})
-
-	It("creates process files with the right permisssion and ownership", func() {
-		skipIfContainerdForProcesses("There is no processes directory in the depot when running processes with containerd")
+	JustBeforeEach(func() {
 		client = runner.Start(config)
-		container, err := client.Create(garden.ContainerSpec{})
+
+		var err error
+		container, err = client.Create(containerSpec)
 		Expect(err).NotTo(HaveOccurred())
 
-		process, err := container.Run(garden.ProcessSpec{
-			Path: "sleep",
-			Args: []string{"50"},
-		}, garden.ProcessIO{})
+		proc, err := container.Run(
+			processSpec,
+			garden.ProcessIO{
+				Stdout: io.MultiWriter(GinkgoWriter, out),
+				Stderr: io.MultiWriter(GinkgoWriter, out),
+			})
 		Expect(err).NotTo(HaveOccurred())
 
-		processPath := filepath.Join(client.DepotDir, container.Handle(), "processes", process.ID())
+		exitCode, err = proc.Wait()
+		Expect(err).NotTo(HaveOccurred())
+
+		processID = proc.ID()
+		processPath = filepath.Join(client.DepotDir, container.Handle(), "processes", processID)
+	})
+
+	It("execs the process", func() {
+		Expect(out).To(gbytes.Say("hello"))
+		Expect(exitCode).To(Equal(12))
+	})
+
+	Context("with a command present in the PATH", func() {
+		BeforeEach(func() {
+			processSpec = makeSpec("sh", "-c", "echo potato; exit 24")
+		})
+
+		It("execs the process", func() {
+			Expect(out).To(gbytes.Say("potato"))
+			Expect(exitCode).To(Equal(24))
+		})
+	})
+
+	Describe("TTY", func() {
+		BeforeEach(func() {
+			processSpec = makeSpec("test", "-t", "1")
+		})
+
+		It("does not allocate a TTY", func() {
+			Expect(exitCode).To(Equal(1))
+		})
+
+		Context("when a TTY is requested", func() {
+			BeforeEach(func() {
+				processSpec.TTY = new(garden.TTYSpec)
+			})
+
+			It("allocates a TTY", func() {
+				Expect(exitCode).To(Equal(0))
+			})
+
+			It("does not leak FIFOs", func() {
+				Eventually(func() string {
+					return lsofFileHandlesOnProcessPipes(processID)
+				}, "1m").Should(BeEmpty())
+			})
+		})
+	})
+
+	Describe("IO", func() {
+		BeforeEach(func() {
+			processSpec = makeSpec("sh", "-c", "echo foo > /dev/stdout")
+		})
+
+		It("can write to /dev/stdout", func() {
+			Expect(exitCode).To(Equal(0))
+			Expect(out).To(gbytes.Say("foo"))
+		})
+	})
+
+	It("does not delete the process directory", func() {
+		skipIfContainerdForProcesses("There is no processes directory in the depot when running processes with containerd")
+		Expect(processPath).To(BeADirectory())
+	})
+
+	It("can re-attach to the process and Wait on it", func() {
+		reattachedProcess, err := container.Attach(processID, garden.ProcessIO{})
+		Expect(err).NotTo(HaveOccurred())
+
+		code, err := reattachedProcess.Wait()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(code).To(Equal(12))
+	})
+
+	Context("when --cleanup-process-dirs-on-wait is set", func() {
+		BeforeEach(func() {
+			config.CleanupProcessDirsOnWait = boolptr(true)
+		})
+
+		It("deletes the process directory", func() {
+			skipIfContainerdForProcesses("There is no processes directory in the depot when running processes with containerd")
+			Expect(processPath).NotTo(BeAnExistingFile())
+		})
+
+		It("deletes the process metadata", func() {
+			skipIfRunDmcForProcesses("Processes not managed by containerd")
+			_, err := container.Attach(processID, garden.ProcessIO{})
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(garden.ProcessNotFoundError{}))
+		})
+	})
+
+	It("creates process files with the right permission and ownership", func() {
+		skipIfContainerdForProcesses("There is no processes directory in the depot when running processes with containerd")
+
 		root := uint32(0)
 		maximus := uint32(4294967294)
 		files := []fileInfo{
@@ -188,114 +166,40 @@ var _ = Describe("Run", func() {
 			{dir: processPath, name: "stderr", mode: "prw-------", owner: maximus},
 			{dir: processPath, name: "winsz", mode: "prw-------", owner: maximus},
 		}
+
 		for _, info := range files {
 			Expect(checkFileInfo(info)).NotTo(HaveOccurred())
 		}
 	})
 
-	lsofFileHandlesOnProcessPipes := func(processID string) string {
-		grepProcID := exec.Command("grep", processID)
-		lsof := exec.Command("lsof")
-
-		lsofOutPipe, err := lsof.StdoutPipe()
-		Expect(err).NotTo(HaveOccurred())
-		defer lsofOutPipe.Close()
-
-		stdoutBuf := gbytes.NewBuffer()
-		grepProcID.Stdin = lsofOutPipe
-		grepProcID.Stdout = stdoutBuf
-		Expect(grepProcID.Start()).To(Succeed())
-
-		Expect(lsof.Run()).To(Succeed())
-
-		_ = grepProcID.Wait()
-
-		return string(stdoutBuf.Contents())
-	}
-
 	It("cleans up file handles when the process exits", func() {
-		client = runner.Start(config)
-
-		container, err := client.Create(garden.ContainerSpec{})
-		Expect(err).NotTo(HaveOccurred())
-
-		process, err := container.Run(garden.ProcessSpec{
-			Path: "echo",
-			Args: []string{
-				"ohai",
-			},
-		}, garden.ProcessIO{
-			Stdin:  gbytes.NewBuffer(),
-			Stdout: gbytes.NewBuffer(),
-			Stderr: gbytes.NewBuffer(),
-		})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(process.Wait()).To(Equal(0))
-
-		Expect(lsofFileHandlesOnProcessPipes(process.ID())).To(BeEmpty())
-	})
-
-	Context("when asking for a TTY", func() {
-		It("does not leak FIFOs", func() {
-			client = runner.Start(config)
-
-			container, err := client.Create(garden.ContainerSpec{})
-			Expect(err).NotTo(HaveOccurred())
-
-			process, err := container.Run(garden.ProcessSpec{
-				Path: "echo",
-				Args: []string{"hello"},
-				TTY:  &garden.TTYSpec{},
-			}, garden.ProcessIO{
-				Stdin:  gbytes.NewBuffer(),
-				Stdout: gbytes.NewBuffer(),
-				Stderr: gbytes.NewBuffer(),
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(process.Wait()).To(Equal(0))
-			Eventually(func() string {
-				return lsofFileHandlesOnProcessPipes(process.ID())
-			}, "1m").Should(BeEmpty())
-		})
+		Expect(lsofFileHandlesOnProcessPipes(processID)).To(BeEmpty())
 	})
 
 	Describe("security", func() {
 		Describe("rlimits", func() {
-			It("sets requested rlimits, even if they are increased above current limit", func() {
-				var old unix.Rlimit
-				Expect(unix.Getrlimit(unix.RLIMIT_NOFILE, &old)).To(Succeed())
+			var old unix.Rlimit
 
+			BeforeEach(func() {
+				Expect(unix.Getrlimit(unix.RLIMIT_NOFILE, &old)).To(Succeed())
 				Expect(unix.Setrlimit(unix.RLIMIT_NOFILE, &unix.Rlimit{
 					Max: 100000,
 					Cur: 100000,
 				})).To(Succeed())
 
-				defer unix.Setrlimit(unix.RLIMIT_NOFILE, &old)
-
-				client = runner.Start(config)
-				container, err := client.Create(garden.ContainerSpec{
-					Privileged: false,
-				})
-				Expect(err).NotTo(HaveOccurred())
-
+				processSpec.Args = []string{"-c", "ulimit -a"}
 				limit := uint64(100001)
-				stdout := gbytes.NewBuffer()
-				process, err := container.Run(garden.ProcessSpec{
-					User: "root",
-					Path: "/bin/sh",
-					Args: []string{"-c", "ulimit -a"},
-					Limits: garden.ResourceLimits{
-						Nofile: &limit,
-					},
-				}, garden.ProcessIO{
-					Stdout: stdout,
-					Stderr: GinkgoWriter,
-				})
-				Expect(err).ToNot(HaveOccurred())
+				processSpec.Limits = garden.ResourceLimits{
+					Nofile: &limit,
+				}
+			})
 
-				Expect(process.Wait()).To(Equal(0))
-				Expect(stdout).To(gbytes.Say("file descriptors\\W+100001"))
+			AfterEach(func() {
+				unix.Setrlimit(unix.RLIMIT_NOFILE, &old)
+			})
+
+			It("sets requested rlimits, even if they are increased above current limit", func() {
+				Expect(out).To(gbytes.Say("file descriptors\\W+100001"))
 			})
 		})
 
@@ -306,10 +210,11 @@ var _ = Describe("Run", func() {
 
 			BeforeEach(func() {
 				target = tempDir("", "symlinkstarget")
-
 				rootfs = createRootfsTar(func(unpackedRootfs string) {
 					Expect(os.Symlink(target, path.Join(unpackedRootfs, "symlink"))).To(Succeed())
 				})
+				containerSpec.RootFSPath = rootfs
+				processSpec.Dir = "/symlink/foo/bar"
 			})
 
 			AfterEach(func() {
@@ -318,157 +223,167 @@ var _ = Describe("Run", func() {
 			})
 
 			It("does not follow symlinks into the host when creating cwd", func() {
-				client = runner.Start(config)
-				container, err := client.Create(garden.ContainerSpec{RootFSPath: rootfs})
-				Expect(err).NotTo(HaveOccurred())
-
-				_, err = container.Run(garden.ProcessSpec{
-					Path: "non-existing-cmd",
-					Args: []string{},
-					Dir:  "/symlink/foo/bar",
-				}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
-				Expect(err).To(HaveOccurred())
 				Expect(path.Join(target, "foo")).NotTo(BeADirectory())
 			})
 		})
 	})
 
 	Context("when container is privileged", func() {
+		BeforeEach(func() {
+			containerSpec.Privileged = true
+			processSpec = makeSpec("whoami")
+			processSpec.User = "alice"
+		})
+
 		It("can run a process as a particular user", func() {
-			client = runner.Start(config)
-			container, err := client.Create(garden.ContainerSpec{
-				Privileged: true,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			out := gbytes.NewBuffer()
-			proc, err := container.Run(
-				garden.ProcessSpec{
-					Path: "whoami",
-					User: "alice",
-				},
-				garden.ProcessIO{
-					Stdout: io.MultiWriter(GinkgoWriter, out),
-					Stderr: io.MultiWriter(GinkgoWriter, out),
-				})
-			Expect(err).NotTo(HaveOccurred())
-
-			exitCode, err := proc.Wait()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(exitCode).To(Equal(0))
-
 			Expect(out).To(gbytes.Say("alice"))
 		})
 	})
 
 	Describe("PATH env variable", func() {
-		var container garden.Container
-
 		BeforeEach(func() {
-			client = runner.Start(config)
-			var err error
-			container, err = client.Create(garden.ContainerSpec{})
-			Expect(err).NotTo(HaveOccurred())
+			processSpec.Args = []string{"-c", "echo $PATH"}
 		})
 
-		DescribeTable("contains the correct values", func(user, path string, env []string) {
-			out := gbytes.NewBuffer()
-			proc, err := container.Run(
-				garden.ProcessSpec{
-					Path: "sh",
-					Args: []string{"-c", "echo $PATH"},
-					User: user,
-					Env:  env,
-				},
-				garden.ProcessIO{
-					Stdout: io.MultiWriter(GinkgoWriter, out),
-					Stderr: io.MultiWriter(GinkgoWriter, out),
-				})
-			Expect(err).NotTo(HaveOccurred())
+		It("includes the `sbin` folders", func() {
+			Expect(out).To(gbytes.Say(`^/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n$`))
+		})
 
-			exitCode, err := proc.Wait()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(exitCode).To(Equal(0))
+		Context("for a non-root user", func() {
+			BeforeEach(func() {
+				processSpec.User = "alice"
+			})
 
-			Expect(out).To(gbytes.Say(path))
-		},
-			Entry("for a non-root user",
-				"alice", `^/usr/local/bin:/usr/bin:/bin\n$`, []string{}),
-			Entry("for the root user",
-				"root", `^/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n$`, []string{}),
-			Entry("with an env variable matching the string .*PATH.*",
-				"alice", `^/usr/local/bin:/usr/bin:/bin\n$`, []string{"APATH=foo"}),
-		)
+			It("does not include the `sbin` folders", func() {
+				Expect(out).To(gbytes.Say(`^/usr/local/bin:/usr/bin:/bin\n$`))
+			})
+		})
+
+		Context("with an environment variable containing `PATH` in the name", func() {
+			BeforeEach(func() {
+				processSpec.Env = []string{"APATH=foo"}
+			})
+
+			It("ignores it", func() {
+				Expect(out).To(gbytes.Say(`^/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n$`))
+			})
+		})
 	})
 
 	Describe("USER env variable", func() {
-		var container garden.Container
-
 		BeforeEach(func() {
-			client = runner.Start(config)
-			var err error
-			container, err = client.Create(garden.ContainerSpec{
-				Env: []string{"USER=ppp", "HOME=/home/ppp"},
-			})
-			Expect(err).NotTo(HaveOccurred())
+			containerSpec.Env = []string{"USER=ppp", "HOME=/home/ppp"}
+			processSpec.Args = []string{"-c", "env"}
 		})
 
-		DescribeTable("contains the correct values", func(user string, env, paths []string) {
-			out := gbytes.NewBuffer()
-			proc, err := container.Run(
-				garden.ProcessSpec{
-					Path: "sh",
-					Args: []string{"-c", "env"},
-					User: user,
-					Env:  env,
-				},
-				garden.ProcessIO{
-					Stdout: io.MultiWriter(GinkgoWriter, out),
-					Stderr: io.MultiWriter(GinkgoWriter, out),
-				})
-			Expect(err).NotTo(HaveOccurred())
+		It("is inherited from the container spec", func() {
+			Expect(out).To(gbytes.Say("USER=ppp"))
+			Expect(out).To(gbytes.Say("HOME=/home/ppp"))
+		})
 
-			exitCode, err := proc.Wait()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(exitCode).To(Equal(0))
+		Context("when the USER env var is not set in the container spec", func() {
+			BeforeEach(func() {
+				containerSpec.Env = []string{}
+				processSpec.User = "alice"
+			})
 
-			for _, path := range paths {
-				Expect(out).To(gbytes.Say(path))
-			}
-		},
-			Entry(
-				"for empty user",
-				"", []string{}, []string{"USER=ppp", "HOME=/home/ppp"},
-			),
-			Entry(
-				"when we specify the USER env in processSpec",
-				"alice", []string{"USER=alice", "HI=YO"}, []string{"USER=alice", "HOME=/home/ppp", "HI=YO"},
-			),
-			Entry(
-				"with an env variable matching the string .*USER.*",
-				"alice", []string{"USER=alice", "HI=YO", "AUSER=foo"}, []string{"USER=alice", "HOME=/home/ppp", "HI=YO", "AUSER=foo"},
-			),
-		)
+			It("sets the value using the process spec user", func() {
+				Expect(out).To(gbytes.Say("USER=alice"))
+				Expect(out).To(gbytes.Say("HOME=/home/alice"))
+			})
+		})
+
+		Context("when the user is set in the process spec", func() {
+			BeforeEach(func() {
+				processSpec.User = "alice"
+			})
+
+			It("maintains the value from the container spec", func() {
+				Expect(out).To(gbytes.Say("USER=ppp"))
+				Expect(out).To(gbytes.Say("HOME=/home/ppp"))
+			})
+		})
+
+		Context("when the USER env var is set in the process spec", func() {
+			BeforeEach(func() {
+				processSpec.Env = []string{"USER=alice"}
+			})
+
+			It("gets overridden", func() {
+				Expect(out).To(gbytes.Say("USER=alice"))
+				Expect(out).To(gbytes.Say("HOME=/home/ppp"))
+			})
+		})
+
+		Context("when both the user and the USER env var are set in the process spec", func() {
+			BeforeEach(func() {
+				processSpec.User = "alice"
+				processSpec.Env = []string{"USER=bob"}
+			})
+
+			It("gets overridden", func() {
+				Expect(out).To(gbytes.Say("USER=bob"))
+				Expect(out).To(gbytes.Say("HOME=/home/ppp"))
+			})
+		})
+
+		Context("when there is an env var containing `USER` in the name", func() {
+			BeforeEach(func() {
+				processSpec.Env = []string{"NOT_USER=alice"}
+			})
+
+			It("is not affected", func() {
+				Expect(out).To(gbytes.Say("USER=ppp"))
+				Expect(out).To(gbytes.Say("HOME=/home/ppp"))
+			})
+		})
+	})
+
+	Describe("environment", func() {
+		BeforeEach(func() {
+			containerSpec.Env = []string{"ONE=1"}
+			processSpec.Args = []string{"-c", "env"}
+		})
+
+		It("is inherited from the container spec", func() {
+			Expect(out).To(gbytes.Say("ONE=1"))
+		})
+
+		Context("when it is specified in the process spec", func() {
+			BeforeEach(func() {
+				processSpec.Env = []string{"TWO=2"}
+			})
+
+			It("is merged with the environment in the container spec", func() {
+				Expect(out).To(gbytes.Say("ONE=1"))
+				Expect(out).To(gbytes.Say("TWO=2"))
+			})
+		})
+
+		Context("when an environment variable is set in both the container spec and the process spec", func() {
+			BeforeEach(func() {
+				processSpec.Env = []string{"ONE=42"}
+			})
+
+			It("uses the value from the process spec", func() {
+				Expect(out).To(gbytes.Say("ONE=42"))
+			})
+		})
 	})
 
 	Describe("dadoo exec", func() {
+		BeforeEach(func() {
+			config.LogLevel = "debug"
+		})
+
 		Context("when runc writes a lot of stderr before exiting", func() {
-			var (
-				container     garden.Container
-				propertiesDir string
-			)
+			var propertiesDir string
 
 			BeforeEach(func() {
 				skipIfContainerdForProcesses("When running processes with containerd we are not calling runc directly.")
-				propertiesDir = tempDir("", "props")
+			})
 
-				config.PropertiesPath = path.Join(propertiesDir, "props.json")
-				client = runner.Start(config)
-
-				var err error
-				container, err = client.Create(garden.ContainerSpec{})
-				Expect(err).NotTo(HaveOccurred())
-
+			JustBeforeEach(func() {
 				config.RuntimePluginBin = binaries.FakeRuncStderr
 				client = restartGarden(client, config)
 			})
@@ -492,58 +407,38 @@ var _ = Describe("Run", func() {
 		})
 
 		It("forwards runc logs to lager when exec fails, and gives proper error messages", func() {
-			config.LogLevel = "debug"
-			client = runner.Start(config)
-			container, err := client.Create(garden.ContainerSpec{})
-			Expect(err).NotTo(HaveOccurred())
-
-			_, err = container.Run(garden.ProcessSpec{
+			_, err := container.Run(garden.ProcessSpec{
 				Path: "does-not-exit",
 			}, garden.ProcessIO{})
-			runcErrorMessage := "executable file not found"
-			Expect(err).To(MatchError(ContainSubstring(runcErrorMessage)))
-			Eventually(client).Should(gbytes.Say(runcErrorMessage))
+
+			Expect(err).To(MatchError(ContainSubstring("executable file not found")))
+			Eventually(client).Should(gbytes.Say("executable file not found"))
 		})
 
 		It("forwards runc logs to lager when exec fails, and gives proper error messages when requesting a TTY", func() {
-			config.LogLevel = "debug"
-			client = runner.Start(config)
-			container, err := client.Create(garden.ContainerSpec{})
-			Expect(err).NotTo(HaveOccurred())
-
-			_, err = container.Run(garden.ProcessSpec{
+			_, err := container.Run(garden.ProcessSpec{
 				Path: "does-not-exit",
-				TTY: &garden.TTYSpec{
-					WindowSize: &garden.WindowSize{
-						Columns: 1,
-						Rows:    1,
-					},
-				},
+				TTY:  &garden.TTYSpec{},
 			}, garden.ProcessIO{})
-			runcErrorMessage := "executable file not found"
-			Expect(err).To(MatchError(ContainSubstring(runcErrorMessage)))
-			Eventually(client).Should(gbytes.Say(runcErrorMessage))
+
+			Expect(err).To(MatchError(ContainSubstring("executable file not found")))
+			Eventually(client).Should(gbytes.Say("executable file not found"))
 		})
 	})
 
 	Describe("Signalling", func() {
 		It("should forward SIGTERM to the process", func() {
-			client = runner.Start(config)
-
-			container, err := client.Create(garden.ContainerSpec{})
-			Expect(err).NotTo(HaveOccurred())
-
 			buffer := gbytes.NewBuffer()
 			proc, err := container.Run(garden.ProcessSpec{
 				Path: "sh",
 				Args: []string{"-c", `
-					trap 'exit 42' TERM
+							trap 'exit 42' TERM
 
-					while true; do
-					  echo 'sleeping'
-					  sleep 1
-					done
-				`},
+							while true; do
+							  echo 'sleeping'
+							  sleep 1
+							done
+						`},
 			}, garden.ProcessIO{
 				Stdout: buffer,
 			})
@@ -575,17 +470,15 @@ var _ = Describe("Run", func() {
 			)
 
 			BeforeEach(func() {
-				binaryPath = "/i/do/not/exist"
+				binaryPath = "/bin/does-not-exist"
 			})
 
 			JustBeforeEach(func() {
 				config.DebugIP = "0.0.0.0"
 				config.DebugPort = intptr(8080 + GinkgoParallelNode())
-				client = runner.Start(config)
+				client = restartGarden(client, config)
 
-				container, err := client.Create(garden.ContainerSpec{})
-				Expect(err).NotTo(HaveOccurred())
-
+				var err error
 				stackBefore, err = client.StackDump()
 				Expect(err).NotTo(HaveOccurred())
 				numGoRoutinesBefore = numGoRoutines(client)
@@ -595,19 +488,13 @@ var _ = Describe("Run", func() {
 				}, garden.ProcessIO{})
 			})
 
-			Context("when the executable is a fully qualified path", func() {
-				BeforeEach(func() {
-					binaryPath = "/bin/fake"
-				})
-
-				It("returns a useful error type", func() {
-					Expect(runErr).To(BeAssignableToTypeOf(garden.ExecutableNotFoundError{}))
-				})
+			It("returns a useful error type", func() {
+				Expect(runErr).To(BeAssignableToTypeOf(garden.ExecutableNotFoundError{}))
 			})
 
 			Context("when the executable should be somewhere on the $PATH", func() {
 				BeforeEach(func() {
-					binaryPath = "fake-path"
+					binaryPath = "does-not-exist"
 				})
 
 				It("returns a useful error type", func() {
@@ -776,38 +663,11 @@ var _ = Describe("Attach", func() {
 	})
 })
 
-func should(matchers ...types.GomegaMatcher) func(actual interface{}) {
-	return func(actual interface{}) {
-		for _, matcher := range matchers {
-			Expect(actual).To(matcher)
-		}
-	}
-}
-
-func spec(path string, args ...string) garden.ProcessSpec {
+func makeSpec(path string, args ...string) garden.ProcessSpec {
 	return garden.ProcessSpec{
 		Path: path,
 		Args: args,
 	}
-}
-
-func ttySpec(path string, args ...string) garden.ProcessSpec {
-	base := spec(path, args...)
-	base.TTY = new(garden.TTYSpec)
-	return base
-}
-
-type process struct {
-	exitCode int
-	buffer   *gbytes.Buffer
-}
-
-func (p *process) ExitCode() int {
-	return p.exitCode
-}
-
-func (p *process) Buffer() *gbytes.Buffer {
-	return p.buffer
 }
 
 type fileInfo struct {
@@ -836,4 +696,24 @@ func checkFileInfo(expectedInfo fileInfo) error {
 		return fmt.Errorf("owner %v is not the expected %v of file %v", uid, expectedInfo.owner, path)
 	}
 	return nil
+}
+
+func lsofFileHandlesOnProcessPipes(processID string) string {
+	grepProcID := exec.Command("grep", processID)
+	lsof := exec.Command("lsof")
+
+	lsofOutPipe, err := lsof.StdoutPipe()
+	Expect(err).NotTo(HaveOccurred())
+	defer lsofOutPipe.Close()
+
+	stdoutBuf := gbytes.NewBuffer()
+	grepProcID.Stdin = lsofOutPipe
+	grepProcID.Stdout = stdoutBuf
+	Expect(grepProcID.Start()).To(Succeed())
+
+	Expect(lsof.Run()).To(Succeed())
+
+	_ = grepProcID.Wait()
+
+	return string(stdoutBuf.Contents())
 }
