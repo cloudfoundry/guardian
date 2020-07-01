@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"net"
 	"net/http"
 	"os"
@@ -225,7 +226,8 @@ func DefaultGdnRunnerConfig(binaries Binaries) GdnRunnerConfig {
 
 	if runtime.GOOS == "windows" {
 		config.BindIP = "127.0.0.1"
-		config.BindPort = intptr(10000 + os.Getpid())
+		pid := os.Getpid() % (math.MaxUint16 - 10000)
+		config.BindPort = intptr(10000 + pid)
 	} else {
 		config.BindSocket = fmt.Sprintf("/tmp/garden_%s.sock", config.Tag)
 	}
