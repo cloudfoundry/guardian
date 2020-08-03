@@ -3,6 +3,7 @@ package processes
 import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/rundmc/users"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -29,19 +30,19 @@ func NewBuilder(envDeterminer EnvDeterminer, nonRootMaxCaps []string) *ProcBuild
 	}
 }
 
-func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, uid, gid int) *specs.Process {
+func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, user *users.ExecUser) *specs.Process {
 	return &specs.Process{
 		Args:        append([]string{spec.Path}, spec.Args...),
 		ConsoleSize: console(spec),
-		Env:         p.envDeterminer.EnvFor(bndl, spec, uid),
+		Env:         p.envDeterminer.EnvFor(bndl, spec, user.Uid),
 		User: specs.User{
-			UID:            uint32(uid),
-			GID:            uint32(gid),
-			AdditionalGids: []uint32{},
+			UID:            uint32(user.Uid),
+			GID:            uint32(user.Gid),
+			AdditionalGids: toUint32Slice(user.Sgids),
 			Username:       spec.User,
 		},
 		Cwd:             spec.Dir,
-		Capabilities:    p.capabilities(bndl, uid),
+		Capabilities:    p.capabilities(bndl, user.Gid),
 		Rlimits:         toRlimits(spec.Limits),
 		Terminal:        spec.TTY != nil,
 		ApparmorProfile: bndl.Process().ApparmorProfile,
@@ -87,5 +88,13 @@ func intersect(l1 []string, l2 []string) (result []string) {
 		}
 	}
 
+	return result
+}
+
+func toUint32Slice(slice []int) []uint32 {
+	result := []uint32{}
+	for _, i := range slice {
+		result = append(result, uint32(i))
+	}
 	return result
 }

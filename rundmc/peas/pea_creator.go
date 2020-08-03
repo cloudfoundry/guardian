@@ -14,6 +14,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/lager"
 	multierror "github.com/hashicorp/go-multierror"
 	uuid "github.com/nu7hatch/gouuid"
@@ -156,7 +157,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		return errs("generating-bundle", multierror.Append(genErr, destroyErr))
 	}
 
-	preparedProcess := p.ProcessBuilder.BuildProcess(bndl, processSpec, userUID, userGID)
+	preparedProcess := p.ProcessBuilder.BuildProcess(bndl, processSpec, &users.ExecUser{Uid: userUID, Gid: userGID})
 	bndl = bndl.WithProcess(*preparedProcess)
 
 	extraCleanup := func() error {

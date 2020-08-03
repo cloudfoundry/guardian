@@ -362,9 +362,10 @@ var _ = Describe("Runcontainerd", func() {
 		Context("when use_containerd_for_processes is enabled", func() {
 			BeforeEach(func() {
 				user := users.ExecUser{
-					Uid:  1000,
-					Gid:  1001,
-					Home: "/home/alice",
+					Uid:   1000,
+					Gid:   1001,
+					Sgids: []int{2000, 3000, 5000},
+					Home:  "/home/alice",
 				}
 				userLookupper.LookupReturns(&user, nil)
 
@@ -403,7 +404,7 @@ var _ = Describe("Runcontainerd", func() {
 
 			It("converts the garden process to an OCI process", func() {
 				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-				passedBundle, passedGardenProcessSpec, _, _ := processBuilder.BuildProcessArgsForCall(0)
+				passedBundle, passedGardenProcessSpec, _ := processBuilder.BuildProcessArgsForCall(0)
 				Expect(passedBundle).To(Equal(bundle))
 				passedGardenProcessSpec.Dir = processSpec.Dir
 				Expect(passedGardenProcessSpec).To(Equal(processSpec))
@@ -425,9 +426,10 @@ var _ = Describe("Runcontainerd", func() {
 				Expect(passedRootfs).To(Equal("/proc/1234/root"))
 
 				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-				_, _, ociProcessUid, ociProcessGid := processBuilder.BuildProcessArgsForCall(0)
-				Expect(ociProcessUid).To(Equal(1000))
-				Expect(ociProcessGid).To(Equal(1001))
+				_, _, user := processBuilder.BuildProcessArgsForCall(0)
+				Expect(user.Uid).To(Equal(1000))
+				Expect(user.Gid).To(Equal(1001))
+				Expect(user.Sgids).To(Equal([]int{2000, 3000, 5000}))
 			})
 
 			It("sets up the working directory", func() {
@@ -527,7 +529,7 @@ var _ = Describe("Runcontainerd", func() {
 
 				It("sets the spec dir to the user home dir if no dir specified", func() {
 					Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-					_, actualProcessSpec, _, _ := processBuilder.BuildProcessArgsForCall(0)
+					_, actualProcessSpec, _ := processBuilder.BuildProcessArgsForCall(0)
 					Expect(actualProcessSpec.Dir).To(Equal("/home/alice"))
 				})
 			})

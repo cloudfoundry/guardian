@@ -83,7 +83,7 @@ func (e *Execer) ExecWithBndl(log lager.Logger, sandboxHandle string, bundle goc
 		return nil, err
 	}
 
-	preparedSpec := e.processBuilder.BuildProcess(bundle, spec, user.Uid, user.Gid)
+	preparedSpec := e.processBuilder.BuildProcess(bundle, spec, user)
 
 	processID := spec.ID
 	if processID == "" {

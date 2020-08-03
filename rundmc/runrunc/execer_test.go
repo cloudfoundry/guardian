@@ -40,9 +40,10 @@ var _ = Describe("Execer", func() {
 		pio        = garden.ProcessIO{Stdin: bytes.NewBufferString("some-stdin")}
 
 		user = &users.ExecUser{
-			Uid:  1,
-			Gid:  2,
-			Home: "/some/home",
+			Uid:   1,
+			Gid:   2,
+			Sgids: []int{5, 6, 7},
+			Home:  "/some/home",
 		}
 		bndl = goci.Bundle().
 			WithUIDMappings(specs.LinuxIDMapping{
@@ -125,11 +126,12 @@ var _ = Describe("Execer", func() {
 
 		It("builds a process", func() {
 			Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-			actualBundle, actualProcessSpec, actualContainerUID, actualContainerGID := processBuilder.BuildProcessArgsForCall(0)
+			actualBundle, actualProcessSpec, actualUser := processBuilder.BuildProcessArgsForCall(0)
 			Expect(actualBundle).To(Equal(bndl))
 			Expect(actualProcessSpec).To(Equal(spec))
-			Expect(actualContainerUID).To(Equal(user.Uid))
-			Expect(actualContainerGID).To(Equal(user.Gid))
+			Expect(actualUser.Uid).To(Equal(user.Uid))
+			Expect(actualUser.Gid).To(Equal(user.Gid))
+			Expect(actualUser.Sgids).To(Equal(user.Sgids))
 		})
 
 		It("does not generate an ID for the process if one is specified", func() {
@@ -189,7 +191,7 @@ var _ = Describe("Execer", func() {
 
 			It("defaults the workdir to the user's home when building a process", func() {
 				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-				_, actualProcessSpec, _, _ := processBuilder.BuildProcessArgsForCall(0)
+				_, actualProcessSpec, _ := processBuilder.BuildProcessArgsForCall(0)
 				Expect(actualProcessSpec.Dir).To(Equal(user.Home))
 			})
 		})

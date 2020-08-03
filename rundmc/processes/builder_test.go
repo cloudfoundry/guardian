@@ -5,6 +5,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
 	fakes "code.cloudfoundry.org/guardian/rundmc/processes/processesfakes"
+	"code.cloudfoundry.org/guardian/rundmc/users"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -17,10 +18,9 @@ var _ = Describe("ProcBuilder", func() {
 
 		procBuilder *processes.ProcBuilder
 
-		bndl         goci.Bndl
-		processSpec  garden.ProcessSpec
-		containerUID int
-		containerGID int
+		bndl        goci.Bndl
+		processSpec garden.ProcessSpec
+		user        *users.ExecUser
 	)
 
 	BeforeEach(func() {
@@ -68,15 +68,18 @@ var _ = Describe("ProcBuilder", func() {
 				Stack:      ptr(44),
 			},
 		}
-		containerUID = 1
-		containerGID = 2
+		user = &users.ExecUser{
+			Uid:   1,
+			Gid:   2,
+			Sgids: []int{5, 6, 7},
+		}
 	})
 
 	Describe("the built process", func() {
 		var preparedProc *specs.Process
 
 		JustBeforeEach(func() {
-			preparedProc = procBuilder.BuildProcess(bndl, processSpec, containerUID, containerGID)
+			preparedProc = procBuilder.BuildProcess(bndl, processSpec, user)
 		})
 
 		It("merges the path and args to create the argv", func() {
@@ -141,8 +144,8 @@ var _ = Describe("ProcBuilder", func() {
 
 				Context("when the user is root", func() {
 					BeforeEach(func() {
-						containerUID = 0
-						containerGID = 0
+						user.Uid = 0
+						user.Gid = 0
 					})
 
 					It("passes the specified capabilities", func() {
@@ -180,9 +183,10 @@ var _ = Describe("ProcBuilder", func() {
 					Expect(preparedProc.ApparmorProfile).To(Equal("default-profile"))
 				})
 
-				It("passes the UID and GID", func() {
+				It("passes the UID, GID and additional gids", func() {
 					Expect(preparedProc.User.UID).To(Equal(uint32(1)))
 					Expect(preparedProc.User.GID).To(Equal(uint32(2)))
+					Expect(preparedProc.User.AdditionalGids).To(Equal([]uint32{5, 6, 7}))
 				})
 
 				It("passes the username, which is used on Windows", func() {
@@ -198,7 +202,7 @@ var _ = Describe("ProcBuilder", func() {
 					actualBndl, actualSpec, actualContainerUID := envDeterminer.EnvForArgsForCall(0)
 					Expect(actualBndl).To(Equal(bndl))
 					Expect(actualSpec).To(Equal(processSpec))
-					Expect(actualContainerUID).To(Equal(containerUID))
+					Expect(actualContainerUID).To(Equal(user.Uid))
 					Expect(preparedProc.Env).To(ConsistOf("ENV"))
 				})
 			})

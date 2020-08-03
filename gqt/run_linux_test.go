@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -224,6 +225,28 @@ var _ = Describe("Run", func() {
 
 			It("does not follow symlinks into the host when creating cwd", func() {
 				Expect(path.Join(target, "foo")).NotTo(BeADirectory())
+			})
+		})
+
+		Describe("sgids", func() {
+			When("gdn process has supplementary groups", func() {
+				BeforeEach(func() {
+					config.User = &syscall.Credential{
+						Uid:    0,
+						Gid:    0,
+						Groups: []uint32{42},
+					}
+					processSpec = makeSpec("id")
+				})
+
+				It("does not propagate them to the container process", func() {
+					Expect(out).NotTo(gbytes.Say(`\b42\b`))
+				})
+
+				It("uses supplementary groups from /etc/group for the user", func() {
+					// busybox has root in the wheel supplementary group
+					Expect(out).To(gbytes.Say(`\b10\b`))
+				})
 			})
 		})
 	})

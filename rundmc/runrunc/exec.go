@@ -6,6 +6,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -40,7 +41,7 @@ type ExecRunner interface {
 
 //go:generate counterfeiter . ProcessBuilder
 type ProcessBuilder interface {
-	BuildProcess(bndl goci.Bndl, processSpec garden.ProcessSpec, containerUID, containerGID int) *specs.Process
+	BuildProcess(bndl goci.Bndl, processSpec garden.ProcessSpec, user *users.ExecUser) *specs.Process
 }
 
 //go:generate counterfeiter . Waiter
