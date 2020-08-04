@@ -1,6 +1,8 @@
 package processes
 
 import (
+	"os"
+
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/users"
@@ -31,6 +33,10 @@ func NewBuilder(envDeterminer EnvDeterminer, nonRootMaxCaps []string) *ProcBuild
 }
 
 func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, user *users.ExecUser) *specs.Process {
+	additionalGIDs := []uint32{}
+	if os.Geteuid() == 0 {
+		additionalGIDs = toUint32Slice(user.Sgids)
+	}
 	return &specs.Process{
 		Args:        append([]string{spec.Path}, spec.Args...),
 		ConsoleSize: console(spec),
@@ -38,7 +44,7 @@ func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, user
 		User: specs.User{
 			UID:            uint32(user.Uid),
 			GID:            uint32(user.Gid),
-			AdditionalGids: toUint32Slice(user.Sgids),
+			AdditionalGids: additionalGIDs,
 			Username:       spec.User,
 		},
 		Cwd:             spec.Dir,
