@@ -570,7 +570,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	bndlLoader := &goci.BndlLoader{}
 	depot := cmd.wireDepot(bundleSaver, bndlLoader)
 
-	processBuilder := processes.NewBuilder(wireEnvFunc(), nonRootMaxCaps)
+	processBuilder := processes.NewBuilder(wireEnvFunc(), !runningAsRoot(), nonRootMaxCaps)
 
 	cmdRunner := factory.CommandRunner()
 	runcLogRunner := runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile)

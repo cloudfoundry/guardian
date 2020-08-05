@@ -7,17 +7,17 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
+	"code.cloudfoundry.org/guardian/rundmc/users"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type FakeProcessBuilder struct {
-	BuildProcessStub        func(goci.Bndl, garden.ProcessSpec, int, int) *specs.Process
+	BuildProcessStub        func(goci.Bndl, garden.ProcessSpec, *users.ExecUser) *specs.Process
 	buildProcessMutex       sync.RWMutex
 	buildProcessArgsForCall []struct {
 		arg1 goci.Bndl
 		arg2 garden.ProcessSpec
-		arg3 int
-		arg4 int
+		arg3 *users.ExecUser
 	}
 	buildProcessReturns struct {
 		result1 *specs.Process
@@ -29,19 +29,18 @@ type FakeProcessBuilder struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeProcessBuilder) BuildProcess(arg1 goci.Bndl, arg2 garden.ProcessSpec, arg3 int, arg4 int) *specs.Process {
+func (fake *FakeProcessBuilder) BuildProcess(arg1 goci.Bndl, arg2 garden.ProcessSpec, arg3 *users.ExecUser) *specs.Process {
 	fake.buildProcessMutex.Lock()
 	ret, specificReturn := fake.buildProcessReturnsOnCall[len(fake.buildProcessArgsForCall)]
 	fake.buildProcessArgsForCall = append(fake.buildProcessArgsForCall, struct {
 		arg1 goci.Bndl
 		arg2 garden.ProcessSpec
-		arg3 int
-		arg4 int
-	}{arg1, arg2, arg3, arg4})
-	fake.recordInvocation("BuildProcess", []interface{}{arg1, arg2, arg3, arg4})
+		arg3 *users.ExecUser
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("BuildProcess", []interface{}{arg1, arg2, arg3})
 	fake.buildProcessMutex.Unlock()
 	if fake.BuildProcessStub != nil {
-		return fake.BuildProcessStub(arg1, arg2, arg3, arg4)
+		return fake.BuildProcessStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
@@ -56,17 +55,17 @@ func (fake *FakeProcessBuilder) BuildProcessCallCount() int {
 	return len(fake.buildProcessArgsForCall)
 }
 
-func (fake *FakeProcessBuilder) BuildProcessCalls(stub func(goci.Bndl, garden.ProcessSpec, int, int) *specs.Process) {
+func (fake *FakeProcessBuilder) BuildProcessCalls(stub func(goci.Bndl, garden.ProcessSpec, *users.ExecUser) *specs.Process) {
 	fake.buildProcessMutex.Lock()
 	defer fake.buildProcessMutex.Unlock()
 	fake.BuildProcessStub = stub
 }
 
-func (fake *FakeProcessBuilder) BuildProcessArgsForCall(i int) (goci.Bndl, garden.ProcessSpec, int, int) {
+func (fake *FakeProcessBuilder) BuildProcessArgsForCall(i int) (goci.Bndl, garden.ProcessSpec, *users.ExecUser) {
 	fake.buildProcessMutex.RLock()
 	defer fake.buildProcessMutex.RUnlock()
 	argsForCall := fake.buildProcessArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeProcessBuilder) BuildProcessReturns(result1 *specs.Process) {

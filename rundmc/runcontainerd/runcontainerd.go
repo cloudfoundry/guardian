@@ -48,7 +48,7 @@ type ProcessManager interface {
 
 //go:generate counterfeiter . ProcessBuilder
 type ProcessBuilder interface {
-	BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, uid, gid int) *specs.Process
+	BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, user *users.ExecUser) *specs.Process
 }
 
 //go:generate counterfeiter . Execer
@@ -197,7 +197,7 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 		return gardenIO.Stdin, gardenIO.Stdout, gardenIO.Stderr, gardenProcessSpec.TTY != nil
 	}
 
-	ociProcessSpec := r.processBuilder.BuildProcess(bundle, gardenProcessSpec, resolvedUser.Uid, resolvedUser.Gid)
+	ociProcessSpec := r.processBuilder.BuildProcess(bundle, gardenProcessSpec, resolvedUser)
 	if err = r.containerManager.Exec(log, containerID, gardenProcessSpec.ID, ociProcessSpec, processIO); err != nil {
 		if isNoSuchExecutable(err) {
 			return nil, garden.ExecutableNotFoundError{Message: err.Error()}

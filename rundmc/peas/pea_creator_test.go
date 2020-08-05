@@ -242,11 +242,11 @@ var _ = Describe("PeaCreator", func() {
 
 		It("builds a process", func() {
 			Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-			actualBundle, actualProcessSpec, actualContainerUID, actualContainerGID := processBuilder.BuildProcessArgsForCall(0)
+			actualBundle, actualProcessSpec, user := processBuilder.BuildProcessArgsForCall(0)
 			Expect(actualBundle).To(Equal(generatedBundle))
 			Expect(actualProcessSpec).To(Equal(processSpec))
-			Expect(actualContainerUID).To(Equal(4))
-			Expect(actualContainerGID).To(Equal(5))
+			Expect(user.Uid).To(Equal(4))
+			Expect(user.Gid).To(Equal(5))
 		})
 
 		It("creates a runc container based on the bundle", func() {
@@ -290,7 +290,7 @@ var _ = Describe("PeaCreator", func() {
 
 			It("defaults to /", func() {
 				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-				_, actualProcessSpec, _, _ := processBuilder.BuildProcessArgsForCall(0)
+				_, actualProcessSpec, _ := processBuilder.BuildProcessArgsForCall(0)
 				Expect(actualProcessSpec.Dir).To(Equal("/"))
 			})
 		})
@@ -302,9 +302,9 @@ var _ = Describe("PeaCreator", func() {
 
 			It("defaults to 0:0", func() {
 				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
-				_, _, actualContainerUID, actualContainerGID := processBuilder.BuildProcessArgsForCall(0)
-				Expect(actualContainerUID).To(Equal(0))
-				Expect(actualContainerGID).To(Equal(0))
+				_, _, user := processBuilder.BuildProcessArgsForCall(0)
+				Expect(user.Uid).To(Equal(0))
+				Expect(user.Gid).To(Equal(0))
 			})
 		})
 

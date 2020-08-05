@@ -26,7 +26,8 @@ var _ = Describe("LookupUser", func() {
 _cvmsroot:*:212:212:CVMS Root:/var/empty:/usr/bin/false
 _usbmuxd:*:213:213:iPhone OS Device Helper:/var/db/lockdown:/usr/bin/false
 devil:*:666:777:Beelzebub:/home/fieryunderworld:/usr/bin/false
-_dovecot:*:214:6:Dovecot Administrator:/var/empty:/usr/bin/false`,
+_dovecot:*:214:6:Dovecot Administrator:/var/empty:/usr/bin/false
+vcap:*:1000:1000:VCAP:/home/vcap/:/bin/sh`,
 			), 0777)
 		}
 
@@ -35,7 +36,8 @@ _dovecot:*:214:6:Dovecot Administrator:/var/empty:/usr/bin/false`,
 				`root:x:0:
 daemon:x:1:
 bin:x:2:
-vcap:x:1000:`,
+vcap:x:1000:
+another:x:4:vcap`,
 			), 0777)
 		}
 
@@ -127,6 +129,16 @@ vcap:x:1000:`,
 			It("errors when a group name is requested", func() {
 				_, err := users.LookupUser(rootFsPath, "123:devil")
 				Expect(err).To(MatchError(ContainSubstring("unable to find group devil")))
+			})
+		})
+
+		Context("secondary groups", func() {
+			It("has vcap in a secondary group", func() {
+				user, err := users.LookupUser(rootFsPath, "vcap")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(user.Gid).To(Equal(1000))
+				Expect(user.Sgids).To(HaveLen(1))
+				Expect(user.Sgids[0]).To(Equal(4))
 			})
 		})
 	})

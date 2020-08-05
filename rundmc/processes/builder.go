@@ -3,10 +3,12 @@ package processes
 import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/rundmc/users"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 //go:generate counterfeiter . EnvDeterminer
+
 type EnvDeterminer interface {
 	EnvFor(bndl goci.Bndl, spec garden.ProcessSpec, containerUID int) []string
 }
@@ -19,29 +21,35 @@ func (fn EnvFunc) EnvFor(bndl goci.Bndl, spec garden.ProcessSpec, containerUID i
 
 type ProcBuilder struct {
 	envDeterminer  EnvDeterminer
+	isRootless     bool
 	nonRootMaxCaps []string
 }
 
-func NewBuilder(envDeterminer EnvDeterminer, nonRootMaxCaps []string) *ProcBuilder {
+func NewBuilder(envDeterminer EnvDeterminer, isRootless bool, nonRootMaxCaps []string) *ProcBuilder {
 	return &ProcBuilder{
 		envDeterminer:  envDeterminer,
+		isRootless:     isRootless,
 		nonRootMaxCaps: nonRootMaxCaps,
 	}
 }
 
-func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, uid, gid int) *specs.Process {
+func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, user *users.ExecUser) *specs.Process {
+	additionalGIDs := []uint32{}
+	if !p.isRootless {
+		additionalGIDs = toUint32Slice(user.Sgids)
+	}
 	return &specs.Process{
 		Args:        append([]string{spec.Path}, spec.Args...),
 		ConsoleSize: console(spec),
-		Env:         p.envDeterminer.EnvFor(bndl, spec, uid),
+		Env:         p.envDeterminer.EnvFor(bndl, spec, user.Uid),
 		User: specs.User{
-			UID:            uint32(uid),
-			GID:            uint32(gid),
-			AdditionalGids: []uint32{},
+			UID:            uint32(user.Uid),
+			GID:            uint32(user.Gid),
+			AdditionalGids: additionalGIDs,
 			Username:       spec.User,
 		},
 		Cwd:             spec.Dir,
-		Capabilities:    p.capabilities(bndl, uid),
+		Capabilities:    p.capabilities(bndl, user.Gid),
 		Rlimits:         toRlimits(spec.Limits),
 		Terminal:        spec.TTY != nil,
 		ApparmorProfile: bndl.Process().ApparmorProfile,
@@ -87,5 +95,13 @@ func intersect(l1 []string, l2 []string) (result []string) {
 		}
 	}
 
+	return result
+}
+
+func toUint32Slice(slice []int) []uint32 {
+	result := []uint32{}
+	for _, i := range slice {
+		result = append(result, uint32(i))
+	}
 	return result
 }
