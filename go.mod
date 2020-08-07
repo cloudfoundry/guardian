@@ -13,15 +13,17 @@ require (
 	code.cloudfoundry.org/lager v2.0.0+incompatible
 	code.cloudfoundry.org/localip v0.0.0-20170223024724-b88ad0dea95c
 	github.com/BurntSushi/toml v0.3.1
+	github.com/Microsoft/hcsshim v0.8.9 // indirect
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.1.0
 	github.com/containerd/cgroups v0.0.0-20200404012852-53ba5634dc0f // indirect
 	github.com/containerd/console v0.0.0-20181022165439-0650fd9eeb50 // indirect
-	github.com/containerd/containerd v1.3.1
+	github.com/containerd/containerd v1.3.7
 	github.com/containerd/continuity v0.0.0-20190827140505-75bee3e2ccb6 // indirect
 	github.com/containerd/fifo v0.0.0-20190816180239-bda0ff6ed73c // indirect
 	github.com/containerd/ttrpc v0.0.0-20191028202541-4f1b8fe65a5c // indirect
 	github.com/containerd/typeurl v0.0.0-20190911142611-5eb25027c9fd
+	github.com/docker/distribution v0.0.0-00010101000000-000000000000 // indirect
 	github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/eapache/go-resiliency v1.2.0
@@ -45,6 +47,7 @@ require (
 	github.com/sirupsen/logrus v1.5.0
 	github.com/spf13/pflag v1.0.5
 	github.com/st3v/glager v0.3.0
+	github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2 // indirect
 	github.com/tedsuo/ifrit v0.0.0-20180410193936-e89a512c3162
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/vishvananda/netlink v1.1.0
