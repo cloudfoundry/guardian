@@ -1,6 +1,6 @@
 module code.cloudfoundry.org/idmapper
 
-go 1.12
+go 1.14
 
 require (
 	github.com/kr/pretty v0.1.0 // indirect
