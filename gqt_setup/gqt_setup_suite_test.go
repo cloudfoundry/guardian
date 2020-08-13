@@ -2,6 +2,7 @@ package gqt_setup_test
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -77,7 +78,7 @@ func nodeToString(ginkgoNode int) string {
 	r := 'a' + ginkgoNode - 1
 	Expect(r).To(BeNumerically(">=", 'a'))
 	Expect(r).To(BeNumerically("<=", 'z'))
-	return string(r)
+	return fmt.Sprintf("%c", r)
 }
 
 func idToStr(id uint32) string {
