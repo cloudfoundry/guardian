@@ -1,10 +1,13 @@
 # code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b
+## explicit
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
 # code.cloudfoundry.org/idmapper v0.0.0-00010101000000-000000000000 => ../idmapper
+## explicit
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager v0.0.0-20181119165122-baf208c4c56b
+## explicit
 code.cloudfoundry.org/lager
 code.cloudfoundry.org/lager/chug
 code.cloudfoundry.org/lager/internal/truncate
@@ -15,9 +18,13 @@ github.com/BurntSushi/toml
 # github.com/Microsoft/go-winio v0.4.15-0.20190919025122-fc70bd9a86b5
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
+# github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77
+## explicit
 # github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
+## explicit
 github.com/beorn7/perks/quantile
 # github.com/cloudfoundry/dropsonde v1.0.0
+## explicit
 github.com/cloudfoundry/dropsonde
 github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller
 github.com/cloudfoundry/dropsonde/emitter
@@ -34,13 +41,18 @@ github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
 # github.com/cloudfoundry/gosteno v0.0.0-20150423193413-0c8581caea35
+## explicit
 github.com/cloudfoundry/gosteno
 github.com/cloudfoundry/gosteno/syslog
+# github.com/cloudfoundry/loggregatorlib v0.0.0-20170823162133-36eddf15ef12
+## explicit
 # github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4
+## explicit
 github.com/cloudfoundry/sonde-go/events
 # github.com/containerd/continuity v0.0.0-20190426062206-aaeac12a7ffc
 github.com/containerd/continuity/pathdriver
 # github.com/containers/image v1.5.1
+## explicit
 github.com/containers/image/directory/explicitfilepath
 github.com/containers/image/docker
 github.com/containers/image/docker/policyconfiguration
@@ -57,10 +69,13 @@ github.com/containers/image/pkg/tlsclientconfig
 github.com/containers/image/transports
 github.com/containers/image/types
 # github.com/containers/storage v1.23.0
+## explicit
 github.com/containers/storage/pkg/reexec
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
+## explicit
 github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/docker/distribution v2.7.1+incompatible
+## explicit
 github.com/docker/distribution
 github.com/docker/distribution/digestset
 github.com/docker/distribution/metrics
@@ -73,26 +88,33 @@ github.com/docker/distribution/registry/client/transport
 github.com/docker/distribution/registry/storage/cache
 github.com/docker/distribution/registry/storage/cache/memory
 # github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
+## explicit
 github.com/docker/docker/api/types/versions
 github.com/docker/docker/pkg/homedir
 github.com/docker/docker/pkg/idtools
 github.com/docker/docker/pkg/mount
 github.com/docker/docker/pkg/system
 # github.com/docker/docker-credential-helpers v0.6.0
+## explicit
 github.com/docker/docker-credential-helpers/client
 github.com/docker/docker-credential-helpers/credentials
 # github.com/docker/go-connections v0.3.0
+## explicit
 github.com/docker/go-connections/sockets
 github.com/docker/go-connections/tlsconfig
 # github.com/docker/go-metrics v0.0.0-20180209012529-399ea8c73916
+## explicit
 github.com/docker/go-metrics
 # github.com/docker/go-units v0.4.0
+## explicit
 github.com/docker/go-units
 # github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7
+## explicit
 github.com/docker/libtrust
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
 # github.com/ghodss/yaml v1.0.0
+## explicit
 github.com/ghodss/yaml
 # github.com/gogo/protobuf v1.3.1
 github.com/gogo/protobuf/gogoproto
@@ -100,20 +122,27 @@ github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 # github.com/golang/protobuf v1.4.2
 github.com/golang/protobuf/proto
+# github.com/google/go-cmp v0.5.1
+## explicit
 # github.com/gorilla/context v1.1.1
+## explicit
 github.com/gorilla/context
 # github.com/gorilla/mux v1.6.2
+## explicit
 github.com/gorilla/mux
 # github.com/konsorten/go-windows-terminal-sequences v1.0.3
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/mailru/easyjson v0.0.0-20180323154445-8b799c424f57
+## explicit
 github.com/mailru/easyjson
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
+## explicit
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
+## explicit
 github.com/nu7hatch/gouuid
 # github.com/nxadm/tail v1.4.4
 github.com/nxadm/tail
@@ -122,6 +151,7 @@ github.com/nxadm/tail/util
 github.com/nxadm/tail/watch
 github.com/nxadm/tail/winfile
 # github.com/onsi/ginkgo v1.14.0
+## explicit
 github.com/onsi/ginkgo
 github.com/onsi/ginkgo/config
 github.com/onsi/ginkgo/internal/codelocation
@@ -142,6 +172,7 @@ github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
 # github.com/onsi/gomega v1.10.1
+## explicit
 github.com/onsi/gomega
 github.com/onsi/gomega/format
 github.com/onsi/gomega/gbytes
@@ -158,26 +189,37 @@ github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
 # github.com/opencontainers/go-digest v1.0.0
+## explicit
 github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.1
+## explicit
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
 # github.com/opencontainers/runc v1.0.0-rc91 => github.com/opencontainers/runc v1.0.0-rc90
+## explicit
 github.com/opencontainers/runc/libcontainer/user
 # github.com/opencontainers/runtime-spec v1.0.3-0.20200520003142-237cc4f519e2
+## explicit
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/pkg/errors v0.9.1
+## explicit
 github.com/pkg/errors
+# github.com/poy/eachers v0.0.0-20181020210610-23942921fe77
+## explicit
 # github.com/prometheus/client_golang v0.0.0-20180529170124-42bc0a18c220
+## explicit
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/promhttp
 # github.com/prometheus/client_model v0.0.0-20171117100541-99fa1f4be8e5
+## explicit
 github.com/prometheus/client_model/go
 # github.com/prometheus/common v0.0.0-20180518154759-7600349dcfe1
+## explicit
 github.com/prometheus/common/expfmt
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
 github.com/prometheus/common/model
 # github.com/prometheus/procfs v0.0.5
+## explicit
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
@@ -186,14 +228,19 @@ github.com/russross/blackfriday/v2
 # github.com/shurcooL/sanitized_anchor_name v1.0.0
 github.com/shurcooL/sanitized_anchor_name
 # github.com/sirupsen/logrus v1.6.0
+## explicit
 github.com/sirupsen/logrus
 # github.com/st3v/glager v0.3.0
+## explicit
 github.com/st3v/glager
 # github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861
+## explicit
 github.com/tscolari/lagregator
 # github.com/urfave/cli/v2 v2.2.0
+## explicit
 github.com/urfave/cli/v2
 # github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c
+## explicit
 github.com/ventu-io/go-shortid
 # golang.org/x/net v0.0.0-20200707034311-ab3426394381
 golang.org/x/net/html
@@ -202,6 +249,7 @@ golang.org/x/net/html/charset
 golang.org/x/net/internal/socks
 golang.org/x/net/proxy
 # golang.org/x/sys v0.0.0-20200812155832-6a926be9bd1d
+## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
@@ -257,4 +305,11 @@ google.golang.org/protobuf/runtime/protoimpl
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 gopkg.in/tomb.v1
 # gopkg.in/yaml.v2 v2.3.0
+## explicit
 gopkg.in/yaml.v2
+# gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+## explicit
+# launchpad.net/gocheck v0.0.0-20140225173054-000000000087
+## explicit
+# code.cloudfoundry.org/idmapper => ../idmapper
+# github.com/opencontainers/runc => github.com/opencontainers/runc v1.0.0-rc90
