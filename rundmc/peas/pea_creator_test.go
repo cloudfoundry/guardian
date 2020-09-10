@@ -176,10 +176,11 @@ var _ = Describe("PeaCreator", func() {
 			}))
 		})
 
-		It("passes the container handle as cgroup path to the bundle generator", func() {
+		It("passes <container-handle>/<process-id> as cgroup path to the bundle generator", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
 			actualCtrSpec := bundleGenerator.GenerateArgsForCall(0)
-			Expect(actualCtrSpec.CgroupPath).To(Equal(ctrHandle))
+			expected := filepath.Join(ctrHandle, processSpec.ID)
+			Expect(actualCtrSpec.CgroupPath).To(Equal(expected))
 		})
 
 		It("passes sandbox handle to bundle generator", func() {
@@ -192,19 +193,6 @@ var _ = Describe("PeaCreator", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
 			actualCtrSpec := bundleGenerator.GenerateArgsForCall(0)
 			Expect(actualCtrSpec.Privileged).To(Equal(false))
-		})
-
-		Context("When NestedCgroups=true", func() {
-			BeforeEach(func() {
-				peaCreator.NestedCgroups = true
-			})
-
-			It("passes <container-handle>/<process-id> as cgroup path to the bundle generator", func() {
-				Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-				actualCtrSpec := bundleGenerator.GenerateArgsForCall(0)
-				expected := filepath.Join(ctrHandle, processSpec.ID)
-				Expect(actualCtrSpec.CgroupPath).To(Equal(expected))
-			})
 		})
 
 		Describe("sharing namespaces", func() {

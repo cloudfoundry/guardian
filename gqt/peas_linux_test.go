@@ -56,6 +56,20 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		Eventually(func() int { return numPipes(gdn.Pid) }).Should(Equal(initialPipes))
 	})
 
+	It("should not kill the sandbox init process", func() {
+		peaProcess, err := ctr.Run(garden.ProcessSpec{
+			Path:  "echo",
+			Args:  []string{"hello"},
+			Image: garden.ImageRef{URI: "raw://" + peaRootfs},
+		}, garden.ProcessIO{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(peaProcess.Wait()).To(Equal(0))
+
+		initPid, err := gdn.GetContainerPid(ctr.Handle())
+		Expect(err).NotTo(HaveOccurred())
+		Expect("/proc/" + initPid).To(BeADirectory())
+	})
+
 	Context("when run with /etc/passwd username", func() {
 		BeforeEach(func() {
 			config.CleanupProcessDirsOnWait = boolptr(true)

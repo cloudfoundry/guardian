@@ -68,7 +68,6 @@ type PeaCreator struct {
 	ProcessBuilder   runrunc.ProcessBuilder
 	ExecRunner       ExecRunner
 	PeaCleaner       gardener.PeaCleaner
-	NestedCgroups    bool
 }
 
 func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle string) (_ garden.Process, theErr error) {
@@ -128,11 +127,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 		NetworkSharedContainerName: sandboxHandle,
 	}
 
-	cgroupPath := sandboxHandle
-
-	if p.NestedCgroups {
-		cgroupPath = filepath.Join(sandboxHandle, processID)
-	}
+	cgroupPath := filepath.Join(sandboxHandle, processID)
 
 	limits := garden.Limits{}
 	if processSpec.OverrideContainerLimits != nil {

@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strings"
 	"syscall"
@@ -357,7 +358,7 @@ func (r *RunningGarden) Create(spec garden.ContainerSpec) (garden.Container, err
 		return nil, err
 	}
 
-	containerPid, err := r.getContainerPid(container.Handle())
+	containerPid, err := r.GetContainerPid(container.Handle())
 	if err != nil {
 		return nil, err
 	}
@@ -366,9 +367,9 @@ func (r *RunningGarden) Create(spec garden.ContainerSpec) (garden.Container, err
 	return container, nil
 }
 
-func (r *RunningGarden) getContainerPid(handle string) (string, error) {
+func (r *RunningGarden) GetContainerPid(handle string) (string, error) {
 	if isContainerd() {
-		return r.listProcesses(handle), nil
+		return r.getContainerdContainerPid(handle), nil
 	}
 
 	pidBytes, err := ioutil.ReadFile(filepath.Join(r.DepotDir, handle, "pidfile"))
@@ -570,8 +571,15 @@ func isContainerd() bool {
 	return os.Getenv("CONTAINERD_ENABLED") == "true"
 }
 
-func (r *RunningGarden) listProcesses(containerID string) string {
-	return r.runCtr([]string{"tasks", "ps", containerID})
+func (r *RunningGarden) getContainerdContainerPid(containerID string) string {
+	processesTable := r.runCtr([]string{"tasks", "ps", containerID})
+
+	re := regexp.MustCompile(`(?m)^([0-9]+).*`)
+	res := re.FindAllStringSubmatch(processesTable, -1)
+	Expect(res).To(HaveLen(1), "Unexpected output from ctr tasks: "+processesTable)
+	Expect(res[0]).To(HaveLen(2), "Unexpected output from ctr tasks: "+processesTable)
+
+	return res[0][1]
 }
 
 func (r *RunningGarden) runCtr(args []string) string {
