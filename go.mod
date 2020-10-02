@@ -38,14 +38,17 @@ require (
 	github.com/mailru/easyjson v0.0.0-20190403194419-1ea4449da983 // indirect
 	github.com/mitchellh/copystructure v0.0.0-20170525013902-d23ffcb85de3
 	github.com/mitchellh/reflectwalk v0.0.0-20170726202117-63d60e9d0dbc // indirect
+	github.com/mrunalp/fileutils v0.5.0 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.0.1
-	github.com/opencontainers/runc v1.0.0-rc91
+	github.com/opencontainers/runc v1.0.0-rc92
 	github.com/opencontainers/runtime-spec v1.0.3-0.20200520003142-237cc4f519e2
+	github.com/opencontainers/selinux v1.6.0 // indirect
 	github.com/pkg/errors v0.9.1
+	github.com/seccomp/libseccomp-golang v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/st3v/glager v0.3.0
