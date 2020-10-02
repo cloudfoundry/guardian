@@ -45,11 +45,12 @@ code.cloudfoundry.org/localip
 # github.com/BurntSushi/toml v0.3.1
 ## explicit
 github.com/BurntSushi/toml
-# github.com/Microsoft/go-winio v0.4.15-0.20190919025122-fc70bd9a86b5
+# github.com/Microsoft/go-winio v0.4.15-0.20200908182639-5b44b70ab3ab
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
 github.com/Microsoft/go-winio/vhd
-# github.com/Microsoft/hcsshim v0.8.9
+# github.com/Microsoft/hcsshim v0.8.10
+## explicit
 github.com/Microsoft/hcsshim
 github.com/Microsoft/hcsshim/internal/cow
 github.com/Microsoft/hcsshim/internal/hcs
@@ -67,7 +68,10 @@ github.com/Microsoft/hcsshim/internal/schema2
 github.com/Microsoft/hcsshim/internal/timeout
 github.com/Microsoft/hcsshim/internal/vmcompute
 github.com/Microsoft/hcsshim/internal/wclayer
+github.com/Microsoft/hcsshim/internal/winapi
 github.com/Microsoft/hcsshim/osversion
+# github.com/Microsoft/hcsshim/test v0.0.0-20201001234239-936eeeb286fd
+## explicit
 # github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40
 github.com/bmizerany/pat
 # github.com/cloudfoundry/dropsonde v1.0.0
@@ -95,13 +99,13 @@ github.com/cloudfoundry/gosteno
 github.com/cloudfoundry/gosteno/syslog
 # github.com/cloudfoundry/sonde-go v0.0.0-20171206171820-b33733203bb4
 github.com/cloudfoundry/sonde-go/events
-# github.com/containerd/cgroups v0.0.0-20200710171044-318312a37340
+# github.com/containerd/cgroups v0.0.0-20200824123100-0b889c03f102
 ## explicit
 github.com/containerd/cgroups/stats/v1
 # github.com/containerd/console v1.0.0
 ## explicit
 github.com/containerd/console
-# github.com/containerd/containerd v1.3.7
+# github.com/containerd/containerd v1.4.1
 ## explicit
 github.com/containerd/containerd
 github.com/containerd/containerd/api/events
@@ -146,18 +150,20 @@ github.com/containerd/containerd/pkg/stdio
 github.com/containerd/containerd/platforms
 github.com/containerd/containerd/plugin
 github.com/containerd/containerd/reference
+github.com/containerd/containerd/reference/docker
 github.com/containerd/containerd/remotes
 github.com/containerd/containerd/remotes/docker
 github.com/containerd/containerd/remotes/docker/schema1
 github.com/containerd/containerd/rootfs
 github.com/containerd/containerd/runtime/linux/runctypes
 github.com/containerd/containerd/runtime/v2/runc/options
+github.com/containerd/containerd/services
+github.com/containerd/containerd/services/introspection
 github.com/containerd/containerd/snapshots
 github.com/containerd/containerd/snapshots/proxy
 github.com/containerd/containerd/sys
 github.com/containerd/containerd/version
-# github.com/containerd/continuity v0.0.0-20200710164510-efbc4488d8fe
-## explicit
+# github.com/containerd/continuity v0.0.0-20200928162600-f2cc35102c2a
 github.com/containerd/continuity/fs
 github.com/containerd/continuity/sysx
 # github.com/containerd/fifo v0.0.0-20200410184934-f15a3290365b
@@ -166,7 +172,7 @@ github.com/containerd/fifo
 # github.com/containerd/go-runc v0.0.0-20200707131846-23d84c510c41
 ## explicit
 github.com/containerd/go-runc
-# github.com/containerd/ttrpc v1.0.1
+# github.com/containerd/ttrpc v1.0.2
 ## explicit
 github.com/containerd/ttrpc
 # github.com/containerd/typeurl v1.0.1
@@ -179,15 +185,10 @@ github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/cyphar/filepath-securejoin v0.2.2
 ## explicit
 github.com/cyphar/filepath-securejoin
-# github.com/docker/distribution v2.7.1+incompatible => github.com/docker/distribution v0.0.0-20190205005809-0d3efadf0154
-github.com/docker/distribution/digestset
-github.com/docker/distribution/reference
-github.com/docker/distribution/registry/api/errcode
 # github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
 ## explicit
 github.com/docker/docker/pkg/reexec
 # github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c
-## explicit
 github.com/docker/go-events
 # github.com/docker/go-units v0.4.0
 github.com/docker/go-units
@@ -214,6 +215,9 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
+# github.com/google/uuid v1.1.2
+## explicit
+github.com/google/uuid
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
 # github.com/hashicorp/go-multierror v1.1.0
@@ -227,8 +231,6 @@ github.com/jessevdk/go-flags
 # github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1
 ## explicit
 github.com/kardianos/osext
-# github.com/konsorten/go-windows-terminal-sequences v1.0.3
-github.com/konsorten/go-windows-terminal-sequences
 # github.com/mailru/easyjson v0.0.0-20190403194419-1ea4449da983
 ## explicit
 github.com/mailru/easyjson
@@ -308,6 +310,10 @@ github.com/opencontainers/runc/libcontainer/utils
 # github.com/opencontainers/runtime-spec v1.0.3-0.20200520003142-237cc4f519e2
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
+# github.com/opencontainers/selinux v1.6.0
+github.com/opencontainers/selinux/go-selinux
+github.com/opencontainers/selinux/go-selinux/label
+github.com/opencontainers/selinux/pkg/pwalk
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
@@ -315,7 +321,7 @@ github.com/pkg/errors
 github.com/russross/blackfriday/v2
 # github.com/shurcooL/sanitized_anchor_name v1.0.0
 github.com/shurcooL/sanitized_anchor_name
-# github.com/sirupsen/logrus v1.6.0
+# github.com/sirupsen/logrus v1.7.0
 ## explicit
 github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.5
@@ -324,7 +330,8 @@ github.com/spf13/pflag
 # github.com/st3v/glager v0.3.0
 ## explicit
 github.com/st3v/glager
-# github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2
+# github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
+## explicit
 github.com/syndtr/gocapability/capability
 # github.com/tedsuo/ifrit v0.0.0-20180410193936-e89a512c3162
 ## explicit
@@ -344,8 +351,9 @@ github.com/vishvananda/netlink/nl
 # github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
 ## explicit
 github.com/vishvananda/netns
-# go.etcd.io/bbolt v1.3.3
+# github.com/willf/bitset v1.1.11
 ## explicit
+github.com/willf/bitset
 # go.opencensus.io v0.22.4
 ## explicit
 go.opencensus.io
@@ -353,7 +361,7 @@ go.opencensus.io/internal
 go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/tracestate
-# golang.org/x/net v0.0.0-20200707034311-ab3426394381
+# golang.org/x/net v0.0.0-20200930145003-4acb6c075d10
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
 golang.org/x/net/html/atom
@@ -364,11 +372,11 @@ golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
 golang.org/x/net/trace
-# golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
+# golang.org/x/sync v0.0.0-20200930132711-30421366ff76
 ## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20200812155832-6a926be9bd1d
+# golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
@@ -397,10 +405,10 @@ golang.org/x/text/unicode/norm
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/genproto v0.0.0-20200813001606-1ccf2a5ae4fd
+# google.golang.org/genproto v0.0.0-20201001141541-efaab9d3c4f7
 ## explicit
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.31.0
+# google.golang.org/grpc v1.32.0
 ## explicit
 google.golang.org/grpc
 google.golang.org/grpc/attributes
@@ -413,7 +421,6 @@ google.golang.org/grpc/binarylog/grpc_binarylog_v1
 google.golang.org/grpc/codes
 google.golang.org/grpc/connectivity
 google.golang.org/grpc/credentials
-google.golang.org/grpc/credentials/internal
 google.golang.org/grpc/encoding
 google.golang.org/grpc/encoding/proto
 google.golang.org/grpc/grpclog
@@ -445,7 +452,6 @@ google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
 # google.golang.org/protobuf v1.25.0
-## explicit
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
 google.golang.org/protobuf/internal/descfmt
@@ -480,6 +486,8 @@ gopkg.in/tomb.v1
 # gopkg.in/yaml.v2 v2.3.0
 ## explicit
 gopkg.in/yaml.v2
+# gotest.tools/v3 v3.0.2
+## explicit
 # code.cloudfoundry.org/garden => ../garden
 # code.cloudfoundry.org/grootfs => ../grootfs
 # code.cloudfoundry.org/idmapper => ../idmapper
