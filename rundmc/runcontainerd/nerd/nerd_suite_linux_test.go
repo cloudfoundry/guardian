@@ -78,7 +78,7 @@ var _ = BeforeEach(func() {
 	containerdConfig := containerdrunner.ContainerdConfig(runDir)
 	containerdProcess = containerdrunner.NewContainerdProcess(runDir, containerdConfig)
 
-	containerdClient, err = containerd.New(containerdConfig.GRPC.Address, containerd.WithDefaultRuntime(plugin.RuntimeLinuxV1))
+	containerdClient, err = containerd.New(containerdConfig.GRPC.Address, containerd.WithDefaultRuntime(plugin.RuntimeRuncV2))
 	Expect(err).NotTo(HaveOccurred())
 
 	containerdContext = namespaces.WithNamespace(context.Background(), fmt.Sprintf("nerdspace%d", GinkgoParallelNode()))
