@@ -212,6 +212,8 @@ func (n *Nerd) GetProcess(log lager.Logger, containerID, processID string) (runc
 	}
 
 	process, err := task.LoadProcess(n.context, processID, cio.Load)
+	s, e := process.Status(n.context)
+	log.Debug("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", lager.Data{"process": fmt.Sprintf("%#v %#v", s, e), "error": err})
 	if err != nil {
 		if errdefs.IsNotFound(err) {
 			return BackingProcess{}, runcontainerd.ProcessNotFoundError{Handle: containerID, ID: processID}

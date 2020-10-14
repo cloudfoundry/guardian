@@ -230,18 +230,21 @@ func (r *RunContainerd) getBundle(log lager.Logger, containerID string) (goci.Bn
 }
 
 func (r *RunContainerd) Attach(log lager.Logger, sandboxID, processID string, io garden.ProcessIO) (garden.Process, error) {
+	log.Debug("About to attach")
 	if !r.useContainerdForProcesses {
 		return r.execer.Attach(log, sandboxID, processID, io)
 	}
 
 	var process BackingProcess
 	var err error
+	log.Debug("About to get process")
 	if process, err = r.processManager.GetProcess(log, sandboxID, processID); err != nil {
 		if isNotFound(err) {
 			return nil, garden.ProcessNotFoundError{ProcessID: processID}
 		}
 		return nil, err
 	}
+	log.Debug("Returning process", lager.Data{"pid": process.ID})
 	return NewProcess(log, process, r.cleanupProcessDirsOnWait), nil
 }
 

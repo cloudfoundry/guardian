@@ -2,6 +2,7 @@ package gqt_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,6 +16,9 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/api/services/tasks/v1"
+	"github.com/containerd/containerd/plugin"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -351,9 +355,19 @@ var _ = Describe("Containerd", func() {
 			})
 
 			Describe("pea", func() {
-				var rootfs string
+				var (
+					rootfs           string
+					containerdClient *containerd.Client
+				)
 
 				BeforeEach(func() {
+					var err error
+					containerdClient, err = containerd.New(
+						config.ContainerdSocket,
+						containerd.WithDefaultRuntime(plugin.RuntimeRuncV2),
+						containerd.WithDefaultNamespace("garden"),
+					)
+					Expect(err).NotTo(HaveOccurred())
 					rootfs = createPeaRootfsTar()
 				})
 
@@ -368,17 +382,19 @@ var _ = Describe("Containerd", func() {
 						Path:  "/bin/sleep",
 						Args:  []string{"10"},
 						User:  "alice",
-					}, garden.ProcessIO{})
+					}, ginkgoIO)
 					Expect(err).NotTo(HaveOccurred())
 
-					containers := listContainers("ctr", config.ContainerdSocket)
-					Expect(containers).To(ContainSubstring("ctrd-pea-id"))
+					_, err = containerdClient.ContainerService().Get(context.Background(), "ctrd-pea-id")
+					Expect(err).NotTo(HaveOccurred())
 
-					processes := listProcesses("ctr", config.ContainerdSocket, "ctrd-pea-id")
-					Expect(processes).To(ContainSubstring("ctrd-pea-id"))
+					pidsResponse, err := containerdClient.TaskService().ListPids(context.Background(), &tasks.ListPidsRequest{ContainerID: "ctrd-pea-id"})
+					Expect(err).NotTo(HaveOccurred())
 
-					peaProcessPid := pidFromProcessesOutput(processes, "ctrd-pea-id")
-					cmdline := readFileString(filepath.Join("/", "proc", peaProcessPid, "cmdline"))
+					Expect(pidsResponse.Processes).To(HaveLen(1))
+
+					peaProcessPid := pidsResponse.Processes[0].Pid
+					cmdline := readFileString(filepath.Join("/", "proc", fmt.Sprintf("%d", peaProcessPid), "cmdline"))
 					Expect(cmdline).To(ContainSubstring("/bin/sleep"))
 
 					code, err := process.Wait()
@@ -635,6 +651,14 @@ func getContainerPids(ctr, socket, containerID string) []string {
 func getContainerdProcessPid(ctr, socket, containerID, processID string) string {
 	processesOutput := runCtr(ctr, socket, []string{"tasks", "ps", containerID})
 	return pidFromProcessesOutput(processesOutput, processID)
+}
+
+func runCtrOrErr(ctr, socket string, args []string) (string, error) {
+	defaultArgs := []string{"--address", socket, "--namespace", "garden"}
+	cmd := exec.Command(ctr, append(defaultArgs, args...)...)
+
+	output, err := cmd.CombinedOutput()
+	return string(output), err
 }
 
 func runCtr(ctr, socket string, args []string) string {

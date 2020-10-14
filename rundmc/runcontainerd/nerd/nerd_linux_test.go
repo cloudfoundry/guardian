@@ -18,8 +18,12 @@ import (
 
 	"github.com/containerd/containerd"
 	apievents "github.com/containerd/containerd/api/events"
+	"github.com/containerd/containerd/api/services/tasks/v1"
 	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/oci"
+	"github.com/containerd/containerd/runtime/v2/runc/options"
+	"github.com/containerd/typeurl"
+	"github.com/gogo/protobuf/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -175,9 +179,23 @@ var _ = Describe("Nerd", func() {
 			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 			Expect(err).NotTo(HaveOccurred())
 
-			containers := listProcesses(testConfig.CtrBin, testConfig.Socket, containerID)
-			Expect(containers).To(ContainSubstring(containerID)) // init process
-			Expect(containers).To(ContainSubstring(processID))   // execed process
+			response, err := containerdClient.TaskService().ListPids(
+				containerdContext,
+				&tasks.ListPidsRequest{
+					ContainerID: containerID,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response.Processes).To(HaveLen(2))
+
+			execIds := []string{}
+			for _, process := range response.Processes {
+				if process.Info != nil {
+					execIds = append(execIds, getProcessDetails(process.Info).ExecID)
+				}
+			}
+
+			Expect(execIds).To(ContainElement(processID))
 		})
 
 		Describe("process IO", func() {
@@ -666,4 +684,10 @@ func findFilesContaining(substring string) bool {
 
 func int64ptr(i int64) *int64 {
 	return &i
+}
+func getProcessDetails(processInfo *types.Any) *options.ProcessDetails {
+	obj, err := typeurl.UnmarshalAny(processInfo)
+	Expect(err).NotTo(HaveOccurred())
+
+	return obj.(*options.ProcessDetails)
 }

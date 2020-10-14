@@ -146,8 +146,14 @@ var _ = Describe("Run", func() {
 			Expect(processPath).NotTo(BeAnExistingFile())
 		})
 
-		It("deletes the process metadata", func() {
+		FIt("deletes the process metadata", func() {
 			skipIfRunDmcForProcesses("Processes not managed by containerd")
+			fmt.Println(">>>>>>>>>>>>>>>>>>>>", processID)
+			Eventually(func() error {
+				_, err := container.Attach(processID, garden.ProcessIO{})
+				return err
+			}, "10s").ShouldNot(Succeed())
+
 			_, err := container.Attach(processID, garden.ProcessIO{})
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeAssignableToTypeOf(garden.ProcessNotFoundError{}))
