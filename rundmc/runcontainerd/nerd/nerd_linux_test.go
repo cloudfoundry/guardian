@@ -100,12 +100,21 @@ var _ = Describe("Nerd", func() {
 			Expect(containers).To(ContainSubstring(containerID))
 		})
 
-		It("starts an init process in the container", func() {
+		FIt("starts an init process in the container", func() {
 			spec = generateSpec(containerdContext, containerdClient, containerID)
 			Expect(cnerd.Create(testLogger, containerID, spec, maximusUID, maximusGID, initProcessIO)).To(Succeed())
 
-			containers := listProcesses(testConfig.CtrBin, testConfig.Socket, containerID)
-			Expect(containers).To(ContainSubstring(containerID))
+			response, err := containerdClient.TaskService().ListPids(
+				containerdContext,
+				&tasks.ListPidsRequest{
+					ContainerID: containerID,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response.Processes).To(HaveLen(1))
+
+			details := getProcessDetails(response.Processes[0].Info)
+			Expect(details.ExecID).To(Equal(containerID))
 		})
 
 		It("adds the annotations as labels", func() {
@@ -400,6 +409,13 @@ var _ = Describe("Nerd", func() {
 
 			It("fails", func() {
 				_, err := cnerd.GetProcess(testLogger, containerID, processID)
+				Expect(err).To(MatchError(ContainSubstring("not found")))
+			})
+		})
+
+		Context("when the process does not exist", func() {
+			It("fails", func() {
+				_, err := cnerd.GetProcess(testLogger, containerID, "not-existing-process-id")
 				Expect(err).To(MatchError(ContainSubstring("not found")))
 			})
 		})

@@ -146,15 +146,14 @@ var _ = Describe("Run", func() {
 			Expect(processPath).NotTo(BeAnExistingFile())
 		})
 
-		FIt("deletes the process metadata", func() {
+		It("deletes the process metadata", func() {
 			skipIfRunDmcForProcesses("Processes not managed by containerd")
-			fmt.Println(">>>>>>>>>>>>>>>>>>>>", processID)
-			Eventually(func() error {
-				_, err := container.Attach(processID, garden.ProcessIO{})
-				return err
-			}, "10s").ShouldNot(Succeed())
-
 			_, err := container.Attach(processID, garden.ProcessIO{})
+			// According to the Garden API contract attaching to a process that does not exist
+			// should return an error type garden.ProcessNotFoundError. Unfortunately due to a
+			// bug in  the v2.runc runtime of containerd we are getting no error and a process
+			// in unknow state.
+			// For more info: TODO: link to bug here
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeAssignableToTypeOf(garden.ProcessNotFoundError{}))
 		})
