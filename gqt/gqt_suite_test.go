@@ -635,7 +635,7 @@ func getCmdLine(pid string) string {
 
 func ociBundlesDir() string {
 	if isContainerd() {
-		return filepath.Join(containerdRunDir, "state", "io.containerd.runtime.v1.linux", "garden")
+		return filepath.Join(containerdRunDir, "state", "io.containerd.runtime.v2.task", "garden")
 	}
 	return config.DepotDir
 }

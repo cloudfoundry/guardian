@@ -368,17 +368,16 @@ var _ = Describe("Containerd", func() {
 						Path:  "/bin/sleep",
 						Args:  []string{"10"},
 						User:  "alice",
-					}, garden.ProcessIO{})
+					}, ginkgoIO)
 					Expect(err).NotTo(HaveOccurred())
 
 					containers := listContainers("ctr", config.ContainerdSocket)
 					Expect(containers).To(ContainSubstring("ctrd-pea-id"))
 
-					processes := listProcesses("ctr", config.ContainerdSocket, "ctrd-pea-id")
-					Expect(processes).To(ContainSubstring("ctrd-pea-id"))
+					pids := getContainerPids("ctr", config.ContainerdSocket, "ctrd-pea-id")
+					Expect(pids).To(HaveLen(1))
 
-					peaProcessPid := pidFromProcessesOutput(processes, "ctrd-pea-id")
-					cmdline := readFileString(filepath.Join("/", "proc", peaProcessPid, "cmdline"))
+					cmdline := readFileString(filepath.Join("/", "proc", pids[0], "cmdline"))
 					Expect(cmdline).To(ContainSubstring("/bin/sleep"))
 
 					code, err := process.Wait()

@@ -19,7 +19,7 @@ import (
 	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/errdefs"
 	ctrdevents "github.com/containerd/containerd/events"
-	"github.com/containerd/containerd/runtime/linux/runctypes"
+	v2types "github.com/containerd/containerd/runtime/v2/runc/options"
 	"github.com/containerd/typeurl"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -217,6 +217,20 @@ func (n *Nerd) GetProcess(log lager.Logger, containerID, processID string) (runc
 			return BackingProcess{}, runcontainerd.ProcessNotFoundError{Handle: containerID, ID: processID}
 		}
 		return BackingProcess{}, err
+	}
+
+	// According to the Garden API contract attaching to a process that does
+	// not exist should return an error of type garden.ProcessNotFoundError.
+	// Unfortunately due to a bug in the io.containerd.runc.v2 runtime we are
+	// getting no error and a process with Status = unknown.
+	// For more info: https://github.com/containerd/containerd/issues/4632
+	// TODO: remove this if the regression gets fixed in containerd.
+	status, err := process.Status(n.context)
+	if err != nil {
+		return BackingProcess{}, err
+	}
+	if status.Status == containerd.Unknown {
+		return BackingProcess{}, runcontainerd.ProcessNotFoundError{Handle: containerID, ID: processID}
 	}
 
 	return NewBackingProcess(log, process, n.context), nil
@@ -425,7 +439,7 @@ func (n *Nerd) RemoveBundle(log lager.Logger, handle string) error {
 
 func WithUIDAndGID(uid, gid uint32) containerd.NewTaskOpts {
 	return func(ctx context.Context, c *containerd.Client, ti *containerd.TaskInfo) error {
-		return updateTaskInfoCreateOptions(ti, func(opts *runctypes.CreateOptions) error {
+		return updateTaskInfoCreateOptions(ti, func(opts *v2types.Options) error {
 			opts.IoUid = uid
 			opts.IoGid = gid
 			return nil
@@ -433,11 +447,11 @@ func WithUIDAndGID(uid, gid uint32) containerd.NewTaskOpts {
 	}
 }
 
-func updateTaskInfoCreateOptions(taskInfo *containerd.TaskInfo, updateCreateOptions func(createOptions *runctypes.CreateOptions) error) error {
+func updateTaskInfoCreateOptions(taskInfo *containerd.TaskInfo, updateCreateOptions func(createOptions *v2types.Options) error) error {
 	if taskInfo.Options == nil {
-		taskInfo.Options = &runctypes.CreateOptions{}
+		taskInfo.Options = &v2types.Options{}
 	}
-	opts, ok := taskInfo.Options.(*runctypes.CreateOptions)
+	opts, ok := taskInfo.Options.(*v2types.Options)
 
 	if !ok {
 		return errors.New("could not cast TaskInfo Options to CreateOptions")
