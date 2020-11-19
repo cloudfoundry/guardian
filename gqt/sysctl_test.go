@@ -19,6 +19,8 @@ var _ = Describe("Sysctl", func() {
 		config.TCPKeepaliveTime = intptr(100)
 		config.TCPKeepaliveInterval = intptr(200)
 		config.TCPKeepaliveProbes = intptr(300)
+		config.TCPRetries1 = intptr(400)
+		config.TCPRetries2 = intptr(500)
 	})
 
 	JustBeforeEach(func() {
@@ -47,12 +49,22 @@ var _ = Describe("Sysctl", func() {
 		Expect(strings.TrimSpace(output)).To(Equal("300"))
 	})
 
+	It("sets the container tcp_retries1 parameter to the specified value", func() {
+		output := runInContainerCombinedOutput(container, "/bin/cat", []string{"/proc/sys/net/ipv4/tcp_retries1"})
+		Expect(strings.TrimSpace(output)).To(Equal("400"))
+	})
+
+	It("sets the container tcp_retries2 parameter to the specified value", func() {
+		output := runInContainerCombinedOutput(container, "/bin/cat", []string{"/proc/sys/net/ipv4/tcp_retries2"})
+		Expect(strings.TrimSpace(output)).To(Equal("500"))
+	})
+
 	When("the tcp_keepalive_time specified value is 0", func() {
 		BeforeEach(func() {
 			config.TCPKeepaliveTime = intptr(0)
 		})
 
-		It("uses the value from the host", func() {
+		It("uses the default from the init_net namespace", func() {
 			output := runInContainerCombinedOutput(container, "/bin/cat", []string{"/proc/sys/net/ipv4/tcp_keepalive_time"})
 			Expect(strings.TrimSpace(output)).NotTo(Equal("0"))
 		})
@@ -63,7 +75,7 @@ var _ = Describe("Sysctl", func() {
 			config.TCPKeepaliveInterval = intptr(0)
 		})
 
-		It("uses the value from the host", func() {
+		It("uses the default from the init_net namespace", func() {
 			output := runInContainerCombinedOutput(container, "/bin/cat", []string{"/proc/sys/net/ipv4/tcp_keepalive_intvl"})
 			Expect(strings.TrimSpace(output)).NotTo(Equal("0"))
 		})
@@ -74,9 +86,32 @@ var _ = Describe("Sysctl", func() {
 			config.TCPKeepaliveProbes = intptr(0)
 		})
 
-		It("uses the value from the host", func() {
+		It("uses the default from the init_net namespace", func() {
 			output := runInContainerCombinedOutput(container, "/bin/cat", []string{"/proc/sys/net/ipv4/tcp_keepalive_probes"})
 			Expect(strings.TrimSpace(output)).NotTo(Equal("0"))
 		})
 	})
+
+	When("the tcp_retries1 specified value is 0", func() {
+		BeforeEach(func() {
+			config.TCPRetries1 = intptr(0)
+		})
+
+		It("uses the default from the init_net namespace", func() {
+			output := runInContainerCombinedOutput(container, "/bin/cat", []string{"/proc/sys/net/ipv4/tcp_retries1"})
+			Expect(strings.TrimSpace(output)).NotTo(Equal("0"))
+		})
+	})
+
+	When("the tcp_retries2 specified value is 0", func() {
+		BeforeEach(func() {
+			config.TCPRetries2 = intptr(0)
+		})
+
+		It("uses the default from the init_net namespace", func() {
+			output := runInContainerCombinedOutput(container, "/bin/cat", []string{"/proc/sys/net/ipv4/tcp_retries2"})
+			Expect(strings.TrimSpace(output)).NotTo(Equal("0"))
+		})
+	})
+
 })
