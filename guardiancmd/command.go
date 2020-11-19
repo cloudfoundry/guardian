@@ -198,6 +198,8 @@ type CommonCommand struct {
 		TCPKeepaliveTime     uint32 `long:"tcp-keepalive-time" description:"The net.ipv4.tcp_keepalive_time sysctl parameter that will be used inside containers"`
 		TCPKeepaliveInterval uint32 `long:"tcp-keepalive-interval" description:"The net.ipv4.tcp_keepalive_intvl sysctl parameter that will be used inside containers"`
 		TCPKeepaliveProbes   uint32 `long:"tcp-keepalive-probes" description:"The net.ipv4.tcp_keepalive_probes sysctl parameter that will be used inside containers"`
+		TCPRetries1          uint32 `long:"tcp-retries1" description:"The net.ipv4.tcp_retries1 sysctl parameter that will be used inside containers"`
+		TCPRetries2          uint32 `long:"tcp-retries2" description:"The net.ipv4.tcp_retries2 sysctl parameter that will be used inside containers"`
 	} `group:"Sysctl"`
 }
 

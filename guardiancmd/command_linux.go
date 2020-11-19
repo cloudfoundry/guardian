@@ -258,6 +258,8 @@ func (cmd *CommonCommand) wireKernelParams() []rundmc.BundlerRule {
 		bundlerules.NewKernelParameter(sysctl, "net.ipv4.tcp_keepalive_time", cmd.Sysctl.TCPKeepaliveTime),
 		bundlerules.NewKernelParameter(sysctl, "net.ipv4.tcp_keepalive_intvl", cmd.Sysctl.TCPKeepaliveInterval),
 		bundlerules.NewKernelParameter(sysctl, "net.ipv4.tcp_keepalive_probes", cmd.Sysctl.TCPKeepaliveProbes),
+		bundlerules.NewKernelParameter(sysctl, "net.ipv4.tcp_retries1", cmd.Sysctl.TCPRetries1),
+		bundlerules.NewKernelParameter(sysctl, "net.ipv4.tcp_retries2", cmd.Sysctl.TCPRetries2),
 	}
 }
 

@@ -111,6 +111,8 @@ type GdnRunnerConfig struct {
 	TCPKeepaliveTime     *int `flag:"tcp-keepalive-time"`
 	TCPKeepaliveInterval *int `flag:"tcp-keepalive-interval"`
 	TCPKeepaliveProbes   *int `flag:"tcp-keepalive-probes"`
+	TCPRetries1          *int `flag:"tcp-retries1"`
+	TCPRetries2          *int `flag:"tcp-retries2"`
 }
 
 func (c GdnRunnerConfig) connectionInfo() (string, string) {
