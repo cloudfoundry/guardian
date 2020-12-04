@@ -13,24 +13,25 @@ require (
 	code.cloudfoundry.org/lager v2.0.0+incompatible
 	code.cloudfoundry.org/localip v0.0.0-20170223024724-b88ad0dea95c
 	github.com/BurntSushi/toml v0.3.1
+	github.com/Microsoft/go-winio v0.4.15 // indirect
 	github.com/Microsoft/hcsshim v0.8.10 // indirect
 	github.com/Microsoft/hcsshim/test v0.0.0-20201001234239-936eeeb286fd // indirect
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.1.0
-	github.com/containerd/cgroups v0.0.0-20200824123100-0b889c03f102 // indirect
+	github.com/containerd/cgroups v0.0.0-20201119153540-4cbc285b3327 // indirect
 	github.com/containerd/console v1.0.0 // indirect
-	github.com/containerd/containerd v1.4.1
-	github.com/containerd/fifo v0.0.0-20200410184934-f15a3290365b // indirect
+	github.com/containerd/containerd v1.4.3
+	github.com/containerd/continuity v0.0.0-20201201154230-62ef0fffa6a1 // indirect
+	github.com/containerd/fifo v0.0.0-20201026212402-0724c46b320c // indirect
 	github.com/containerd/go-runc v0.0.0-20200707131846-23d84c510c41 // indirect
 	github.com/containerd/ttrpc v1.0.2 // indirect
 	github.com/containerd/typeurl v1.0.1
-	github.com/coreos/go-systemd/v22 v22.1.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
 	github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
 	github.com/eapache/go-resiliency v1.2.0
 	github.com/gogo/googleapis v1.4.0 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
-	github.com/google/uuid v1.1.2 // indirect
+	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/jessevdk/go-flags v1.4.0
@@ -55,11 +56,13 @@ require (
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
 	github.com/willf/bitset v1.1.11 // indirect
-	go.opencensus.io v0.22.4 // indirect
-	golang.org/x/sync v0.0.0-20200930132711-30421366ff76 // indirect
-	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
-	google.golang.org/genproto v0.0.0-20201001141541-efaab9d3c4f7 // indirect
-	google.golang.org/grpc v1.32.0 // indirect
+	go.opencensus.io v0.22.5 // indirect
+	golang.org/x/net v0.0.0-20201201195509-5d6afe98e0b7 // indirect
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9 // indirect
+	golang.org/x/sys v0.0.0-20201201145000-ef89a241ccb3
+	golang.org/x/text v0.3.4 // indirect
+	google.golang.org/genproto v0.0.0-20201201144952-b05cb90ed32e // indirect
+	google.golang.org/grpc v1.33.2 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	gotest.tools/v3 v3.0.2 // indirect
 )

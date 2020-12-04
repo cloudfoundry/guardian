@@ -213,24 +213,10 @@ func (n *Nerd) GetProcess(log lager.Logger, containerID, processID string) (runc
 
 	process, err := task.LoadProcess(n.context, processID, cio.Load)
 	if err != nil {
-		if errdefs.IsNotFound(err) {
+		if errdefs.IsNotFound(err) || errors.Is(err, errdefs.ErrUnknown) {
 			return BackingProcess{}, runcontainerd.ProcessNotFoundError{Handle: containerID, ID: processID}
 		}
 		return BackingProcess{}, err
-	}
-
-	// According to the Garden API contract attaching to a process that does
-	// not exist should return an error of type garden.ProcessNotFoundError.
-	// Unfortunately due to a bug in the io.containerd.runc.v2 runtime we are
-	// getting no error and a process with Status = unknown.
-	// For more info: https://github.com/containerd/containerd/issues/4632
-	// TODO: remove this if the regression gets fixed in containerd.
-	status, err := process.Status(n.context)
-	if err != nil {
-		return BackingProcess{}, err
-	}
-	if status.Status == containerd.Unknown {
-		return BackingProcess{}, runcontainerd.ProcessNotFoundError{Handle: containerID, ID: processID}
 	}
 
 	return NewBackingProcess(log, process, n.context), nil
@@ -239,7 +225,6 @@ func (n *Nerd) GetProcess(log lager.Logger, containerID, processID string) (runc
 func (n *Nerd) GetTask(log lager.Logger, id string) (runcontainerd.BackingProcess, error) {
 	log.Debug("get-task", lager.Data{"id": id})
 	_, task, err := n.loadContainerAndTask(log, id)
-
 	if err != nil {
 		return BackingProcess{}, err
 	}
