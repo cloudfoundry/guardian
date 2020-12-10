@@ -19,7 +19,7 @@ var _ = Describe("Sysctl", func() {
 		config.TCPKeepaliveTime = intptr(100)
 		config.TCPKeepaliveInterval = intptr(200)
 		config.TCPKeepaliveProbes = intptr(300)
-		config.TCPRetries1 = intptr(400)
+		config.TCPRetries1 = intptr(255)
 		config.TCPRetries2 = intptr(500)
 	})
 
@@ -51,7 +51,7 @@ var _ = Describe("Sysctl", func() {
 
 	It("sets the container tcp_retries1 parameter to the specified value", func() {
 		output := runInContainerCombinedOutput(container, "/bin/cat", []string{"/proc/sys/net/ipv4/tcp_retries1"})
-		Expect(strings.TrimSpace(output)).To(Equal("400"))
+		Expect(strings.TrimSpace(output)).To(Equal("255"))
 	})
 
 	It("sets the container tcp_retries2 parameter to the specified value", func() {
@@ -113,5 +113,4 @@ var _ = Describe("Sysctl", func() {
 			Expect(strings.TrimSpace(output)).NotTo(Equal("0"))
 		})
 	})
-
 })
