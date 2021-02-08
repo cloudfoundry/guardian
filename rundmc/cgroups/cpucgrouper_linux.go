@@ -18,6 +18,7 @@ func NewCPUCgrouper(cgroupRoot string) CPUCgrouper {
 		cgroupRoot: cgroupRoot,
 	}
 }
+
 func (c CPUCgrouper) CreateBadCgroup(handle string) error {
 	if err := os.MkdirAll(filepath.Join(c.cgroupRoot, BadCgroupName, handle), 0755); err != nil {
 		return err
@@ -36,7 +37,12 @@ func (c CPUCgrouper) ReadBadCgroupUsage(handle string) (garden.ContainerCPUStat,
 	stats := cgroups.Stats{}
 	cpuactCgroup := &fs.CpuacctGroup{}
 
-	if err := cpuactCgroup.GetStats(filepath.Join(c.cgroupRoot, BadCgroupName, handle), &stats); err != nil {
+	path := filepath.Join(c.cgroupRoot, BadCgroupName, handle)
+	if _, err := os.Stat(path); err != nil {
+		return garden.ContainerCPUStat{}, err
+	}
+
+	if err := cpuactCgroup.GetStats(path, &stats); err != nil {
 		return garden.ContainerCPUStat{}, err
 	}
 
