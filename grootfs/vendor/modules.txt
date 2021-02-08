@@ -234,7 +234,7 @@ github.com/st3v/glager
 # github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861
 ## explicit
 github.com/tscolari/lagregator
-# github.com/urfave/cli/v2 v2.3.0
+# github.com/urfave/cli/v2 v2.2.0
 ## explicit
 github.com/urfave/cli/v2
 # github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c
