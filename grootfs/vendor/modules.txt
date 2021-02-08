@@ -15,7 +15,7 @@ code.cloudfoundry.org/lager/lagerctx
 code.cloudfoundry.org/lager/lagertest
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
-# github.com/Microsoft/go-winio v0.4.15-0.20200908182639-5b44b70ab3ab
+# github.com/Microsoft/go-winio v0.4.16
 ## explicit
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
@@ -70,11 +70,10 @@ github.com/containers/image/pkg/sysregistriesv2
 github.com/containers/image/pkg/tlsclientconfig
 github.com/containers/image/transports
 github.com/containers/image/types
-# github.com/containers/storage v1.23.0
+# github.com/containers/storage v1.25.0
 ## explicit
 github.com/containers/storage/pkg/reexec
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
-## explicit
 github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/docker/distribution v2.7.1+incompatible
 ## explicit
@@ -118,12 +117,15 @@ github.com/fsnotify/fsnotify
 # github.com/ghodss/yaml v1.0.0
 ## explicit
 github.com/ghodss/yaml
-# github.com/gogo/protobuf v1.3.1
+# github.com/gogo/protobuf v1.3.2
+## explicit
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 # github.com/golang/protobuf v1.4.3
 github.com/golang/protobuf/proto
+# github.com/google/go-cmp v0.5.3
+## explicit
 # github.com/gorilla/context v1.1.1
 ## explicit
 github.com/gorilla/context
