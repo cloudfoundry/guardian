@@ -39,7 +39,7 @@ require (
 	github.com/mitchellh/copystructure v0.0.0-20170525013902-d23ffcb85de3
 	github.com/mitchellh/reflectwalk v0.0.0-20170726202117-63d60e9d0dbc // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo v1.14.0
+	github.com/onsi/ginkgo v1.15.0
 	github.com/onsi/gomega v1.10.1
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.0.1
@@ -57,7 +57,7 @@ require (
 	github.com/willf/bitset v1.1.11 // indirect
 	go.opencensus.io v0.22.5 // indirect
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9 // indirect
-	golang.org/x/sys v0.0.0-20201201145000-ef89a241ccb3
+	golang.org/x/sys v0.0.0-20210112080510-489259a85091
 	golang.org/x/text v0.3.4 // indirect
 	google.golang.org/genproto v0.0.0-20201201144952-b05cb90ed32e // indirect
 	google.golang.org/grpc v1.33.2 // indirect
