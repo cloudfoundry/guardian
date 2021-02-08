@@ -9,11 +9,9 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/opencontainers/runc/libcontainer/system"
 )
 
 var _ = Describe("Rundmc/Cgroups/Cpucgrouper", func() {
-
 	var (
 		cpuCgrouper cgroups.CPUCgrouper
 		rootPath    string
@@ -40,9 +38,7 @@ var _ = Describe("Rundmc/Cgroups/Cpucgrouper", func() {
 	})
 
 	Describe("deleting the bad cgroup", func() {
-		var (
-			badCgroupPath string
-		)
+		var badCgroupPath string
 
 		BeforeEach(func() {
 			badCgroupPath = filepath.Join(rootPath, cgroups.BadCgroupName, "frenchtoast!")
@@ -52,14 +48,11 @@ var _ = Describe("Rundmc/Cgroups/Cpucgrouper", func() {
 		It("deletes the bad cgroup", func() {
 			Expect(cpuCgrouper.DestroyBadCgroup("frenchtoast!")).To(Succeed())
 			Expect(badCgroupPath).NotTo(BeADirectory())
-
 		})
 	})
 
 	Describe("reading the CPU stats from the bad cgroup", func() {
-		var (
-			badCgroupPath string
-		)
+		var badCgroupPath string
 
 		BeforeEach(func() {
 			badCgroupPath = filepath.Join(rootPath, cgroups.BadCgroupName, "pancakes!")
@@ -74,7 +67,7 @@ var _ = Describe("Rundmc/Cgroups/Cpucgrouper", func() {
 			usage, err := cpuCgrouper.ReadBadCgroupUsage("pancakes!")
 			Expect(err).NotTo(HaveOccurred())
 			// The weird values in user and system usage come from https://github.com/opencontainers/runc/blob/2186cfa3cd52b8e00b1de76db7859cacdf7b1f94/libcontainer/cgroups/fs/cpuacct.go#L19
-			clockTicks := system.GetClockTicks()
+			var clockTicks uint64 = 100
 			Expect(usage).To(Equal(garden.ContainerCPUStat{
 				Usage:  123,
 				User:   uint64((456 * 1000000000) / clockTicks),
