@@ -51,7 +51,7 @@ require (
 	github.com/st3v/glager v0.3.0
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	github.com/tedsuo/ifrit v0.0.0-20180410193936-e89a512c3162
-	github.com/urfave/cli/v2 v2.2.0
+	github.com/urfave/cli/v2 v2.3.0
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
 	github.com/willf/bitset v1.1.11 // indirect
