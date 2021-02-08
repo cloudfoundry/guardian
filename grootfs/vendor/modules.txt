@@ -122,10 +122,8 @@ github.com/ghodss/yaml
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
-# github.com/golang/protobuf v1.4.2
+# github.com/golang/protobuf v1.4.3
 github.com/golang/protobuf/proto
-# github.com/google/go-cmp v0.5.1
-## explicit
 # github.com/gorilla/context v1.1.1
 ## explicit
 github.com/gorilla/context
@@ -195,10 +193,10 @@ github.com/opencontainers/go-digest
 ## explicit
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.0.0-rc91 => github.com/opencontainers/runc v1.0.0-rc90
+# github.com/opencontainers/runc v1.0.0-rc93
 ## explicit
 github.com/opencontainers/runc/libcontainer/user
-# github.com/opencontainers/runtime-spec v1.0.3-0.20200520003142-237cc4f519e2
+# github.com/opencontainers/runtime-spec v1.0.3-0.20200929063507-e6143ca7d51d
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/pkg/errors v0.9.1
@@ -241,14 +239,13 @@ github.com/urfave/cli/v2
 # github.com/ventu-io/go-shortid v0.0.0-20160104014424-6c56cef5189c
 ## explicit
 github.com/ventu-io/go-shortid
-# golang.org/x/net v0.0.0-20200930145003-4acb6c075d10
-## explicit
+# golang.org/x/net v0.0.0-20201224014010-6772e930b67b
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
 golang.org/x/net/internal/socks
 golang.org/x/net/proxy
-# golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
+# golang.org/x/sys v0.0.0-20201119102817-f84b799fce68
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
@@ -312,4 +309,3 @@ gopkg.in/yaml.v2
 # launchpad.net/gocheck v0.0.0-20140225173054-000000000087
 ## explicit
 # code.cloudfoundry.org/idmapper => ../idmapper
-# github.com/opencontainers/runc => github.com/opencontainers/runc v1.0.0-rc90
