@@ -45,14 +45,14 @@ code.cloudfoundry.org/localip
 # github.com/BurntSushi/toml v0.3.1
 ## explicit
 github.com/BurntSushi/toml
-# github.com/Microsoft/go-winio v0.4.15
-## explicit
+# github.com/Microsoft/go-winio v0.4.16
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
+github.com/Microsoft/go-winio/pkg/security
 github.com/Microsoft/go-winio/vhd
-# github.com/Microsoft/hcsshim v0.8.10
-## explicit
+# github.com/Microsoft/hcsshim v0.8.14
 github.com/Microsoft/hcsshim
+github.com/Microsoft/hcsshim/computestorage
 github.com/Microsoft/hcsshim/internal/cow
 github.com/Microsoft/hcsshim/internal/hcs
 github.com/Microsoft/hcsshim/internal/hcserror
@@ -200,7 +200,7 @@ github.com/godbus/dbus/v5
 # github.com/gogo/googleapis v1.4.0
 ## explicit
 github.com/gogo/googleapis/google/rpc
-# github.com/gogo/protobuf v1.3.1
+# github.com/gogo/protobuf v1.3.2
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
@@ -320,10 +320,9 @@ github.com/opencontainers/selinux/pkg/pwalk
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
-# github.com/russross/blackfriday/v2 v2.0.1
+# github.com/russross/blackfriday/v2 v2.1.0
+## explicit
 github.com/russross/blackfriday/v2
-# github.com/shurcooL/sanitized_anchor_name v1.0.0
-github.com/shurcooL/sanitized_anchor_name
 # github.com/sirupsen/logrus v1.7.0
 ## explicit
 github.com/sirupsen/logrus
@@ -343,7 +342,7 @@ github.com/tedsuo/ifrit/http_server
 github.com/tedsuo/ifrit/sigmon
 # github.com/tedsuo/rata v1.0.0
 github.com/tedsuo/rata
-# github.com/urfave/cli/v2 v2.2.0
+# github.com/urfave/cli/v2 v2.3.0
 ## explicit
 github.com/urfave/cli/v2
 # github.com/vishvananda/netlink v1.1.0

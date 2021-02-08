@@ -13,8 +13,6 @@ require (
 	code.cloudfoundry.org/lager v2.0.0+incompatible
 	code.cloudfoundry.org/localip v0.0.0-20170223024724-b88ad0dea95c
 	github.com/BurntSushi/toml v0.3.1
-	github.com/Microsoft/go-winio v0.4.15 // indirect
-	github.com/Microsoft/hcsshim v0.8.10 // indirect
 	github.com/Microsoft/hcsshim/test v0.0.0-20201001234239-936eeeb286fd // indirect
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.1.0
@@ -44,11 +42,12 @@ require (
 	github.com/opencontainers/runc v1.0.0-rc93
 	github.com/opencontainers/runtime-spec v1.0.3-0.20200929063507-e6143ca7d51d
 	github.com/pkg/errors v0.9.1
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/st3v/glager v0.3.0
 	github.com/tedsuo/ifrit v0.0.0-20180410193936-e89a512c3162
-	github.com/urfave/cli/v2 v2.2.0
+	github.com/urfave/cli/v2 v2.3.0
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
 	go.opencensus.io v0.22.5 // indirect
