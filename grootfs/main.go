@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	"github.com/containers/storage/pkg/reexec"
+	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
 
@@ -34,6 +36,33 @@ func main() {
 	grootfs.Name = "grootfs"
 	grootfs.Version = version
 	grootfs.Usage = "I am Groot!"
+
+	/* This block is copied from here:
+		https://github.com/cloudfoundry/grootfs/blob/e3748cdda45b5e7efe500e442f9ae029499a287d/vendor/github.com/urfave/cli/v2/errors.go#L94-L116
+
+		Here is why:
+	    The default ExitErrHandler is always printing error messagees to stderr. However, Grootfs is using stderr
+		for logging unless a log file is supplied, and error messages are expected by the test runner on stdout. Given that
+		the default handler does not allow configuration of the error stream we have created one that is identical, but writes
+		error messges to stdout to keep our tests happy.
+	*/
+	grootfs.ExitErrHandler = func(ctx *cli.Context, err error) {
+		if err == nil {
+			return
+		}
+
+		if exitErr, ok := err.(cli.ExitCoder); ok {
+			if err.Error() != "" {
+				if _, ok := exitErr.(cli.ErrorFormatter); ok {
+					_, _ = fmt.Fprintf(grootfs.Writer, "%+v\n", err)
+				} else {
+					_, _ = fmt.Fprintln(grootfs.Writer, err)
+				}
+			}
+			cli.OsExiter(exitErr.ExitCode())
+			return
+		}
+	}
 
 	grootfs.Flags = []cli.Flag{
 		&cli.StringFlag{
@@ -115,7 +144,7 @@ func main() {
 		lagerLogLevel := translateLogLevel(cfg.LogLevel)
 		logger, err := configureLogger(lagerLogLevel, cfg.LogFile, cfg.LogTimestampFormat)
 		if err != nil {
-			return err
+			return cli.NewExitError(err.Error(), 1)
 		}
 		ctx.App.Metadata["logger"] = logger
 
@@ -155,7 +184,7 @@ func configureLogger(logLevel lager.LogLevel, logFile, logTimestampFormat string
 		var err error
 		logWriter, err = os.OpenFile(logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to configure logger")
 		}
 
 		if logLevel == lager.FATAL {
