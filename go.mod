@@ -17,7 +17,7 @@ require (
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.1.0
 	github.com/containerd/cgroups v0.0.0-20201119153540-4cbc285b3327 // indirect
-	github.com/containerd/containerd v1.4.3
+	github.com/containerd/containerd v1.4.4
 	github.com/containerd/continuity v0.0.0-20201201154230-62ef0fffa6a1 // indirect
 	github.com/containerd/fifo v0.0.0-20201026212402-0724c46b320c // indirect
 	github.com/containerd/go-runc v0.0.0-20200707131846-23d84c510c41 // indirect
