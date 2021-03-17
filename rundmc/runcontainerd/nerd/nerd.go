@@ -213,7 +213,7 @@ func (n *Nerd) GetProcess(log lager.Logger, containerID, processID string) (runc
 
 	process, err := task.LoadProcess(n.context, processID, cio.Load)
 	if err != nil {
-		if errdefs.IsNotFound(err) || errors.Is(err, errdefs.ErrUnknown) {
+		if errdefs.IsNotFound(err) {
 			return BackingProcess{}, runcontainerd.ProcessNotFoundError{Handle: containerID, ID: processID}
 		}
 		return BackingProcess{}, err
