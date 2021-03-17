@@ -300,7 +300,6 @@ var _ = Describe("Nerd", func() {
 			_, err = proc.Wait()
 			Expect(err).NotTo(HaveOccurred())
 		})
-
 	})
 
 	Describe("Signal", func() {
@@ -349,7 +348,6 @@ var _ = Describe("Nerd", func() {
 
 			Eventually(status, 5*time.Second).Should(Receive(BeEquivalentTo(42)))
 		})
-
 	})
 
 	Describe("GetProcess", func() {
@@ -391,13 +389,12 @@ var _ = Describe("Nerd", func() {
 		Context("when the process does not exist", func() {
 			It("fails", func() {
 				_, err := cnerd.GetProcess(testLogger, containerID, "not-existing-process-id")
-				Expect(err).To(MatchError(ContainSubstring("not found")))
+				Expect(err).To(MatchError(ContainSubstring("process not-existing-process-id not found in container %s", containerID)))
 			})
 		})
 	})
 
 	Describe("GetTask", func() {
-
 		JustBeforeEach(func() {
 			spec = generateSpec(containerdContext, containerdClient, containerID)
 			Expect(cnerd.Create(testLogger, containerID, spec, maximusUID, maximusGID, initProcessIO)).To(Succeed())
