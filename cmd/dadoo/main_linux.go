@@ -69,6 +69,22 @@ func run() int {
 		return 2
 	}
 
+	go func() {
+		for {
+			if _, err := io.Copy(ioutil.Discard, stdoutR); err != nil {
+				break
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			if _, err := io.Copy(ioutil.Discard, stderrR); err != nil {
+				break
+			}
+		}
+	}()
+
 	ioWg := &sync.WaitGroup{}
 	var runcExecCmd *exec.Cmd
 	if *tty {
