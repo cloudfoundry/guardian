@@ -22,7 +22,7 @@ require (
 	github.com/containerd/fifo v0.0.0-20201026212402-0724c46b320c // indirect
 	github.com/containerd/go-runc v0.0.0-20200707131846-23d84c510c41 // indirect
 	github.com/containerd/ttrpc v1.0.2 // indirect
-	github.com/containerd/typeurl v1.0.1
+	github.com/containerd/typeurl v1.0.2
 	github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
 	github.com/eapache/go-resiliency v1.2.0
 	github.com/gogo/googleapis v1.4.0 // indirect
