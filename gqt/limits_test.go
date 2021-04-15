@@ -46,40 +46,6 @@ var _ = Describe("Limits", func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
-	Context("TCP Mem Limits", func() {
-		const tcpMemDefault = "9223372036854771712"
-
-		var (
-			tcpMemLimit string
-		)
-
-		BeforeEach(func() {
-			limits = garden.Limits{}
-			cgroupType = "memory"
-		})
-
-		JustBeforeEach(func() {
-			memLimitBytes := readFileString(filepath.Join(cgroupPath, "memory.kmem.tcp.limit_in_bytes"))
-			tcpMemLimit = strings.TrimSpace(memLimitBytes)
-		})
-
-		Context("when starting the server with --tcp-memory-limit set to 0", func() {
-			It("does not explicitly set memory.kmem.tcp.limit_in_bytes and uses the default value instead", func() {
-				Expect(tcpMemLimit).To(Equal(tcpMemDefault))
-			})
-		})
-
-		Context("when starting the server with --tcp-memory-limit set to > 0", func() {
-			BeforeEach(func() {
-				config.TCPMemoryLimit = uint64ptr(212992)
-			})
-
-			It("sets memory.kmem.tcp.limit_in_bytes to the provided value", func() {
-				Expect(tcpMemLimit).To(Equal("212992"))
-			})
-		})
-	})
-
 	Context("CPU Limits", func() {
 		BeforeEach(func() {
 			limits = garden.Limits{CPU: garden.CPULimits{LimitInShares: 128}}

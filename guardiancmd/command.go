@@ -170,7 +170,6 @@ type CommonCommand struct {
 
 	Limits struct {
 		CPUQuotaPerShare     uint64 `long:"cpu-quota-per-share" default:"0" description:"Maximum number of microseconds each cpu share assigned to a container allows per quota period"`
-		TCPMemoryLimit       uint64 `long:"tcp-memory-limit" default:"0" description:"Set hard limit for the tcp buf memory, value in bytes"`
 		DefaultBlockIOWeight uint16 `long:"default-container-blockio-weight" default:"0" description:"Default block IO weight assigned to a container"`
 		MaxContainers        uint64 `long:"max-containers" default:"0" description:"Maximum number of containers that can be created."`
 		DisableSwapLimit     bool   `long:"disable-swap-limit" description:"Disable swap memory limit"`
@@ -558,7 +557,6 @@ func (cmd *CommonCommand) wireContainerizer(
 		bundlerules.RootFS{},
 		bundlerules.Limits{
 			CpuQuotaPerShare: cmd.Limits.CPUQuotaPerShare,
-			TCPMemoryLimit:   int64(cmd.Limits.TCPMemoryLimit),
 			BlockIOWeight:    cmd.Limits.DefaultBlockIOWeight,
 			DisableSwapLimit: cmd.Limits.DisableSwapLimit,
 		},

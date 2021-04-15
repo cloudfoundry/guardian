@@ -6,13 +6,14 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
-var CpuPeriod uint64 = 100000
-var MinCpuQuota uint64 = 1000
+var (
+	CpuPeriod   uint64 = 100000
+	MinCpuQuota uint64 = 1000
+)
 
 type Limits struct {
 	CpuQuotaPerShare uint64
 	BlockIOWeight    uint16
-	TCPMemoryLimit   int64
 	DisableSwapLimit bool
 }
 
@@ -24,7 +25,7 @@ func (l Limits) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec) (goci.Bndl
 		swapLimit = &limit
 	}
 
-	bndl = bndl.WithMemoryLimit(specs.LinuxMemory{Limit: &limit, Swap: swapLimit, KernelTCP: &l.TCPMemoryLimit})
+	bndl = bndl.WithMemoryLimit(specs.LinuxMemory{Limit: &limit, Swap: swapLimit})
 
 	shares := uint64(spec.Limits.CPU.LimitInShares)
 	if spec.Limits.CPU.Weight > 0 {
