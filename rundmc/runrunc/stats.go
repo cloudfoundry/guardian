@@ -94,7 +94,7 @@ func (r *Statser) Stats(log lager.Logger, id string) (gardener.StatsContainerMet
 		Age: time.Since(ctime),
 	}
 
-	stats.Memory.TotalUsageTowardLimit = stats.Memory.TotalRss + (stats.Memory.TotalCache - stats.Memory.TotalInactiveFile)
+	stats.Memory.TotalUsageTowardLimit = stats.Memory.TotalRss + stats.Memory.TotalCache + stats.Memory.TotalSwap - stats.Memory.TotalInactiveFile
 
 	return stats, nil
 }

@@ -96,7 +96,7 @@ var _ = Describe("Stats", func() {
 								"total_active_file": 15,
 								"total_cache": 16,
 								"total_inactive_anon": 17,
-								"total_inactive_file": 18,
+								"total_inactive_file": 48,
 								"total_mapped_file": 19,
 								"total_pgfault": 20,
 								"total_pgmajfault": 21,
@@ -171,7 +171,7 @@ var _ = Describe("Stats", func() {
 				TotalActiveFile:         15,
 				TotalCache:              16,
 				TotalInactiveAnon:       17,
-				TotalInactiveFile:       18,
+				TotalInactiveFile:       48,
 				TotalMappedFile:         19,
 				TotalPgfault:            20,
 				TotalPgmajfault:         21,
@@ -183,7 +183,7 @@ var _ = Describe("Stats", func() {
 				Swap:                    30,
 				HierarchicalMemswLimit:  31,
 				TotalSwap:               32,
-				TotalUsageTowardLimit:   22,
+				TotalUsageTowardLimit:   24,
 			}))
 		})
 
