@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	. "github.com/onsi/gomega/gstruct"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -34,6 +35,8 @@ var _ = Describe("Runtime Plugin", func() {
 		config.RuntimePluginExtraArgs = []string{
 			`"--image-store"`, `some-image-store`,
 		}
+		blkioWeight := uint64(200)
+		config.DefaultBlkioWeight = &blkioWeight
 	})
 
 	JustBeforeEach(func() {
@@ -66,6 +69,90 @@ var _ = Describe("Runtime Plugin", func() {
 				"--pid-file", HaveSuffix(filepath.Join("containers", handle, "pidfile")),
 				handle,
 			))
+		})
+
+		Describe("limits", func() {
+			var (
+				containerSpec garden.ContainerSpec
+				bundle        specs.Spec
+			)
+
+			BeforeEach(func() {
+				containerSpec = garden.ContainerSpec{
+					Handle: handle,
+					Limits: garden.Limits{
+						Memory: garden.MemoryLimits{
+							LimitInBytes: 1 * 1024 * 1024,
+						},
+						CPU: garden.CPULimits{
+							LimitInShares: 10,
+						},
+						Pid: garden.PidLimits{
+							Max: 300,
+						},
+					},
+				}
+			})
+
+			JustBeforeEach(func() {
+				_, err := client.Create(containerSpec)
+				Expect(err).ToNot(HaveOccurred())
+
+				pluginArgs := readPluginArgs(argsFilepath)
+				Expect(pluginArgs[11]).To(Equal("--bundle"))
+
+				bundlePath := filepath.Join(pluginArgs[12], "config.json")
+				bundleBytes, err := ioutil.ReadFile(bundlePath)
+				Expect(err).NotTo(HaveOccurred())
+
+				bundle = specs.Spec{}
+				err = json.Unmarshal(bundleBytes, &bundle)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Describe("linux", func() {
+				BeforeEach(func() {
+					onlyOnLinux()
+				})
+				It("sets the memory limit", func() {
+					Expect(bundle.Linux.Resources.Memory.Limit).To(PointTo(Equal(int64(1 * 1024 * 1024))))
+				})
+
+				It("sets the CPU shares", func() {
+					Expect(bundle.Linux.Resources.CPU.Shares).To(PointTo(Equal(uint64(10))))
+				})
+
+				It("sets BlockIO", func() {
+					Expect(bundle.Linux.Resources.BlockIO.Weight).To(PointTo(Equal(uint16(200))))
+				})
+
+				It("sets pid limits", func() {
+					Expect(bundle.Linux.Resources.Pids.Limit).To(Equal(int64(300)))
+				})
+			})
+
+			Describe("windows", func() {
+				BeforeEach(func() {
+					onlyOnWindows()
+				})
+				It("sets the memory limit", func() {
+					Expect(bundle.Windows.Resources.Memory.Limit).To(PointTo(Equal(uint64(1 * 1024 * 1024))))
+				})
+
+				It("sets the CPU shares", func() {
+					Expect(bundle.Windows.Resources.CPU.Shares).To(PointTo(Equal(uint16(10))))
+				})
+
+				When("CPU weight is specified", func() {
+					BeforeEach(func() {
+						containerSpec.Limits.CPU.Weight = 20
+					})
+
+					It("sets the CPU shares to the CPU weight", func() {
+						Expect(bundle.Windows.Resources.CPU.Shares).To(PointTo(Equal(uint16(20))))
+					})
+				})
+			})
 		})
 	})
 
@@ -327,9 +414,7 @@ var _ = Describe("Runtime Plugin", func() {
 	})
 
 	Describe("destroying a container", func() {
-		var (
-			argsFilepath string
-		)
+		var argsFilepath string
 
 		JustBeforeEach(func() {
 			handle = fmt.Sprintf("runtime-plugin-test-handle-%s", config.Tag)
