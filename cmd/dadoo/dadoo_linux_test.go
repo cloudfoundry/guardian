@@ -577,7 +577,7 @@ var _ = Describe("Dadoo", func() {
 					Expect(os.RemoveAll(runcRoot)).To(Succeed())
 				})
 
-				It("uses the provided value as the runc root dir", func() {
+				FIt("uses the provided value as the runc root dir", func() {
 					processSpec, err := json.Marshal(&specs.Process{
 						Args:        []string{"/bin/sh", "-c", "exit 0"},
 						Cwd:         "/",
@@ -604,7 +604,7 @@ var _ = Describe("Dadoo", func() {
 			})
 		}
 
-		Describe("exec", func() {
+		PDescribe("exec", func() {
 			BeforeEach(func() {
 				mode = "exec"
 			})
