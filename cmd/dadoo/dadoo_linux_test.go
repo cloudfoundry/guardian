@@ -570,6 +570,11 @@ var _ = Describe("Dadoo", func() {
 				JustBeforeEach(func() {
 					// hangs if GinkgoWriter is attached
 					cmd := exec.Command("runc", "--root", runcRoot, "create", "--no-new-keyring", "--bundle", bundlePath, filepath.Base(bundlePath))
+
+					Expect(cmd.Run()).To(Succeed())
+
+					cmd = exec.Command("runc", "--root", runcRoot, "start", filepath.Base(bundlePath))
+
 					Expect(cmd.Run()).To(Succeed())
 				})
 
