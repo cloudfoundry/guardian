@@ -340,4 +340,42 @@ var _ = Describe("Stats", func() {
 			Expect(err).To(MatchError(ContainSubstring("runC state: banana")))
 		})
 	})
+
+	Context("when runC stats reports inconsistent memory values", func() {
+		BeforeEach(func() {
+			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+				Path: "funC-stats",
+			}, func(cmd *exec.Cmd) error {
+				cmd.Stdout.Write([]byte(`{
+					"type": "stats",
+					"data": {
+						"memory": {
+							"raw": {
+								"total_rss": 1,
+								"total_cache": 2,
+								"total_swap": 3,
+								"total_inactive_file": 7
+							}
+						}
+					}
+				}`))
+
+				return nil
+			})
+
+			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+				Path: "funC-state",
+			}, func(cmd *exec.Cmd) error {
+				cmd.Stdout.Write([]byte(`{
+					"created": "2018-08-17T11:05:57.464894007Z"
+				}`))
+				return nil
+			})
+		})
+
+		It("doesn't underflow", func() {
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stats.Memory.TotalUsageTowardLimit).To(BeZero())
+		})
+	})
 })
