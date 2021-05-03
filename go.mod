@@ -15,7 +15,7 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Microsoft/hcsshim/test v0.0.0-20201001234239-936eeeb286fd // indirect
 	github.com/cloudfoundry/dropsonde v1.0.0
-	github.com/cloudfoundry/gosigar v1.1.0
+	github.com/cloudfoundry/gosigar v1.2.0
 	github.com/containerd/cgroups v0.0.0-20201119153540-4cbc285b3327 // indirect
 	github.com/containerd/containerd v1.4.4
 	github.com/containerd/continuity v0.0.0-20201201154230-62ef0fffa6a1 // indirect
