@@ -9,6 +9,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
 )
 
 var _ = Describe("Rundmc/Cgroups/Cpucgrouper", func() {
@@ -18,6 +19,8 @@ var _ = Describe("Rundmc/Cgroups/Cpucgrouper", func() {
 	)
 
 	BeforeEach(func() {
+		fscommon.TestMode = true
+
 		var err error
 		rootPath, err = ioutil.TempDir("", "garden")
 		Expect(err).NotTo(HaveOccurred())
