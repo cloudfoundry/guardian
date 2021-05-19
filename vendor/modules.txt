@@ -103,7 +103,7 @@ github.com/cloudfoundry/sonde-go/events
 # github.com/containerd/cgroups v0.0.0-20201119153540-4cbc285b3327
 ## explicit
 github.com/containerd/cgroups/stats/v1
-# github.com/containerd/console v1.0.1
+# github.com/containerd/console v1.0.2
 github.com/containerd/console
 # github.com/containerd/containerd v1.4.4
 ## explicit
@@ -179,7 +179,7 @@ github.com/containerd/ttrpc
 # github.com/containerd/typeurl v1.0.1
 ## explicit
 github.com/containerd/typeurl
-# github.com/coreos/go-systemd/v22 v22.1.0
+# github.com/coreos/go-systemd/v22 v22.3.1
 github.com/coreos/go-systemd/v22/dbus
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
 github.com/cpuguy83/go-md2man/v2/md2man
@@ -195,7 +195,7 @@ github.com/docker/go-events
 github.com/eapache/go-resiliency/retrier
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
-# github.com/godbus/dbus/v5 v5.0.3
+# github.com/godbus/dbus/v5 v5.0.4
 github.com/godbus/dbus/v5
 # github.com/gogo/googleapis v1.4.0
 ## explicit
@@ -242,7 +242,7 @@ github.com/mitchellh/copystructure
 # github.com/mitchellh/reflectwalk v0.0.0-20170726202117-63d60e9d0dbc
 ## explicit
 github.com/mitchellh/reflectwalk
-# github.com/moby/sys/mountinfo v0.4.0
+# github.com/moby/sys/mountinfo v0.4.1
 github.com/moby/sys/mountinfo
 # github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 ## explicit
@@ -301,7 +301,7 @@ github.com/opencontainers/go-digest
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.0.0-rc93
+# github.com/opencontainers/runc v1.0.0-rc95
 ## explicit
 github.com/opencontainers/runc/libcontainer/cgroups
 github.com/opencontainers/runc/libcontainer/cgroups/devices
@@ -311,8 +311,9 @@ github.com/opencontainers/runc/libcontainer/configs
 github.com/opencontainers/runc/libcontainer/devices
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
+github.com/opencontainers/runc/libcontainer/userns
 github.com/opencontainers/runc/libcontainer/utils
-# github.com/opencontainers/runtime-spec v1.0.3-0.20200929063507-e6143ca7d51d
+# github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/opencontainers/selinux v1.8.0
@@ -376,7 +377,7 @@ golang.org/x/net/trace
 # golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
+# golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
