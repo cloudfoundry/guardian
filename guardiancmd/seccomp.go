@@ -206,6 +206,7 @@ var seccomp = &specs.LinuxSeccomp{
 		AllowSyscall("preadv"),
 		AllowSyscall("prlimit64"),
 		AllowSyscall("pselect6"),
+		AllowSyscall("ptrace"),
 		AllowSyscall("pwrite64"),
 		AllowSyscall("pwritev"),
 		AllowSyscall("read"),

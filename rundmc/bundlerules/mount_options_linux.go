@@ -1,6 +1,8 @@
 package bundlerules
 
-import "golang.org/x/sys/unix"
+import (
+	"golang.org/x/sys/unix"
+)
 
 // This comes from https://github.com/cyphar/docker/blob/c0f883fdeeb2480970fb48fbcbc2a842aa5a90e8/daemon/oci_linux.go#L473-L503
 func UnprivilegedMountFlagsGetter(path string) ([]string, error) {

@@ -39,12 +39,14 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/pid"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
+	"code.cloudfoundry.org/guardian/rundmc/sysctl"
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/guardian/sysinfo"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/localip"
 	"github.com/eapache/go-resiliency/retrier"
+	version "github.com/hashicorp/go-version"
 	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -515,6 +517,18 @@ func (cmd *CommonCommand) wireContainerizer(
 		WithMaskedPaths(defaultMaskedPaths())
 
 	unprivilegedBundle.Spec.Linux.Seccomp = seccomp
+
+	ptraceAllowed, err := ptraceCanBeAllowed()
+	if err != nil {
+		return nil, nil, err
+	}
+	if ptraceAllowed {
+		unprivilegedBundle.Spec.Linux.Seccomp.Syscalls = append(
+			unprivilegedBundle.Spec.Linux.Seccomp.Syscalls,
+			AllowSyscall("ptrace"),
+		)
+	}
+
 	if cmd.Containers.ApparmorProfile != "" {
 		unprivilegedBundle = unprivilegedBundle.WithApparmorProfile(cmd.Containers.ApparmorProfile)
 	}
@@ -787,4 +801,38 @@ func defaultMaskedPaths() []string {
 		"/proc/keys",
 		"/sys/firmware",
 	}
+}
+
+const (
+	minimumYamaKernelVersion = "4.8.0"
+	ptraceScope              = uint32(1)
+)
+
+func ptraceCanBeAllowed() (bool, error) {
+	sysctlGetter := sysctl.New()
+
+	kernelVersion, err := sysctlGetter.GetString("kernel.osrelease")
+	if err != nil {
+		return false, err
+	}
+
+	minKernelSemver, err := version.NewVersion(minimumYamaKernelVersion)
+	if err != nil {
+		return false, err
+	}
+
+	kernelSemver, err := version.NewVersion(kernelVersion)
+	if err != nil {
+		return false, err
+	}
+
+	actualPtraceScope, err := sysctlGetter.Get("kernel.yama.ptrace_scope")
+	if err != nil {
+		return false, err
+	}
+
+	ptraceAllowed := kernelSemver.Core().GreaterThanOrEqual(minKernelSemver.Core()) &&
+		actualPtraceScope <= ptraceScope
+
+	return ptraceAllowed, nil
 }
