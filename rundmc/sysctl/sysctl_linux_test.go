@@ -38,4 +38,21 @@ var _ = Describe("Sysctl", func() {
 			})
 		})
 	})
+
+	Describe("GetString", func() {
+		It("gets the value of a sysctl kernel parameter", func() {
+			value, err := s.GetString("kernel.osrelease")
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(value).ToNot(BeEmpty())
+		})
+
+		When("it fails to retrieve the property", func() {
+			It("fails", func() {
+				_, err := s.Get("foo.bar")
+
+				Expect(err).To(HaveOccurred())
+			})
+		})
+	})
 })

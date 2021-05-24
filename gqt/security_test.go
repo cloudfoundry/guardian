@@ -13,9 +13,7 @@ import (
 )
 
 var _ = Describe("Security", func() {
-	var (
-		client *runner.RunningGarden
-	)
+	var client *runner.RunningGarden
 
 	JustBeforeEach(func() {
 		client = runner.Start(config)
@@ -59,9 +57,7 @@ var _ = Describe("Security", func() {
 				})
 
 				Context("when running a pea", func() {
-					var (
-						peaRootfs string
-					)
+					var peaRootfs string
 
 					BeforeEach(func() {
 						peaRootfs = createPeaRootfsTar()
@@ -161,6 +157,34 @@ var _ = Describe("Security", func() {
 				_, err := client.Create(garden.ContainerSpec{})
 				Expect(err).To(HaveOccurred())
 			})
+		})
+	})
+
+	Describe("ptrace in seccomp allow rules", func() {
+		It("should allow the ptrace syscall without CAP_SYS_PTRACE", func() {
+			container, err := client.Create(garden.ContainerSpec{
+				Image: garden.ImageRef{
+					URI: "docker://index.docker.io/cfgarden/strace",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			process, err := container.Run(garden.ProcessSpec{
+				Path: "strace",
+				Args: []string{"echo", "hello"},
+			}, garden.ProcessIO{
+				Stdout: GinkgoWriter,
+				Stderr: GinkgoWriter,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			status := make(chan int)
+			go func() {
+				exit, err := process.Wait()
+				Expect(err).NotTo(HaveOccurred())
+				status <- exit
+			}()
+
+			Eventually(status).Should(Receive(Equal(0)))
 		})
 	})
 })

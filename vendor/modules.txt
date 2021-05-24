@@ -222,6 +222,9 @@ github.com/hashicorp/errwrap
 # github.com/hashicorp/go-multierror v1.1.0
 ## explicit
 github.com/hashicorp/go-multierror
+# github.com/hashicorp/go-version v1.3.0
+## explicit
+github.com/hashicorp/go-version
 # github.com/imdario/mergo v0.3.11
 ## explicit
 # github.com/jessevdk/go-flags v1.4.0

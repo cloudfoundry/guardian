@@ -14,19 +14,26 @@ func New() *Sysctl {
 }
 
 func (s *Sysctl) Get(key string) (uint32, error) {
-	path := filepath.Join("/proc/sys", strings.ReplaceAll(key, ".", "/"))
-
-	stringValue, err := ioutil.ReadFile(path)
+	stringValue, err := s.GetString(key)
 	if err != nil {
 		return 0, err
 	}
 
-	trimmedStringValue := strings.TrimSpace(string(stringValue))
-
-	value, err := strconv.ParseUint(trimmedStringValue, 10, 32)
+	value, err := strconv.ParseUint(stringValue, 10, 32)
 	if err != nil {
 		return 0, err
 	}
 
 	return uint32(value), nil
+}
+
+func (s *Sysctl) GetString(key string) (string, error) {
+	path := filepath.Join("/proc/sys", strings.ReplaceAll(key, ".", "/"))
+
+	stringValue, err := ioutil.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(stringValue)), nil
 }
