@@ -5,7 +5,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
-func MinPtraceKernelVersion() (int, int, int) {
+func MinPtraceKernelVersion() (uint16, uint16, uint16) {
 	return 4, 8, 0
 }
 

@@ -15,7 +15,7 @@ var _ = DescribeTable("Checking min version with kernel 5.4.0-72-generic", func(
 
 	minVerChecker := guardiancmd.NewKernelMinVersionChecker(sysctlGetter)
 
-	ok, err := minVerChecker.CheckVersionIsAtLeast(maj, min, patch)
+	ok, err := minVerChecker.CheckVersionIsAtLeast(uint16(maj), uint16(min), uint16(patch))
 
 	Expect(ok).To(Equal(expectedOutput))
 	Expect(err).NotTo(HaveOccurred())
@@ -44,6 +44,8 @@ var _ = DescribeTable("Checking kernel versions against 4.8.0", func(kernelVersi
 },
 	Entry("5.4.0-72-generic", "5.4.0-72-generic", true, nil),
 	Entry("5.4.0+72-generic", "5.4.0+72-generic", true, nil),
+	Entry("5.4.89+", "5.4.89+", true, nil),
+	Entry("4.18.0-240.22.1.el8_3.x86_64", "4.18.0-240.22.1.el8_3.x86_64", true, nil),
 	Entry("2 digit semver with -", "5.4-72-generic", true, nil),
 	Entry("1 digit semver with -", "5-72-generic", true, nil),
 	Entry("1 digit semver with -", "4-72-generic", false, nil),
