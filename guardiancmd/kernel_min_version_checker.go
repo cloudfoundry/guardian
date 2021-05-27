@@ -43,7 +43,7 @@ func (c KernelMinVersionChecker) CheckVersionIsAtLeast(maj, min, patch uint16) (
 func kernelVersionFromReleaseString(release string) (uint64, error) {
 	parts := kernelVersionRegexp.FindStringSubmatch(release)
 	if len(parts) != 4 {
-		return 0, fmt.Errorf("Malformed version: %s", release)
+		return 0, fmt.Errorf("malformed version: %s", release)
 	}
 
 	maj, err := strconv.ParseInt(parts[1], 10, 16)

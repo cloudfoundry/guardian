@@ -50,6 +50,6 @@ var _ = DescribeTable("Checking kernel versions against 4.8.0", func(kernelVersi
 	Entry("1 digit semver with -", "5-72-generic", true, nil),
 	Entry("1 digit semver with -", "4-72-generic", false, nil),
 	Entry("1 digit semver", "3", false, nil),
-	Entry("nonsense", "ubuntu-4.15.2-generic", false, errors.New("Malformed version: ubuntu-4.15.2-generic")),
-	Entry("empty", "", false, errors.New("Malformed version: ")),
+	Entry("nonsense", "ubuntu-4.15.2-generic", false, errors.New("malformed version: ubuntu-4.15.2-generic")),
+	Entry("empty", "", false, errors.New("malformed version: ")),
 )
