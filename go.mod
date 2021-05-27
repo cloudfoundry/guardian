@@ -13,16 +13,11 @@ require (
 	code.cloudfoundry.org/lager v2.0.0+incompatible
 	code.cloudfoundry.org/localip v0.0.0-20170223024724-b88ad0dea95c
 	github.com/BurntSushi/toml v0.3.1
-	github.com/Microsoft/hcsshim/test v0.0.0-20201001234239-936eeeb286fd // indirect
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.1.0
-	github.com/containerd/cgroups v0.0.0-20201119153540-4cbc285b3327 // indirect
-	github.com/containerd/containerd v1.4.4
-	github.com/containerd/continuity v0.0.0-20201201154230-62ef0fffa6a1 // indirect
-	github.com/containerd/fifo v0.0.0-20201026212402-0724c46b320c // indirect
-	github.com/containerd/go-runc v0.0.0-20200707131846-23d84c510c41 // indirect
+	github.com/containerd/containerd v1.5.2
 	github.com/containerd/ttrpc v1.0.2 // indirect
-	github.com/containerd/typeurl v1.0.1
+	github.com/containerd/typeurl v1.0.2
 	github.com/docker/docker v0.7.3-0.20190329212828-d7ab8ad145fa
 	github.com/eapache/go-resiliency v1.2.0
 	github.com/gogo/googleapis v1.4.0 // indirect
@@ -31,7 +26,6 @@ require (
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1
-	github.com/mailru/easyjson v0.0.0-20190403194419-1ea4449da983 // indirect
 	github.com/mitchellh/copystructure v0.0.0-20170525013902-d23ffcb85de3
 	github.com/mitchellh/reflectwalk v0.0.0-20170726202117-63d60e9d0dbc // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
@@ -47,14 +41,13 @@ require (
 	github.com/st3v/glager v0.3.0
 	github.com/tedsuo/ifrit v0.0.0-20180410193936-e89a512c3162
 	github.com/urfave/cli/v2 v2.3.0
-	github.com/vishvananda/netlink v1.1.0
-	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
+	github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852
+	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae
 	go.opencensus.io v0.22.5 // indirect
 	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
 	google.golang.org/genproto v0.0.0-20201201144952-b05cb90ed32e // indirect
 	google.golang.org/grpc v1.33.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0
-	gotest.tools/v3 v3.0.2 // indirect
 )
 
 replace (
