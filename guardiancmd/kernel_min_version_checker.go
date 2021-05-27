@@ -2,9 +2,11 @@ package guardiancmd
 
 import (
 	"fmt"
-
-	"github.com/hashicorp/go-version"
+	"regexp"
+	"strconv"
 )
+
+var kernelVersionRegexp = regexp.MustCompile(`^(\d+)(?:\.(\d+))?(?:\.(\d+))?.*$`)
 
 //go:generate counterfeiter . SysctlGetter
 
@@ -22,18 +24,52 @@ func NewKernelMinVersionChecker(sysctlGetter SysctlGetter) KernelMinVersionCheck
 	}
 }
 
-func (c KernelMinVersionChecker) CheckVersionIsAtLeast(maj, min, patch int) (bool, error) {
-	minVersion := version.Must(version.NewVersion(fmt.Sprintf("%d.%d.%d", maj, min, patch)))
+func (c KernelMinVersionChecker) CheckVersionIsAtLeast(maj, min, patch uint16) (bool, error) {
+	minVersion := kernelVersion(maj, min, patch)
 
-	kernelVersion, err := c.sysctlGetter.GetString("kernel.osrelease")
+	kernelVersionStr, err := c.sysctlGetter.GetString("kernel.osrelease")
 	if err != nil {
 		return false, err
 	}
 
-	kernelSemver, err := version.NewVersion(kernelVersion)
+	kernelVersion, err := kernelVersionFromReleaseString(kernelVersionStr)
 	if err != nil {
 		return false, err
 	}
 
-	return kernelSemver.Core().GreaterThanOrEqual(minVersion), nil
+	return kernelVersion >= minVersion, nil
+}
+
+func kernelVersionFromReleaseString(release string) (uint64, error) {
+	parts := kernelVersionRegexp.FindStringSubmatch(release)
+	if len(parts) != 4 {
+		return 0, fmt.Errorf("Malformed version: %s", release)
+	}
+
+	maj, err := strconv.ParseInt(parts[1], 10, 16)
+	if err != nil {
+		return 0, err
+	}
+
+	var min int64
+	if parts[2] != "" {
+		min, err = strconv.ParseInt(parts[2], 10, 16)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	var patch int64
+	if parts[3] != "" {
+		patch, err = strconv.ParseInt(parts[3], 10, 16)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return kernelVersion(uint16(maj), uint16(min), uint16(patch)), nil
+}
+
+func kernelVersion(maj, min, patch uint16) uint64 {
+	return uint64(maj)<<32 + uint64(min)<<16 + uint64(patch)
 }
