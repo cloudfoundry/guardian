@@ -70,7 +70,7 @@ func run() int {
 	}
 
 	ioWg := &sync.WaitGroup{}
-	var runcExecCmd *exec.Cmd
+	var runcCmd *exec.Cmd
 	if *tty {
 		winsz, err := openFile(filepath.Join(processStateDir, "winsz"), os.O_RDWR)
 		defer closeFile(winsz)
@@ -83,25 +83,25 @@ func run() int {
 			return logAndExit(fmt.Sprintf("value for --socket-dir-path cannot exceed %d characters in length", MaxSocketDirPathLength))
 		}
 		ttySocketPath := setupTTYSocket(stdinR, stdoutW, winsz, pidFilePath, *socketDirPath, ioWg)
-		runcExecCmd = dadoo.BuildRuncCommand(runtime, runMode, *runcRoot, processStateDir, containerId, ttySocketPath, logFile)
+		runcCmd = dadoo.BuildRuncCommand(runtime, runMode, *runcRoot, processStateDir, containerId, ttySocketPath, logFile)
 	} else {
-		runcExecCmd = dadoo.BuildRuncCommand(runtime, runMode, *runcRoot, processStateDir, containerId, "", logFile)
-		runcExecCmd.Stdin = stdinR
-		runcExecCmd.Stdout = stdoutW
-		runcExecCmd.Stderr = stderrW
+		runcCmd = dadoo.BuildRuncCommand(runtime, runMode, *runcRoot, processStateDir, containerId, "", logFile)
+		runcCmd.Stdin = stdinR
+		runcCmd.Stdout = stdoutW
+		runcCmd.Stderr = stderrW
 	}
 
 	// we need to be the subreaper so we can wait on the detached container process
 	system.SetSubreaper(os.Getpid())
 
-	if err := runcExecCmd.Start(); err != nil {
+	if err := runcCmd.Start(); err != nil {
 		runcExitCodePipe.Write([]byte{2})
 		return 2
 	}
 
 	var status syscall.WaitStatus
 	var rusage syscall.Rusage
-	_, err = syscall.Wait4(runcExecCmd.Process.Pid, &status, 0, &rusage)
+	_, err = syscall.Wait4(runcCmd.Process.Pid, &status, 0, &rusage)
 	check(err)    // Start succeeded but Wait4 failed, this can only be a programmer error
 	logFD.Close() // No more logs from runc so close fd
 
@@ -191,7 +191,7 @@ func setupTTYSocket(stdin io.Reader, stdout io.Writer, winszFifo io.Reader, pidF
 	l, err := net.Listen("unix", ttySockPath)
 	check(err)
 
-	//go to the background and set master
+	// go to the background and set master
 	go func(ln net.Listener) (err error) {
 		// if any of the following errors, it means runc has connected to the
 		// socket, so it must've started, thus we might need to kill the process
