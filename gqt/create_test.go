@@ -17,6 +17,8 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	"code.cloudfoundry.org/guardian/guardiancmd"
+	"code.cloudfoundry.org/guardian/rundmc/sysctl"
 
 	. "code.cloudfoundry.org/guardian/matchers"
 	. "github.com/onsi/ginkgo"
@@ -75,7 +77,7 @@ var _ = Describe("Creating a Container", func() {
 
 	Context("when creating fails", func() {
 		// cause Create to fail by specifying an invalid network CIDR address
-		var containerSpec = garden.ContainerSpec{
+		containerSpec := garden.ContainerSpec{
 			Network: "not-a-valid-network",
 		}
 
@@ -299,7 +301,7 @@ var _ = Describe("Creating a Container", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
-	//TODO why duplicate?
+	// TODO why duplicate?
 	Context("when creating a container fails", func() {
 		It("should not leak networking configuration", func() {
 			_, err := client.Create(garden.ContainerSpec{
@@ -435,6 +437,12 @@ var _ = Describe("Creating a Container", func() {
 
 	Describe("block IO weight", func() {
 		BeforeEach(func() {
+			kernelMinVersionChecker := guardiancmd.NewKernelMinVersionChecker(sysctl.New())
+			is50, err := kernelMinVersionChecker.CheckVersionIsAtLeast(5, 0, 0)
+			Expect(err).NotTo(HaveOccurred())
+			if is50 {
+				Skip("blkio.weight is removed in kernels >= 5.0")
+			}
 			config.DefaultBlkioWeight = uint64ptr(400)
 		})
 
