@@ -1,7 +1,6 @@
 package gqt_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -625,26 +624,6 @@ var _ = Describe("Creating a Container", func() {
 		})
 	})
 })
-
-func initProcessPID(handle string) int {
-	Eventually(fmt.Sprintf("%s/%s/state.json", getRuncRoot(), handle)).Should(BeAnExistingFile())
-
-	state := struct {
-		Pid int `json:"init_process_pid"`
-	}{}
-
-	Eventually(func() error {
-		stateFile, err := os.Open(fmt.Sprintf("%s/%s/state.json", getRuncRoot(), handle))
-		Expect(err).NotTo(HaveOccurred())
-		defer stateFile.Close()
-
-		// state.json is sometimes empty immediately after creation, so keep
-		// trying until it's valid json
-		return json.NewDecoder(stateFile).Decode(&state)
-	}).Should(Succeed())
-
-	return state.Pid
-}
 
 func psauxf() string {
 	out, err := exec.Command("ps", "auxf").CombinedOutput()

@@ -2,6 +2,7 @@ package gqt_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -540,14 +541,13 @@ func restartContainerd(client *runner.RunningGarden) {
 	waitForContainerd(client)
 }
 
-//We need this because the containerd client needs time
-//to recover its connections after containerd restarts
+// We need this because the containerd client needs time
+// to recover its connections after containerd restarts
 func waitForContainerd(client *runner.RunningGarden) {
 	Eventually(func() error {
 		_, err := client.Containers(garden.Properties{})
 		return err
 	}).Should(Succeed())
-
 }
 
 func numGoRoutines(client *runner.RunningGarden) int {
@@ -647,4 +647,24 @@ func getMountTable() (string, error) {
 	}
 
 	return string(output), nil
+}
+
+func initProcessPID(handle string) int {
+	Eventually(fmt.Sprintf("%s/%s/state.json", getRuncRoot(), handle)).Should(BeAnExistingFile())
+
+	state := struct {
+		Pid int `json:"init_process_pid"`
+	}{}
+
+	Eventually(func() error {
+		stateFile, err := os.Open(fmt.Sprintf("%s/%s/state.json", getRuncRoot(), handle))
+		Expect(err).NotTo(HaveOccurred())
+		defer stateFile.Close()
+
+		// state.json is sometimes empty immediately after creation, so keep
+		// trying until it's valid json
+		return json.NewDecoder(stateFile).Decode(&state)
+	}).Should(Succeed())
+
+	return state.Pid
 }
