@@ -32,7 +32,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
 
-	"github.com/containers/image/types"
+	"github.com/containers/image/v5/types"
 	"github.com/docker/distribution/registry/api/errcode"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	errorspkg "github.com/pkg/errors"
@@ -313,7 +313,6 @@ func createSystemContext(baseImageURL *url.URL, createConfig config.Create, user
 	default:
 		return types.SystemContext{}
 	}
-
 }
 
 func skipTLSValidation(baseImageURL *url.URL, trustedRegistries []string) bool {

@@ -47,15 +47,16 @@ func (fake *FakeVolumeDriver) VolumeSize(arg1 lager.Logger, arg2 string) (int64,
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.VolumeSizeStub
+	fakeReturns := fake.volumeSizeReturns
 	fake.recordInvocation("VolumeSize", []interface{}{arg1, arg2})
 	fake.volumeSizeMutex.Unlock()
-	if fake.VolumeSizeStub != nil {
-		return fake.VolumeSizeStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.volumeSizeReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -110,15 +111,16 @@ func (fake *FakeVolumeDriver) Volumes(arg1 lager.Logger) ([]string, error) {
 	fake.volumesArgsForCall = append(fake.volumesArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.VolumesStub
+	fakeReturns := fake.volumesReturns
 	fake.recordInvocation("Volumes", []interface{}{arg1})
 	fake.volumesMutex.Unlock()
-	if fake.VolumesStub != nil {
-		return fake.VolumesStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.volumesReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

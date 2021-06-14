@@ -7,7 +7,7 @@ import (
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
-	"github.com/containers/image/types"
+	"github.com/containers/image/v5/types"
 )
 
 type FakeSource struct {
@@ -61,15 +61,16 @@ func (fake *FakeSource) Blob(arg1 lager.Logger, arg2 groot.LayerInfo) (string, i
 		arg1 lager.Logger
 		arg2 groot.LayerInfo
 	}{arg1, arg2})
+	stub := fake.BlobStub
+	fakeReturns := fake.blobReturns
 	fake.recordInvocation("Blob", []interface{}{arg1, arg2})
 	fake.blobMutex.Unlock()
-	if fake.BlobStub != nil {
-		return fake.BlobStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
 	}
-	fakeReturns := fake.blobReturns
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
@@ -126,15 +127,16 @@ func (fake *FakeSource) Close() error {
 	ret, specificReturn := fake.closeReturnsOnCall[len(fake.closeArgsForCall)]
 	fake.closeArgsForCall = append(fake.closeArgsForCall, struct {
 	}{})
+	stub := fake.CloseStub
+	fakeReturns := fake.closeReturns
 	fake.recordInvocation("Close", []interface{}{})
 	fake.closeMutex.Unlock()
-	if fake.CloseStub != nil {
-		return fake.CloseStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.closeReturns
 	return fakeReturns.result1
 }
 
@@ -179,15 +181,16 @@ func (fake *FakeSource) Manifest(arg1 lager.Logger) (types.Image, error) {
 	fake.manifestArgsForCall = append(fake.manifestArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.ManifestStub
+	fakeReturns := fake.manifestReturns
 	fake.recordInvocation("Manifest", []interface{}{arg1})
 	fake.manifestMutex.Unlock()
-	if fake.ManifestStub != nil {
-		return fake.ManifestStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.manifestReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

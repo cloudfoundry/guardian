@@ -42,15 +42,16 @@ func (fake *FakeStoreNamespacer) ApplyMappings(arg1 []groot.IDMappingSpec, arg2 
 		arg1 []groot.IDMappingSpec
 		arg2 []groot.IDMappingSpec
 	}{arg1Copy, arg2Copy})
+	stub := fake.ApplyMappingsStub
+	fakeReturns := fake.applyMappingsReturns
 	fake.recordInvocation("ApplyMappings", []interface{}{arg1Copy, arg2Copy})
 	fake.applyMappingsMutex.Unlock()
-	if fake.ApplyMappingsStub != nil {
-		return fake.ApplyMappingsStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.applyMappingsReturns
 	return fakeReturns.result1
 }
 

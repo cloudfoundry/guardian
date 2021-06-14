@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
-	"github.com/containers/image/docker/reference"
-	"github.com/containers/image/types"
+	"github.com/containers/image/v5/docker/reference"
+	"github.com/containers/image/v5/types"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -145,6 +145,17 @@ type FakeManifest struct {
 		result1 int64
 		result2 error
 	}
+	SupportsEncryptionStub        func(context.Context) bool
+	supportsEncryptionMutex       sync.RWMutex
+	supportsEncryptionArgsForCall []struct {
+		arg1 context.Context
+	}
+	supportsEncryptionReturns struct {
+		result1 bool
+	}
+	supportsEncryptionReturnsOnCall map[int]struct {
+		result1 bool
+	}
 	UpdatedImageStub        func(context.Context, types.ManifestUpdateOptions) (types.Image, error)
 	updatedImageMutex       sync.RWMutex
 	updatedImageArgsForCall []struct {
@@ -180,15 +191,16 @@ func (fake *FakeManifest) ConfigBlob(arg1 context.Context) ([]byte, error) {
 	fake.configBlobArgsForCall = append(fake.configBlobArgsForCall, struct {
 		arg1 context.Context
 	}{arg1})
+	stub := fake.ConfigBlobStub
+	fakeReturns := fake.configBlobReturns
 	fake.recordInvocation("ConfigBlob", []interface{}{arg1})
 	fake.configBlobMutex.Unlock()
-	if fake.ConfigBlobStub != nil {
-		return fake.ConfigBlobStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.configBlobReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -242,15 +254,16 @@ func (fake *FakeManifest) ConfigInfo() types.BlobInfo {
 	ret, specificReturn := fake.configInfoReturnsOnCall[len(fake.configInfoArgsForCall)]
 	fake.configInfoArgsForCall = append(fake.configInfoArgsForCall, struct {
 	}{})
+	stub := fake.ConfigInfoStub
+	fakeReturns := fake.configInfoReturns
 	fake.recordInvocation("ConfigInfo", []interface{}{})
 	fake.configInfoMutex.Unlock()
-	if fake.ConfigInfoStub != nil {
-		return fake.ConfigInfoStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.configInfoReturns
 	return fakeReturns.result1
 }
 
@@ -295,15 +308,16 @@ func (fake *FakeManifest) EmbeddedDockerReferenceConflicts(arg1 reference.Named)
 	fake.embeddedDockerReferenceConflictsArgsForCall = append(fake.embeddedDockerReferenceConflictsArgsForCall, struct {
 		arg1 reference.Named
 	}{arg1})
+	stub := fake.EmbeddedDockerReferenceConflictsStub
+	fakeReturns := fake.embeddedDockerReferenceConflictsReturns
 	fake.recordInvocation("EmbeddedDockerReferenceConflicts", []interface{}{arg1})
 	fake.embeddedDockerReferenceConflictsMutex.Unlock()
-	if fake.EmbeddedDockerReferenceConflictsStub != nil {
-		return fake.EmbeddedDockerReferenceConflictsStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.embeddedDockerReferenceConflictsReturns
 	return fakeReturns.result1
 }
 
@@ -355,15 +369,16 @@ func (fake *FakeManifest) Inspect(arg1 context.Context) (*types.ImageInspectInfo
 	fake.inspectArgsForCall = append(fake.inspectArgsForCall, struct {
 		arg1 context.Context
 	}{arg1})
+	stub := fake.InspectStub
+	fakeReturns := fake.inspectReturns
 	fake.recordInvocation("Inspect", []interface{}{arg1})
 	fake.inspectMutex.Unlock()
-	if fake.InspectStub != nil {
-		return fake.InspectStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.inspectReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -417,15 +432,16 @@ func (fake *FakeManifest) LayerInfos() []types.BlobInfo {
 	ret, specificReturn := fake.layerInfosReturnsOnCall[len(fake.layerInfosArgsForCall)]
 	fake.layerInfosArgsForCall = append(fake.layerInfosArgsForCall, struct {
 	}{})
+	stub := fake.LayerInfosStub
+	fakeReturns := fake.layerInfosReturns
 	fake.recordInvocation("LayerInfos", []interface{}{})
 	fake.layerInfosMutex.Unlock()
-	if fake.LayerInfosStub != nil {
-		return fake.LayerInfosStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.layerInfosReturns
 	return fakeReturns.result1
 }
 
@@ -470,15 +486,16 @@ func (fake *FakeManifest) LayerInfosForCopy(arg1 context.Context) ([]types.BlobI
 	fake.layerInfosForCopyArgsForCall = append(fake.layerInfosForCopyArgsForCall, struct {
 		arg1 context.Context
 	}{arg1})
+	stub := fake.LayerInfosForCopyStub
+	fakeReturns := fake.layerInfosForCopyReturns
 	fake.recordInvocation("LayerInfosForCopy", []interface{}{arg1})
 	fake.layerInfosForCopyMutex.Unlock()
-	if fake.LayerInfosForCopyStub != nil {
-		return fake.LayerInfosForCopyStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.layerInfosForCopyReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -533,15 +550,16 @@ func (fake *FakeManifest) Manifest(arg1 context.Context) ([]byte, string, error)
 	fake.manifestArgsForCall = append(fake.manifestArgsForCall, struct {
 		arg1 context.Context
 	}{arg1})
+	stub := fake.ManifestStub
+	fakeReturns := fake.manifestReturns
 	fake.recordInvocation("Manifest", []interface{}{arg1})
 	fake.manifestMutex.Unlock()
-	if fake.ManifestStub != nil {
-		return fake.ManifestStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
 	}
-	fakeReturns := fake.manifestReturns
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
@@ -599,15 +617,16 @@ func (fake *FakeManifest) OCIConfig(arg1 context.Context) (*v1.Image, error) {
 	fake.oCIConfigArgsForCall = append(fake.oCIConfigArgsForCall, struct {
 		arg1 context.Context
 	}{arg1})
+	stub := fake.OCIConfigStub
+	fakeReturns := fake.oCIConfigReturns
 	fake.recordInvocation("OCIConfig", []interface{}{arg1})
 	fake.oCIConfigMutex.Unlock()
-	if fake.OCIConfigStub != nil {
-		return fake.OCIConfigStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.oCIConfigReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -661,15 +680,16 @@ func (fake *FakeManifest) Reference() types.ImageReference {
 	ret, specificReturn := fake.referenceReturnsOnCall[len(fake.referenceArgsForCall)]
 	fake.referenceArgsForCall = append(fake.referenceArgsForCall, struct {
 	}{})
+	stub := fake.ReferenceStub
+	fakeReturns := fake.referenceReturns
 	fake.recordInvocation("Reference", []interface{}{})
 	fake.referenceMutex.Unlock()
-	if fake.ReferenceStub != nil {
-		return fake.ReferenceStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.referenceReturns
 	return fakeReturns.result1
 }
 
@@ -714,15 +734,16 @@ func (fake *FakeManifest) Signatures(arg1 context.Context) ([][]byte, error) {
 	fake.signaturesArgsForCall = append(fake.signaturesArgsForCall, struct {
 		arg1 context.Context
 	}{arg1})
+	stub := fake.SignaturesStub
+	fakeReturns := fake.signaturesReturns
 	fake.recordInvocation("Signatures", []interface{}{arg1})
 	fake.signaturesMutex.Unlock()
-	if fake.SignaturesStub != nil {
-		return fake.SignaturesStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.signaturesReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -776,15 +797,16 @@ func (fake *FakeManifest) Size() (int64, error) {
 	ret, specificReturn := fake.sizeReturnsOnCall[len(fake.sizeArgsForCall)]
 	fake.sizeArgsForCall = append(fake.sizeArgsForCall, struct {
 	}{})
+	stub := fake.SizeStub
+	fakeReturns := fake.sizeReturns
 	fake.recordInvocation("Size", []interface{}{})
 	fake.sizeMutex.Unlock()
-	if fake.SizeStub != nil {
-		return fake.SizeStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.sizeReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -826,6 +848,67 @@ func (fake *FakeManifest) SizeReturnsOnCall(i int, result1 int64, result2 error)
 	}{result1, result2}
 }
 
+func (fake *FakeManifest) SupportsEncryption(arg1 context.Context) bool {
+	fake.supportsEncryptionMutex.Lock()
+	ret, specificReturn := fake.supportsEncryptionReturnsOnCall[len(fake.supportsEncryptionArgsForCall)]
+	fake.supportsEncryptionArgsForCall = append(fake.supportsEncryptionArgsForCall, struct {
+		arg1 context.Context
+	}{arg1})
+	stub := fake.SupportsEncryptionStub
+	fakeReturns := fake.supportsEncryptionReturns
+	fake.recordInvocation("SupportsEncryption", []interface{}{arg1})
+	fake.supportsEncryptionMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeManifest) SupportsEncryptionCallCount() int {
+	fake.supportsEncryptionMutex.RLock()
+	defer fake.supportsEncryptionMutex.RUnlock()
+	return len(fake.supportsEncryptionArgsForCall)
+}
+
+func (fake *FakeManifest) SupportsEncryptionCalls(stub func(context.Context) bool) {
+	fake.supportsEncryptionMutex.Lock()
+	defer fake.supportsEncryptionMutex.Unlock()
+	fake.SupportsEncryptionStub = stub
+}
+
+func (fake *FakeManifest) SupportsEncryptionArgsForCall(i int) context.Context {
+	fake.supportsEncryptionMutex.RLock()
+	defer fake.supportsEncryptionMutex.RUnlock()
+	argsForCall := fake.supportsEncryptionArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeManifest) SupportsEncryptionReturns(result1 bool) {
+	fake.supportsEncryptionMutex.Lock()
+	defer fake.supportsEncryptionMutex.Unlock()
+	fake.SupportsEncryptionStub = nil
+	fake.supportsEncryptionReturns = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeManifest) SupportsEncryptionReturnsOnCall(i int, result1 bool) {
+	fake.supportsEncryptionMutex.Lock()
+	defer fake.supportsEncryptionMutex.Unlock()
+	fake.SupportsEncryptionStub = nil
+	if fake.supportsEncryptionReturnsOnCall == nil {
+		fake.supportsEncryptionReturnsOnCall = make(map[int]struct {
+			result1 bool
+		})
+	}
+	fake.supportsEncryptionReturnsOnCall[i] = struct {
+		result1 bool
+	}{result1}
+}
+
 func (fake *FakeManifest) UpdatedImage(arg1 context.Context, arg2 types.ManifestUpdateOptions) (types.Image, error) {
 	fake.updatedImageMutex.Lock()
 	ret, specificReturn := fake.updatedImageReturnsOnCall[len(fake.updatedImageArgsForCall)]
@@ -833,15 +916,16 @@ func (fake *FakeManifest) UpdatedImage(arg1 context.Context, arg2 types.Manifest
 		arg1 context.Context
 		arg2 types.ManifestUpdateOptions
 	}{arg1, arg2})
+	stub := fake.UpdatedImageStub
+	fakeReturns := fake.updatedImageReturns
 	fake.recordInvocation("UpdatedImage", []interface{}{arg1, arg2})
 	fake.updatedImageMutex.Unlock()
-	if fake.UpdatedImageStub != nil {
-		return fake.UpdatedImageStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.updatedImageReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -896,15 +980,16 @@ func (fake *FakeManifest) UpdatedImageNeedsLayerDiffIDs(arg1 types.ManifestUpdat
 	fake.updatedImageNeedsLayerDiffIDsArgsForCall = append(fake.updatedImageNeedsLayerDiffIDsArgsForCall, struct {
 		arg1 types.ManifestUpdateOptions
 	}{arg1})
+	stub := fake.UpdatedImageNeedsLayerDiffIDsStub
+	fakeReturns := fake.updatedImageNeedsLayerDiffIDsReturns
 	fake.recordInvocation("UpdatedImageNeedsLayerDiffIDs", []interface{}{arg1})
 	fake.updatedImageNeedsLayerDiffIDsMutex.Unlock()
-	if fake.UpdatedImageNeedsLayerDiffIDsStub != nil {
-		return fake.UpdatedImageNeedsLayerDiffIDsStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.updatedImageNeedsLayerDiffIDsReturns
 	return fakeReturns.result1
 }
 
@@ -975,6 +1060,8 @@ func (fake *FakeManifest) Invocations() map[string][][]interface{} {
 	defer fake.signaturesMutex.RUnlock()
 	fake.sizeMutex.RLock()
 	defer fake.sizeMutex.RUnlock()
+	fake.supportsEncryptionMutex.RLock()
+	defer fake.supportsEncryptionMutex.RUnlock()
 	fake.updatedImageMutex.RLock()
 	defer fake.updatedImageMutex.RUnlock()
 	fake.updatedImageNeedsLayerDiffIDsMutex.RLock()

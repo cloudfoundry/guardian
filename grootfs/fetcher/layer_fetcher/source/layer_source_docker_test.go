@@ -19,7 +19,7 @@ import (
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/containers/image/types"
+	"github.com/containers/image/v5/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -309,7 +309,7 @@ var _ = Describe("Layer source: Docker", func() {
 		})
 
 		It("retries fetching the manifest twice", func() {
-			fakeRegistry.FailNextRequests(2)
+			fakeRegistry.FailNextManifestRequests(2)
 
 			_, err := layerSource.Manifest(logger)
 			Expect(err).NotTo(HaveOccurred())
@@ -321,7 +321,7 @@ var _ = Describe("Layer source: Docker", func() {
 		})
 
 		It("retries fetching a blob twice", func() {
-			fakeRegistry.FailNextRequests(2)
+			fakeRegistry.FailNextBlobRequests(2)
 
 			var err error
 			blobPath, _, err = layerSource.Blob(logger, layerInfos[0])
@@ -359,7 +359,6 @@ var _ = Describe("Layer source: Docker", func() {
 
 			baseImageURL, err = url.Parse(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
 			Expect(err).NotTo(HaveOccurred())
-
 		})
 
 		AfterEach(func() {
@@ -622,7 +621,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(blobErr).To(MatchError(ContainSubstring("fetching blob 404")))
+				Expect(blobErr).To(MatchError(And(ContainSubstring("fetching blob"), ContainSubstring("404"))))
 			})
 		})
 
@@ -696,9 +695,7 @@ var _ = Describe("Layer source: Docker", func() {
 		})
 
 		Context("when the docker registry does not report blob size", func() {
-			var (
-				blob io.ReadCloser
-			)
+			var blob io.ReadCloser
 			BeforeEach(func() {
 				fakeImageSourceCreator := new(sourcefakes.FakeImageSourceCreator)
 				imageSourceCreator = fakeImageSourceCreator.Spy

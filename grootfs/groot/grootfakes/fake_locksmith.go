@@ -43,15 +43,16 @@ func (fake *FakeLocksmith) Lock(arg1 string) (*os.File, error) {
 	fake.lockArgsForCall = append(fake.lockArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.LockStub
+	fakeReturns := fake.lockReturns
 	fake.recordInvocation("Lock", []interface{}{arg1})
 	fake.lockMutex.Unlock()
-	if fake.LockStub != nil {
-		return fake.LockStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.lockReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -106,15 +107,16 @@ func (fake *FakeLocksmith) Unlock(arg1 *os.File) error {
 	fake.unlockArgsForCall = append(fake.unlockArgsForCall, struct {
 		arg1 *os.File
 	}{arg1})
+	stub := fake.UnlockStub
+	fakeReturns := fake.unlockReturns
 	fake.recordInvocation("Unlock", []interface{}{arg1})
 	fake.unlockMutex.Unlock()
-	if fake.UnlockStub != nil {
-		return fake.UnlockStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.unlockReturns
 	return fakeReturns.result1
 }
 

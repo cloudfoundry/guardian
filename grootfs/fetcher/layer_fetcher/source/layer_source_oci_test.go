@@ -10,7 +10,7 @@ import (
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/containers/image/types"
+	"github.com/containers/image/v5/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"

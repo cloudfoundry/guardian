@@ -32,15 +32,16 @@ func (fake *FakeImageIDsGetter) ImageIDs(arg1 lager.Logger) ([]string, error) {
 	fake.imageIDsArgsForCall = append(fake.imageIDsArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.ImageIDsStub
+	fakeReturns := fake.imageIDsReturns
 	fake.recordInvocation("ImageIDs", []interface{}{arg1})
 	fake.imageIDsMutex.Unlock()
-	if fake.ImageIDsStub != nil {
-		return fake.ImageIDsStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.imageIDsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

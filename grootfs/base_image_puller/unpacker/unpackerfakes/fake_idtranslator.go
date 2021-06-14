@@ -40,15 +40,16 @@ func (fake *FakeIDTranslator) TranslateGID(arg1 int) int {
 	fake.translateGIDArgsForCall = append(fake.translateGIDArgsForCall, struct {
 		arg1 int
 	}{arg1})
+	stub := fake.TranslateGIDStub
+	fakeReturns := fake.translateGIDReturns
 	fake.recordInvocation("TranslateGID", []interface{}{arg1})
 	fake.translateGIDMutex.Unlock()
-	if fake.TranslateGIDStub != nil {
-		return fake.TranslateGIDStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.translateGIDReturns
 	return fakeReturns.result1
 }
 
@@ -100,15 +101,16 @@ func (fake *FakeIDTranslator) TranslateUID(arg1 int) int {
 	fake.translateUIDArgsForCall = append(fake.translateUIDArgsForCall, struct {
 		arg1 int
 	}{arg1})
+	stub := fake.TranslateUIDStub
+	fakeReturns := fake.translateUIDReturns
 	fake.recordInvocation("TranslateUID", []interface{}{arg1})
 	fake.translateUIDMutex.Unlock()
-	if fake.TranslateUIDStub != nil {
-		return fake.TranslateUIDStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.translateUIDReturns
 	return fakeReturns.result1
 }
 

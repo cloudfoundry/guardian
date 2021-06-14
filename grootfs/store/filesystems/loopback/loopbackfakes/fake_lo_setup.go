@@ -53,15 +53,16 @@ func (fake *FakeLoSetup) DisableDirectIO(arg1 string) error {
 	fake.disableDirectIOArgsForCall = append(fake.disableDirectIOArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.DisableDirectIOStub
+	fakeReturns := fake.disableDirectIOReturns
 	fake.recordInvocation("DisableDirectIO", []interface{}{arg1})
 	fake.disableDirectIOMutex.Unlock()
-	if fake.DisableDirectIOStub != nil {
-		return fake.DisableDirectIOStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.disableDirectIOReturns
 	return fakeReturns.result1
 }
 
@@ -113,15 +114,16 @@ func (fake *FakeLoSetup) EnableDirectIO(arg1 string) error {
 	fake.enableDirectIOArgsForCall = append(fake.enableDirectIOArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.EnableDirectIOStub
+	fakeReturns := fake.enableDirectIOReturns
 	fake.recordInvocation("EnableDirectIO", []interface{}{arg1})
 	fake.enableDirectIOMutex.Unlock()
-	if fake.EnableDirectIOStub != nil {
-		return fake.EnableDirectIOStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.enableDirectIOReturns
 	return fakeReturns.result1
 }
 
@@ -173,15 +175,16 @@ func (fake *FakeLoSetup) FindAssociatedLoopDevice(arg1 string) (string, error) {
 	fake.findAssociatedLoopDeviceArgsForCall = append(fake.findAssociatedLoopDeviceArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.FindAssociatedLoopDeviceStub
+	fakeReturns := fake.findAssociatedLoopDeviceReturns
 	fake.recordInvocation("FindAssociatedLoopDevice", []interface{}{arg1})
 	fake.findAssociatedLoopDeviceMutex.Unlock()
-	if fake.FindAssociatedLoopDeviceStub != nil {
-		return fake.FindAssociatedLoopDeviceStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.findAssociatedLoopDeviceReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

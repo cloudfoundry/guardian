@@ -55,15 +55,16 @@ func (fake *FakeGarbageCollector) Collect(arg1 lager.Logger) error {
 	fake.collectArgsForCall = append(fake.collectArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.CollectStub
+	fakeReturns := fake.collectReturns
 	fake.recordInvocation("Collect", []interface{}{arg1})
 	fake.collectMutex.Unlock()
-	if fake.CollectStub != nil {
-		return fake.CollectStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.collectReturns
 	return fakeReturns.result1
 }
 
@@ -121,15 +122,16 @@ func (fake *FakeGarbageCollector) MarkUnused(arg1 lager.Logger, arg2 []string) e
 		arg1 lager.Logger
 		arg2 []string
 	}{arg1, arg2Copy})
+	stub := fake.MarkUnusedStub
+	fakeReturns := fake.markUnusedReturns
 	fake.recordInvocation("MarkUnused", []interface{}{arg1, arg2Copy})
 	fake.markUnusedMutex.Unlock()
-	if fake.MarkUnusedStub != nil {
-		return fake.MarkUnusedStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.markUnusedReturns
 	return fakeReturns.result1
 }
 
@@ -181,15 +183,16 @@ func (fake *FakeGarbageCollector) UnusedVolumes(arg1 lager.Logger) ([]string, er
 	fake.unusedVolumesArgsForCall = append(fake.unusedVolumesArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.UnusedVolumesStub
+	fakeReturns := fake.unusedVolumesReturns
 	fake.recordInvocation("UnusedVolumes", []interface{}{arg1})
 	fake.unusedVolumesMutex.Unlock()
-	if fake.UnusedVolumesStub != nil {
-		return fake.UnusedVolumesStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.unusedVolumesReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

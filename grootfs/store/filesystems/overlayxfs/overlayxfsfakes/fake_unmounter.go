@@ -32,15 +32,16 @@ func (fake *FakeUnmounter) Unmount(arg1 lager.Logger, arg2 string) error {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.UnmountStub
+	fakeReturns := fake.unmountReturns
 	fake.recordInvocation("Unmount", []interface{}{arg1, arg2})
 	fake.unmountMutex.Unlock()
-	if fake.UnmountStub != nil {
-		return fake.UnmountStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.unmountReturns
 	return fakeReturns.result1
 }
 

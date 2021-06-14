@@ -73,15 +73,16 @@ func (fake *FakeImageManager) Create(arg1 lager.Logger, arg2 groot.ImageSpec) (g
 		arg1 lager.Logger
 		arg2 groot.ImageSpec
 	}{arg1, arg2})
+	stub := fake.CreateStub
+	fakeReturns := fake.createReturns
 	fake.recordInvocation("Create", []interface{}{arg1, arg2})
 	fake.createMutex.Unlock()
-	if fake.CreateStub != nil {
-		return fake.CreateStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -137,15 +138,16 @@ func (fake *FakeImageManager) Destroy(arg1 lager.Logger, arg2 string) error {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DestroyStub
+	fakeReturns := fake.destroyReturns
 	fake.recordInvocation("Destroy", []interface{}{arg1, arg2})
 	fake.destroyMutex.Unlock()
-	if fake.DestroyStub != nil {
-		return fake.DestroyStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.destroyReturns
 	return fakeReturns.result1
 }
 
@@ -197,15 +199,16 @@ func (fake *FakeImageManager) Exists(arg1 string) (bool, error) {
 	fake.existsArgsForCall = append(fake.existsArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.ExistsStub
+	fakeReturns := fake.existsReturns
 	fake.recordInvocation("Exists", []interface{}{arg1})
 	fake.existsMutex.Unlock()
-	if fake.ExistsStub != nil {
-		return fake.ExistsStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.existsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -261,15 +264,16 @@ func (fake *FakeImageManager) Stats(arg1 lager.Logger, arg2 string) (groot.Volum
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.StatsStub
+	fakeReturns := fake.statsReturns
 	fake.recordInvocation("Stats", []interface{}{arg1, arg2})
 	fake.statsMutex.Unlock()
-	if fake.StatsStub != nil {
-		return fake.StatsStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.statsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
-	"github.com/containers/image/types"
+	"github.com/containers/image/v5/types"
 	digest "github.com/opencontainers/go-digest"
 )
 
@@ -79,10 +79,11 @@ type FakeImageSource struct {
 	hasThreadSafeGetBlobReturnsOnCall map[int]struct {
 		result1 bool
 	}
-	LayerInfosForCopyStub        func(context.Context) ([]types.BlobInfo, error)
+	LayerInfosForCopyStub        func(context.Context, *digest.Digest) ([]types.BlobInfo, error)
 	layerInfosForCopyMutex       sync.RWMutex
 	layerInfosForCopyArgsForCall []struct {
 		arg1 context.Context
+		arg2 *digest.Digest
 	}
 	layerInfosForCopyReturns struct {
 		result1 []types.BlobInfo
@@ -111,15 +112,16 @@ func (fake *FakeImageSource) Close() error {
 	ret, specificReturn := fake.closeReturnsOnCall[len(fake.closeArgsForCall)]
 	fake.closeArgsForCall = append(fake.closeArgsForCall, struct {
 	}{})
+	stub := fake.CloseStub
+	fakeReturns := fake.closeReturns
 	fake.recordInvocation("Close", []interface{}{})
 	fake.closeMutex.Unlock()
-	if fake.CloseStub != nil {
-		return fake.CloseStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.closeReturns
 	return fakeReturns.result1
 }
 
@@ -166,15 +168,16 @@ func (fake *FakeImageSource) GetBlob(arg1 context.Context, arg2 types.BlobInfo, 
 		arg2 types.BlobInfo
 		arg3 types.BlobInfoCache
 	}{arg1, arg2, arg3})
+	stub := fake.GetBlobStub
+	fakeReturns := fake.getBlobReturns
 	fake.recordInvocation("GetBlob", []interface{}{arg1, arg2, arg3})
 	fake.getBlobMutex.Unlock()
-	if fake.GetBlobStub != nil {
-		return fake.GetBlobStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
 	}
-	fakeReturns := fake.getBlobReturns
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
@@ -233,15 +236,16 @@ func (fake *FakeImageSource) GetManifest(arg1 context.Context, arg2 *digest.Dige
 		arg1 context.Context
 		arg2 *digest.Digest
 	}{arg1, arg2})
+	stub := fake.GetManifestStub
+	fakeReturns := fake.getManifestReturns
 	fake.recordInvocation("GetManifest", []interface{}{arg1, arg2})
 	fake.getManifestMutex.Unlock()
-	if fake.GetManifestStub != nil {
-		return fake.GetManifestStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
 	}
-	fakeReturns := fake.getManifestReturns
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
@@ -300,15 +304,16 @@ func (fake *FakeImageSource) GetSignatures(arg1 context.Context, arg2 *digest.Di
 		arg1 context.Context
 		arg2 *digest.Digest
 	}{arg1, arg2})
+	stub := fake.GetSignaturesStub
+	fakeReturns := fake.getSignaturesReturns
 	fake.recordInvocation("GetSignatures", []interface{}{arg1, arg2})
 	fake.getSignaturesMutex.Unlock()
-	if fake.GetSignaturesStub != nil {
-		return fake.GetSignaturesStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.getSignaturesReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -362,15 +367,16 @@ func (fake *FakeImageSource) HasThreadSafeGetBlob() bool {
 	ret, specificReturn := fake.hasThreadSafeGetBlobReturnsOnCall[len(fake.hasThreadSafeGetBlobArgsForCall)]
 	fake.hasThreadSafeGetBlobArgsForCall = append(fake.hasThreadSafeGetBlobArgsForCall, struct {
 	}{})
+	stub := fake.HasThreadSafeGetBlobStub
+	fakeReturns := fake.hasThreadSafeGetBlobReturns
 	fake.recordInvocation("HasThreadSafeGetBlob", []interface{}{})
 	fake.hasThreadSafeGetBlobMutex.Unlock()
-	if fake.HasThreadSafeGetBlobStub != nil {
-		return fake.HasThreadSafeGetBlobStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.hasThreadSafeGetBlobReturns
 	return fakeReturns.result1
 }
 
@@ -409,21 +415,23 @@ func (fake *FakeImageSource) HasThreadSafeGetBlobReturnsOnCall(i int, result1 bo
 	}{result1}
 }
 
-func (fake *FakeImageSource) LayerInfosForCopy(arg1 context.Context) ([]types.BlobInfo, error) {
+func (fake *FakeImageSource) LayerInfosForCopy(arg1 context.Context, arg2 *digest.Digest) ([]types.BlobInfo, error) {
 	fake.layerInfosForCopyMutex.Lock()
 	ret, specificReturn := fake.layerInfosForCopyReturnsOnCall[len(fake.layerInfosForCopyArgsForCall)]
 	fake.layerInfosForCopyArgsForCall = append(fake.layerInfosForCopyArgsForCall, struct {
 		arg1 context.Context
-	}{arg1})
-	fake.recordInvocation("LayerInfosForCopy", []interface{}{arg1})
+		arg2 *digest.Digest
+	}{arg1, arg2})
+	stub := fake.LayerInfosForCopyStub
+	fakeReturns := fake.layerInfosForCopyReturns
+	fake.recordInvocation("LayerInfosForCopy", []interface{}{arg1, arg2})
 	fake.layerInfosForCopyMutex.Unlock()
-	if fake.LayerInfosForCopyStub != nil {
-		return fake.LayerInfosForCopyStub(arg1)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.layerInfosForCopyReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -433,17 +441,17 @@ func (fake *FakeImageSource) LayerInfosForCopyCallCount() int {
 	return len(fake.layerInfosForCopyArgsForCall)
 }
 
-func (fake *FakeImageSource) LayerInfosForCopyCalls(stub func(context.Context) ([]types.BlobInfo, error)) {
+func (fake *FakeImageSource) LayerInfosForCopyCalls(stub func(context.Context, *digest.Digest) ([]types.BlobInfo, error)) {
 	fake.layerInfosForCopyMutex.Lock()
 	defer fake.layerInfosForCopyMutex.Unlock()
 	fake.LayerInfosForCopyStub = stub
 }
 
-func (fake *FakeImageSource) LayerInfosForCopyArgsForCall(i int) context.Context {
+func (fake *FakeImageSource) LayerInfosForCopyArgsForCall(i int) (context.Context, *digest.Digest) {
 	fake.layerInfosForCopyMutex.RLock()
 	defer fake.layerInfosForCopyMutex.RUnlock()
 	argsForCall := fake.layerInfosForCopyArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeImageSource) LayerInfosForCopyReturns(result1 []types.BlobInfo, result2 error) {
@@ -477,15 +485,16 @@ func (fake *FakeImageSource) Reference() types.ImageReference {
 	ret, specificReturn := fake.referenceReturnsOnCall[len(fake.referenceArgsForCall)]
 	fake.referenceArgsForCall = append(fake.referenceArgsForCall, struct {
 	}{})
+	stub := fake.ReferenceStub
+	fakeReturns := fake.referenceReturns
 	fake.recordInvocation("Reference", []interface{}{})
 	fake.referenceMutex.Unlock()
-	if fake.ReferenceStub != nil {
-		return fake.ReferenceStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.referenceReturns
 	return fakeReturns.result1
 }
 

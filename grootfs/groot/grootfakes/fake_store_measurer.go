@@ -45,15 +45,16 @@ func (fake *FakeStoreMeasurer) CommittedQuota(arg1 lager.Logger) (int64, error) 
 	fake.committedQuotaArgsForCall = append(fake.committedQuotaArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.CommittedQuotaStub
+	fakeReturns := fake.committedQuotaReturns
 	fake.recordInvocation("CommittedQuota", []interface{}{arg1})
 	fake.committedQuotaMutex.Unlock()
-	if fake.CommittedQuotaStub != nil {
-		return fake.CommittedQuotaStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.committedQuotaReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -108,15 +109,16 @@ func (fake *FakeStoreMeasurer) TotalVolumesSize(arg1 lager.Logger) (int64, error
 	fake.totalVolumesSizeArgsForCall = append(fake.totalVolumesSizeArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.TotalVolumesSizeStub
+	fakeReturns := fake.totalVolumesSizeReturns
 	fake.recordInvocation("TotalVolumesSize", []interface{}{arg1})
 	fake.totalVolumesSizeMutex.Unlock()
-	if fake.TotalVolumesSizeStub != nil {
-		return fake.TotalVolumesSizeStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.totalVolumesSizeReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

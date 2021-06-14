@@ -53,15 +53,16 @@ func (fake *FakeIDMapper) MapGIDs(arg1 lager.Logger, arg2 int, arg3 []groot.IDMa
 		arg2 int
 		arg3 []groot.IDMappingSpec
 	}{arg1, arg2, arg3Copy})
+	stub := fake.MapGIDsStub
+	fakeReturns := fake.mapGIDsReturns
 	fake.recordInvocation("MapGIDs", []interface{}{arg1, arg2, arg3Copy})
 	fake.mapGIDsMutex.Unlock()
-	if fake.MapGIDsStub != nil {
-		return fake.MapGIDsStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.mapGIDsReturns
 	return fakeReturns.result1
 }
 
@@ -120,15 +121,16 @@ func (fake *FakeIDMapper) MapUIDs(arg1 lager.Logger, arg2 int, arg3 []groot.IDMa
 		arg2 int
 		arg3 []groot.IDMappingSpec
 	}{arg1, arg2, arg3Copy})
+	stub := fake.MapUIDsStub
+	fakeReturns := fake.mapUIDsReturns
 	fake.recordInvocation("MapUIDs", []interface{}{arg1, arg2, arg3Copy})
 	fake.mapUIDsMutex.Unlock()
-	if fake.MapUIDsStub != nil {
-		return fake.MapUIDsStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.mapUIDsReturns
 	return fakeReturns.result1
 }
 

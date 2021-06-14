@@ -32,15 +32,16 @@ func (fake *FakeRootFSConfigurer) Configure(arg1 string, arg2 *v1.Image) error {
 		arg1 string
 		arg2 *v1.Image
 	}{arg1, arg2})
+	stub := fake.ConfigureStub
+	fakeReturns := fake.configureReturns
 	fake.recordInvocation("Configure", []interface{}{arg1, arg2})
 	fake.configureMutex.Unlock()
-	if fake.ConfigureStub != nil {
-		return fake.ConfigureStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.configureReturns
 	return fakeReturns.result1
 }
 

@@ -41,10 +41,11 @@ var _ = Describe("Create with remote DOCKER images", func() {
 	)
 
 	BeforeEach(func() {
-		initSpec := runnerpkg.InitSpec{UIDMappings: []groot.IDMappingSpec{
-			{HostID: GrootUID, NamespaceID: 0, Size: 1},
-			{HostID: 100000, NamespaceID: 1, Size: 65000},
-		},
+		initSpec := runnerpkg.InitSpec{
+			UIDMappings: []groot.IDMappingSpec{
+				{HostID: GrootUID, NamespaceID: 0, Size: 1},
+				{HostID: 100000, NamespaceID: 1, Size: 65000},
+			},
 			GIDMappings: []groot.IDMappingSpec{
 				{HostID: GrootGID, NamespaceID: 0, Size: 1},
 				{HostID: 100000, NamespaceID: 1, Size: 65000},

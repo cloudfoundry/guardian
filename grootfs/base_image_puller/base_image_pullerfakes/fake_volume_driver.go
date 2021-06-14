@@ -114,15 +114,16 @@ func (fake *FakeVolumeDriver) CreateVolume(arg1 lager.Logger, arg2 string, arg3 
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.CreateVolumeStub
+	fakeReturns := fake.createVolumeReturns
 	fake.recordInvocation("CreateVolume", []interface{}{arg1, arg2, arg3})
 	fake.createVolumeMutex.Unlock()
-	if fake.CreateVolumeStub != nil {
-		return fake.CreateVolumeStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createVolumeReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -178,15 +179,16 @@ func (fake *FakeVolumeDriver) DestroyVolume(arg1 lager.Logger, arg2 string) erro
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DestroyVolumeStub
+	fakeReturns := fake.destroyVolumeReturns
 	fake.recordInvocation("DestroyVolume", []interface{}{arg1, arg2})
 	fake.destroyVolumeMutex.Unlock()
-	if fake.DestroyVolumeStub != nil {
-		return fake.DestroyVolumeStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.destroyVolumeReturns
 	return fakeReturns.result1
 }
 
@@ -245,15 +247,16 @@ func (fake *FakeVolumeDriver) HandleOpaqueWhiteouts(arg1 lager.Logger, arg2 stri
 		arg2 string
 		arg3 []string
 	}{arg1, arg2, arg3Copy})
+	stub := fake.HandleOpaqueWhiteoutsStub
+	fakeReturns := fake.handleOpaqueWhiteoutsReturns
 	fake.recordInvocation("HandleOpaqueWhiteouts", []interface{}{arg1, arg2, arg3Copy})
 	fake.handleOpaqueWhiteoutsMutex.Unlock()
-	if fake.HandleOpaqueWhiteoutsStub != nil {
-		return fake.HandleOpaqueWhiteoutsStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.handleOpaqueWhiteoutsReturns
 	return fakeReturns.result1
 }
 
@@ -307,15 +310,16 @@ func (fake *FakeVolumeDriver) MoveVolume(arg1 lager.Logger, arg2 string, arg3 st
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.MoveVolumeStub
+	fakeReturns := fake.moveVolumeReturns
 	fake.recordInvocation("MoveVolume", []interface{}{arg1, arg2, arg3})
 	fake.moveVolumeMutex.Unlock()
-	if fake.MoveVolumeStub != nil {
-		return fake.MoveVolumeStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.moveVolumeReturns
 	return fakeReturns.result1
 }
 
@@ -368,15 +372,16 @@ func (fake *FakeVolumeDriver) VolumePath(arg1 lager.Logger, arg2 string) (string
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.VolumePathStub
+	fakeReturns := fake.volumePathReturns
 	fake.recordInvocation("VolumePath", []interface{}{arg1, arg2})
 	fake.volumePathMutex.Unlock()
-	if fake.VolumePathStub != nil {
-		return fake.VolumePathStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.volumePathReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -431,15 +436,16 @@ func (fake *FakeVolumeDriver) Volumes(arg1 lager.Logger) ([]string, error) {
 	fake.volumesArgsForCall = append(fake.volumesArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.VolumesStub
+	fakeReturns := fake.volumesReturns
 	fake.recordInvocation("Volumes", []interface{}{arg1})
 	fake.volumesMutex.Unlock()
-	if fake.VolumesStub != nil {
-		return fake.VolumesStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.volumesReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -496,15 +502,16 @@ func (fake *FakeVolumeDriver) WriteVolumeMeta(arg1 lager.Logger, arg2 string, ar
 		arg2 string
 		arg3 base_image_puller.VolumeMeta
 	}{arg1, arg2, arg3})
+	stub := fake.WriteVolumeMetaStub
+	fakeReturns := fake.writeVolumeMetaReturns
 	fake.recordInvocation("WriteVolumeMeta", []interface{}{arg1, arg2, arg3})
 	fake.writeVolumeMetaMutex.Unlock()
-	if fake.WriteVolumeMetaStub != nil {
-		return fake.WriteVolumeMetaStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.writeVolumeMetaReturns
 	return fakeReturns.result1
 }
 

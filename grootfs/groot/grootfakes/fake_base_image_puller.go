@@ -45,15 +45,16 @@ func (fake *FakeBaseImagePuller) FetchBaseImageInfo(arg1 lager.Logger) (groot.Ba
 	fake.fetchBaseImageInfoArgsForCall = append(fake.fetchBaseImageInfoArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.FetchBaseImageInfoStub
+	fakeReturns := fake.fetchBaseImageInfoReturns
 	fake.recordInvocation("FetchBaseImageInfo", []interface{}{arg1})
 	fake.fetchBaseImageInfoMutex.Unlock()
-	if fake.FetchBaseImageInfoStub != nil {
-		return fake.FetchBaseImageInfoStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.fetchBaseImageInfoReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -110,15 +111,16 @@ func (fake *FakeBaseImagePuller) Pull(arg1 lager.Logger, arg2 groot.BaseImageInf
 		arg2 groot.BaseImageInfo
 		arg3 groot.BaseImageSpec
 	}{arg1, arg2, arg3})
+	stub := fake.PullStub
+	fakeReturns := fake.pullReturns
 	fake.recordInvocation("Pull", []interface{}{arg1, arg2, arg3})
 	fake.pullMutex.Unlock()
-	if fake.PullStub != nil {
-		return fake.PullStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.pullReturns
 	return fakeReturns.result1
 }
 

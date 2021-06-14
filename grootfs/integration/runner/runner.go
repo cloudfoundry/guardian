@@ -63,6 +63,8 @@ func (r Runner) StartSubcommand(subcommand string, args ...string) (*gexec.Sessi
 	} else {
 		cmd.Env = os.Environ()
 	}
+
+	cmd.Env = removeHome(cmd.Env)
 	cmd.Env = append(cmd.Env, "GOTRACEBACK=crash")
 
 	if r.SysCredential.Uid != 0 {
@@ -72,6 +74,22 @@ func (r Runner) StartSubcommand(subcommand string, args ...string) (*gexec.Sessi
 	}
 
 	return gexec.Start(cmd, ginkgo.GinkgoWriter, ginkgo.GinkgoWriter)
+}
+
+func removeHome(env []string) []string {
+	if len(env) == 0 {
+		env = os.Environ()
+	}
+
+	newEnv := []string{}
+	for _, e := range env {
+		if strings.HasPrefix(e, "HOME=") {
+			continue
+		}
+		newEnv = append(newEnv, e)
+	}
+
+	return newEnv
 }
 
 func (r Runner) RunSubcommand(subcommand string, args ...string) (string, error) {
@@ -85,7 +103,7 @@ func (r Runner) RunSubcommand(subcommand string, args ...string) (string, error)
 	r = r.WithStdout(stdout)
 
 	cmd := r.makeCmd(subcommand, args)
-	cmd.Env = r.EnvVars
+	cmd.Env = removeHome(r.EnvVars)
 
 	if r.SysCredential.Uid != 0 {
 		cmd.SysProcAttr = &syscall.SysProcAttr{

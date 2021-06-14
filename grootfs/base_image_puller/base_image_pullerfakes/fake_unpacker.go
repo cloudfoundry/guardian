@@ -34,15 +34,16 @@ func (fake *FakeUnpacker) Unpack(arg1 lager.Logger, arg2 base_image_puller.Unpac
 		arg1 lager.Logger
 		arg2 base_image_puller.UnpackSpec
 	}{arg1, arg2})
+	stub := fake.UnpackStub
+	fakeReturns := fake.unpackReturns
 	fake.recordInvocation("Unpack", []interface{}{arg1, arg2})
 	fake.unpackMutex.Unlock()
-	if fake.UnpackStub != nil {
-		return fake.UnpackStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.unpackReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

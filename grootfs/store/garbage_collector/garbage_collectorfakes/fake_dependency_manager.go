@@ -31,15 +31,16 @@ func (fake *FakeDependencyManager) Dependencies(arg1 string) ([]string, error) {
 	fake.dependenciesArgsForCall = append(fake.dependenciesArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.DependenciesStub
+	fakeReturns := fake.dependenciesReturns
 	fake.recordInvocation("Dependencies", []interface{}{arg1})
 	fake.dependenciesMutex.Unlock()
-	if fake.DependenciesStub != nil {
-		return fake.DependenciesStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.dependenciesReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

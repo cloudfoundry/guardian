@@ -88,15 +88,16 @@ func (fake *FakeStoreDriver) ConfigureStore(arg1 lager.Logger, arg2 string, arg3
 		arg4 int
 		arg5 int
 	}{arg1, arg2, arg3, arg4, arg5})
+	stub := fake.ConfigureStoreStub
+	fakeReturns := fake.configureStoreReturns
 	fake.recordInvocation("ConfigureStore", []interface{}{arg1, arg2, arg3, arg4, arg5})
 	fake.configureStoreMutex.Unlock()
-	if fake.ConfigureStoreStub != nil {
-		return fake.ConfigureStoreStub(arg1, arg2, arg3, arg4, arg5)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.configureStoreReturns
 	return fakeReturns.result1
 }
 
@@ -149,15 +150,16 @@ func (fake *FakeStoreDriver) DeInitFilesystem(arg1 lager.Logger, arg2 string) er
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DeInitFilesystemStub
+	fakeReturns := fake.deInitFilesystemReturns
 	fake.recordInvocation("DeInitFilesystem", []interface{}{arg1, arg2})
 	fake.deInitFilesystemMutex.Unlock()
-	if fake.DeInitFilesystemStub != nil {
-		return fake.DeInitFilesystemStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.deInitFilesystemReturns
 	return fakeReturns.result1
 }
 
@@ -211,15 +213,16 @@ func (fake *FakeStoreDriver) InitFilesystem(arg1 lager.Logger, arg2 string, arg3
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.InitFilesystemStub
+	fakeReturns := fake.initFilesystemReturns
 	fake.recordInvocation("InitFilesystem", []interface{}{arg1, arg2, arg3})
 	fake.initFilesystemMutex.Unlock()
-	if fake.InitFilesystemStub != nil {
-		return fake.InitFilesystemStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.initFilesystemReturns
 	return fakeReturns.result1
 }
 
@@ -273,15 +276,16 @@ func (fake *FakeStoreDriver) MountFilesystem(arg1 lager.Logger, arg2 string, arg
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.MountFilesystemStub
+	fakeReturns := fake.mountFilesystemReturns
 	fake.recordInvocation("MountFilesystem", []interface{}{arg1, arg2, arg3})
 	fake.mountFilesystemMutex.Unlock()
-	if fake.MountFilesystemStub != nil {
-		return fake.MountFilesystemStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.mountFilesystemReturns
 	return fakeReturns.result1
 }
 
@@ -334,15 +338,16 @@ func (fake *FakeStoreDriver) ValidateFileSystem(arg1 lager.Logger, arg2 string) 
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.ValidateFileSystemStub
+	fakeReturns := fake.validateFileSystemReturns
 	fake.recordInvocation("ValidateFileSystem", []interface{}{arg1, arg2})
 	fake.validateFileSystemMutex.Unlock()
-	if fake.ValidateFileSystemStub != nil {
-		return fake.ValidateFileSystemStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.validateFileSystemReturns
 	return fakeReturns.result1
 }
 

@@ -41,15 +41,16 @@ func (fake *FakeDependencyManager) Deregister(arg1 string) error {
 	fake.deregisterArgsForCall = append(fake.deregisterArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.DeregisterStub
+	fakeReturns := fake.deregisterReturns
 	fake.recordInvocation("Deregister", []interface{}{arg1})
 	fake.deregisterMutex.Unlock()
-	if fake.DeregisterStub != nil {
-		return fake.DeregisterStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.deregisterReturns
 	return fakeReturns.result1
 }
 
@@ -107,15 +108,16 @@ func (fake *FakeDependencyManager) Register(arg1 string, arg2 []string) error {
 		arg1 string
 		arg2 []string
 	}{arg1, arg2Copy})
+	stub := fake.RegisterStub
+	fakeReturns := fake.registerReturns
 	fake.recordInvocation("Register", []interface{}{arg1, arg2Copy})
 	fake.registerMutex.Unlock()
-	if fake.RegisterStub != nil {
-		return fake.RegisterStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.registerReturns
 	return fakeReturns.result1
 }
 

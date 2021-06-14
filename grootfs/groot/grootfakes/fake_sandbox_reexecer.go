@@ -33,15 +33,16 @@ func (fake *FakeSandboxReexecer) Reexec(arg1 string, arg2 groot.ReexecSpec) ([]b
 		arg1 string
 		arg2 groot.ReexecSpec
 	}{arg1, arg2})
+	stub := fake.ReexecStub
+	fakeReturns := fake.reexecReturns
 	fake.recordInvocation("Reexec", []interface{}{arg1, arg2})
 	fake.reexecMutex.Unlock()
-	if fake.ReexecStub != nil {
-		return fake.ReexecStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.reexecReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

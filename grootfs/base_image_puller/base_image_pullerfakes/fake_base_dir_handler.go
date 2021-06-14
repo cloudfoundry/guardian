@@ -34,15 +34,16 @@ func (fake *FakeBaseDirHandler) Handle(arg1 lager.Logger, arg2 base_image_puller
 		arg2 base_image_puller.UnpackSpec
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.HandleStub
+	fakeReturns := fake.handleReturns
 	fake.recordInvocation("Handle", []interface{}{arg1, arg2, arg3})
 	fake.handleMutex.Unlock()
-	if fake.HandleStub != nil {
-		return fake.HandleStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.handleReturns
 	return fakeReturns.result1
 }
 

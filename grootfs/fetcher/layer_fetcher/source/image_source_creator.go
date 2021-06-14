@@ -5,8 +5,8 @@ import (
 	"net/url"
 
 	"code.cloudfoundry.org/lager"
-	"github.com/containers/image/transports"
-	"github.com/containers/image/types"
+	"github.com/containers/image/v5/transports"
+	"github.com/containers/image/v5/types"
 	errorspkg "github.com/pkg/errors"
 )
 

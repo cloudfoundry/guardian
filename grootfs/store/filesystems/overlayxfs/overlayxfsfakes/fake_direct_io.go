@@ -29,15 +29,16 @@ func (fake *FakeDirectIO) Configure(arg1 string) error {
 	fake.configureArgsForCall = append(fake.configureArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.ConfigureStub
+	fakeReturns := fake.configureReturns
 	fake.recordInvocation("Configure", []interface{}{arg1})
 	fake.configureMutex.Unlock()
-	if fake.ConfigureStub != nil {
-		return fake.ConfigureStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.configureReturns
 	return fakeReturns.result1
 }
 

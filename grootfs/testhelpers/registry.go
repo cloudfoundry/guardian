@@ -18,17 +18,18 @@ type blobHandler struct {
 }
 
 type FakeRegistry struct {
-	ActualRegistryURL   *url.URL
-	blobHandlers        map[string]blobHandler
-	blobRequestsCounter map[string]int
-	blobRegexp          *regexp.Regexp
-	manifestRegexp      *regexp.Regexp
-	failNextRequests    int
-	forceTokenAuthError bool
-	revProxy            *httputil.ReverseProxy
-	server              *ghttp.Server
-	mutex               *sync.RWMutex
-	stopped             chan struct{}
+	ActualRegistryURL        *url.URL
+	blobHandlers             map[string]blobHandler
+	blobRequestsCounter      map[string]int
+	blobRegexp               *regexp.Regexp
+	manifestRegexp           *regexp.Regexp
+	failNextBlobRequests     int
+	failNextManifestRequests int
+	forceTokenAuthError      bool
+	revProxy                 *httputil.ReverseProxy
+	server                   *ghttp.Server
+	mutex                    *sync.RWMutex
+	stopped                  chan struct{}
 }
 
 func NewFakeRegistry(actualRegistryURL *url.URL) *FakeRegistry {
@@ -66,8 +67,12 @@ func (r *FakeRegistry) Start() {
 	r.server.RouteToHandler("GET", ourRegexp, r.serveHTTP)
 }
 
-func (r *FakeRegistry) FailNextRequests(n int) {
-	r.failNextRequests = n
+func (r *FakeRegistry) FailNextBlobRequests(n int) {
+	r.failNextBlobRequests = n
+}
+
+func (r *FakeRegistry) FailNextManifestRequests(n int) {
+	r.failNextManifestRequests = n
 }
 
 func (r *FakeRegistry) ForceTokenAuthError() {
@@ -101,8 +106,8 @@ func (r *FakeRegistry) serveHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (r *FakeRegistry) serveManifest(rw http.ResponseWriter, req *http.Request) {
-	if r.failNextRequests > 0 {
-		r.failNextRequests--
+	if r.failNextManifestRequests > 0 {
+		r.failNextManifestRequests--
 		rw.WriteHeader(http.StatusTeapot)
 		_, _ = rw.Write([]byte("null"))
 		return
@@ -112,8 +117,8 @@ func (r *FakeRegistry) serveManifest(rw http.ResponseWriter, req *http.Request) 
 }
 
 func (r *FakeRegistry) serveBlob(rw http.ResponseWriter, req *http.Request) {
-	if r.failNextRequests > 0 {
-		r.failNextRequests--
+	if r.failNextBlobRequests > 0 {
+		r.failNextBlobRequests--
 		rw.WriteHeader(http.StatusTeapot)
 		_, _ = rw.Write([]byte("null"))
 		return

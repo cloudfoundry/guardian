@@ -29,15 +29,16 @@ func (fake *FakeWhiteoutHandler) RemoveWhiteout(arg1 string) error {
 	fake.removeWhiteoutArgsForCall = append(fake.removeWhiteoutArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.RemoveWhiteoutStub
+	fakeReturns := fake.removeWhiteoutReturns
 	fake.recordInvocation("RemoveWhiteout", []interface{}{arg1})
 	fake.removeWhiteoutMutex.Unlock()
-	if fake.RemoveWhiteoutStub != nil {
-		return fake.RemoveWhiteoutStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.removeWhiteoutReturns
 	return fakeReturns.result1
 }
 

@@ -180,15 +180,16 @@ func (fake *FakeInternalDriver) CreateImage(arg1 lager.Logger, arg2 image_manage
 		arg1 lager.Logger
 		arg2 image_manager.ImageDriverSpec
 	}{arg1, arg2})
+	stub := fake.CreateImageStub
+	fakeReturns := fake.createImageReturns
 	fake.recordInvocation("CreateImage", []interface{}{arg1, arg2})
 	fake.createImageMutex.Unlock()
-	if fake.CreateImageStub != nil {
-		return fake.CreateImageStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createImageReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -245,15 +246,16 @@ func (fake *FakeInternalDriver) CreateVolume(arg1 lager.Logger, arg2 string, arg
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.CreateVolumeStub
+	fakeReturns := fake.createVolumeReturns
 	fake.recordInvocation("CreateVolume", []interface{}{arg1, arg2, arg3})
 	fake.createVolumeMutex.Unlock()
-	if fake.CreateVolumeStub != nil {
-		return fake.CreateVolumeStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createVolumeReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -309,15 +311,16 @@ func (fake *FakeInternalDriver) DestroyImage(arg1 lager.Logger, arg2 string) err
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DestroyImageStub
+	fakeReturns := fake.destroyImageReturns
 	fake.recordInvocation("DestroyImage", []interface{}{arg1, arg2})
 	fake.destroyImageMutex.Unlock()
-	if fake.DestroyImageStub != nil {
-		return fake.DestroyImageStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.destroyImageReturns
 	return fakeReturns.result1
 }
 
@@ -370,15 +373,16 @@ func (fake *FakeInternalDriver) DestroyVolume(arg1 lager.Logger, arg2 string) er
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DestroyVolumeStub
+	fakeReturns := fake.destroyVolumeReturns
 	fake.recordInvocation("DestroyVolume", []interface{}{arg1, arg2})
 	fake.destroyVolumeMutex.Unlock()
-	if fake.DestroyVolumeStub != nil {
-		return fake.DestroyVolumeStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.destroyVolumeReturns
 	return fakeReturns.result1
 }
 
@@ -431,15 +435,16 @@ func (fake *FakeInternalDriver) FetchStats(arg1 lager.Logger, arg2 string) (groo
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.FetchStatsStub
+	fakeReturns := fake.fetchStatsReturns
 	fake.recordInvocation("FetchStats", []interface{}{arg1, arg2})
 	fake.fetchStatsMutex.Unlock()
-	if fake.FetchStatsStub != nil {
-		return fake.FetchStatsStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.fetchStatsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -501,15 +506,16 @@ func (fake *FakeInternalDriver) HandleOpaqueWhiteouts(arg1 lager.Logger, arg2 st
 		arg2 string
 		arg3 []string
 	}{arg1, arg2, arg3Copy})
+	stub := fake.HandleOpaqueWhiteoutsStub
+	fakeReturns := fake.handleOpaqueWhiteoutsReturns
 	fake.recordInvocation("HandleOpaqueWhiteouts", []interface{}{arg1, arg2, arg3Copy})
 	fake.handleOpaqueWhiteoutsMutex.Unlock()
-	if fake.HandleOpaqueWhiteoutsStub != nil {
-		return fake.HandleOpaqueWhiteoutsStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.handleOpaqueWhiteoutsReturns
 	return fakeReturns.result1
 }
 
@@ -562,15 +568,16 @@ func (fake *FakeInternalDriver) MarkVolumeArtifacts(arg1 lager.Logger, arg2 stri
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.MarkVolumeArtifactsStub
+	fakeReturns := fake.markVolumeArtifactsReturns
 	fake.recordInvocation("MarkVolumeArtifacts", []interface{}{arg1, arg2})
 	fake.markVolumeArtifactsMutex.Unlock()
-	if fake.MarkVolumeArtifactsStub != nil {
-		return fake.MarkVolumeArtifactsStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.markVolumeArtifactsReturns
 	return fakeReturns.result1
 }
 
@@ -622,15 +629,16 @@ func (fake *FakeInternalDriver) Marshal(arg1 lager.Logger) ([]byte, error) {
 	fake.marshalArgsForCall = append(fake.marshalArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.MarshalStub
+	fakeReturns := fake.marshalReturns
 	fake.recordInvocation("Marshal", []interface{}{arg1})
 	fake.marshalMutex.Unlock()
-	if fake.MarshalStub != nil {
-		return fake.MarshalStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.marshalReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -687,15 +695,16 @@ func (fake *FakeInternalDriver) MoveVolume(arg1 lager.Logger, arg2 string, arg3 
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.MoveVolumeStub
+	fakeReturns := fake.moveVolumeReturns
 	fake.recordInvocation("MoveVolume", []interface{}{arg1, arg2, arg3})
 	fake.moveVolumeMutex.Unlock()
-	if fake.MoveVolumeStub != nil {
-		return fake.MoveVolumeStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.moveVolumeReturns
 	return fakeReturns.result1
 }
 
@@ -748,15 +757,16 @@ func (fake *FakeInternalDriver) VolumePath(arg1 lager.Logger, arg2 string) (stri
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.VolumePathStub
+	fakeReturns := fake.volumePathReturns
 	fake.recordInvocation("VolumePath", []interface{}{arg1, arg2})
 	fake.volumePathMutex.Unlock()
-	if fake.VolumePathStub != nil {
-		return fake.VolumePathStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.volumePathReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -811,15 +821,16 @@ func (fake *FakeInternalDriver) Volumes(arg1 lager.Logger) ([]string, error) {
 	fake.volumesArgsForCall = append(fake.volumesArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.VolumesStub
+	fakeReturns := fake.volumesReturns
 	fake.recordInvocation("Volumes", []interface{}{arg1})
 	fake.volumesMutex.Unlock()
-	if fake.VolumesStub != nil {
-		return fake.VolumesStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.volumesReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -876,15 +887,16 @@ func (fake *FakeInternalDriver) WriteVolumeMeta(arg1 lager.Logger, arg2 string, 
 		arg2 string
 		arg3 base_image_puller.VolumeMeta
 	}{arg1, arg2, arg3})
+	stub := fake.WriteVolumeMetaStub
+	fakeReturns := fake.writeVolumeMetaReturns
 	fake.recordInvocation("WriteVolumeMeta", []interface{}{arg1, arg2, arg3})
 	fake.writeVolumeMetaMutex.Unlock()
-	if fake.WriteVolumeMetaStub != nil {
-		return fake.WriteVolumeMetaStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.writeVolumeMetaReturns
 	return fakeReturns.result1
 }
 

@@ -61,15 +61,16 @@ func (fake *FakeImageDriver) CreateImage(arg1 lager.Logger, arg2 image_manager.I
 		arg1 lager.Logger
 		arg2 image_manager.ImageDriverSpec
 	}{arg1, arg2})
+	stub := fake.CreateImageStub
+	fakeReturns := fake.createImageReturns
 	fake.recordInvocation("CreateImage", []interface{}{arg1, arg2})
 	fake.createImageMutex.Unlock()
-	if fake.CreateImageStub != nil {
-		return fake.CreateImageStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createImageReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -125,15 +126,16 @@ func (fake *FakeImageDriver) DestroyImage(arg1 lager.Logger, arg2 string) error 
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DestroyImageStub
+	fakeReturns := fake.destroyImageReturns
 	fake.recordInvocation("DestroyImage", []interface{}{arg1, arg2})
 	fake.destroyImageMutex.Unlock()
-	if fake.DestroyImageStub != nil {
-		return fake.DestroyImageStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.destroyImageReturns
 	return fakeReturns.result1
 }
 
@@ -186,15 +188,16 @@ func (fake *FakeImageDriver) FetchStats(arg1 lager.Logger, arg2 string) (groot.V
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.FetchStatsStub
+	fakeReturns := fake.fetchStatsReturns
 	fake.recordInvocation("FetchStats", []interface{}{arg1, arg2})
 	fake.fetchStatsMutex.Unlock()
-	if fake.FetchStatsStub != nil {
-		return fake.FetchStatsStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.fetchStatsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

@@ -7,7 +7,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
 	"code.cloudfoundry.org/lager"
-	"github.com/containers/image/types"
+	"github.com/containers/image/v5/types"
 )
 
 type FakeImageSourceCreator struct {
@@ -38,15 +38,17 @@ func (fake *FakeImageSourceCreator) Spy(arg1 lager.Logger, arg2 types.SystemCont
 		arg2 types.SystemContext
 		arg3 *url.URL
 	}{arg1, arg2, arg3})
+	stub := fake.Stub
+	returns := fake.returns
 	fake.recordInvocation("ImageSourceCreator", []interface{}{arg1, arg2, arg3})
 	fake.mutex.Unlock()
-	if fake.Stub != nil {
-		return fake.Stub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.returns.result1, fake.returns.result2
+	return returns.result1, returns.result2
 }
 
 func (fake *FakeImageSourceCreator) CallCount() int {

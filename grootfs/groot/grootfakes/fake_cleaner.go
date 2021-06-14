@@ -34,15 +34,16 @@ func (fake *FakeCleaner) Clean(arg1 lager.Logger, arg2 int64) (bool, error) {
 		arg1 lager.Logger
 		arg2 int64
 	}{arg1, arg2})
+	stub := fake.CleanStub
+	fakeReturns := fake.cleanReturns
 	fake.recordInvocation("Clean", []interface{}{arg1, arg2})
 	fake.cleanMutex.Unlock()
-	if fake.CleanStub != nil {
-		return fake.CleanStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.cleanReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

@@ -36,9 +36,10 @@ func (fake *FakeMetricsEmitter) TryEmitDurationFrom(arg1 lager.Logger, arg2 stri
 		arg2 string
 		arg3 time.Time
 	}{arg1, arg2, arg3})
+	stub := fake.TryEmitDurationFromStub
 	fake.recordInvocation("TryEmitDurationFrom", []interface{}{arg1, arg2, arg3})
 	fake.tryEmitDurationFromMutex.Unlock()
-	if fake.TryEmitDurationFromStub != nil {
+	if stub != nil {
 		fake.TryEmitDurationFromStub(arg1, arg2, arg3)
 	}
 }
@@ -70,9 +71,10 @@ func (fake *FakeMetricsEmitter) TryEmitUsage(arg1 lager.Logger, arg2 string, arg
 		arg3 int64
 		arg4 string
 	}{arg1, arg2, arg3, arg4})
+	stub := fake.TryEmitUsageStub
 	fake.recordInvocation("TryEmitUsage", []interface{}{arg1, arg2, arg3, arg4})
 	fake.tryEmitUsageMutex.Unlock()
-	if fake.TryEmitUsageStub != nil {
+	if stub != nil {
 		fake.TryEmitUsageStub(arg1, arg2, arg3, arg4)
 	}
 }

@@ -36,15 +36,16 @@ func (fake *FakeDependencyRegisterer) Register(arg1 string, arg2 []string) error
 		arg1 string
 		arg2 []string
 	}{arg1, arg2Copy})
+	stub := fake.RegisterStub
+	fakeReturns := fake.registerReturns
 	fake.recordInvocation("Register", []interface{}{arg1, arg2Copy})
 	fake.registerMutex.Unlock()
-	if fake.RegisterStub != nil {
-		return fake.RegisterStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.registerReturns
 	return fakeReturns.result1
 }
 

@@ -60,15 +60,16 @@ func (fake *FakeFetcher) BaseImageInfo(arg1 lager.Logger) (groot.BaseImageInfo, 
 	fake.baseImageInfoArgsForCall = append(fake.baseImageInfoArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.BaseImageInfoStub
+	fakeReturns := fake.baseImageInfoReturns
 	fake.recordInvocation("BaseImageInfo", []interface{}{arg1})
 	fake.baseImageInfoMutex.Unlock()
-	if fake.BaseImageInfoStub != nil {
-		return fake.BaseImageInfoStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.baseImageInfoReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -122,15 +123,16 @@ func (fake *FakeFetcher) Close() error {
 	ret, specificReturn := fake.closeReturnsOnCall[len(fake.closeArgsForCall)]
 	fake.closeArgsForCall = append(fake.closeArgsForCall, struct {
 	}{})
+	stub := fake.CloseStub
+	fakeReturns := fake.closeReturns
 	fake.recordInvocation("Close", []interface{}{})
 	fake.closeMutex.Unlock()
-	if fake.CloseStub != nil {
-		return fake.CloseStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.closeReturns
 	return fakeReturns.result1
 }
 
@@ -176,15 +178,16 @@ func (fake *FakeFetcher) StreamBlob(arg1 lager.Logger, arg2 groot.LayerInfo) (io
 		arg1 lager.Logger
 		arg2 groot.LayerInfo
 	}{arg1, arg2})
+	stub := fake.StreamBlobStub
+	fakeReturns := fake.streamBlobReturns
 	fake.recordInvocation("StreamBlob", []interface{}{arg1, arg2})
 	fake.streamBlobMutex.Unlock()
-	if fake.StreamBlobStub != nil {
-		return fake.StreamBlobStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
 	}
-	fakeReturns := fake.streamBlobReturns
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
