@@ -1,4 +1,4 @@
-# code.cloudfoundry.org/archiver v0.0.0-20210513174825-6979f8d756e2
+# code.cloudfoundry.org/archiver v0.0.0-20210609160716-67523bd33dbf
 ## explicit
 code.cloudfoundry.org/archiver/extractor/test_helper
 # code.cloudfoundry.org/clock v1.0.0
@@ -12,10 +12,10 @@ code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.0.0-20210513170648-513d45197033
+# code.cloudfoundry.org/debugserver v0.0.0-20210608171006-d7658ce493f4
 ## explicit
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20210208153517-580cadd489d2 => ../garden
+# code.cloudfoundry.org/garden v0.0.0-20210608104724-fa3a10d59c82 => ../garden
 ## explicit
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
@@ -30,7 +30,7 @@ code.cloudfoundry.org/garden/transport
 # code.cloudfoundry.org/grootfs v0.30.0 => ../grootfs
 ## explicit
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20210208154102-be3abcaf6e2b => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20210608104755-adcde2231d2c => ../idmapper
 ## explicit
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager v2.0.0+incompatible
@@ -39,7 +39,7 @@ code.cloudfoundry.org/lager
 code.cloudfoundry.org/lager/chug
 code.cloudfoundry.org/lager/lagerctx
 code.cloudfoundry.org/lager/lagertest
-# code.cloudfoundry.org/localip v0.0.0-20210513163154-20d795cea8ec
+# code.cloudfoundry.org/localip v0.0.0-20210608161955-43c3ec713c20
 ## explicit
 code.cloudfoundry.org/localip
 # github.com/BurntSushi/toml v0.3.1
@@ -222,7 +222,6 @@ github.com/golang/snappy
 # github.com/google/uuid v1.2.0
 github.com/google/uuid
 # github.com/hashicorp/errwrap v1.1.0
-## explicit
 github.com/hashicorp/errwrap
 # github.com/hashicorp/go-multierror v1.1.1
 ## explicit
@@ -235,7 +234,7 @@ github.com/josharian/intern
 # github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 ## explicit
 github.com/kardianos/osext
-# github.com/klauspost/compress v1.12.3
+# github.com/klauspost/compress v1.13.1
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
 github.com/klauspost/compress/zstd
@@ -308,7 +307,7 @@ github.com/onsi/gomega/types
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit
 github.com/opencontainers/go-digest
-# github.com/opencontainers/image-spec v1.0.1
+# github.com/opencontainers/image-spec v1.0.2-0.20190823105129-775207bd45b6
 ## explicit
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
@@ -329,7 +328,6 @@ github.com/opencontainers/runc/libcontainer/utils
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/opencontainers/selinux v1.8.2 => github.com/opencontainers/selinux v1.8.2
-## explicit
 github.com/opencontainers/selinux/go-selinux
 github.com/opencontainers/selinux/go-selinux/label
 github.com/opencontainers/selinux/pkg/pwalk
@@ -372,7 +370,8 @@ go.opencensus.io/internal
 go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/tracestate
-# golang.org/x/net v0.0.0-20210525063256-abc453219eb5
+# golang.org/x/net v0.0.0-20210614182718-04defd469f4e
+## explicit
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
 golang.org/x/net/html/atom
@@ -386,7 +385,7 @@ golang.org/x/net/trace
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20210603081109-ebe580a85c40
+# golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
@@ -412,7 +411,7 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c
+# google.golang.org/genproto v0.0.0-20210614182748-5b3b54cad159
 ## explicit
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.38.0

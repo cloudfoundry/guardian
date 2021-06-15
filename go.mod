@@ -3,15 +3,15 @@ module code.cloudfoundry.org/guardian
 go 1.16
 
 require (
-	code.cloudfoundry.org/archiver v0.0.0-20210513174825-6979f8d756e2
+	code.cloudfoundry.org/archiver v0.0.0-20210609160716-67523bd33dbf
 	code.cloudfoundry.org/clock v1.0.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b
-	code.cloudfoundry.org/debugserver v0.0.0-20210513170648-513d45197033
-	code.cloudfoundry.org/garden v0.0.0-20210208153517-580cadd489d2
+	code.cloudfoundry.org/debugserver v0.0.0-20210608171006-d7658ce493f4
+	code.cloudfoundry.org/garden v0.0.0-20210608104724-fa3a10d59c82
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20210208154102-be3abcaf6e2b
+	code.cloudfoundry.org/idmapper v0.0.0-20210608104755-adcde2231d2c
 	code.cloudfoundry.org/lager v2.0.0+incompatible
-	code.cloudfoundry.org/localip v0.0.0-20210513163154-20d795cea8ec
+	code.cloudfoundry.org/localip v0.0.0-20210608161955-43c3ec713c20
 	github.com/BurntSushi/toml v0.3.1
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.2.0
@@ -22,7 +22,6 @@ require (
 	github.com/eapache/go-resiliency v1.2.0
 	github.com/gogo/googleapis v1.4.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
@@ -31,10 +30,9 @@ require (
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
 	github.com/opencontainers/go-digest v1.0.0
-	github.com/opencontainers/image-spec v1.0.1
+	github.com/opencontainers/image-spec v1.0.2-0.20190823105129-775207bd45b6
 	github.com/opencontainers/runc v1.0.0-rc95
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
-	github.com/opencontainers/selinux v1.8.2 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/pflag v1.0.5
@@ -44,8 +42,9 @@ require (
 	github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f
 	go.opencensus.io v0.23.0 // indirect
-	golang.org/x/sys v0.0.0-20210603081109-ebe580a85c40
-	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c // indirect
+	golang.org/x/net v0.0.0-20210614182718-04defd469f4e // indirect
+	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
+	google.golang.org/genproto v0.0.0-20210614182748-5b3b54cad159 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )
 
