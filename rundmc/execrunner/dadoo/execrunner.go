@@ -236,10 +236,12 @@ func (d *ExecRunner) runProcess(
 }
 
 func isNoSuchExecutable(logLine string) bool {
-	noSuchFile := regexp.MustCompile(`starting container process caused: exec: .*: stat .*: no such file or directory`)
-	executableNotFound := regexp.MustCompile(`starting container process caused: exec: .*: executable file not found in \$PATH`)
+	runcError := `(?:starting container process caused|unable to start container process)`
+	noSuchFile := `stat .*: no such file or directory`
+	executableNotFound := `executable file not found in \$PATH`
+	noSuchExecutable := regexp.MustCompile(fmt.Sprintf(`%s: exec: .*: (?:%s|%s)`, runcError, noSuchFile, executableNotFound))
 
-	return noSuchFile.MatchString(logLine) || executableNotFound.MatchString(logLine)
+	return noSuchExecutable.MatchString(logLine)
 }
 
 func buildDadooCommand(tty bool, dadooPath, dadooRunMode, runcPath, runcRoot, processID, processPath, sandboxHandle string, extraFiles []*os.File, stdin io.Reader) *exec.Cmd {

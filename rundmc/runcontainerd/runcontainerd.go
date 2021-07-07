@@ -190,7 +190,7 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 		if err != nil {
 			return nil, err
 		}
-		gardenProcessSpec.ID = fmt.Sprintf("%s", randomID)
+		gardenProcessSpec.ID = randomID.String()
 	}
 
 	processIO := func() (io.Reader, io.Writer, io.Writer, bool) {
@@ -214,10 +214,12 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 }
 
 func isNoSuchExecutable(err error) bool {
-	noSuchFile := regexp.MustCompile(`starting container process caused: exec: .*: stat .*: no such file or directory`)
-	executableNotFound := regexp.MustCompile(`starting container process caused: exec: .*: executable file not found in \$PATH`)
+	runcError := `(?:starting container process caused|unable to start container process)`
+	noSuchFile := `stat .*: no such file or directory`
+	executableNotFound := `executable file not found in \$PATH`
+	noSuchExecutable := regexp.MustCompile(fmt.Sprintf(`%s: exec: .*: (?:%s|%s)`, runcError, noSuchFile, executableNotFound))
 
-	return noSuchFile.MatchString(err.Error()) || executableNotFound.MatchString(err.Error())
+	return noSuchExecutable.MatchString(err.Error())
 }
 
 func (r *RunContainerd) getBundle(log lager.Logger, containerID string) (goci.Bndl, error) {

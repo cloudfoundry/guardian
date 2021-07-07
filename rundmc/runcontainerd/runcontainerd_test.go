@@ -163,7 +163,6 @@ var _ = Describe("Runcontainerd", func() {
 				Expect(containerManager.CreateCallCount()).To(Equal(1))
 				_, _, actualSpec, _, _, _ := containerManager.CreateArgsForCall(0)
 				Expect(actualSpec.Annotations["container-type"]).To(Equal("something"))
-
 			})
 		})
 
@@ -301,7 +300,8 @@ var _ = Describe("Runcontainerd", func() {
 				Spec: specs.Spec{
 					Hostname: "test-hostname",
 					Linux:    &specs.Linux{},
-				}}.WithUIDMappings(specs.LinuxIDMapping{
+				},
+			}.WithUIDMappings(specs.LinuxIDMapping{
 				ContainerID: 1000,
 				HostID:      2000,
 				Size:        10,
@@ -464,7 +464,7 @@ var _ = Describe("Runcontainerd", func() {
 
 			Context("when the binary does not exist in $PATH", func() {
 				BeforeEach(func() {
-					containerManager.ExecReturns(errors.New("OCI runtime exec failed: exec failed: container_linux.go:345: starting container process caused: exec: potato: executable file not found in $PATH"))
+					containerManager.ExecReturns(errors.New("OCI runtime exec failed: exec failed: container_linux.go:345: unable to start container process: exec: potato: executable file not found in $PATH"))
 				})
 
 				It("returns a garden.ExecutableNotFoundError error", func() {
@@ -473,6 +473,16 @@ var _ = Describe("Runcontainerd", func() {
 			})
 
 			Context("when the binary is filly qualified and does not exist", func() {
+				BeforeEach(func() {
+					containerManager.ExecReturns(errors.New("OCI runtime exec failed: exec failed: container_linux.go:345: unable to start container process: exec: potato: stat potato: no such file or directory"))
+				})
+
+				It("returns a garden.ExecutableNotFoundError error", func() {
+					Expect(execErr).To(BeAssignableToTypeOf(garden.ExecutableNotFoundError{}))
+				})
+			})
+
+			Context("when the error message is from an older version of runc", func() {
 				BeforeEach(func() {
 					containerManager.ExecReturns(errors.New("OCI runtime exec failed: exec failed: container_linux.go:345: starting container process caused: exec: potato: stat potato: no such file or directory"))
 				})
@@ -542,7 +552,6 @@ var _ = Describe("Runcontainerd", func() {
 				It("returns the error", func() {
 					Expect(execErr).To(MatchError("process-problem"))
 				})
-
 			})
 		})
 	})
@@ -632,7 +641,8 @@ var _ = Describe("Runcontainerd", func() {
 			statser.StatsReturns(gardener.StatsContainerMetrics{
 				CPU: garden.ContainerCPUStat{
 					Usage: 123,
-				}}, nil)
+				},
+			}, nil)
 		})
 
 		JustBeforeEach(func() {
@@ -675,7 +685,6 @@ var _ = Describe("Runcontainerd", func() {
 		BeforeEach(func() {
 			oomEvents = make(chan *apievents.TaskOOM)
 			containerManager.OOMEventsReturnsOnCall(0, oomEvents)
-
 		})
 
 		JustBeforeEach(func() {
@@ -723,7 +732,6 @@ var _ = Describe("Runcontainerd", func() {
 				Eventually(eventsChannel).Should(Receive(&oomEvent))
 				Expect(oomEvent.ContainerID).To(Equal("my-second-container-id"))
 			})
-
 		})
 	})
 

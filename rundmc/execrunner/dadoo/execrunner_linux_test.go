@@ -427,10 +427,9 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				}
 
 				Context("when the binary is not on the $PATH", func() {
-
 					BeforeEach(func() {
-						expectedMessage = `starting container process caused: exec: \"potato\": executable file not found in $PATH"`
-						dadooWritesLogs = `{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"starting container process caused: exec: \\\"potato\\\": executable file not found in $PATH\""}`
+						expectedMessage = `unable to start container process: exec: \"potato\": executable file not found in $PATH"`
+						dadooWritesLogs = `{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"unable to start container process: exec: \\\"potato\\\": executable file not found in $PATH\""}`
 					})
 
 					It("Returns a garden.ExecutableNotFoundError error", func() {
@@ -448,11 +447,21 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					})
 				})
 
-				Context("when a fully qualified binary does not exist", func() {
-
+				Context("when the error message is from an older version of runc", func() {
 					BeforeEach(func() {
-						expectedMessage = `starting container process caused: exec: \"/bin/potato\": stat /bin/potato: no such file or directory"`
-						dadooWritesLogs = `{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"starting container process caused: exec: \\\"/bin/potato\\\": stat /bin/potato: no such file or directory\""}`
+						expectedMessage = `starting container process caused: exec: \"potato\": executable file not found in $PATH"`
+						dadooWritesLogs = `{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"starting container process caused: exec: \\\"potato\\\": executable file not found in $PATH\""}`
+					})
+
+					It("Returns a garden.ExecutableNotFoundError error", func() {
+						verifyNotFoundError(expectedMessage)
+					})
+				})
+
+				Context("when a fully qualified binary does not exist", func() {
+					BeforeEach(func() {
+						expectedMessage = `unable to start container process: exec: \"/bin/potato\": stat /bin/potato: no such file or directory"`
+						dadooWritesLogs = `{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"unable to start container process: exec: \\\"/bin/potato\\\": stat /bin/potato: no such file or directory\""}`
 					})
 
 					It("Returns a garden.ExecutableNotFoundError error", func() {
@@ -480,7 +489,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			It("returns a meaningful error", func() {
 				_, err := runner.Run(log, processID, "some-handle", defaultProcessIO(), false, nil, nil)
 				Expect(err).To(MatchError(ContainSubstring("failed to read runc exit code")))
-
 			})
 		})
 
@@ -1082,13 +1090,13 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			Context("when runc tries to run a non-existent binary", func() {
 				Context("when the binary is not on the $PATH", func() {
 					BeforeEach(func() {
-						dadooWritesLogs = `{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"starting container process caused: exec: \\\"potato\\\": executable file not found in $PATH\""}`
+						dadooWritesLogs = `{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"unable to start container process: exec: \\\"potato\\\": executable file not found in $PATH\""}`
 					})
 
 					It("Returns a garden.RequestedBinaryNotFoundError error", func() {
 						_, err := runner.RunPea(log, processID, goci.Bndl{}, "some-handle", defaultProcessIO(), false, nil, nil)
 
-						message := `starting container process caused: exec: \"potato\": executable file not found in $PATH"`
+						message := `unable to start container process: exec: \"potato\": executable file not found in $PATH"`
 						expectedErr := garden.ExecutableNotFoundError{Message: message}
 
 						Expect(err).To(MatchError(expectedErr))
@@ -1097,13 +1105,13 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 				Context("when a fully qualified binary does not exist", func() {
 					BeforeEach(func() {
-						dadooWritesLogs = `{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"starting container process caused: exec: \\\"/bin/potato\\\": stat /bin/potato: no such file or directory\""}`
+						dadooWritesLogs = `{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"unable to start container process: exec: \\\"/bin/potato\\\": stat /bin/potato: no such file or directory\""}`
 					})
 
 					It("Returns a garden.RequestedBinaryNotFoundError error", func() {
 						_, err := runner.RunPea(log, processID, goci.Bndl{}, "some-handle", defaultProcessIO(), false, nil, nil)
 
-						message := `starting container process caused: exec: \"/bin/potato\": stat /bin/potato: no such file or directory"`
+						message := `unable to start container process: exec: \"/bin/potato\": stat /bin/potato: no such file or directory"`
 						expectedErr := garden.ExecutableNotFoundError{Message: message}
 
 						Expect(err).To(MatchError(expectedErr))
@@ -1120,7 +1128,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			It("returns a meaningful error", func() {
 				_, err := runner.RunPea(log, processID, goci.Bndl{}, "some-handle", defaultProcessIO(), false, nil, nil)
 				Expect(err).To(MatchError(ContainSubstring("failed to read runc exit code")))
-
 			})
 		})
 
@@ -1573,7 +1580,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			var stdin, stdout, stderr *os.File
 			var gstdin, gstdout, gstderr *os.File
 
-			var openNonBlocking = func(fileName string) (*os.File, error) {
+			openNonBlocking := func(fileName string) (*os.File, error) {
 				file, err := os.OpenFile(fileName, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
 				if err != nil {
 					return nil, err
@@ -1585,7 +1592,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			}
 
 			JustBeforeEach(func() {
-
 				var err error
 				// pretend we opened pipes on garden
 				gstdin, err = os.OpenFile(filepath.Join(processPath, "stdin"), os.O_RDWR, 0600)
@@ -1713,8 +1719,10 @@ var _ = Describe("Dadoo ExecRunner", func() {
 	})
 })
 
-type fakeExitError int
-type fakeWaitStatus fakeExitError
+type (
+	fakeExitError  int
+	fakeWaitStatus fakeExitError
+)
 
 func (e fakeExitError) Error() string {
 	return fmt.Sprintf("Fake Exit Error: %d", e)
