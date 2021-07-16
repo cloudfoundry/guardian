@@ -272,6 +272,25 @@ var _ = Describe("Containerd", func() {
 			})
 
 			Describe("Stdio", func() {
+				It("waits long enough but not too long for stdin", func() {
+					stdout := gbytes.NewBuffer()
+					stdin := gbytes.BufferWithBytes([]byte("hello from stdin"))
+					process, err := container.Run(garden.ProcessSpec{
+						ID:   processID,
+						Path: "/bin/sh",
+						Args: []string{"-c", "sleep 1; cat; sleep 1; echo done; exit 12"},
+						TTY:  &garden.TTYSpec{},
+					}, garden.ProcessIO{
+						Stdin:  stdin,
+						Stdout: io.MultiWriter(GinkgoWriter, stdout),
+						Stderr: nil,
+					})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(process.Wait()).To(Equal(12))
+
+					Eventually(stdout).Should(gbytes.Say("hello from stdindone"))
+				})
+
 				It("connects stdin", func() {
 					stdout := gbytes.NewBuffer()
 					stdin := bytes.NewBufferString("hello from stdin")

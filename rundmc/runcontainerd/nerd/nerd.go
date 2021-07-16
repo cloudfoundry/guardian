@@ -187,19 +187,22 @@ func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs
 		return err
 	}
 
+	closer, newProcessIO := wrapStdinWithCloser(processIO)
+
 	log.Debug("execing-task", lager.Data{"containerID": containerID, "processID": processID})
-	process, err := task.Exec(n.context, processID, spec, cio.NewCreator(withProcessIO(processIO, n.ioFifoDir)))
+	process, err := task.Exec(n.context, processID, spec, cio.NewCreator(withProcessIO(newProcessIO, n.ioFifoDir)))
 	if err != nil {
 		return err
+	}
+
+	closer.closer = func() {
+		process.CloseIO(n.context, containerd.WithStdinCloser)
 	}
 
 	log.Debug("starting-task", lager.Data{"containerID": containerID, "processID": processID})
 	if err := process.Start(n.context); err != nil {
 		return err
 	}
-
-	log.Debug("closing-stdin", lager.Data{"containerID": containerID, "processID": processID})
-	go exponentialBackoffCloseIO(process, n.context, log, containerID)
 
 	return nil
 }
@@ -232,24 +235,34 @@ func (n *Nerd) GetTask(log lager.Logger, id string) (runcontainerd.BackingProces
 	return NewBackingProcess(log, task, n.context), nil
 }
 
-func exponentialBackoffCloseIO(process containerd.Process, ctx context.Context, log lager.Logger, containerID string) {
-	duration := 3 * time.Second
-	retries := 10
-	for i := 0; i < retries; i++ {
-		if err := process.CloseIO(ctx, containerd.WithStdinCloser); err != nil {
-			log.Error("failed-closing-stdin", err, lager.Data{"containerID": containerID, "processID": process.ID()})
-			time.Sleep(duration)
-			duration *= 2
-			continue
-		}
-		break
-	}
-}
-
 func noTTYProcessIO(initProcessIO func() (io.Reader, io.Writer, io.Writer)) func() (io.Reader, io.Writer, io.Writer, bool) {
 	return func() (io.Reader, io.Writer, io.Writer, bool) {
 		stdin, stdout, stderr := initProcessIO()
 		return stdin, stdout, stderr, false
+	}
+}
+
+type stdinCloser struct {
+	stdin  io.Reader
+	closer func()
+}
+
+func (s *stdinCloser) Read(p []byte) (int, error) {
+	n, err := s.stdin.Read(p)
+	if err == io.EOF {
+		if s.closer != nil {
+			s.closer()
+		}
+	}
+	return n, err
+}
+
+func wrapStdinWithCloser(processIO func() (io.Reader, io.Writer, io.Writer, bool)) (*stdinCloser, func() (io.Reader, io.Writer, io.Writer, bool)) {
+	i, o, e, t := processIO()
+
+	closer := &stdinCloser{stdin: orEmpty(i)}
+	return closer, func() (io.Reader, io.Writer, io.Writer, bool) {
+		return closer, o, e, t
 	}
 }
 
