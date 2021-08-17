@@ -11,9 +11,9 @@ require (
 	github.com/cloudfoundry/gosteno v0.0.0-20150423193413-0c8581caea35 // indirect
 	github.com/cloudfoundry/loggregatorlib v0.0.0-20170823162133-36eddf15ef12 // indirect
 	github.com/cloudfoundry/sonde-go v0.0.0-20200416163440-a42463ba266b
-	github.com/containers/image/v5 v5.15.0
+	github.com/containers/image/v5 v5.15.1
 	github.com/containers/libtrust v0.0.0-20200511145503-9c3a6c22cd9a // indirect
-	github.com/containers/storage v1.33.0
+	github.com/containers/storage v1.34.0
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v20.10.8+incompatible
 	github.com/docker/go-units v0.4.0

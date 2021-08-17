@@ -13,8 +13,9 @@ code.cloudfoundry.org/lager/chug
 code.cloudfoundry.org/lager/internal/truncate
 code.cloudfoundry.org/lager/lagerctx
 code.cloudfoundry.org/lager/lagertest
-# github.com/BurntSushi/toml v0.3.1
+# github.com/BurntSushi/toml v0.4.1
 github.com/BurntSushi/toml
+github.com/BurntSushi/toml/internal
 # github.com/Microsoft/go-winio v0.5.0
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
@@ -52,7 +53,7 @@ github.com/cloudfoundry/gosteno/syslog
 # github.com/cloudfoundry/sonde-go v0.0.0-20200416163440-a42463ba266b
 ## explicit
 github.com/cloudfoundry/sonde-go/events
-# github.com/containers/image/v5 v5.15.0
+# github.com/containers/image/v5 v5.15.1
 ## explicit
 github.com/containers/image/v5/directory/explicitfilepath
 github.com/containers/image/v5/docker
@@ -85,7 +86,7 @@ github.com/containers/image/v5/version
 github.com/containers/libtrust
 # github.com/containers/ocicrypt v1.1.2
 github.com/containers/ocicrypt/spec
-# github.com/containers/storage v1.33.0
+# github.com/containers/storage v1.34.0
 ## explicit
 github.com/containers/storage/pkg/chunked/compressor
 github.com/containers/storage/pkg/chunked/internal
@@ -156,7 +157,8 @@ github.com/hashicorp/errwrap
 github.com/hashicorp/go-multierror
 # github.com/josharian/intern v1.0.0
 github.com/josharian/intern
-# github.com/klauspost/compress v1.13.1
+# github.com/klauspost/compress v1.13.3
+github.com/klauspost/compress
 github.com/klauspost/compress/flate
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
