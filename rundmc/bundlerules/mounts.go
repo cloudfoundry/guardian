@@ -4,41 +4,39 @@ import (
 	"code.cloudfoundry.org/garden"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"code.cloudfoundry.org/lager"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type Mounts struct {
+	Logger             lager.Logger
 	MountOptionsGetter func(path string) ([]string, error)
 }
 
 func (b Mounts) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec) (goci.Bndl, error) {
 	var mounts []specs.Mount
 	for _, m := range spec.BindMounts {
-		mountOptions, err := b.buildMountOptions(m)
-		if err != nil {
-			return goci.Bndl{}, err
-		}
-
 		mounts = append(mounts, specs.Mount{
 			Destination: m.DstPath,
 			Source:      m.SrcPath,
 			Type:        "bind",
-			Options:     mountOptions,
+			Options:     b.buildMountOptions(m),
 		})
 	}
 
 	return bndl.WithPrependedMounts(spec.BaseConfig.Mounts...).WithMounts(mounts...), nil
 }
 
-func (b Mounts) buildMountOptions(m garden.BindMount) ([]string, error) {
+func (b Mounts) buildMountOptions(m garden.BindMount) []string {
 	mountOptions := []string{"bind", getMountMode(m)}
 
 	srcMountOptions, err := b.MountOptionsGetter(m.SrcPath)
 	if err != nil {
-		return nil, err
+		b.Logger.Info("failed to get mount options, assuming no additional mount options", lager.Data{"error": err})
+		srcMountOptions = []string{}
 	}
 
-	return append(mountOptions, filterModeOption(srcMountOptions)...), nil
+	return append(mountOptions, filterModeOption(srcMountOptions)...)
 }
 
 func getMountMode(m garden.BindMount) string {

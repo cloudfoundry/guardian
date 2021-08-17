@@ -5,6 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/garden"
@@ -12,10 +13,12 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/rundmcfakes"
+	"code.cloudfoundry.org/lager/lagertest"
 )
 
 var _ = Describe("MountsRule", func() {
 	var (
+		logger             *lagertest.TestLogger
 		bndl               goci.Bndl
 		bundleApplyErr     error
 		originalBndl       goci.Bndl
@@ -26,6 +29,7 @@ var _ = Describe("MountsRule", func() {
 	)
 
 	BeforeEach(func() {
+		logger = lagertest.NewTestLogger("MountsRule")
 		mountOptionsGetter = new(rundmcfakes.FakeMountOptionsGetter)
 
 		preConfiguredMounts := []specs.Mount{
@@ -61,6 +65,7 @@ var _ = Describe("MountsRule", func() {
 
 	JustBeforeEach(func() {
 		rule := bundlerules.Mounts{
+			Logger:             logger,
 			MountOptionsGetter: mountOptionsGetter.Spy,
 		}
 		bndl, bundleApplyErr = rule.Apply(
@@ -90,20 +95,36 @@ var _ = Describe("MountsRule", func() {
 				mountOptionsGetter.Returns(nil, errors.New("options-check-failure"))
 			})
 
-			It("returns an error", func() {
-				Expect(bundleApplyErr).To(MatchError("options-check-failure"))
-				Expect(bndl).To(Equal(goci.Bndl{}))
+			It("logs a warning", func() {
+				Expect(logger.LogMessages()).To(ContainElement(ContainSubstring("failed to get mount options")))
+			})
+
+			It("ignores the error", func() {
+				Expect(bundleApplyErr).NotTo(HaveOccurred())
+			})
+
+			It("assumes no additional mount options", func() {
+				Expect(bndl.Mounts()).To(ContainElements(
+					MatchFields(IgnoreExtras, Fields{
+						"Destination": Equal("/path/to/ro/dest"),
+						"Options":     ConsistOf("bind", "ro"),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Destination": Equal("/path/to/rw/dest"),
+						"Options":     ConsistOf("bind", "rw"),
+					}),
+				))
 			})
 		})
 
 		It("preserves source mount options on the bind mount", func() {
-			Expect(bndl.Mounts()[2]).To(Equal(
-				specs.Mount{
-					Source:      "/path/to/ro/src",
-					Destination: "/path/to/ro/dest",
-					Options:     []string{"bind", "ro", "noexec"},
-					Type:        "bind",
-				},
+			Expect(bndl.Mounts()).To(ContainElements(
+				MatchFields(IgnoreExtras, Fields{
+					"Source":      Equal("/path/to/ro/src"),
+					"Destination": Equal("/path/to/ro/dest"),
+					"Options":     ConsistOf("bind", "ro", "noexec"),
+					"Type":        Equal("bind"),
+				}),
 			))
 		})
 
@@ -113,13 +134,13 @@ var _ = Describe("MountsRule", func() {
 			})
 
 			It("filters them all", func() {
-				Expect(bndl.Mounts()[2]).To(Equal(
-					specs.Mount{
-						Source:      "/path/to/ro/src",
-						Destination: "/path/to/ro/dest",
-						Options:     []string{"bind", "ro", "noexec"},
-						Type:        "bind",
-					},
+				Expect(bndl.Mounts()).To(ContainElements(
+					MatchFields(IgnoreExtras, Fields{
+						"Source":      Equal("/path/to/ro/src"),
+						"Destination": Equal("/path/to/ro/dest"),
+						"Options":     ConsistOf("bind", "ro", "noexec"),
+						"Type":        Equal("bind"),
+					}),
 				))
 			})
 		})
@@ -151,6 +172,7 @@ var _ = Describe("MountsRule", func() {
 	})
 
 	It("adds mounts to the bundle, ensuring bindMounts appear last", func() {
+		Expect(bndl.Mounts()).To(HaveLen(4))
 		Expect(bndl.Mounts()[2]).To(Equal(
 			specs.Mount{
 				Source:      "/path/to/ro/src",
