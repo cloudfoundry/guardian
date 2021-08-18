@@ -8,6 +8,9 @@ import (
 	"github.com/containerd/containerd"
 )
 
+//go:generate counterfeiter github.com/containerd/containerd.Process
+//go:generate counterfeiter github.com/containerd/containerd/cio.IO
+
 type BackingProcess struct {
 	log               lager.Logger
 	context           context.Context
@@ -37,6 +40,7 @@ func (p BackingProcess) Wait() (int, error) {
 		return 0, exitStatus.Error()
 	}
 
+	p.containerdProcess.IO().Wait()
 	return int(exitStatus.ExitCode()), nil
 }
 
