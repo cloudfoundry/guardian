@@ -555,7 +555,7 @@ func (cmd *CommonCommand) wireContainerizer(
 		bundlerules.CGroupPath{
 			Path: cgroupRootPath,
 		},
-		wireMounts(),
+		wireMounts(log),
 		bundlerules.Env{},
 		bundlerules.Hostname{},
 		bundlerules.Windows{},

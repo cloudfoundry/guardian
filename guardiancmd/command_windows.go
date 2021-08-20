@@ -109,11 +109,11 @@ func wireEnvFunc() processes.EnvFunc {
 	return processes.WindowsEnvFor
 }
 
-func wireMounts() bundlerules.Mounts {
+func wireMounts(logger lager.Logger) bundlerules.Mounts {
 	noopMountOptionsGetter := func(path string) ([]string, error) {
 		return []string{}, nil
 	}
-	return bundlerules.Mounts{MountOptionsGetter: noopMountOptionsGetter}
+	return bundlerules.NewMounts(logger, noopMountOptionsGetter)
 }
 
 // Note - it's not possible to bind mount a single file in Windows, so we are

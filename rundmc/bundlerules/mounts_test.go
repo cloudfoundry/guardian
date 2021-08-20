@@ -64,10 +64,7 @@ var _ = Describe("MountsRule", func() {
 	})
 
 	JustBeforeEach(func() {
-		rule := bundlerules.Mounts{
-			Logger:             logger,
-			MountOptionsGetter: mountOptionsGetter.Spy,
-		}
+		rule := bundlerules.NewMounts(logger, mountOptionsGetter.Spy)
 		bndl, bundleApplyErr = rule.Apply(
 			originalBndl,
 			spec.DesiredContainerSpec{

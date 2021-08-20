@@ -207,8 +207,10 @@ func defaultBindMounts() []specs.Mount {
 		{Destination: "/dev", Type: "tmpfs", Source: "tmpfs", Options: []string{"noexec", "strictatime", "mode=755"}},
 		{Destination: "/dev/shm", Type: "tmpfs", Source: "tmpfs", Options: []string{"noexec", "nosuid", "nodev", "mode=1777"}},
 		{Destination: "/dev/mqueue", Type: "mqueue", Source: "mqueue", Options: []string{"noexec", "nosuid", "nodev"}},
-		{Destination: "/dev/pts", Type: "devpts", Source: "devpts",
-			Options: []string{"nosuid", "noexec", "newinstance", fmt.Sprintf("gid=%d", devptsGid), "ptmxmode=0666", "mode=0620"}},
+		{
+			Destination: "/dev/pts", Type: "devpts", Source: "devpts",
+			Options: []string{"nosuid", "noexec", "newinstance", fmt.Sprintf("gid=%d", devptsGid), "ptmxmode=0666", "mode=0620"},
+		},
 	}
 }
 
@@ -245,10 +247,8 @@ func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
 	return nil
 }
 
-func wireMounts() bundlerules.Mounts {
-	return bundlerules.Mounts{
-		MountOptionsGetter: bundlerules.UnprivilegedMountFlagsGetter,
-	}
+func wireMounts(logger lager.Logger) bundlerules.Mounts {
+	return bundlerules.NewMounts(logger, bundlerules.UnprivilegedMountFlagsGetter)
 }
 
 func (cmd *CommonCommand) wireKernelParams() []rundmc.BundlerRule {

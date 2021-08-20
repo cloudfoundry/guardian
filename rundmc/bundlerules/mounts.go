@@ -3,14 +3,22 @@ package bundlerules
 import (
 	"code.cloudfoundry.org/garden"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
+	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type Mounts struct {
-	Logger             lager.Logger
-	MountOptionsGetter func(path string) ([]string, error)
+	logger             lager.Logger
+	mountOptionsGetter rundmc.MountOptionsGetter
+}
+
+func NewMounts(logger lager.Logger, mountOptionsGetter rundmc.MountOptionsGetter) Mounts {
+	return Mounts{
+		logger:             logger,
+		mountOptionsGetter: mountOptionsGetter,
+	}
 }
 
 func (b Mounts) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec) (goci.Bndl, error) {
@@ -30,9 +38,9 @@ func (b Mounts) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec) (goci.Bndl
 func (b Mounts) buildMountOptions(m garden.BindMount) []string {
 	mountOptions := []string{"bind", getMountMode(m)}
 
-	srcMountOptions, err := b.MountOptionsGetter(m.SrcPath)
+	srcMountOptions, err := b.mountOptionsGetter(m.SrcPath)
 	if err != nil {
-		b.Logger.Info("failed to get mount options, assuming no additional mount options", lager.Data{"error": err})
+		b.logger.Info("failed to get mount options, assuming no additional mount options", lager.Data{"error": err})
 		srcMountOptions = []string{}
 	}
 
