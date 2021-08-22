@@ -57,15 +57,16 @@ func (fake *FakeExecer) Attach(arg1 lager.Logger, arg2 string, arg3 string, arg4
 		arg3 string
 		arg4 garden.ProcessIO
 	}{arg1, arg2, arg3, arg4})
+	stub := fake.AttachStub
+	fakeReturns := fake.attachReturns
 	fake.recordInvocation("Attach", []interface{}{arg1, arg2, arg3, arg4})
 	fake.attachMutex.Unlock()
-	if fake.AttachStub != nil {
-		return fake.AttachStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.attachReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -124,15 +125,16 @@ func (fake *FakeExecer) ExecWithBndl(arg1 lager.Logger, arg2 string, arg3 goci.B
 		arg4 garden.ProcessSpec
 		arg5 garden.ProcessIO
 	}{arg1, arg2, arg3, arg4, arg5})
+	stub := fake.ExecWithBndlStub
+	fakeReturns := fake.execWithBndlReturns
 	fake.recordInvocation("ExecWithBndl", []interface{}{arg1, arg2, arg3, arg4, arg5})
 	fake.execWithBndlMutex.Unlock()
-	if fake.ExecWithBndlStub != nil {
-		return fake.ExecWithBndlStub(arg1, arg2, arg3, arg4, arg5)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.execWithBndlReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

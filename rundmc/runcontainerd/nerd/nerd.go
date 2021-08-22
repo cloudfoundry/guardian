@@ -181,27 +181,27 @@ func (n *Nerd) tryToGetStatus(log lager.Logger, task containerd.Task) (container
 	return containerd.Status{}, errors.New("failed getting task status")
 }
 
-func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer, bool)) error {
+func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer, bool)) (runcontainerd.BackingProcess, error) {
 	_, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
-		return err
+		return BackingProcess{}, err
 	}
 
 	log.Debug("execing-task", lager.Data{"containerID": containerID, "processID": processID})
 	process, err := task.Exec(n.context, processID, spec, cio.NewCreator(withProcessIO(processIO, n.ioFifoDir)))
 	if err != nil {
-		return err
+		return BackingProcess{}, err
 	}
 
 	log.Debug("starting-task", lager.Data{"containerID": containerID, "processID": processID})
 	if err := process.Start(n.context); err != nil {
-		return err
+		return BackingProcess{}, err
 	}
 
 	log.Debug("closing-stdin", lager.Data{"containerID": containerID, "processID": processID})
 	go exponentialBackoffCloseIO(process, n.context, log, containerID)
 
-	return nil
+	return NewBackingProcess(log, process, n.context), nil
 }
 
 func (n *Nerd) GetProcess(log lager.Logger, containerID, processID string) (runcontainerd.BackingProcess, error) {

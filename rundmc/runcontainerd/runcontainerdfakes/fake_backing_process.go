@@ -61,15 +61,16 @@ func (fake *FakeBackingProcess) Delete() error {
 	ret, specificReturn := fake.deleteReturnsOnCall[len(fake.deleteArgsForCall)]
 	fake.deleteArgsForCall = append(fake.deleteArgsForCall, struct {
 	}{})
+	stub := fake.DeleteStub
+	fakeReturns := fake.deleteReturns
 	fake.recordInvocation("Delete", []interface{}{})
 	fake.deleteMutex.Unlock()
-	if fake.DeleteStub != nil {
-		return fake.DeleteStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.deleteReturns
 	return fakeReturns.result1
 }
 
@@ -113,15 +114,16 @@ func (fake *FakeBackingProcess) ID() string {
 	ret, specificReturn := fake.iDReturnsOnCall[len(fake.iDArgsForCall)]
 	fake.iDArgsForCall = append(fake.iDArgsForCall, struct {
 	}{})
+	stub := fake.IDStub
+	fakeReturns := fake.iDReturns
 	fake.recordInvocation("ID", []interface{}{})
 	fake.iDMutex.Unlock()
-	if fake.IDStub != nil {
-		return fake.IDStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.iDReturns
 	return fakeReturns.result1
 }
 
@@ -166,15 +168,16 @@ func (fake *FakeBackingProcess) Signal(arg1 syscall.Signal) error {
 	fake.signalArgsForCall = append(fake.signalArgsForCall, struct {
 		arg1 syscall.Signal
 	}{arg1})
+	stub := fake.SignalStub
+	fakeReturns := fake.signalReturns
 	fake.recordInvocation("Signal", []interface{}{arg1})
 	fake.signalMutex.Unlock()
-	if fake.SignalStub != nil {
-		return fake.SignalStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.signalReturns
 	return fakeReturns.result1
 }
 
@@ -225,15 +228,16 @@ func (fake *FakeBackingProcess) Wait() (int, error) {
 	ret, specificReturn := fake.waitReturnsOnCall[len(fake.waitArgsForCall)]
 	fake.waitArgsForCall = append(fake.waitArgsForCall, struct {
 	}{})
+	stub := fake.WaitStub
+	fakeReturns := fake.waitReturns
 	fake.recordInvocation("Wait", []interface{}{})
 	fake.waitMutex.Unlock()
-	if fake.WaitStub != nil {
-		return fake.WaitStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.waitReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

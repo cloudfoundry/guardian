@@ -44,15 +44,16 @@ func (fake *FakeRuntime) Delete(arg1 lager.Logger, arg2 string) error {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DeleteStub
+	fakeReturns := fake.deleteReturns
 	fake.recordInvocation("Delete", []interface{}{arg1, arg2})
 	fake.deleteMutex.Unlock()
-	if fake.DeleteStub != nil {
-		return fake.DeleteStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.deleteReturns
 	return fakeReturns.result1
 }
 
@@ -105,15 +106,16 @@ func (fake *FakeRuntime) RemoveBundle(arg1 lager.Logger, arg2 string) error {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.RemoveBundleStub
+	fakeReturns := fake.removeBundleReturns
 	fake.recordInvocation("RemoveBundle", []interface{}{arg1, arg2})
 	fake.removeBundleMutex.Unlock()
-	if fake.RemoveBundleStub != nil {
-		return fake.RemoveBundleStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.removeBundleReturns
 	return fakeReturns.result1
 }
 

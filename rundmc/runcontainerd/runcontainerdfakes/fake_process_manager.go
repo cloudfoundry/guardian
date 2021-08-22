@@ -50,15 +50,16 @@ func (fake *FakeProcessManager) GetProcess(arg1 lager.Logger, arg2 string, arg3 
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.GetProcessStub
+	fakeReturns := fake.getProcessReturns
 	fake.recordInvocation("GetProcess", []interface{}{arg1, arg2, arg3})
 	fake.getProcessMutex.Unlock()
-	if fake.GetProcessStub != nil {
-		return fake.GetProcessStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.getProcessReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -114,15 +115,16 @@ func (fake *FakeProcessManager) GetTask(arg1 lager.Logger, arg2 string) (runcont
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.GetTaskStub
+	fakeReturns := fake.getTaskReturns
 	fake.recordInvocation("GetTask", []interface{}{arg1, arg2})
 	fake.getTaskMutex.Unlock()
-	if fake.GetTaskStub != nil {
-		return fake.GetTaskStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.getTaskReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
