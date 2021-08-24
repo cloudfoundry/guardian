@@ -163,22 +163,17 @@ func (e *WindowsExecRunner) runProcess(
 		}
 	}()
 
-	var childLogW syscall.Handle
+	logWFd := logW.Fd()
 
-	// GetCurrentProcess doesn't error
-	self, _ := syscall.GetCurrentProcess()
-	// duplicate handle so it is inheritable by child process
-	err = syscall.DuplicateHandle(self, syscall.Handle(logW.Fd()), self, &childLogW, 0, true, syscall.DUPLICATE_SAME_ACCESS)
-	if err != nil {
-		return nil, errors.Wrap(err, "duplicating log pipe handle")
-	}
-
-	cmd := exec.Command(e.runtimePath, "--debug", "--log-handle", strconv.FormatUint(uint64(childLogW), 10), "--log-format", "json", runMode, "--pid-file", filepath.Join(processPath, "pidfile"))
+	cmd := exec.Command(e.runtimePath, "--debug", "--log-handle", strconv.FormatUint(uint64(logWFd), 10), "--log-format", "json", runMode, "--pid-file", filepath.Join(processPath, "pidfile"))
 	cmd.Args = append(cmd.Args, runtimeExtraArgs...)
 
 	cmd.Stdin = stdinR
 	cmd.Stdout = stdoutW
 	cmd.Stderr = stderrW
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		AdditionalInheritedHandles: []syscall.Handle{syscall.Handle(logWFd)},
+	}
 
 	if err := e.commandRunner.Start(cmd); err != nil {
 		return nil, errors.Wrap(err, "execing runtime plugin")
@@ -228,7 +223,6 @@ func (e *WindowsExecRunner) runProcess(
 		}()
 
 		// the streamLogs go func will only exit once this handle is closed
-		defer syscall.CloseHandle(childLogW)
 		defer proc.exitMutex.Unlock()
 		if err := e.commandRunner.Wait(cmd); err != nil {
 			if exitErr, ok := err.(*exec.ExitError); ok {
