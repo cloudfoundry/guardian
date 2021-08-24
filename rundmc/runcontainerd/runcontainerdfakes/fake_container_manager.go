@@ -53,7 +53,7 @@ type FakeContainerManager struct {
 	deleteReturnsOnCall map[int]struct {
 		result1 error
 	}
-	ExecStub        func(lager.Logger, string, string, *specs.Process, func() (io.Reader, io.Writer, io.Writer, bool)) error
+	ExecStub        func(lager.Logger, string, string, *specs.Process, func() (io.Reader, io.Writer, io.Writer, bool)) (runcontainerd.BackingProcess, error)
 	execMutex       sync.RWMutex
 	execArgsForCall []struct {
 		arg1 lager.Logger
@@ -63,10 +63,12 @@ type FakeContainerManager struct {
 		arg5 func() (io.Reader, io.Writer, io.Writer, bool)
 	}
 	execReturns struct {
-		result1 error
+		result1 runcontainerd.BackingProcess
+		result2 error
 	}
 	execReturnsOnCall map[int]struct {
-		result1 error
+		result1 runcontainerd.BackingProcess
+		result2 error
 	}
 	GetContainerPIDStub        func(lager.Logger, string) (uint32, error)
 	getContainerPIDMutex       sync.RWMutex
@@ -145,15 +147,16 @@ func (fake *FakeContainerManager) BundleIDs(arg1 ...runcontainerd.ContainerFilte
 	fake.bundleIDsArgsForCall = append(fake.bundleIDsArgsForCall, struct {
 		arg1 []runcontainerd.ContainerFilter
 	}{arg1})
+	stub := fake.BundleIDsStub
+	fakeReturns := fake.bundleIDsReturns
 	fake.recordInvocation("BundleIDs", []interface{}{arg1})
 	fake.bundleIDsMutex.Unlock()
-	if fake.BundleIDsStub != nil {
-		return fake.BundleIDsStub(arg1...)
+	if stub != nil {
+		return stub(arg1...)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.bundleIDsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -213,15 +216,16 @@ func (fake *FakeContainerManager) Create(arg1 lager.Logger, arg2 string, arg3 *s
 		arg5 uint32
 		arg6 func() (io.Reader, io.Writer, io.Writer)
 	}{arg1, arg2, arg3, arg4, arg5, arg6})
+	stub := fake.CreateStub
+	fakeReturns := fake.createReturns
 	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6})
 	fake.createMutex.Unlock()
-	if fake.CreateStub != nil {
-		return fake.CreateStub(arg1, arg2, arg3, arg4, arg5, arg6)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4, arg5, arg6)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.createReturns
 	return fakeReturns.result1
 }
 
@@ -274,15 +278,16 @@ func (fake *FakeContainerManager) Delete(arg1 lager.Logger, arg2 string) error {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DeleteStub
+	fakeReturns := fake.deleteReturns
 	fake.recordInvocation("Delete", []interface{}{arg1, arg2})
 	fake.deleteMutex.Unlock()
-	if fake.DeleteStub != nil {
-		return fake.DeleteStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.deleteReturns
 	return fakeReturns.result1
 }
 
@@ -328,7 +333,7 @@ func (fake *FakeContainerManager) DeleteReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeContainerManager) Exec(arg1 lager.Logger, arg2 string, arg3 string, arg4 *specs.Process, arg5 func() (io.Reader, io.Writer, io.Writer, bool)) error {
+func (fake *FakeContainerManager) Exec(arg1 lager.Logger, arg2 string, arg3 string, arg4 *specs.Process, arg5 func() (io.Reader, io.Writer, io.Writer, bool)) (runcontainerd.BackingProcess, error) {
 	fake.execMutex.Lock()
 	ret, specificReturn := fake.execReturnsOnCall[len(fake.execArgsForCall)]
 	fake.execArgsForCall = append(fake.execArgsForCall, struct {
@@ -338,16 +343,17 @@ func (fake *FakeContainerManager) Exec(arg1 lager.Logger, arg2 string, arg3 stri
 		arg4 *specs.Process
 		arg5 func() (io.Reader, io.Writer, io.Writer, bool)
 	}{arg1, arg2, arg3, arg4, arg5})
+	stub := fake.ExecStub
+	fakeReturns := fake.execReturns
 	fake.recordInvocation("Exec", []interface{}{arg1, arg2, arg3, arg4, arg5})
 	fake.execMutex.Unlock()
-	if fake.ExecStub != nil {
-		return fake.ExecStub(arg1, arg2, arg3, arg4, arg5)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
-		return ret.result1
+		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.execReturns
-	return fakeReturns.result1
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeContainerManager) ExecCallCount() int {
@@ -356,7 +362,7 @@ func (fake *FakeContainerManager) ExecCallCount() int {
 	return len(fake.execArgsForCall)
 }
 
-func (fake *FakeContainerManager) ExecCalls(stub func(lager.Logger, string, string, *specs.Process, func() (io.Reader, io.Writer, io.Writer, bool)) error) {
+func (fake *FakeContainerManager) ExecCalls(stub func(lager.Logger, string, string, *specs.Process, func() (io.Reader, io.Writer, io.Writer, bool)) (runcontainerd.BackingProcess, error)) {
 	fake.execMutex.Lock()
 	defer fake.execMutex.Unlock()
 	fake.ExecStub = stub
@@ -369,27 +375,30 @@ func (fake *FakeContainerManager) ExecArgsForCall(i int) (lager.Logger, string, 
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
 }
 
-func (fake *FakeContainerManager) ExecReturns(result1 error) {
+func (fake *FakeContainerManager) ExecReturns(result1 runcontainerd.BackingProcess, result2 error) {
 	fake.execMutex.Lock()
 	defer fake.execMutex.Unlock()
 	fake.ExecStub = nil
 	fake.execReturns = struct {
-		result1 error
-	}{result1}
+		result1 runcontainerd.BackingProcess
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeContainerManager) ExecReturnsOnCall(i int, result1 error) {
+func (fake *FakeContainerManager) ExecReturnsOnCall(i int, result1 runcontainerd.BackingProcess, result2 error) {
 	fake.execMutex.Lock()
 	defer fake.execMutex.Unlock()
 	fake.ExecStub = nil
 	if fake.execReturnsOnCall == nil {
 		fake.execReturnsOnCall = make(map[int]struct {
-			result1 error
+			result1 runcontainerd.BackingProcess
+			result2 error
 		})
 	}
 	fake.execReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
+		result1 runcontainerd.BackingProcess
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeContainerManager) GetContainerPID(arg1 lager.Logger, arg2 string) (uint32, error) {
@@ -399,15 +408,16 @@ func (fake *FakeContainerManager) GetContainerPID(arg1 lager.Logger, arg2 string
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.GetContainerPIDStub
+	fakeReturns := fake.getContainerPIDReturns
 	fake.recordInvocation("GetContainerPID", []interface{}{arg1, arg2})
 	fake.getContainerPIDMutex.Unlock()
-	if fake.GetContainerPIDStub != nil {
-		return fake.GetContainerPIDStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.getContainerPIDReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -462,15 +472,16 @@ func (fake *FakeContainerManager) OOMEvents(arg1 lager.Logger) <-chan *events.Ta
 	fake.oOMEventsArgsForCall = append(fake.oOMEventsArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.OOMEventsStub
+	fakeReturns := fake.oOMEventsReturns
 	fake.recordInvocation("OOMEvents", []interface{}{arg1})
 	fake.oOMEventsMutex.Unlock()
-	if fake.OOMEventsStub != nil {
-		return fake.OOMEventsStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.oOMEventsReturns
 	return fakeReturns.result1
 }
 
@@ -523,15 +534,16 @@ func (fake *FakeContainerManager) RemoveBundle(arg1 lager.Logger, arg2 string) e
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.RemoveBundleStub
+	fakeReturns := fake.removeBundleReturns
 	fake.recordInvocation("RemoveBundle", []interface{}{arg1, arg2})
 	fake.removeBundleMutex.Unlock()
-	if fake.RemoveBundleStub != nil {
-		return fake.RemoveBundleStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.removeBundleReturns
 	return fakeReturns.result1
 }
 
@@ -584,15 +596,16 @@ func (fake *FakeContainerManager) Spec(arg1 lager.Logger, arg2 string) (*specs.S
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.SpecStub
+	fakeReturns := fake.specReturns
 	fake.recordInvocation("Spec", []interface{}{arg1, arg2})
 	fake.specMutex.Unlock()
-	if fake.SpecStub != nil {
-		return fake.SpecStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.specReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -648,15 +661,16 @@ func (fake *FakeContainerManager) State(arg1 lager.Logger, arg2 string) (int, st
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.StateStub
+	fakeReturns := fake.stateReturns
 	fake.recordInvocation("State", []interface{}{arg1, arg2})
 	fake.stateMutex.Unlock()
-	if fake.StateStub != nil {
-		return fake.StateStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
 	}
-	fakeReturns := fake.stateReturns
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 

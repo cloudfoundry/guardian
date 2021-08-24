@@ -62,15 +62,16 @@ func (fake *FakePeaManager) Create(arg1 lager.Logger, arg2 string, arg3 goci.Bnd
 		arg3 goci.Bndl
 		arg4 garden.ProcessIO
 	}{arg1, arg2, arg3, arg4})
+	stub := fake.CreateStub
+	fakeReturns := fake.createReturns
 	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3, arg4})
 	fake.createMutex.Unlock()
-	if fake.CreateStub != nil {
-		return fake.CreateStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.createReturns
 	return fakeReturns.result1
 }
 
@@ -123,15 +124,16 @@ func (fake *FakePeaManager) Delete(arg1 lager.Logger, arg2 string) error {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DeleteStub
+	fakeReturns := fake.deleteReturns
 	fake.recordInvocation("Delete", []interface{}{arg1, arg2})
 	fake.deleteMutex.Unlock()
-	if fake.DeleteStub != nil {
-		return fake.DeleteStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.deleteReturns
 	return fakeReturns.result1
 }
 
@@ -184,15 +186,16 @@ func (fake *FakePeaManager) RemoveBundle(arg1 lager.Logger, arg2 string) error {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.RemoveBundleStub
+	fakeReturns := fake.removeBundleReturns
 	fake.recordInvocation("RemoveBundle", []interface{}{arg1, arg2})
 	fake.removeBundleMutex.Unlock()
-	if fake.RemoveBundleStub != nil {
-		return fake.RemoveBundleStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.removeBundleReturns
 	return fakeReturns.result1
 }
 

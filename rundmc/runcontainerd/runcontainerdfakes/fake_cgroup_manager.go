@@ -29,15 +29,16 @@ func (fake *FakeCgroupManager) SetUseMemoryHierarchy(arg1 string) error {
 	fake.setUseMemoryHierarchyArgsForCall = append(fake.setUseMemoryHierarchyArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.SetUseMemoryHierarchyStub
+	fakeReturns := fake.setUseMemoryHierarchyReturns
 	fake.recordInvocation("SetUseMemoryHierarchy", []interface{}{arg1})
 	fake.setUseMemoryHierarchyMutex.Unlock()
-	if fake.SetUseMemoryHierarchyStub != nil {
-		return fake.SetUseMemoryHierarchyStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.setUseMemoryHierarchyReturns
 	return fakeReturns.result1
 }
 

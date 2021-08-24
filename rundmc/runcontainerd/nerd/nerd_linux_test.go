@@ -175,8 +175,9 @@ var _ = Describe("Nerd", func() {
 				Cwd:  "/",
 			}
 
-			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+			proc, err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(proc.ID()).To(Equal(processID))
 
 			containers := listProcesses(testConfig.CtrBin, testConfig.Socket, containerID)
 			Expect(containers).To(ContainSubstring(processID))
@@ -197,7 +198,7 @@ var _ = Describe("Nerd", func() {
 					return stdin, stdout, nil, false
 				}
 
-				err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+				_, err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(stdout).Should(gbytes.Say("hello nerd"))
 			})
@@ -214,7 +215,7 @@ var _ = Describe("Nerd", func() {
 					return nil, stdout, nil, false
 				}
 
-				err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+				_, err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(stdout).Should(gbytes.Say("hello nerd"))
 			})
@@ -231,7 +232,7 @@ var _ = Describe("Nerd", func() {
 					return nil, nil, stderr, false
 				}
 
-				err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+				_, err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(stderr).Should(gbytes.Say("No such file"))
 			})
@@ -246,11 +247,9 @@ var _ = Describe("Nerd", func() {
 					return nil, nil, nil, true
 				}
 
-				err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+				proc, err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 				Expect(err).NotTo(HaveOccurred())
 
-				proc, err := cnerd.GetProcess(testLogger, containerID, processID)
-				Expect(err).NotTo(HaveOccurred())
 				exitCode, err := proc.Wait()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exitCode).To(BeZero())
@@ -268,7 +267,7 @@ var _ = Describe("Nerd", func() {
 				Cwd:  "/",
 			}
 
-			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+			_, err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -323,7 +322,7 @@ var _ = Describe("Nerd", func() {
 				Cwd: "/",
 			}
 
-			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+			_, err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(stdoutBuffer).Should(gbytes.Say("sleeping"))
@@ -360,7 +359,7 @@ var _ = Describe("Nerd", func() {
 				Cwd:  "/",
 			}
 
-			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
+			_, err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -499,9 +498,7 @@ var _ = Describe("Nerd", func() {
 
 			events = cnerd.OOMEvents(testLogger)
 
-			err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
-			Expect(err).NotTo(HaveOccurred())
-			proc, err := cnerd.GetProcess(testLogger, containerID, processID)
+			proc, err := cnerd.Exec(testLogger, containerID, processID, processSpec, processIO)
 			Expect(err).NotTo(HaveOccurred())
 			_, err = proc.Wait()
 			Expect(err).NotTo(HaveOccurred())

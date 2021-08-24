@@ -370,7 +370,7 @@ var _ = Describe("Runcontainerd", func() {
 				userLookupper.LookupReturns(&user, nil)
 
 				containerManager.GetContainerPIDReturns(1234, nil)
-				containerManager.ExecReturns(nil)
+				containerManager.ExecReturns(nil, nil)
 				runContainerd = runcontainerd.New(containerManager, processManager, processBuilder, userLookupper, execer, statser, true, cgroupManager, mkdirer, nil, false, runtimeStopper)
 			})
 
@@ -443,13 +443,6 @@ var _ = Describe("Runcontainerd", func() {
 				Expect(workDir).To(ConsistOf(processSpec.Dir))
 			})
 
-			It("gets the backing process", func() {
-				Expect(processManager.GetProcessCallCount()).To(Equal(1))
-				_, actualContainerID, actualProcessID := processManager.GetProcessArgsForCall(0)
-				Expect(actualContainerID).To(Equal(containerID))
-				Expect(actualProcessID).To(Equal(processSpec.ID))
-			})
-
 			Context("when processSpec.ID is not set", func() {
 				BeforeEach(func() {
 					processSpec.ID = ""
@@ -464,7 +457,7 @@ var _ = Describe("Runcontainerd", func() {
 
 			Context("when the binary does not exist in $PATH", func() {
 				BeforeEach(func() {
-					containerManager.ExecReturns(errors.New("OCI runtime exec failed: exec failed: container_linux.go:345: unable to start container process: exec: potato: executable file not found in $PATH"))
+					containerManager.ExecReturns(nil, errors.New("OCI runtime exec failed: exec failed: container_linux.go:345: unable to start container process: exec: potato: executable file not found in $PATH"))
 				})
 
 				It("returns a garden.ExecutableNotFoundError error", func() {
@@ -474,7 +467,7 @@ var _ = Describe("Runcontainerd", func() {
 
 			Context("when the binary is filly qualified and does not exist", func() {
 				BeforeEach(func() {
-					containerManager.ExecReturns(errors.New("OCI runtime exec failed: exec failed: container_linux.go:345: unable to start container process: exec: potato: stat potato: no such file or directory"))
+					containerManager.ExecReturns(nil, errors.New("OCI runtime exec failed: exec failed: container_linux.go:345: unable to start container process: exec: potato: stat potato: no such file or directory"))
 				})
 
 				It("returns a garden.ExecutableNotFoundError error", func() {
@@ -484,7 +477,7 @@ var _ = Describe("Runcontainerd", func() {
 
 			Context("when the error message is from an older version of runc", func() {
 				BeforeEach(func() {
-					containerManager.ExecReturns(errors.New("OCI runtime exec failed: exec failed: container_linux.go:345: starting container process caused: exec: potato: stat potato: no such file or directory"))
+					containerManager.ExecReturns(nil, errors.New("OCI runtime exec failed: exec failed: container_linux.go:345: starting container process caused: exec: potato: stat potato: no such file or directory"))
 				})
 
 				It("returns a garden.ExecutableNotFoundError error", func() {
@@ -524,7 +517,7 @@ var _ = Describe("Runcontainerd", func() {
 
 			Context("when containerManager returns an error", func() {
 				BeforeEach(func() {
-					containerManager.ExecReturns(errors.New("error-execing"))
+					containerManager.ExecReturns(nil, errors.New("error-execing"))
 				})
 
 				It("returns the error", func() {
@@ -541,16 +534,6 @@ var _ = Describe("Runcontainerd", func() {
 					Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
 					_, actualProcessSpec, _ := processBuilder.BuildProcessArgsForCall(0)
 					Expect(actualProcessSpec.Dir).To(Equal("/home/alice"))
-				})
-			})
-
-			Context("when getting backing process errors", func() {
-				BeforeEach(func() {
-					processManager.GetProcessReturns(nil, errors.New("process-problem"))
-				})
-
-				It("returns the error", func() {
-					Expect(execErr).To(MatchError("process-problem"))
 				})
 			})
 		})

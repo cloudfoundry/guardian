@@ -35,15 +35,16 @@ func (fake *FakeStatser) Stats(arg1 lager.Logger, arg2 string) (gardener.StatsCo
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.StatsStub
+	fakeReturns := fake.statsReturns
 	fake.recordInvocation("Stats", []interface{}{arg1, arg2})
 	fake.statsMutex.Unlock()
-	if fake.StatsStub != nil {
-		return fake.StatsStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.statsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

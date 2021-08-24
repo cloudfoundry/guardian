@@ -27,15 +27,16 @@ func (fake *FakeRuntimeStopper) Stop() error {
 	ret, specificReturn := fake.stopReturnsOnCall[len(fake.stopArgsForCall)]
 	fake.stopArgsForCall = append(fake.stopArgsForCall, struct {
 	}{})
+	stub := fake.StopStub
+	fakeReturns := fake.stopReturns
 	fake.recordInvocation("Stop", []interface{}{})
 	fake.stopMutex.Unlock()
-	if fake.StopStub != nil {
-		return fake.StopStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.stopReturns
 	return fakeReturns.result1
 }
 
