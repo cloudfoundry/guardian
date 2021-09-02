@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-source "$( dirname "$BASH_SOURCE" )/test/utils.sh"
+source "$(dirname "$BASH_SOURCE")/test/utils.sh"
 
 trap unmount_storage EXIT
 

@@ -50,6 +50,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				{HostID: GrootGID, NamespaceID: 0, Size: 1},
 				{HostID: 100000, NamespaceID: 1, Size: 65000},
 			},
+			StoreSizeBytes: 1000 * 1024 * 1024,
 		}
 
 		randomImageID = testhelpers.NewRandomID()
