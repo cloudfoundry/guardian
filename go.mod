@@ -19,7 +19,7 @@ require (
 	github.com/containerd/containerd v1.5.5
 	github.com/containerd/typeurl v1.0.2
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
-	github.com/docker/docker v20.10.8+incompatible
+	github.com/docker/docker v20.10.9+incompatible
 	github.com/eapache/go-resiliency v1.2.0
 	github.com/gogo/googleapis v1.4.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
