@@ -1,6 +1,7 @@
 package groot
 
 import (
+	"fmt"
 	"time"
 
 	"code.cloudfoundry.org/lager"
@@ -42,10 +43,15 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64) (bool, error) {
 		if err != nil {
 			return false, errorspkg.Wrap(err, "failed to calculate committed quota")
 		}
+		logger.Debug(fmt.Sprintf("commitedQuota in bytes is: %d", committedQuota))
+
 		totalVolumesSize, err := c.storeMeasurer.TotalVolumesSize(logger)
 		if err != nil {
 			return false, errorspkg.Wrap(err, "failed to calculate total volumes size")
 		}
+		logger.Debug(fmt.Sprintf("totalVolumesSize in bytes is: %d", totalVolumesSize))
+		logger.Debug(fmt.Sprintf("threshold in bytes is: %d", threshold))
+
 		if (committedQuota + totalVolumesSize) < threshold {
 			return true, nil
 		}
