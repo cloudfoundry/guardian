@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"golang.org/x/sys/unix"
 )
 
 func init() {
@@ -42,6 +43,7 @@ var _ = Describe("Tar unpacker", func() {
 		storeDirFile       *os.File
 		whiteoutDevicePath string
 		filepathToTar      string
+		deviceNumber       uint64
 	)
 
 	BeforeEach(func() {
@@ -59,7 +61,8 @@ var _ = Describe("Tar unpacker", func() {
 		logger = lagertest.NewTestLogger("test-store")
 
 		whiteoutDevicePath = filepath.Join(storeDir, overlayxfs.WhiteoutDevice)
-		Expect(syscall.Mknod(whiteoutDevicePath, syscall.S_IFCHR, 0)).To(Succeed())
+		deviceNumber = unix.Mkdev(123, 456)
+		Expect(unix.Mknod(whiteoutDevicePath, syscall.S_IFCHR, int(deviceNumber))).To(Succeed())
 
 		storeDirFile, err = os.Open(storeDir)
 		Expect(err).NotTo(HaveOccurred())
@@ -756,14 +759,14 @@ var _ = Describe("Tar unpacker", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stat.Mode()).To(Equal(os.ModeCharDevice|os.ModeDevice), "Whiteout file is not a character device")
 			stat_t := stat.Sys().(*syscall.Stat_t)
-			Expect(stat_t.Rdev).To(Equal(uint64(0)), "Whiteout file has incorrect device number")
+			Expect(stat_t.Rdev).To(Equal(deviceNumber), "Whiteout file has incorrect device number")
 
 			aFilePath := path.Join(targetPath, "a_dir", "a_file")
 			stat, err = os.Stat(aFilePath)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stat.Mode()).To(Equal(os.ModeCharDevice|os.ModeDevice), "Whiteout file is not a character device")
 			stat_t = stat.Sys().(*syscall.Stat_t)
-			Expect(stat_t.Rdev).To(Equal(uint64(0)), "Whiteout file has incorrect device number")
+			Expect(stat_t.Rdev).To(Equal(deviceNumber), "Whiteout file has incorrect device number")
 		})
 
 		Context("when it fails to link the whiteout device", func() {

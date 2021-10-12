@@ -20,6 +20,7 @@ var _ = Describe("WhiteoutHandler", func() {
 		filePath        string
 		whiteoutPath    string
 		whiteoutHandler unpacker.WhiteoutHandler
+		deviceNumber    uint64
 	)
 
 	BeforeEach(func() {
@@ -28,7 +29,8 @@ var _ = Describe("WhiteoutHandler", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		whiteoutDevicePath := filepath.Join(storePath, overlayxfs.WhiteoutDevice)
-		Expect(unix.Mknod(whiteoutDevicePath, unix.S_IFCHR, 0)).To(Succeed())
+		deviceNumber = unix.Mkdev(123, 456)
+		Expect(unix.Mknod(whiteoutDevicePath, unix.S_IFCHR, int(deviceNumber))).To(Succeed())
 
 		storeFile, err = os.Open(storePath)
 		Expect(err).NotTo(HaveOccurred())
@@ -52,6 +54,6 @@ var _ = Describe("WhiteoutHandler", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(stat.Mode()).To(Equal(os.ModeCharDevice|os.ModeDevice), "Whiteout file is not a character device")
 		stat_t := stat.Sys().(*syscall.Stat_t)
-		Expect(stat_t.Rdev).To(Equal(uint64(0)), "Whiteout file has incorrect device number")
+		Expect(stat_t.Rdev).To(Equal(deviceNumber), "Whiteout file has incorrect device number")
 	})
 })
