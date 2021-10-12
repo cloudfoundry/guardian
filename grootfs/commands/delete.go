@@ -82,6 +82,12 @@ var DeleteCommand = cli.Command{
 				logger.Error("getting-unused-layers-size", err)
 			}
 			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", unusedVolumesSize, "bytes")
+
+			usedVolumesSize, err := sm.UsedVolumesSize(logger)
+			if err != nil {
+				logger.Error("getting-used-layers-size", err)
+			}
+			metricsEmitter.TryEmitUsage(logger, "UsedLayersSize", usedVolumesSize, "bytes")
 		}()
 
 		err = deleter.Delete(logger, id)

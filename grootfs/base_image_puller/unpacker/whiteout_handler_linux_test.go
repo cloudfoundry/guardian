@@ -33,11 +33,11 @@ var _ = Describe("WhiteoutHandler", func() {
 		storeFile, err = os.Open(storePath)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(os.MkdirAll(filepath.Join(storePath, "layer-1"), 0755)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Join(storePath, "layer-1"), 0o755)).To(Succeed())
 		filePath = filepath.Join(storePath, "layer-1", "thefile")
-		Expect(ioutil.WriteFile(filePath, []byte{}, 0755)).To(Succeed())
+		Expect(ioutil.WriteFile(filePath, []byte{}, 0o755)).To(Succeed())
 		whiteoutPath = filepath.Join(storePath, "layer-1", ".wh.thefile")
-		Expect(ioutil.WriteFile(whiteoutPath, []byte{}, 0755)).To(Succeed())
+		Expect(ioutil.WriteFile(whiteoutPath, []byte{}, 0o755)).To(Succeed())
 
 		whiteoutHandler = unpacker.NewOverlayWhiteoutHandler(storeFile)
 	})

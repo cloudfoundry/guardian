@@ -45,6 +45,20 @@ func (s *StoreMeasurer) UnusedVolumesSize(logger lager.Logger) (int64, error) {
 	return s.countVolumesSize(logger, unusedVols)
 }
 
+func (s *StoreMeasurer) UsedVolumesSize(logger lager.Logger) (int64, error) {
+
+	totalVolumesSize, err := s.TotalVolumesSize(logger)
+	if err != nil {
+		return 0, err
+	}
+	unusedVolumesSize, err := s.UnusedVolumesSize(logger)
+	if err != nil {
+		return 0, err
+	}
+	usedVolumesSize := totalVolumesSize - unusedVolumesSize
+	return usedVolumesSize, nil
+}
+
 func (s *StoreMeasurer) TotalVolumesSize(logger lager.Logger) (int64, error) {
 	vols, err := s.volumeDriver.Volumes(logger)
 	if err != nil {
@@ -114,7 +128,7 @@ func readImageQuota(imageDir string) (int64, error) {
 	return imageQuota, nil
 }
 
-func (s *StoreMeasurer) pathStats(path string) (totalBytes, UsedBytes int64, err error) {
+func (s *StoreMeasurer) PathStats(path string) (totalBytes, UsedBytes int64, err error) {
 	stats := syscall.Statfs_t{}
 	if err = syscall.Statfs(s.storePath, &stats); err != nil {
 		return 0, 0, errorspkg.Wrapf(err, "Invalid path %s", s.storePath)
@@ -127,3 +141,5 @@ func (s *StoreMeasurer) pathStats(path string) (totalBytes, UsedBytes int64, err
 
 	return int64(total), used, nil
 }
+
+
