@@ -21,7 +21,7 @@ require (
 	github.com/containerd/typeurl v1.0.2
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
-	github.com/docker/docker v20.10.9+incompatible
+	github.com/docker/docker v20.10.10+incompatible
 	github.com/eapache/go-resiliency v1.2.0
 	github.com/godbus/dbus/v5 v5.0.5 // indirect
 	github.com/gogo/googleapis v1.4.1 // indirect
