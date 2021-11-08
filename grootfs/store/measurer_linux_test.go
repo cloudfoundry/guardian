@@ -95,6 +95,42 @@ var _ = Describe("Measurer", func() {
 		})
 	})
 
+	Describe("UsedVolumesSize", func() {
+		BeforeEach(func() {
+			volumeDriver.VolumeSizeReturns(1024, nil)
+			unusedVolumeGetter.UnusedVolumesReturns([]string{"sha256:fake1", "sha256:fake2"}, nil)
+			volumeDriver.VolumesReturns([]string{"sha256:fake1", "sha256:fake2"}, nil)
+		})
+
+		It("measures the size of the used layers", func() {
+			cacheUsage, err := storeMeasurer.UsedVolumesSize(logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cacheUsage).To(BeNumerically("==", 0))
+		})
+
+		Context("when getting total volumes returns an error", func() {
+			BeforeEach(func() {
+				volumeDriver.VolumesReturns([]string{}, errors.New("failed here"))
+			})
+
+			It("returns the error", func() {
+				_, err := storeMeasurer.TotalVolumesSize(logger)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		Context("when getting unused volumes returns an error", func() {
+			BeforeEach(func() {
+				unusedVolumeGetter.UnusedVolumesReturns([]string{}, errors.New("failed here"))
+			})
+
+			It("returns the error", func() {
+				_, err := storeMeasurer.UnusedVolumesSize(logger)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+	})
+
 	Describe("UnusedVolumeSize", func() {
 		BeforeEach(func() {
 			volumeDriver.VolumeSizeReturns(1024, nil)
