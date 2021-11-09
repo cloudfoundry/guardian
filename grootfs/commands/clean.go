@@ -105,7 +105,7 @@ var CleanCommand = cli.Command{
 			if err != nil {
 				logger.Error("getting-used-volumes-size", err)
 			}
-			logger.Info("usedLayersSize value ", usedVolumesSize)
+			logger.Debug(fmt.Sprintf("UsedLayersSize value: %d", usedVolumesSize))
 			metricsEmitter.TryEmitUsage(logger, "UsedLayersSize", usedVolumesSize, "bytes")
 		}()
 
