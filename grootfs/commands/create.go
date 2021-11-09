@@ -253,13 +253,13 @@ var CreateCommand = cli.Command{
 		}
 		fmt.Println(string(jsonBytes))
 
-		emitMetrics(logger, metricsEmitter, sm, cfg.Create.WithClean)
+		emitMetrics(logger, metricsEmitter, sm, cfg.Create.WithClean, storePath)
 
 		return nil
 	},
 }
 
-func emitMetrics(logger lager.Logger, metricsEmitter *metrics.Emitter, sm *storepkg.StoreMeasurer, cleanOnCreate bool) {
+func emitMetrics(logger lager.Logger, metricsEmitter *metrics.Emitter, sm *storepkg.StoreMeasurer, cleanOnCreate bool, storePath string) {
 	if !cleanOnCreate {
 		unusedVolumesSize, err := sm.UnusedVolumesSize(logger)
 		if err != nil {
@@ -285,6 +285,13 @@ func emitMetrics(logger lager.Logger, metricsEmitter *metrics.Emitter, sm *store
 		logger.Info(fmt.Sprintf("getting-commited-quota: %s", err))
 	}
 	metricsEmitter.TryEmitUsage(logger, "CommittedQuotaInBytes", commitedQuota, "bytes")
+
+	totalBackingStore, usedBackingStore, err := sm.PathStats(storePath)
+	if err != nil {
+		logger.Info(fmt.Sprintf("getting-store-stats: %s", err))
+	}
+	metricsEmitter.TryEmitUsage(logger, "UsedBackingStoreInBytes", usedBackingStore, "bytes")
+	metricsEmitter.TryEmitUsage(logger, "TotalBackingStoreInBytes", totalBackingStore, "bytes")
 }
 
 func createFetcher(baseImageUrl *url.URL, systemContext types.SystemContext, createCfg config.Create) base_image_puller.Fetcher {

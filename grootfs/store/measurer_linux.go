@@ -128,7 +128,7 @@ func readImageQuota(imageDir string) (int64, error) {
 	return imageQuota, nil
 }
 
-func (s *StoreMeasurer) pathStats(path string) (totalBytes, UsedBytes int64, err error) {
+func (s *StoreMeasurer) PathStats(path string) (totalBytes, UsedBytes int64, err error) {
 	stats := syscall.Statfs_t{}
 	if err = syscall.Statfs(s.storePath, &stats); err != nil {
 		return 0, 0, errorspkg.Wrapf(err, "Invalid path %s", s.storePath)
