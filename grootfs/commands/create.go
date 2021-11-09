@@ -271,6 +271,7 @@ func emitMetrics(logger lager.Logger, metricsEmitter *metrics.Emitter, sm *store
 		if err != nil {
 			logger.Info(fmt.Sprintf("getting-used-layers-size: %s", err))
 		}
+		logger.Info("used layers value " , usedLayersSize)
 		metricsEmitter.TryEmitUsage(logger, "UsedLayersSize", usedVolumesSize, "bytes")
 	}
 
@@ -286,12 +287,11 @@ func emitMetrics(logger lager.Logger, metricsEmitter *metrics.Emitter, sm *store
 	}
 	metricsEmitter.TryEmitUsage(logger, "CommittedQuotaInBytes", commitedQuota, "bytes")
 
-	totalBackingStore, usedBackingStore, err := sm.PathStats(storePath)
+	_, usedBackingStore, err := sm.PathStats(storePath)
 	if err != nil {
 		logger.Info(fmt.Sprintf("getting-store-stats: %s", err))
 	}
 	metricsEmitter.TryEmitUsage(logger, "UsedBackingStoreInBytes", usedBackingStore, "bytes")
-	metricsEmitter.TryEmitUsage(logger, "TotalBackingStoreInBytes", totalBackingStore, "bytes")
 }
 
 func createFetcher(baseImageUrl *url.URL, systemContext types.SystemContext, createCfg config.Create) base_image_puller.Fetcher {
