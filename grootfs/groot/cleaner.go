@@ -49,8 +49,8 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64) (bool, error) {
 		if err != nil {
 			return false, errorspkg.Wrap(err, "failed to calculate total volumes size")
 		}
-		logger.Debug(fmt.Sprintf("totalVolumesSize: %d", totalVolumesSize))
-		logger.Debug(fmt.Sprintf("threshold: %d", threshold))
+		logger.Info(fmt.Sprintf("totalVolumesSize: %d", totalVolumesSize))
+		logger.Info(fmt.Sprintf("threshold: %d", threshold))
 
 		if (committedQuota + totalVolumesSize) < threshold {
 			return true, nil
