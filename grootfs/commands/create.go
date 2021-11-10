@@ -271,7 +271,6 @@ func emitMetrics(logger lager.Logger, metricsEmitter *metrics.Emitter, sm *store
 		if err != nil {
 			logger.Info(fmt.Sprintf("getting-used-layers-size: %s", err))
 		}
-		logger.Debug(fmt.Sprintf("UsedLayersSize value: %d", usedVolumesSize))
 		metricsEmitter.TryEmitUsage(logger, "UsedLayersSize", usedVolumesSize, "bytes")
 	}
 
