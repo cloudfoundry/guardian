@@ -21,8 +21,9 @@ require (
 	github.com/containerd/typeurl v1.0.2
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
-	github.com/docker/docker v20.10.9+incompatible
+	github.com/docker/docker v20.10.10+incompatible
 	github.com/eapache/go-resiliency v1.2.0
+	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/godbus/dbus/v5 v5.0.5 // indirect
 	github.com/gogo/googleapis v1.4.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -32,8 +33,8 @@ require (
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo v1.16.4
-	github.com/onsi/gomega v1.16.0
+	github.com/onsi/ginkgo v1.16.5
+	github.com/onsi/gomega v1.17.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.0.2-0.20210819154149-5ad6f50d6283
 	github.com/opencontainers/runc v1.0.2
@@ -48,8 +49,8 @@ require (
 	github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f
 	go.opencensus.io v0.23.0 // indirect
-	golang.org/x/net v0.0.0-20211008194852-3b03d305991f // indirect
-	golang.org/x/sys v0.0.0-20211007075335-d3039528d8ac
+	golang.org/x/net v0.0.0-20211111160137-58aab5ef257a // indirect
+	golang.org/x/sys v0.0.0-20211111213525-f221eed1c01e
 	google.golang.org/genproto v0.0.0-20210811021853-ddbe55d93216 // indirect
 	google.golang.org/grpc v1.40.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0

@@ -191,7 +191,7 @@ github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/cyphar/filepath-securejoin v0.2.3
 ## explicit
 github.com/cyphar/filepath-securejoin
-# github.com/docker/docker v20.10.9+incompatible
+# github.com/docker/docker v20.10.10+incompatible
 ## explicit
 github.com/docker/docker/pkg/reexec
 # github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c
@@ -199,7 +199,8 @@ github.com/docker/go-events
 # github.com/eapache/go-resiliency v1.2.0
 ## explicit
 github.com/eapache/go-resiliency/retrier
-# github.com/fsnotify/fsnotify v1.4.9
+# github.com/fsnotify/fsnotify v1.5.1
+## explicit
 github.com/fsnotify/fsnotify
 # github.com/godbus/dbus/v5 v5.0.5
 ## explicit
@@ -268,7 +269,7 @@ github.com/nxadm/tail/ratelimiter
 github.com/nxadm/tail/util
 github.com/nxadm/tail/watch
 github.com/nxadm/tail/winfile
-# github.com/onsi/ginkgo v1.16.4
+# github.com/onsi/ginkgo v1.16.5
 ## explicit
 github.com/onsi/ginkgo
 github.com/onsi/ginkgo/config
@@ -291,7 +292,7 @@ github.com/onsi/ginkgo/reporters/stenographer
 github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
-# github.com/onsi/gomega v1.16.0
+# github.com/onsi/gomega v1.17.0
 ## explicit
 github.com/onsi/gomega
 github.com/onsi/gomega/format
@@ -373,7 +374,7 @@ go.opencensus.io/internal
 go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/tracestate
-# golang.org/x/net v0.0.0-20211008194852-3b03d305991f
+# golang.org/x/net v0.0.0-20211111160137-58aab5ef257a
 ## explicit
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
@@ -388,7 +389,7 @@ golang.org/x/net/trace
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20211007075335-d3039528d8ac
+# golang.org/x/sys v0.0.0-20211111213525-f221eed1c01e
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
