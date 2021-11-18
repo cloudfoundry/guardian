@@ -17,7 +17,7 @@ require (
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.3.2
 	github.com/containerd/console v1.0.3 // indirect
-	github.com/containerd/containerd v1.5.7
+	github.com/containerd/containerd v1.5.8
 	github.com/containerd/typeurl v1.0.2
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
