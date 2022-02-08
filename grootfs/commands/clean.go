@@ -100,6 +100,12 @@ var CleanCommand = cli.Command{
 				logger.Error("getting-unused-volumes-size", err)
 			}
 			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", unusedVolumesSize, "bytes")
+
+			usedVolumesSize, err := sm.UsedVolumesSize(logger)
+			if err != nil {
+				logger.Error("getting-used-volumes-size", err)
+			}
+			metricsEmitter.TryEmitUsage(logger, "UsedLayersSize", usedVolumesSize, "bytes")
 		}()
 
 		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes)
