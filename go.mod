@@ -17,14 +17,13 @@ require (
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.3.2
 	github.com/containerd/console v1.0.3 // indirect
-	github.com/containerd/containerd v1.5.9
+	github.com/containerd/containerd v1.6.0
 	github.com/containerd/typeurl v1.0.2
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
 	github.com/docker/docker v20.10.10+incompatible
 	github.com/eapache/go-resiliency v1.2.0
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
-	github.com/godbus/dbus/v5 v5.0.5 // indirect
 	github.com/gogo/googleapis v1.4.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/uuid v1.3.0 // indirect
@@ -37,22 +36,18 @@ require (
 	github.com/onsi/gomega v1.17.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.0.2
-	github.com/opencontainers/runc v1.0.2
+	github.com/opencontainers/runc v1.1.0
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
-	github.com/opencontainers/selinux v1.9.1 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/st3v/glager v0.3.0
 	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00
 	github.com/urfave/cli/v2 v2.3.0
-	github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852
+	github.com/vishvananda/netlink v1.1.1-0.20210330154013-f5de75959ad5
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f
 	go.opencensus.io v0.23.0 // indirect
-	golang.org/x/net v0.0.0-20211111160137-58aab5ef257a // indirect
-	golang.org/x/sys v0.0.0-20211111213525-f221eed1c01e
-	google.golang.org/genproto v0.0.0-20210811021853-ddbe55d93216 // indirect
-	google.golang.org/grpc v1.40.0 // indirect
+	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e
 	gopkg.in/yaml.v2 v2.4.0
 )
 
