@@ -200,7 +200,7 @@ var _ = Describe("Run", func() {
 			})
 
 			It("sets requested rlimits, even if they are increased above current limit", func() {
-				Expect(out).To(gbytes.Say("file descriptors\\W+100001"))
+				Expect(out).To(gbytes.Say("open files\\W+(-n)\\W+100001"))
 			})
 		})
 
