@@ -49,7 +49,6 @@ RUN go get github.com/onsi/ginkgo/ginkgo
 RUN go install github.com/onsi/ginkgo/ginkgo
 RUN go get github.com/onsi/gomega
 RUN go get github.com/Masterminds/glide
-RUN go get github.com/fouralarmfire/grootsay
 
 ################################
 # Add groot user

@@ -7,7 +7,7 @@ trap sudo_unmount_storage EXIT
 
 sudo_mount_storage
 
-echo "I AM groot" | grootsay
+echo "I AM groot"
 
 # containers/image gets angry when the home is wrong because it's trying to
 # read $HOME/.docker

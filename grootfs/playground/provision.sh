@@ -54,9 +54,6 @@ install_groot() {
   # Install Management Dependendy tool
   go get github.com/Masterminds/glide
 
-  # Install awesome grootsay, I gotta say
-  go get github.com/fouralarmfire/grootsay
-
   # Clone them all
   [ ! -d $HOME/go/src/code.cloudfoundry.org/grootfs ] && go get code.cloudfoundry.org/grootfs
   go get code.cloudfoundry.org/grootfs-bench
