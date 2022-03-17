@@ -42,5 +42,6 @@ require (
 
 replace (
 	code.cloudfoundry.org/idmapper => ../idmapper
+	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.0
 	golang.org/x/text => golang.org/x/text v0.3.7
 )
