@@ -40,4 +40,7 @@ require (
 	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
 
-replace code.cloudfoundry.org/idmapper => ../idmapper
+replace (
+	code.cloudfoundry.org/idmapper => ../idmapper
+	golang.org/x/text => golang.org/x/text v0.3.7
+)
