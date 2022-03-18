@@ -103,7 +103,7 @@ github.com/containers/storage/pkg/system
 github.com/containers/storage/pkg/unshare
 # github.com/cpuguy83/go-md2man/v2 v2.0.1
 github.com/cpuguy83/go-md2man/v2/md2man
-# github.com/docker/distribution v2.8.0+incompatible
+# github.com/docker/distribution v2.8.0+incompatible => github.com/docker/distribution v2.8.1+incompatible
 ## explicit
 github.com/docker/distribution
 github.com/docker/distribution/digestset
@@ -297,7 +297,7 @@ golang.org/x/net/html/atom
 golang.org/x/net/html/charset
 golang.org/x/net/internal/socks
 golang.org/x/net/proxy
-# golang.org/x/sys v0.0.0-20220310020820-b874c991c1a5
+# golang.org/x/sys v0.0.0-20220317061510-51cd9980dadf
 ## explicit
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
@@ -360,5 +360,6 @@ gopkg.in/yaml.v2
 # launchpad.net/gocheck v0.0.0-20140225173054-000000000087
 ## explicit
 # code.cloudfoundry.org/idmapper => ../idmapper
+# github.com/docker/distribution => github.com/docker/distribution v2.8.1+incompatible
 # github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.0
 # golang.org/x/text => golang.org/x/text v0.3.7

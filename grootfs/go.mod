@@ -35,13 +35,14 @@ require (
 	github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125
-	golang.org/x/sys v0.0.0-20220310020820-b874c991c1a5
+	golang.org/x/sys v0.0.0-20220317061510-51cd9980dadf
 	gopkg.in/yaml.v2 v2.4.0
 	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
 
 replace (
 	code.cloudfoundry.org/idmapper => ../idmapper
+	github.com/docker/distribution => github.com/docker/distribution v2.8.1+incompatible
 	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.0
 	golang.org/x/text => golang.org/x/text v0.3.7
 )
