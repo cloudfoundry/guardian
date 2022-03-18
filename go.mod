@@ -52,4 +52,5 @@ replace (
 	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20190205005809-0d3efadf0154
 	github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
 	github.com/opencontainers/selinux => github.com/opencontainers/selinux v1.8.2
+	golang.org/x/text => golang.org/x/text v0.3.7
 )
