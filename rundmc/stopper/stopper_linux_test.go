@@ -10,6 +10,8 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	fakes "code.cloudfoundry.org/guardian/rundmc/stopper/stopperfakes"
 	"code.cloudfoundry.org/lager/lagertest"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -48,11 +50,14 @@ var _ = Describe("CgroupStopper", func() {
 			return fn()
 		}
 
+		cgroups.TestMode = true
+
 		subject = stopper.New(fakeCgroupResolver, fakeKiller, fakeRetrier)
 	})
 
 	AfterEach(func() {
 		os.RemoveAll(fakeCgroupDir)
+		cgroups.TestMode = false
 	})
 
 	It("does not send any signal to processes in the exceptions list", func() {
