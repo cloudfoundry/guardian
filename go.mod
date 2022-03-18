@@ -49,7 +49,7 @@ replace (
 	code.cloudfoundry.org/grootfs => ../grootfs
 	code.cloudfoundry.org/idmapper => ../idmapper
 	github.com/cloudfoundry/gosigar => github.com/cloudfoundry/gosigar v1.1.0
-	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20190205005809-0d3efadf0154
+	github.com/docker/distribution => github.com/docker/distribution v2.8.1+incompatible
 	github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
 	github.com/opencontainers/selinux => github.com/opencontainers/selinux v1.8.2
 	golang.org/x/text => golang.org/x/text v0.3.7
