@@ -18,7 +18,7 @@ require (
 	github.com/cloudfoundry/gosigar v1.3.2
 	github.com/containerd/containerd v1.5.9
 	github.com/containerd/typeurl v1.0.2
-	github.com/docker/docker v20.10.12+incompatible
+	github.com/docker/docker v20.10.13+incompatible
 	github.com/eapache/go-resiliency v1.2.0
 	github.com/gogo/googleapis v1.4.1 // indirect
 	github.com/hashicorp/go-multierror v1.1.1
@@ -50,6 +50,7 @@ replace (
 	code.cloudfoundry.org/idmapper => ../idmapper
 	github.com/cloudfoundry/gosigar => github.com/cloudfoundry/gosigar v1.1.0
 	github.com/docker/distribution => github.com/docker/distribution v2.8.1+incompatible
+	github.com/docker/docker => github.com/docker/docker v20.10.13+incompatible
 	github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
 	github.com/opencontainers/selinux => github.com/opencontainers/selinux v1.8.2
 	golang.org/x/text => golang.org/x/text v0.3.7
