@@ -61,13 +61,17 @@ type ExternalNetworker interface {
 
 func (p *externalBinaryNetworker) Start() error { return nil }
 
-func networkProperties(containerProperties garden.Properties) garden.Properties {
+func stripNetworkPropertyPrefix(containerProperties garden.Properties) garden.Properties {
 	properties := garden.Properties{}
 
 	for k, value := range containerProperties {
 		if strings.HasPrefix(k, NetworkPropertyPrefix) {
 			key := strings.TrimPrefix(k, NetworkPropertyPrefix)
 			properties[key] = value
+		} else {
+			if _, ok := properties[k]; !ok {
+				properties[k] = value
+			}
 		}
 	}
 
@@ -96,7 +100,7 @@ func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 
 	inputs := UpInputs{
 		Pid:        pid,
-		Properties: networkProperties(containerSpec.Properties),
+		Properties: stripNetworkPropertyPrefix(containerSpec.Properties),
 		NetOut:     containerSpec.NetOut,
 		NetIn:      containerSpec.NetIn,
 	}
