@@ -18,7 +18,7 @@ import (
 
 const NetworkPropertyPrefix = "network."
 
-var FilteredPropeties = map[string]struct{}{"log_config": {}}
+var AllowableProperties = map[string]struct{}{"log_config": {}}
 
 type externalBinaryNetworker struct {
 	commandRunner         commandrunner.CommandRunner
@@ -63,14 +63,14 @@ type ExternalNetworker interface {
 
 func (p *externalBinaryNetworker) Start() error { return nil }
 
-func filterProperties(containerProperties garden.Properties) garden.Properties {
+func networkProperties(containerProperties garden.Properties) garden.Properties {
 	properties := garden.Properties{}
 
 	for k, value := range containerProperties {
 		if strings.HasPrefix(k, NetworkPropertyPrefix) {
 			key := strings.TrimPrefix(k, NetworkPropertyPrefix)
 			properties[key] = value
-		} else if _, ok := FilteredPropeties[k]; ok {
+		} else if _, ok := AllowableProperties[k]; ok {
 			properties[k] = value
 		}
 	}
@@ -100,7 +100,7 @@ func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 
 	inputs := UpInputs{
 		Pid:        pid,
-		Properties: filterProperties(containerSpec.Properties),
+		Properties: networkProperties(containerSpec.Properties),
 		NetOut:     containerSpec.NetOut,
 		NetIn:      containerSpec.NetIn,
 	}
