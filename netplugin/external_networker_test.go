@@ -127,38 +127,21 @@ var _ = Describe("ExternalNetworker", func() {
 			}`))
 		})
 
-		Describe("UpInput properties", func() {
-			It("prefers properties with a 'network.' prefix over those without one, and then strips the prefix", func() {
-				Expect(plugin.Network(logger, containerSpec, 42)).To(Succeed())
-
-				cmd := fakeCommandRunner.ExecutedCommands()[0]
-				pluginInput, err := ioutil.ReadAll(cmd.Stdin)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(pluginInput).To(MatchJSON(`{
-					"Pid": 42,
-					"Properties": {
-						"some-key": "some-network-value",
-						"some-other-key": "some-other-network-value"
-					}
-				}`))
-			})
-
-			It("maintains properties wihtout a 'network.' prefix as long as it doesn't cause a name collision", func() {
-				containerSpec.Properties["log_config"] = "some-log-config"
-				Expect(plugin.Network(logger, containerSpec, 42)).To(Succeed())
-
-				cmd := fakeCommandRunner.ExecutedCommands()[0]
-				pluginInput, err := ioutil.ReadAll(cmd.Stdin)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(pluginInput).To(MatchJSON(`{
-					"Pid": 42,
-					"Properties": {
-						"some-key": "some-network-value",
-						"some-other-key": "some-other-network-value",
-						"log_config": "some-log-config"
-					}
-				}`))
-			})
+		It("preserves filtered properties", func() {
+			containerSpec.Properties["log_config"] = "some-log-config"
+			err := plugin.Network(logger, containerSpec, 42)
+			Expect(err).NotTo(HaveOccurred())
+			cmd := fakeCommandRunner.ExecutedCommands()[0]
+			pluginInput, err := ioutil.ReadAll(cmd.Stdin)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(pluginInput).To(MatchJSON(`{
+				"Pid": 42,
+				"Properties": {
+					"some-key": "some-network-value",
+					"some-other-key": "some-other-network-value",
+					"log_config": "some-log-config"
+				}
+			}`))
 		})
 
 		Context("when there are NetOut rules provided", func() {
