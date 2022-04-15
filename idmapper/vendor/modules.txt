@@ -1,16 +1,17 @@
 # github.com/fsnotify/fsnotify v1.5.1
-## explicit
+## explicit; go 1.13
 github.com/fsnotify/fsnotify
 # github.com/kr/pretty v0.1.0
 ## explicit
 # github.com/nxadm/tail v1.4.8
+## explicit; go 1.13
 github.com/nxadm/tail
 github.com/nxadm/tail/ratelimiter
 github.com/nxadm/tail/util
 github.com/nxadm/tail/watch
 github.com/nxadm/tail/winfile
 # github.com/onsi/ginkgo v1.16.5
-## explicit
+## explicit; go 1.16
 github.com/onsi/ginkgo
 github.com/onsi/ginkgo/config
 github.com/onsi/ginkgo/formatter
@@ -32,7 +33,7 @@ github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
 # github.com/onsi/gomega v1.18.1
-## explicit
+## explicit; go 1.16
 github.com/onsi/gomega
 github.com/onsi/gomega/format
 github.com/onsi/gomega/gbytes
@@ -49,15 +50,16 @@ github.com/onsi/gomega/types
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
 # golang.org/x/net v0.0.0-20220225172249-27dd8689420f
-## explicit
+## explicit; go 1.17
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
 # golang.org/x/sys v0.0.0-20220317061510-51cd9980dadf
-## explicit
+## explicit; go 1.17
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.7 => golang.org/x/text v0.3.7
+## explicit; go 1.17
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/htmlindex
@@ -78,7 +80,9 @@ golang.org/x/text/transform
 # gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
 ## explicit
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
+## explicit
 gopkg.in/tomb.v1
 # gopkg.in/yaml.v2 v2.4.0
+## explicit; go 1.15
 gopkg.in/yaml.v2
 # golang.org/x/text => golang.org/x/text v0.3.7
