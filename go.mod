@@ -12,7 +12,7 @@ require (
 	code.cloudfoundry.org/idmapper v0.0.0-20210608104755-adcde2231d2c
 	code.cloudfoundry.org/lager v2.0.0+incompatible
 	code.cloudfoundry.org/localip v0.0.0-20210608161955-43c3ec713c20
-	github.com/BurntSushi/toml v1.0.0
+	github.com/BurntSushi/toml v1.1.0
 	github.com/bits-and-blooms/bitset v1.2.1 // indirect
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.3.2
