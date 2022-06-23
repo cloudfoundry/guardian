@@ -101,11 +101,13 @@ func (d *ExecRunner) RunPea(
 
 	processPath, err := d.processDepot.CreateProcessDir(log, sandboxHandle, processID)
 	if err != nil {
+		log.Error("failed-to-create-process", err)
 		return nil, err
 	}
 
 	err = d.bundleSaver.Save(processBundle, processPath)
 	if err != nil {
+		log.Error("failed-to-save-bundle", err)
 		return nil, err
 	}
 
@@ -128,24 +130,28 @@ func (d *ExecRunner) runProcess(
 ) (proc garden.Process, theErr error) {
 	fd3r, fd3w, err := os.Pipe()
 	if err != nil {
+		log.Error("failed-to-get-fd3-pipe", err)
 		return nil, err
 	}
 	defer fd3r.Close()
 
 	logr, logw, err := os.Pipe()
 	if err != nil {
+		log.Error("failed-to-get-logging-pipe", err)
 		return nil, err
 	}
 	defer logr.Close()
 
 	syncr, syncw, err := os.Pipe()
 	if err != nil {
+		log.Error("failed-to-get-sync-pipe", err)
 		return nil, err
 	}
 	defer syncr.Close()
 
 	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"), extraCleanup)
 	if err := process.mkfifos(d.containerRootHostUID, d.containerRootHostGID); err != nil {
+		log.Error("getProcess-failed", err)
 		return nil, err
 	}
 
@@ -159,6 +165,7 @@ func (d *ExecRunner) runProcess(
 	dadooLogFilePath := filepath.Join(processPath, "..", "..", fmt.Sprintf("dadoo.%s.log", processID))
 	dadooLogFile, err := os.Create(dadooLogFilePath)
 	if err != nil {
+		log.Error("failed-creating-dadoo-logs", err)
 		return nil, err
 	}
 	defer dadooLogFile.Close()
@@ -166,6 +173,7 @@ func (d *ExecRunner) runProcess(
 	cmd.Stderr = dadooLogFile
 
 	if err := d.commandRunner.Start(cmd); err != nil {
+		log.Error("failed-starting-process", err)
 		return nil, err
 	}
 	go func() {
@@ -182,12 +190,14 @@ func (d *ExecRunner) runProcess(
 
 	stdin, stdout, stderr, err := process.openPipes(pio)
 	if err != nil {
+		log.Error("failed-to-open-process-fd-pipes", err)
 		return nil, err
 	}
 
 	syncMsg := make([]byte, 1)
 	_, err = syncr.Read(syncMsg)
 	if err != nil {
+		log.Error("failed-to-read-from-syncr", err)
 		return nil, err
 	}
 
@@ -220,6 +230,8 @@ func (d *ExecRunner) runProcess(
 
 		theErr = logging.WrapWithErrorFromLastMessage("runc exec", theErr, lastErrorMessage)
 	}()
+
+	// FAILS BEFORE HERE??
 
 	log.Info("read-exit-fd")
 	runcExitStatus := make([]byte, 1)
