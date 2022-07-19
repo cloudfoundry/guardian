@@ -20,7 +20,7 @@ var _ = Describe("Bridge Management", func() {
 	)
 
 	BeforeEach(func() {
-		name = fmt.Sprintf("gdn-test-intf-%d", GinkgoParallelNode())
+		name = fmt.Sprintf("gdn-test-intf-%d", GinkgoParallelProcess())
 
 		var err error
 		addr = "10.9.0.1/30"

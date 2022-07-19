@@ -50,7 +50,7 @@ var _ = Describe("Networking", func() {
 			Expect(os.Remove(filepath.Join(root, "etc", "resolv.conf"))).To(Succeed())
 		}, 0755)
 
-		containerNetwork = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelNode())
+		containerNetwork = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelProcess())
 		containerSpec = garden.ContainerSpec{}
 
 		var ips []net.IP
@@ -968,7 +968,7 @@ var _ = Describe("Networking", func() {
 
 	Describe("comments added to iptables rules", func() {
 		BeforeEach(func() {
-			containerSpec.Handle = fmt.Sprintf("iptable-comment-handle-%d", GinkgoParallelNode())
+			containerSpec.Handle = fmt.Sprintf("iptable-comment-handle-%d", GinkgoParallelProcess())
 		})
 
 		Context("when creating a container", func() {

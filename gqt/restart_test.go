@@ -48,7 +48,7 @@ var _ = Describe("Surviving Restarts", func() {
 			restartConfig = config
 
 			containerSpec = garden.ContainerSpec{
-				Network: fmt.Sprintf("177.100.10.%d/30", 26+GinkgoParallelNode()*4),
+				Network: fmt.Sprintf("177.100.10.%d/30", 26+GinkgoParallelProcess()*4),
 			}
 
 			netOutRules = []garden.NetOutRule{
@@ -164,7 +164,7 @@ var _ = Describe("Surviving Restarts", func() {
 					processImage = garden.ImageRef{URI: defaultTestRootFS}
 					id, err := uuid.NewV4()
 					Expect(err).NotTo(HaveOccurred())
-					processID = fmt.Sprintf("unique-potato-%s-%d", id, GinkgoParallelNode())
+					processID = fmt.Sprintf("unique-potato-%s-%d", id, GinkgoParallelProcess())
 				})
 
 				Context("with runc", func() {

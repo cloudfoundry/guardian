@@ -23,7 +23,7 @@ var _ = Describe("Port Pool", func() {
 		)
 
 		JustBeforeEach(func() {
-			portPoolStart = GinkgoParallelNode() * 7000
+			portPoolStart = GinkgoParallelProcess() * 7000
 			propsPoolDir = tempDir("", "portpool")
 
 			config.PortPoolSize = &numContainers

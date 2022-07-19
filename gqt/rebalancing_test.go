@@ -32,7 +32,7 @@ var _ = Describe("CPU shares rebalancing", func() {
 	JustBeforeEach(func() {
 		client = runner.Start(config)
 		var err error
-		goodCgroupPath, err = cgrouper.GetCGroupPath(client.CgroupsRootPath(), "cpu", strconv.Itoa(GinkgoParallelNode()), false, cpuThrottlingEnabled())
+		goodCgroupPath, err = cgrouper.GetCGroupPath(client.CgroupsRootPath(), "cpu", strconv.Itoa(GinkgoParallelProcess()), false, cpuThrottlingEnabled())
 		Expect(err).NotTo(HaveOccurred())
 		badCgroupPath = filepath.Join(goodCgroupPath, "..", "bad")
 	})

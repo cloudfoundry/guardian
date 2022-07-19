@@ -167,7 +167,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 				)
 
 				BeforeEach(func() {
-					dockerRegistryIP = fmt.Sprintf("192.168.12.%d", 30+GinkgoParallelNode()*4)
+					dockerRegistryIP = fmt.Sprintf("192.168.12.%d", 30+GinkgoParallelProcess()*4)
 					dockerRegistryPort = "5000"
 				})
 

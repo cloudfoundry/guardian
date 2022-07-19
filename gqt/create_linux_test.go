@@ -51,7 +51,7 @@ var _ = Describe("Creating a Container", func() {
 		container, err = client.Create(garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())
 
-		parentPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), "devices", strconv.Itoa(GinkgoParallelNode()), false, cpuThrottlingEnabled())
+		parentPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), "devices", strconv.Itoa(GinkgoParallelProcess()), false, cpuThrottlingEnabled())
 		Expect(err).NotTo(HaveOccurred())
 		cgroupPath := filepath.Join(parentPath, container.Handle())
 
@@ -304,7 +304,7 @@ var _ = Describe("Creating a Container", func() {
 	Context("when creating a container fails", func() {
 		It("should not leak networking configuration", func() {
 			_, err := client.Create(garden.ContainerSpec{
-				Network:    fmt.Sprintf("172.250.%d.20/24", GinkgoParallelNode()),
+				Network:    fmt.Sprintf("172.250.%d.20/24", GinkgoParallelProcess()),
 				RootFSPath: "/banana/does/not/exist",
 			})
 			Expect(err).To(HaveOccurred())
@@ -314,7 +314,7 @@ var _ = Describe("Creating a Container", func() {
 				GinkgoWriter, GinkgoWriter,
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Consistently(session).ShouldNot(gbytes.Say(fmt.Sprintf("172-250-%d-0", GinkgoParallelNode())))
+			Consistently(session).ShouldNot(gbytes.Say(fmt.Sprintf("172-250-%d-0", GinkgoParallelProcess())))
 		})
 	})
 

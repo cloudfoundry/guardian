@@ -24,8 +24,8 @@ var _ = Describe("Veth Pair Creation", func() {
 	}
 
 	BeforeEach(func() {
-		hostName = fmt.Sprintf("doesntexist-h-%d", GinkgoParallelNode())
-		containerName = fmt.Sprintf("doesntexist-c-%d", GinkgoParallelNode())
+		hostName = fmt.Sprintf("doesntexist-h-%d", GinkgoParallelProcess())
+		containerName = fmt.Sprintf("doesntexist-c-%d", GinkgoParallelProcess())
 	})
 
 	AfterEach(func() {

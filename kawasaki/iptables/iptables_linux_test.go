@@ -26,7 +26,7 @@ var _ = Describe("IPTables controller", func() {
 
 	BeforeEach(func() {
 		SetDefaultEventuallyTimeout(8 * time.Second)
-		netnsName = fmt.Sprintf("ginkgo-netns-%d", GinkgoParallelNode())
+		netnsName = fmt.Sprintf("ginkgo-netns-%d", GinkgoParallelProcess())
 		makeNamespace(netnsName)
 
 		fakeRunner = fake_command_runner.New()
@@ -41,7 +41,7 @@ var _ = Describe("IPTables controller", func() {
 
 		fakeLocksmith = NewFakeLocksmith()
 
-		prefix = fmt.Sprintf("g-%d", GinkgoParallelNode())
+		prefix = fmt.Sprintf("g-%d", GinkgoParallelProcess())
 		iptablesController = iptables.New("/sbin/iptables", "/sbin/iptables-restore", fakeRunner, fakeLocksmith, prefix)
 	})
 

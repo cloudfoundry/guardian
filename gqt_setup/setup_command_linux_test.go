@@ -30,10 +30,10 @@ var _ = Describe("gdn setup", func() {
 		// "gdn server" without --skip-setup does this too, and most gqts implicitly
 		// rely on it.
 		// We need a new test "environment" regardless of what tests have previously
-		// run with the same GinkgoParallelNode.
+		// run with the same GinkgoParallelProcess.
 		// There is also a 1 character limit on the tag due to iptables rule length
 		// limitations.
-		tag = nodeToString(GinkgoParallelNode())
+		tag = nodeToString(GinkgoParallelProcess())
 		setupArgs = []string{"setup", "--tag", tag}
 		if cpuThrottlingEnabled() {
 			setupArgs = append(setupArgs, "--enable-cpu-throttling")

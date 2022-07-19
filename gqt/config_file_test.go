@@ -27,7 +27,7 @@ var _ = Describe("Config File", func() {
 			configFile := tempFile("", "gqt-config-file-tests")
 			configFilePath = configFile.Name()
 
-			port = 9080 + GinkgoParallelNode()
+			port = 9080 + GinkgoParallelProcess()
 			fmt.Fprintf(configFile, `[server]
 debug-bind-ip = 127.0.0.1
 debug-bind-port = %d
@@ -57,7 +57,7 @@ debug-bind-port = %d
 
 		Context("and also passing flags on the command line that override values in the config file", func() {
 			BeforeEach(func() {
-				config.DebugPort = intptr(7080 + GinkgoParallelNode())
+				config.DebugPort = intptr(7080 + GinkgoParallelProcess())
 			})
 
 			It("starts the server with config values from the command line taking precedence over the config file", func() {

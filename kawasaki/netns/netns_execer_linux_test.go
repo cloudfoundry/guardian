@@ -17,7 +17,7 @@ var _ = Describe("NetnsExecerLinux", func() {
 	var netnsName string
 
 	BeforeEach(func() {
-		netnsName = fmt.Sprintf("gdn-netnstest-%d", GinkgoParallelNode())
+		netnsName = fmt.Sprintf("gdn-netnstest-%d", GinkgoParallelProcess())
 	})
 
 	JustBeforeEach(func() {

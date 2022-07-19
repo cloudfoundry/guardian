@@ -71,7 +71,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		bundleSaver = new(depotfakes.FakeBundleSaver)
 		bundleLookupper = new(depotfakes.FakeBundleLookupper)
 
-		processID = fmt.Sprintf("pid-%d", GinkgoParallelNode())
+		processID = fmt.Sprintf("pid-%d", GinkgoParallelProcess())
 		fakePidGetter.PidReturns(0, nil)
 
 		var err error

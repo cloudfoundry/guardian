@@ -37,8 +37,8 @@ var _ = Describe("Container", func() {
 	)
 
 	BeforeEach(func() {
-		netNsName = fmt.Sprintf("my-netns-%d", GinkgoParallelNode())
-		linkName = fmt.Sprintf("my-dummy-link-%d", GinkgoParallelNode())
+		netNsName = fmt.Sprintf("my-netns-%d", GinkgoParallelProcess())
+		linkName = fmt.Sprintf("my-dummy-link-%d", GinkgoParallelProcess())
 
 		runCommand("ip", "netns", "add", netNsName)
 

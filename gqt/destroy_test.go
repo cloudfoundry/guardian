@@ -24,7 +24,7 @@ var _ = Describe("Destroying a Container", func() {
 
 	BeforeEach(func() {
 		config.DebugIP = "0.0.0.0"
-		config.DebugPort = intptr(8080 + GinkgoParallelNode())
+		config.DebugPort = intptr(8080 + GinkgoParallelProcess())
 	})
 
 	JustBeforeEach(func() {
@@ -38,7 +38,7 @@ var _ = Describe("Destroying a Container", func() {
 	It("should not leak goroutines", func() {
 		numGoroutinesBefore := numGoRoutines(client)
 
-		handle := fmt.Sprintf("goroutine-leak-test-%d", GinkgoParallelNode())
+		handle := fmt.Sprintf("goroutine-leak-test-%d", GinkgoParallelProcess())
 		_, err := client.Create(garden.ContainerSpec{
 			Handle: handle,
 		})
@@ -148,7 +148,7 @@ var _ = Describe("Destroying a Container", func() {
 		JustBeforeEach(func() {
 			var err error
 
-			networkSpec = fmt.Sprintf("177.100.%d.0/24", GinkgoParallelNode())
+			networkSpec = fmt.Sprintf("177.100.%d.0/24", GinkgoParallelProcess())
 			container, err = client.Create(garden.ContainerSpec{
 				Network: networkSpec,
 			})
@@ -174,7 +174,7 @@ var _ = Describe("Destroying a Container", func() {
 				out, err := runIPTables("-S", "-t", "filter")
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(string(out)).NotTo(ContainSubstring(fmt.Sprintf("w-%d-instance-%s", GinkgoParallelNode(), iptableInstance)))
+				Expect(string(out)).NotTo(ContainSubstring(fmt.Sprintf("w-%d-instance-%s", GinkgoParallelProcess(), iptableInstance)))
 			})
 
 			It("should remove virtual ethernet cards", func() {

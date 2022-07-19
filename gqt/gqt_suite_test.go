@@ -77,7 +77,7 @@ func TestGqt(t *testing.T) {
 		}
 
 		if strings.Contains(message, "running image plugin destroy: deleting image path") {
-			io.WriteString(GinkgoWriter, fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelNode()))
+			io.WriteString(GinkgoWriter, fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelProcess()))
 
 			io.WriteString(GinkgoWriter, "\nPrinting the mount table...\n\n")
 			mntTableOut, mntTableErr := getMountTable()
@@ -110,7 +110,7 @@ func TestGqt(t *testing.T) {
 		}
 
 		if strings.Contains(message, "failed getting task") {
-			io.WriteString(GinkgoWriter, fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelNode()))
+			io.WriteString(GinkgoWriter, fmt.Sprintf("\n\nCurrent Ginkgo node is %d\n", GinkgoParallelProcess()))
 
 			io.WriteString(GinkgoWriter, "\nPrinting the containerd tasks...\n\n")
 			io.WriteString(GinkgoWriter, listTasks("ctr", config.ContainerdSocket))

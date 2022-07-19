@@ -22,7 +22,7 @@ var _ = Describe("Link Management", func() {
 	BeforeEach(func() {
 		runCommand("sh", "-c", "mountpoint /sys || mount -t sysfs sysfs /sys")
 
-		name = fmt.Sprintf("gdn-test-%d", GinkgoParallelNode())
+		name = fmt.Sprintf("gdn-test-%d", GinkgoParallelProcess())
 		link := &netlink.GenericLink{
 			LinkAttrs: netlink.LinkAttrs{Name: name},
 			LinkType:  "dummy",
@@ -115,7 +115,7 @@ var _ = Describe("Link Management", func() {
 		var netnsName string
 
 		BeforeEach(func() {
-			netnsName = fmt.Sprintf("gdnsetnstest%d", GinkgoParallelNode())
+			netnsName = fmt.Sprintf("gdnsetnstest%d", GinkgoParallelProcess())
 
 			runCommand("sh", "-c", fmt.Sprintf("ip netns add %s", netnsName))
 		})

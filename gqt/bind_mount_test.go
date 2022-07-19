@@ -52,7 +52,7 @@ var _ = Describe("Bind mount", func() {
 					SrcPath: srcPath,
 					DstPath: dstPath,
 				}},
-				Network: fmt.Sprintf("10.0.%d.0/24", GinkgoParallelNode()),
+				Network: fmt.Sprintf("10.0.%d.0/24", GinkgoParallelProcess()),
 			})
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -304,7 +304,7 @@ func createTestHostDir() string {
 }
 
 func createTestFile(tstHostDir string) (string, string) {
-	fileName := fmt.Sprintf("bind-mount-%d-test-file", GinkgoParallelNode())
+	fileName := fmt.Sprintf("bind-mount-%d-test-file", GinkgoParallelProcess())
 	file, err := os.OpenFile(filepath.Join(tstHostDir, fileName), os.O_CREATE|os.O_RDWR, 0777)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(file.Close()).ToNot(HaveOccurred())

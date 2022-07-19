@@ -29,7 +29,7 @@ var _ = Describe("gdn cleanup", func() {
 		config.PropertiesPath = path.Join(tmpDir, "props.json")
 		client := runner.Start(config)
 		container, err := client.Create(garden.ContainerSpec{
-			Network: fmt.Sprintf("177.100.%d.0/24", GinkgoParallelNode()),
+			Network: fmt.Sprintf("177.100.%d.0/24", GinkgoParallelProcess()),
 		})
 		Expect(err).NotTo(HaveOccurred())
 

@@ -634,7 +634,7 @@ func containerLabels(ctr, socket, handle string) map[string]interface{} {
 }
 
 func runCtr(ctr, socket string, args []string) string {
-	defaultArgs := []string{"--address", socket, "--namespace", fmt.Sprintf("nerdspace%d", GinkgoParallelNode())}
+	defaultArgs := []string{"--address", socket, "--namespace", fmt.Sprintf("nerdspace%d", GinkgoParallelProcess())}
 	cmd := exec.Command(ctr, append(defaultArgs, args...)...)
 
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)

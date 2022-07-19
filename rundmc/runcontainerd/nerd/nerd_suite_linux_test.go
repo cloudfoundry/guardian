@@ -81,7 +81,7 @@ var _ = BeforeEach(func() {
 	containerdClient, err = containerd.New(containerdConfig.GRPC.Address, containerd.WithDefaultRuntime(plugin.RuntimeRuncV2))
 	Expect(err).NotTo(HaveOccurred())
 
-	containerdContext = namespaces.WithNamespace(context.Background(), fmt.Sprintf("nerdspace%d", GinkgoParallelNode()))
+	containerdContext = namespaces.WithNamespace(context.Background(), fmt.Sprintf("nerdspace%d", GinkgoParallelProcess()))
 	containerdContext = leases.WithLease(containerdContext, "lease-is-off-for-testing")
 
 	testConfig = &TestConfig{

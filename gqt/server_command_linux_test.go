@@ -17,7 +17,7 @@ var _ = Describe("gdn server", func() {
 	)
 
 	JustBeforeEach(func() {
-		config.Tag = fmt.Sprintf("%d", GinkgoParallelNode())
+		config.Tag = fmt.Sprintf("%d", GinkgoParallelProcess())
 		config.User = &syscall.Credential{Uid: 0, Gid: 0}
 		server = runner.Start(config)
 	})

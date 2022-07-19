@@ -33,7 +33,7 @@ var _ = Describe("Network plugin", func() {
 
 	BeforeEach(func() {
 
-		containerNetwork = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelNode())
+		containerNetwork = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelProcess())
 		containerSpec = garden.ContainerSpec{}
 
 		tmpDir = tempDir("", "netplugtest")

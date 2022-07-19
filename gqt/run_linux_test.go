@@ -498,7 +498,7 @@ var _ = Describe("Run", func() {
 
 			JustBeforeEach(func() {
 				config.DebugIP = "0.0.0.0"
-				config.DebugPort = intptr(8080 + GinkgoParallelNode())
+				config.DebugPort = intptr(8080 + GinkgoParallelProcess())
 				client = restartGarden(client, config)
 
 				var err error
