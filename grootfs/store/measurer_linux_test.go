@@ -26,7 +26,7 @@ var _ = Describe("Measurer", func() {
 	)
 
 	BeforeEach(func() {
-		mountPoint := fmt.Sprintf("/mnt/xfs-%d", GinkgoParallelNode())
+		mountPoint := fmt.Sprintf("/mnt/xfs-%d", GinkgoParallelProcess())
 		var err error
 		storePath, err = ioutil.TempDir(mountPoint, "")
 		Expect(err).NotTo(HaveOccurred())

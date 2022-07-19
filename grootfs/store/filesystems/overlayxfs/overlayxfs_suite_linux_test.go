@@ -23,7 +23,7 @@ func TestOverlayxfs(t *testing.T) {
 	testhelpers.ReseedRandomNumberGenerator()
 
 	BeforeEach(func() {
-		StorePath = fmt.Sprintf("/mnt/xfs-%d", GinkgoParallelNode())
+		StorePath = fmt.Sprintf("/mnt/xfs-%d", GinkgoParallelProcess())
 	})
 
 	BeforeSuite(func() {

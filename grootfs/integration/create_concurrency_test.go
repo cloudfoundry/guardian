@@ -50,7 +50,7 @@ var _ = Describe("Concurrent creations", func() {
 				defer wg.Done()
 				runner := Runner.WithLogLevel(lager.ERROR) // clone runner to avoid data-race on stdout
 				_, err := runner.Create(groot.CreateSpec{
-					ID:                          fmt.Sprintf("test-%d-%d", GinkgoParallelNode(), idx),
+					ID:                          fmt.Sprintf("test-%d-%d", GinkgoParallelProcess(), idx),
 					BaseImageURL:                integration.String2URL(fmt.Sprintf("oci://%s/assets/oci-test-image/grootfs-busybox:latest", workDir)),
 					Mount:                       mountByDefault(),
 					DiskLimit:                   2*1024*1024 + 512*1024,
@@ -76,7 +76,7 @@ var _ = Describe("Concurrent creations", func() {
 			for i := 0; i < 100; i++ {
 				runner := Runner.WithLogLevel(lager.ERROR) // clone runner to avoid data-race on stdout
 				_, err := runner.Create(groot.CreateSpec{
-					ID:           fmt.Sprintf("test-%d-%d", GinkgoParallelNode(), i),
+					ID:           fmt.Sprintf("test-%d-%d", GinkgoParallelProcess(), i),
 					BaseImageURL: integration.String2URL(fmt.Sprintf("oci://%s/assets/oci-test-image/grootfs-busybox:latest", workDir)),
 					Mount:        mountByDefault(),
 					DiskLimit:    2*1024*1024 + 512*1024,
@@ -109,7 +109,7 @@ var _ = Describe("Concurrent creations", func() {
 		createWithRegistry := func(registryAddr, imageId, imagePath string) error {
 			runner := Runner.WithLogLevel(lager.ERROR).WithInsecureRegistry(registryAddr)
 			_, err := runner.Create(groot.CreateSpec{
-				ID:           fmt.Sprintf("test-%d-%s", GinkgoParallelNode(), imageId),
+				ID:           fmt.Sprintf("test-%d-%s", GinkgoParallelProcess(), imageId),
 				BaseImageURL: integration.String2URL(fmt.Sprintf("docker://%s/%s", registryAddr, imagePath)),
 			})
 			return err

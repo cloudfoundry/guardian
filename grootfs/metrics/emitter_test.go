@@ -24,7 +24,7 @@ var _ = Describe("Emitter", func() {
 	)
 
 	BeforeEach(func() {
-		fakeMetronPort = uint16(5000 + GinkgoParallelNode())
+		fakeMetronPort = uint16(5000 + GinkgoParallelProcess())
 
 		fakeMetron = testhelpers.NewFakeMetron(fakeMetronPort)
 		Expect(fakeMetron.Listen()).To(Succeed())

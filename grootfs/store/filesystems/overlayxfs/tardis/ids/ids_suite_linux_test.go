@@ -17,7 +17,7 @@ func TestOverlayxfs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	BeforeEach(func() {
-		StorePath = fmt.Sprintf("/mnt/xfs-%d", GinkgoParallelNode())
+		StorePath = fmt.Sprintf("/mnt/xfs-%d", GinkgoParallelProcess())
 	})
 
 	RunSpecs(t, "Tardis/ids Suite")

@@ -15,7 +15,7 @@ func TestQuota(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	BeforeEach(func() {
-		XfsMountPoint = fmt.Sprintf("/mnt/xfs-%d", GinkgoParallelNode())
+		XfsMountPoint = fmt.Sprintf("/mnt/xfs-%d", GinkgoParallelProcess())
 	})
 
 	RunSpecs(t, "Quota Suite")

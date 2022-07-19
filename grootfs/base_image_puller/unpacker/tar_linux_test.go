@@ -56,7 +56,7 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 		baseImagePath, err = ioutil.TempDir("", "base-image-")
 		Expect(err).NotTo(HaveOccurred())
 
-		tarFilePath = filepath.Join(os.TempDir(), (fmt.Sprintf("unpack-test-%d.tar", GinkgoParallelNode())))
+		tarFilePath = filepath.Join(os.TempDir(), (fmt.Sprintf("unpack-test-%d.tar", GinkgoParallelProcess())))
 		tarCommand = exec.Command("tar", "-C", baseImagePath, "-cf", tarFilePath, ".")
 
 		logger = lagertest.NewTestLogger("test-store")

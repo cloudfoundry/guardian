@@ -42,7 +42,7 @@ var _ = Describe("Manager", func() {
 
 	BeforeEach(func() {
 		originalTmpDir = os.TempDir()
-		grootfsPath = filepath.Join(os.TempDir(), fmt.Sprintf("grootfs-%d", GinkgoParallelNode()))
+		grootfsPath = filepath.Join(os.TempDir(), fmt.Sprintf("grootfs-%d", GinkgoParallelProcess()))
 
 		imgDriver = new(image_managerfakes.FakeImageDriver)
 		volDriver = new(base_image_pullerfakes.FakeVolumeDriver)

@@ -99,7 +99,7 @@ func TestGroot(t *testing.T) {
 		testhelpers.ReseedRandomNumberGenerator()
 
 		var err error
-		StorePath, err = ioutil.TempDir("", fmt.Sprintf("store-%d", GinkgoParallelNode()))
+		StorePath, err = ioutil.TempDir("", fmt.Sprintf("store-%d", GinkgoParallelProcess()))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Chmod(StorePath, 0777)).To(Succeed())
 
