@@ -86,7 +86,7 @@ func (u *TarUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackS
 }
 
 func (u *TarUnpacker) handleEntry(entryPath string, tarReader *tar.Reader, tarHeader *tar.Header, spec base_image_puller.UnpackSpec) (entrySize int64, err error) {
-	if err := ensureParentDir(entryPath); err != nil {
+	if err := u.ensureParentDir(entryPath); err != nil {
 		return 0, err
 	}
 
@@ -179,11 +179,15 @@ func (u *TarUnpacker) createLink(path string, tarHeader *tar.Header, spec base_i
 	return os.Link(filepath.Join(spec.TargetPath, spec.BaseDirectory, tarHeader.Linkname), path)
 }
 
-func ensureParentDir(childPath string) error {
+func (u *TarUnpacker) ensureParentDir(childPath string) error {
 	parentDirPath := filepath.Dir(childPath)
 
 	if _, err := os.Stat(parentDirPath); err != nil {
-		if err := os.MkdirAll(parentDirPath, defaultDirectoryFileMode); err != nil {
+		if err := u.ensureParentDir(parentDirPath); err != nil {
+			return err
+		}
+
+		if err := os.Mkdir(parentDirPath, defaultDirectoryFileMode); err != nil {
 			return errors.Wrapf(err, "creating parent dir `%s`", parentDirPath)
 		}
 
@@ -191,7 +195,9 @@ func ensureParentDir(childPath string) error {
 			return err
 		}
 
-		return os.Chown(parentDirPath, defaultDirectoryUid, defaultDirectoryGid)
+		uid := u.idTranslator.TranslateUID(defaultDirectoryUid)
+		gid := u.idTranslator.TranslateGID(defaultDirectoryGid)
+		return os.Chown(parentDirPath, uid, gid)
 	}
 
 	return nil

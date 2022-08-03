@@ -272,8 +272,8 @@ var _ = Describe("Tar unpacker", func() {
 					gid := info.Sys().(*syscall.Stat_t).Gid
 
 					Expect(info.Mode().String()).To(Equal("drwxr-xr-x"))
-					Expect(uid).To(Equal(uint32(0)))
-					Expect(gid).To(Equal(uint32(0)))
+					Expect(uid).To(Equal(uint32(1000)), parentDirPath)
+					Expect(gid).To(Equal(uint32(1000)), parentDirPath)
 				}
 			})
 		})
@@ -397,8 +397,8 @@ var _ = Describe("Tar unpacker", func() {
 				gid := info.Sys().(*syscall.Stat_t).Gid
 
 				Expect(info.Mode().String()).To(Equal("drwxr-xr-x"))
-				Expect(uid).To(Equal(uint32(0)))
-				Expect(gid).To(Equal(uint32(0)))
+				Expect(uid).To(Equal(uint32(1000)))
+				Expect(gid).To(Equal(uint32(1000)))
 			})
 		})
 
