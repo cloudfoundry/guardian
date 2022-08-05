@@ -802,7 +802,7 @@ var _ = Describe("Networking", func() {
 					It("has the correct MTU size", func() {
 						out, err := exec.Command("ifconfig", hostIfName(container)).Output()
 						Expect(err).ToNot(HaveOccurred())
-						Expect(out).To(ContainSubstring(" MTU:1234 "))
+						Expect(string(out)).To(ContainSubstring(" MTU:1234 "))
 					})
 				})
 			})
