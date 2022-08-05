@@ -86,7 +86,8 @@ var _ = Describe("IPTables controller", func() {
 			Expect(iptablesController.PrependRule("test-chain", fakeUDPRule)).To(Succeed())
 
 			cmd := runForStdout(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-S", "test-chain")))
-			Expect(cmd).To(ContainSubstring("-A test-chain -p udp\n-A test-chain -p tcp"))
+			Expect(cmd).To(ContainSubstring("-A test-chain -p udp"))
+			Expect(cmd).To(ContainSubstring("-A test-chain -p tcp"))
 		})
 
 		It("returns an error when the chain does not exist", func() {
@@ -110,8 +111,9 @@ var _ = Describe("IPTables controller", func() {
 				fakeUDPRule,
 			})).To(Succeed())
 
-			cmd := wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-S", "test-chain"))
-			Expect(runForStdout(cmd)).To(ContainSubstring("-A test-chain -p udp\n-A test-chain -p tcp"))
+			cmd := runForStdout(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-S", "test-chain")))
+			Expect(cmd).To(ContainSubstring("-A test-chain -p udp"))
+			Expect(cmd).To(ContainSubstring("-A test-chain -p tcp"))
 		})
 
 		It("returns an error when the chain does not exist", func() {
