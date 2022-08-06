@@ -137,7 +137,7 @@ var _ = Describe("Container", func() {
 func linkIP(netNsName, linkName string) string {
 	stdout := runCommand("ip", "netns", "exec", netNsName, "ifconfig", linkName)
 
-	re := regexp.MustCompile(`inet addr:([0-9.]+)`)
+	re := regexp.MustCompile(`inet ([0-9.]+)`)
 
 	ret := re.FindStringSubmatch(stdout)
 	Expect(ret).NotTo(BeEmpty())
@@ -148,7 +148,7 @@ func linkIP(netNsName, linkName string) string {
 func linkMTU(netNsName, linkName string) int {
 	stdout := runCommand("ip", "netns", "exec", netNsName, "ifconfig", linkName)
 
-	re := regexp.MustCompile(`MTU:([0-9]+)`)
+	re := regexp.MustCompile(`mtu ([0-9]+)`)
 
 	ret := re.FindStringSubmatch(stdout)
 	Expect(ret).NotTo(BeEmpty())
