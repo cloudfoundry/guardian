@@ -794,7 +794,7 @@ var _ = Describe("Networking", func() {
 				Describe("container's network interface", func() {
 					It("has the correct MTU size", func() {
 						stdout := containerIfconfig(container)
-						Expect(stdout).To(ContainSubstring(" MTU:1234 "))
+						Expect(stdout).To(ContainSubstring(" mtu 1234"))
 					})
 				})
 
@@ -802,7 +802,7 @@ var _ = Describe("Networking", func() {
 					It("has the correct MTU size", func() {
 						out, err := exec.Command("ifconfig", hostIfName(container)).Output()
 						Expect(err).ToNot(HaveOccurred())
-						Expect(string(out)).To(ContainSubstring(" MTU:1234 "))
+						Expect(string(out)).To(ContainSubstring(" mtu 1234"))
 					})
 				})
 			})
@@ -815,7 +815,7 @@ var _ = Describe("Networking", func() {
 				Describe("container's network interface", func() {
 					It("has the correct MTU size", func() {
 						stdout := containerIfconfig(container)
-						Expect(stdout).To(ContainSubstring(" MTU:1500 "))
+						Expect(stdout).To(ContainSubstring("mtu 1500"))
 					})
 				})
 
@@ -823,7 +823,7 @@ var _ = Describe("Networking", func() {
 					It("has the correct MTU size", func() {
 						out, err := exec.Command("ifconfig", hostIfName(container)).Output()
 						Expect(err).ToNot(HaveOccurred())
-						Expect(out).To(ContainSubstring(" MTU:1500 "))
+						Expect(out).To(ContainSubstring("mtu 1500"))
 					})
 				})
 			})
@@ -842,7 +842,7 @@ var _ = Describe("Networking", func() {
 			Describe("container's network interface", func() {
 				It("has the same MTU as the host outbound interface", func() {
 					stdout := containerIfconfig(container)
-					Expect(stdout).To(ContainSubstring(fmt.Sprintf(" MTU:%d ", outboundIfaceMtu)))
+					Expect(stdout).To(ContainSubstring(fmt.Sprintf(" mtu %d", outboundIfaceMtu)))
 				})
 			})
 
@@ -851,7 +851,7 @@ var _ = Describe("Networking", func() {
 					out, err := exec.Command("ifconfig", hostIfName(container)).Output()
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(out).To(ContainSubstring(fmt.Sprintf(" MTU:%d ", outboundIfaceMtu)))
+					Expect(out).To(ContainSubstring(fmt.Sprintf(" mtu %d", outboundIfaceMtu)))
 				})
 			})
 		})
