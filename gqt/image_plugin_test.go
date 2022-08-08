@@ -287,7 +287,7 @@ var _ = Describe("Image Plugin", func() {
 
 					manifestDigest := imageIndex.Manifests[0].Digest.String()
 					Expect(manifestDigest).To(HavePrefix("sha256:"))
-					manifestDigest = strings.TrimLeft(manifestDigest, "sha256:")
+					manifestDigest = strings.TrimPrefix(manifestDigest, "sha256:")
 					manifestPath := filepath.Join(ociImagePath, "blobs", "sha256", manifestDigest)
 
 					By("correctly writing blobs/sha256/{manifest_sha}")
