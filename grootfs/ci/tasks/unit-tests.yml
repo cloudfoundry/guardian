@@ -14,3 +14,8 @@ run:
   dir: src/code.cloudfoundry.org/grootfs
   path: ci/scripts/unit-tests.sh
   user: root
+
+image_resource:
+  source:
+    repository: cfgarden/garden-ci
+  type: docker-image

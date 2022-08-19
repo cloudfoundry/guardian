@@ -16,3 +16,8 @@ run:
   dir: src/code.cloudfoundry.org/grootfs
   path: ci/scripts/integration-tests.sh
   user: root
+
+image_resource:
+  source:
+    repository: cfgarden/garden-ci
+  type: docker-image
