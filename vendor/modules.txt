@@ -1,6 +1,11 @@
 # code.cloudfoundry.org/archiver v0.0.0-20210609160716-67523bd33dbf
 ## explicit; go 1.16
 code.cloudfoundry.org/archiver/extractor/test_helper
+# code.cloudfoundry.org/cf-networking-helpers v0.0.0-20221202172023-a3dbff0f6e70
+## explicit; go 1.19
+code.cloudfoundry.org/cf-networking-helpers/healthchecker/cmd/healthchecker
+code.cloudfoundry.org/cf-networking-helpers/healthchecker/config
+code.cloudfoundry.org/cf-networking-helpers/healthchecker/watchdog
 # code.cloudfoundry.org/clock v1.0.0
 ## explicit
 code.cloudfoundry.org/clock
@@ -38,6 +43,7 @@ code.cloudfoundry.org/idmapper
 code.cloudfoundry.org/lager
 code.cloudfoundry.org/lager/chug
 code.cloudfoundry.org/lager/lagerctx
+code.cloudfoundry.org/lager/lagerflags
 code.cloudfoundry.org/lager/lagertest
 # code.cloudfoundry.org/localip v0.0.0-20210608161955-43c3ec713c20
 ## explicit; go 1.16
@@ -240,7 +246,7 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
-# github.com/google/go-cmp v0.5.8
+# github.com/google/go-cmp v0.5.9
 ## explicit; go 1.13
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
@@ -327,7 +333,7 @@ github.com/onsi/ginkgo/reporters/stenographer
 github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
-# github.com/onsi/gomega v1.20.2
+# github.com/onsi/gomega v1.24.1
 ## explicit; go 1.18
 github.com/onsi/gomega
 github.com/onsi/gomega/format
@@ -415,7 +421,7 @@ go.opencensus.io/internal
 go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/tracestate
-# golang.org/x/net v0.0.0-20220722155237-a158d28d115b
+# golang.org/x/net v0.2.0
 ## explicit; go 1.17
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
@@ -427,17 +433,17 @@ golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
 golang.org/x/net/trace
-# golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+# golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 ## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f
+# golang.org/x/sys v0.2.0
 ## explicit; go 1.17
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.3.7 => golang.org/x/text v0.3.7
+# golang.org/x/text v0.4.0 => golang.org/x/text v0.3.7
 ## explicit; go 1.17
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
