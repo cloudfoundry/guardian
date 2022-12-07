@@ -617,7 +617,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 		Context("when the blob does not exist", func() {
 			BeforeEach(func() {
-				layerInfo = groot.LayerInfo{BlobID: "sha256:steamed-blob"}
+				layerInfo = groot.LayerInfo{BlobID: "sha256:3a50a9ff45117c33606ba54f4a7f55cebbdd2e96a06ab48e7e981a02ff1fd665"}
 			})
 
 			It("returns an error", func() {
