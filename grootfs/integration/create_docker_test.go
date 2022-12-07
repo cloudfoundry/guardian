@@ -692,7 +692,8 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				ID:           randomImageID,
 				Mount:        mountByDefault(),
 			})
-			Expect(err).To(MatchError(ContainSubstring("docker:///cfgaren/sorry-not-here does not exist or you do not have permissions to see it.")))
+			Expect(err).To(MatchError(ContainSubstring("cfgaren/sorry-not-here")))
+			Expect(err).To(MatchError(ContainSubstring("requested access to the resource is denied")))
 		})
 	})
 
