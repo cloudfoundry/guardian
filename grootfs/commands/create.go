@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/grootfs/base_image_puller"
@@ -371,6 +372,13 @@ func tryParsingErrorMessage(err error) error {
 }
 
 func tryHumanize(err error, spec groot.CreateSpec) string {
+	// An upgrade to a dependency changed how the error was structured, so errospkg.Cause does not return
+	// the error we're expecting here.  Just do a string compare.
+	unknownAuthority := x509.UnknownAuthorityError{}
+	if strings.Contains(err.Error(), unknownAuthority.Error()) {
+		return "This registry is insecure. To pull images from this registry, please use the --insecure-registry option."
+	}
+
 	switch e := errorspkg.Cause(err).(type) {
 	case *url.Error:
 		if _, ok := e.Err.(x509.UnknownAuthorityError); ok {
