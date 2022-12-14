@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/cf-networking-helpers/healthchecker/config"
@@ -54,7 +53,7 @@ func main() {
 
 	w := watchdog.NewWatchdog(u, c.ComponentName, c.FailureCounterFile, c.HealthCheckPollInterval, c.HealthCheckTimeout, logger)
 	signals := make(chan os.Signal, SIGNAL_BUFFER_SIZE)
-	signal.Notify(signals, syscall.SIGUSR1)
+	signal.Notify(signals, watchdog.HandledSignals...)
 
 	err = w.WatchHealthcheckEndpoint(context.Background(), signals)
 	if err != nil {

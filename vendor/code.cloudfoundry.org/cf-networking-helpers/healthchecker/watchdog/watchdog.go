@@ -10,7 +10,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/lager"
@@ -69,8 +68,7 @@ func (w *Watchdog) WatchHealthcheckEndpoint(ctx context.Context, signals <-chan 
 			w.logger.Info("Context done, exiting")
 			return nil
 		case sig := <-signals:
-			if sig == syscall.SIGUSR1 {
-				w.logger.Info("Received USR1 signal, exiting")
+			if w.shouldExitOnSignal(sig) {
 				return nil
 			}
 		case <-pollTimer.C:
@@ -81,8 +79,7 @@ func (w *Watchdog) WatchHealthcheckEndpoint(ctx context.Context, signals <-chan 
 				if errCounter >= numRetries {
 					select {
 					case sig := <-signals:
-						if sig == syscall.SIGUSR1 {
-							w.logger.Info("Received USR1 signal, exiting")
+						if w.shouldExitOnSignal(sig) {
 							return nil
 						}
 					default:
