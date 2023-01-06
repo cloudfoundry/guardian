@@ -223,6 +223,9 @@ github.com/eapache/go-resiliency/retrier
 # github.com/fsnotify/fsnotify v1.5.1
 ## explicit; go 1.13
 github.com/fsnotify/fsnotify
+# github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0
+## explicit; go 1.13
+github.com/go-task/slim-sprig
 # github.com/godbus/dbus/v5 v5.0.6
 ## explicit; go 1.12
 github.com/godbus/dbus/v5
@@ -318,6 +321,14 @@ github.com/onsi/ginkgo
 github.com/onsi/ginkgo/config
 github.com/onsi/ginkgo/extensions/table
 github.com/onsi/ginkgo/formatter
+github.com/onsi/ginkgo/ginkgo
+github.com/onsi/ginkgo/ginkgo/convert
+github.com/onsi/ginkgo/ginkgo/interrupthandler
+github.com/onsi/ginkgo/ginkgo/nodot
+github.com/onsi/ginkgo/ginkgo/outline
+github.com/onsi/ginkgo/ginkgo/testrunner
+github.com/onsi/ginkgo/ginkgo/testsuite
+github.com/onsi/ginkgo/ginkgo/watch
 github.com/onsi/ginkgo/internal/codelocation
 github.com/onsi/ginkgo/internal/containernode
 github.com/onsi/ginkgo/internal/failer
@@ -467,6 +478,10 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
+# golang.org/x/tools v0.1.12
+## explicit; go 1.18
+golang.org/x/tools/go/ast/inspector
+golang.org/x/tools/internal/typeparams
 # google.golang.org/genproto v0.0.0-20220624142145-8cd45d7dbd1f
 ## explicit; go 1.15
 google.golang.org/genproto/googleapis/rpc/status

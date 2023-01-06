@@ -5,6 +5,7 @@ package main
 
 import (
 	_ "code.cloudfoundry.org/cf-networking-helpers/healthchecker/cmd/healthchecker"
+	_ "github.com/onsi/ginkgo/ginkgo"
 )
 
 // This file imports packages that are used when running go generate, or used
