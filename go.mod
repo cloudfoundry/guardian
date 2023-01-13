@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	code.cloudfoundry.org/archiver v0.0.0-20210609160716-67523bd33dbf
-	code.cloudfoundry.org/cf-networking-helpers v0.0.0-20221214145032-6596923a3b05
 	code.cloudfoundry.org/clock v1.0.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b
 	code.cloudfoundry.org/debugserver v0.0.0-20210608171006-d7658ce493f4

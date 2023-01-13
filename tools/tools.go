@@ -4,7 +4,6 @@
 package main
 
 import (
-	_ "code.cloudfoundry.org/cf-networking-helpers/healthchecker/cmd/healthchecker"
 	_ "github.com/onsi/ginkgo/ginkgo"
 )
 

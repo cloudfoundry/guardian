@@ -67,8 +67,6 @@ cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9
 cloud.google.com/go/storage v1.22.1/go.mod h1:S8N1cAStu7BOeFfE8KAQzmyyLkK8p/vmRq6kuBTW58Y=
 code.cloudfoundry.org/archiver v0.0.0-20210609160716-67523bd33dbf h1:a8Yz4R3NowxSN8Ky4AC8G3jXgDk732kEaVOds1yRA+8=
 code.cloudfoundry.org/archiver v0.0.0-20210609160716-67523bd33dbf/go.mod h1:l6YA1ldmA1uv/OlbQf69Hfgl8fCQHPtKzFxgSoUWJqQ=
-code.cloudfoundry.org/cf-networking-helpers v0.0.0-20221214145032-6596923a3b05 h1:TVjboGVCiilxKaz4WePVqtT9HdHEWnf4kq358qOHPbU=
-code.cloudfoundry.org/cf-networking-helpers v0.0.0-20221214145032-6596923a3b05/go.mod h1:2hha5mRazam+K9rRMWN3ENSKVeqToYQnIeDi0hcx3FE=
 code.cloudfoundry.org/clock v1.0.0 h1:kFXWQM4bxYvdBw2X8BbBeXwQNgfoWv1vqAk2ZZyBN2o=
 code.cloudfoundry.org/clock v1.0.0/go.mod h1:QD9Lzhd/ux6eNQVUDVRJX/RKTigpewimNYBi7ivZKY8=
 code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b h1:wkgiiFREqM2rac/cNUvM8czcp1ZUx5GaVcaNGSCYOuQ=

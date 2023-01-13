@@ -1,11 +1,6 @@
 # code.cloudfoundry.org/archiver v0.0.0-20210609160716-67523bd33dbf
 ## explicit; go 1.16
 code.cloudfoundry.org/archiver/extractor/test_helper
-# code.cloudfoundry.org/cf-networking-helpers v0.0.0-20221214145032-6596923a3b05
-## explicit; go 1.19
-code.cloudfoundry.org/cf-networking-helpers/healthchecker/cmd/healthchecker
-code.cloudfoundry.org/cf-networking-helpers/healthchecker/config
-code.cloudfoundry.org/cf-networking-helpers/healthchecker/watchdog
 # code.cloudfoundry.org/clock v1.0.0
 ## explicit
 code.cloudfoundry.org/clock
@@ -43,7 +38,6 @@ code.cloudfoundry.org/idmapper
 code.cloudfoundry.org/lager
 code.cloudfoundry.org/lager/chug
 code.cloudfoundry.org/lager/lagerctx
-code.cloudfoundry.org/lager/lagerflags
 code.cloudfoundry.org/lager/lagertest
 # code.cloudfoundry.org/localip v0.0.0-20210608161955-43c3ec713c20
 ## explicit; go 1.16
