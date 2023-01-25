@@ -1,11 +1,10 @@
 #!/bin/bash -e
 
 # Default fly target
-[ -z "$FLY_TARGET" ] && FLY_TARGET="garden-ci"
+[ -z "$FLY_TARGET" ] && FLY_TARGET="runtime-garden"
 [ -z "$FLY_ARGS" ] && FLY_ARGS="-p"
 
 RED=1
-GREEN=2
 print_message() {
   message=$1
   colour=$2
@@ -14,24 +13,24 @@ print_message() {
 
 usage() {
   colour=$1
-  print_message "Usage:" $colour
-  print_message "test --- run all the tests" $colour
-  print_message "test <test path> --- only run tests below given path" $colour
-  print_message "test -u --- run all unit tests" $colour
-  print_message "test -i --- run all integration tests" $colour
+  print_message "Usage:" "$colour"
+  print_message "test --- run all the tests" "$colour"
+  print_message "test <test path> --- only run tests below given path" "$colour"
+  print_message "test -u --- run all unit tests" "$colour"
+  print_message "test -i --- run all integration tests" "$colour"
 }
 
 compile_fly_cmd() {
   task_path=$1
-  image_args=("--inputs-from" "main/grootfs" "--image" "garden-ci-image")
+  image_args=("--inputs-from" "garden-runc-release/grootfs" "--image" "garden-ci-image")
 
   cmd="fly -t $FLY_TARGET"
-  cmd=$cmd" e -p ${image_args[@]} -c $task_path"
+  cmd=$cmd" e -p ${image_args[*]} -c $task_path"
   cmd=$cmd" -i grootfs-git-repo=${PWD}"
   cmd=$cmd" $FLY_ARGS"
   cmd=$cmd" --"
 
-  echo $cmd
+  echo "$cmd"
 }
 
 compile_ginkgo_args() {
@@ -42,7 +41,7 @@ compile_ginkgo_args() {
   [ $RECURSIVE -eq 1 ] && args=$args" -r"
   [ "$test_path" != "" ] && args=$args" $test_path"
 
-  echo $args
+  echo "$args"
 }
 
 run_unit_tests() {
@@ -51,8 +50,8 @@ run_unit_tests() {
   echo "Running UNIT tests"
 
   cmd=$(compile_fly_cmd ci/tasks/unit-tests.yml)
-  cmd=$cmd" "$(compile_ginkgo_args $test_path)
-  eval $cmd
+  cmd=$cmd" "$(compile_ginkgo_args "$test_path")
+  eval "$cmd"
 }
 
 run_integration_tests() {
