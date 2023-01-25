@@ -57,7 +57,7 @@ go-vet:
 	GOOS=linux go vet -mod vendor `go list -mod vendor ./... | grep -v vendor`
 
 concourse-go-vet:
-	fly -t garden-ci e -c ci/tasks/go-vet.yml -i grootfs-git-repo=${PWD}
+	fly -t runtime-garden e -c ci/tasks/go-vet.yml -i grootfs-git-repo=${PWD}
 
 go-generate:
 	GOOS=linux go generate `go list ./... | grep -v vendor`
