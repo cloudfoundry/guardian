@@ -212,7 +212,7 @@ var _ = Describe("Layer source: Docker", func() {
 				Expect(err).To(HaveOccurred())
 
 				Expect(logger).To(gbytes.Say("fetching-image-reference-failed"))
-				Expect(logger).To(gbytes.Say("unauthorized: authentication required"))
+				Expect(logger).To(gbytes.Say("requested access to the resource is denied"))
 			})
 		})
 	})
@@ -621,7 +621,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(blobErr).To(MatchError(And(ContainSubstring("fetching blob"), ContainSubstring("404"))))
+				Expect(blobErr).To(MatchError(And(ContainSubstring("fetching blob"), ContainSubstring("blob unknown to registry"))))
 			})
 		})
 
