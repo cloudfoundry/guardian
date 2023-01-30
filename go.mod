@@ -12,7 +12,7 @@ require (
 	code.cloudfoundry.org/idmapper v0.0.0-20210608104755-adcde2231d2c
 	code.cloudfoundry.org/lager v2.0.0+incompatible
 	code.cloudfoundry.org/localip v0.0.0-20210608161955-43c3ec713c20
-	github.com/BurntSushi/toml v1.2.0
+	github.com/BurntSushi/toml v1.2.1
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.3.2
 	github.com/containerd/containerd v1.6.8
@@ -35,7 +35,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/st3v/glager v0.3.0
 	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00
-	github.com/urfave/cli/v2 v2.14.1
+	github.com/urfave/cli/v2 v2.24.2
 	github.com/vishvananda/netlink v1.1.1-0.20210330154013-f5de75959ad5
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f
 	golang.org/x/sys v0.3.0
