@@ -13,7 +13,6 @@ require (
 	github.com/docker/distribution v2.8.1+incompatible
 	github.com/docker/docker v23.0.0+incompatible
 	github.com/docker/go-units v0.5.0
-	github.com/moby/sys/mount v0.3.3
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
 	github.com/opencontainers/go-digest v1.0.0
