@@ -45,8 +45,14 @@ compile-tests:
 unit:
 	./script/test -u
 
+unit-locally: go-vet
+	./ci/scripts/unit-tests.sh
+
 integration:
 	./script/test -i
+
+integration-locally:
+	./ci/scripts/integration-tests.sh
 
 test:
 	./script/test -a
