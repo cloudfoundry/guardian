@@ -6,19 +6,28 @@
 
 prefix ?= ./
 
+ifdef STATIC_BINARY
+	LDFLAG=--ldflags '-linkmode external -extldflags "-static"'
+else
+	LDFLAG=
+endif
+
 all: grootfs tardis
 
 grootfs:
-	GOOS=linux go build -mod vendor -o build/grootfs .
+	GOOS=linux go build ${LDFLAG} -mod vendor -o build/grootfs .
 
 tardis:
-	GOOS=linux go build -mod vendor -o build/tardis ./store/filesystems/overlayxfs/tardis
+	GOOS=linux go build ${LDFLAG} -mod vendor -o build/tardis ./store/filesystems/overlayxfs/tardis
 
 cf: all
 	GOOS=linux go build -mod vendor -tags cloudfoundry -o tardis ./store/filesystems/overlayxfs/tardis
 
 install:
 	cp build/* $(prefix)
+
+clean:
+	rm -rf build/*
 
 ###### Help ###################################################################
 
