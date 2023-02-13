@@ -4,6 +4,11 @@
 package main
 
 import (
+	_ "github.com/containerd/containerd/cmd/containerd"
+	_ "github.com/containerd/containerd/cmd/containerd-shim"
+	_ "github.com/containerd/containerd/cmd/containerd-shim-runc-v1"
+	_ "github.com/containerd/containerd/cmd/containerd-shim-runc-v2"
+	_ "github.com/containerd/containerd/cmd/ctr"
 	_ "github.com/onsi/ginkgo/ginkgo"
 )
 
