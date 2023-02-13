@@ -335,7 +335,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 		Context("when the image is private", func() {
 			BeforeEach(func() {
-				baseImageURL = integration.String2URL("docker:///cfgarden/private")
+				baseImageURL = integration.String2URL("docker:///cloudfoundry/garden-private-image-test")
 			})
 
 			Context("when the credentials are correct", func() {

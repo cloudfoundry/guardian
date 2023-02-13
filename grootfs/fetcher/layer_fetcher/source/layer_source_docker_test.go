@@ -130,7 +130,7 @@ var _ = Describe("Layer source: Docker", func() {
 		Context("when the image is private", func() {
 			BeforeEach(func() {
 				var err error
-				baseImageURL, err = url.Parse("docker:///cfgarden/private")
+				baseImageURL, err = url.Parse("docker:///cloudfoundry/garden-private-image-test")
 				Expect(err).NotTo(HaveOccurred())
 
 				configBlob = "sha256:c2bf00eb303023869c676f91af930a12925c24d677999917e8d52c73fa10b73a"
@@ -234,7 +234,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 			BeforeEach(func() {
 				var err error
-				baseImageURL, err = url.Parse("docker:///cfgarden/private")
+				baseImageURL, err = url.Parse("docker:///cloudfoundry/garden-private-image-test")
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -425,7 +425,7 @@ var _ = Describe("Layer source: Docker", func() {
 		Context("when using private images", func() {
 			BeforeEach(func() {
 				var err error
-				baseImageURL, err = url.Parse("docker:///cfgarden/private")
+				baseImageURL, err = url.Parse("docker:///cloudfoundry/garden-private-image-test")
 				Expect(err).NotTo(HaveOccurred())
 
 				layerInfos[0].BlobID = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
@@ -548,7 +548,7 @@ var _ = Describe("Layer source: Docker", func() {
 		Context("when the image is private", func() {
 			BeforeEach(func() {
 				var err error
-				baseImageURL, err = url.Parse("docker:///cfgarden/private")
+				baseImageURL, err = url.Parse("docker:///cloudfoundry/garden-private-image-test")
 				Expect(err).NotTo(HaveOccurred())
 
 				layerInfo = groot.LayerInfo{
