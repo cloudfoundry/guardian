@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	// the unprivileged user is baked into the cfgarden/garden-ci-ubuntu image
+	// the unprivileged user is baked into the cloudfoundry/garden-runc-release image
 	unprivilegedUID = uint32(5000)
 	unprivilegedGID = uint32(5000)
 
