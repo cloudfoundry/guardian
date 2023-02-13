@@ -134,9 +134,9 @@ var _ = Describe("Layer source: Docker", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				configBlob = "sha256:c2bf00eb303023869c676f91af930a12925c24d677999917e8d52c73fa10b73a"
-				layerInfos[0].BlobID = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
+				layerInfos[0].BlobID = "sha256:e35e705bb210984374da7aaf56e75d0fcfd3165a9b0f18c367507596e02b7265"
 				layerInfos[0].DiffID = "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5"
-				layerInfos[1].BlobID = "sha256:48ce60c2de08a424e10810c41ec2f00916cfd0f12333e96eb4363eb63723be87"
+				layerInfos[1].BlobID = "sha256:5afd09e72b87287a1a78007feae8f3986005ad5b30112f01ec6e2cdfbb91e525"
 			})
 
 			Context("when the correct credentials are provided", func() {
@@ -428,9 +428,9 @@ var _ = Describe("Layer source: Docker", func() {
 				baseImageURL, err = url.Parse("docker:///cloudfoundry/garden-private-image-test")
 				Expect(err).NotTo(HaveOccurred())
 
-				layerInfos[0].BlobID = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
+				layerInfos[0].BlobID = "sha256:e35e705bb210984374da7aaf56e75d0fcfd3165a9b0f18c367507596e02b7265"
 				layerInfos[0].DiffID = "780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296"
-				layerInfos[1].BlobID = "sha256:48ce60c2de08a424e10810c41ec2f00916cfd0f12333e96eb4363eb63723be87"
+				layerInfos[1].BlobID = "sha256:5afd09e72b87287a1a78007feae8f3986005ad5b30112f01ec6e2cdfbb91e525"
 				layerInfos[1].DiffID = "56702ece901015f4f42dc82d1386c5ffc13625c008890d52548ff30dd142838b"
 			})
 
@@ -552,7 +552,7 @@ var _ = Describe("Layer source: Docker", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				layerInfo = groot.LayerInfo{
-					BlobID:    "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4",
+					BlobID:    "sha256:e35e705bb210984374da7aaf56e75d0fcfd3165a9b0f18c367507596e02b7265",
 					DiffID:    "780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296",
 					MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
 					Size:      90,
