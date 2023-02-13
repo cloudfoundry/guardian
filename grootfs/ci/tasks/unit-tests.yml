@@ -17,5 +17,5 @@ run:
 
 image_resource:
   source:
-    repository: cfgarden/garden-ci
+    repository: cloudfoundry/garden-runc-release
   type: docker-image
