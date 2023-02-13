@@ -137,6 +137,7 @@ var _ = Describe("Layer source: Docker", func() {
 				layerInfos[0].BlobID = "sha256:e35e705bb210984374da7aaf56e75d0fcfd3165a9b0f18c367507596e02b7265"
 				layerInfos[0].DiffID = "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5"
 				layerInfos[1].BlobID = "sha256:5afd09e72b87287a1a78007feae8f3986005ad5b30112f01ec6e2cdfbb91e525"
+				layerInfos[1].Size = 89
 			})
 
 			Context("when the correct credentials are provided", func() {
@@ -432,6 +433,7 @@ var _ = Describe("Layer source: Docker", func() {
 				layerInfos[0].DiffID = "780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296"
 				layerInfos[1].BlobID = "sha256:5afd09e72b87287a1a78007feae8f3986005ad5b30112f01ec6e2cdfbb91e525"
 				layerInfos[1].DiffID = "56702ece901015f4f42dc82d1386c5ffc13625c008890d52548ff30dd142838b"
+				layerInfos[1].Size = 89
 			})
 
 			It("fetches the manifest", func() {
