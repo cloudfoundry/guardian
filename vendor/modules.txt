@@ -899,8 +899,8 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20220624142145-8cd45d7dbd1f
-## explicit; go 1.15
+# google.golang.org/genproto v0.0.0-20220624142145-8cd45d7dbd1f => google.golang.org/genproto v0.0.0-20200224152610-e50cd9704f63
+## explicit; go 1.11
 google.golang.org/genproto/googleapis/api/httpbody
 google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/rpc/status
@@ -991,7 +991,6 @@ google.golang.org/protobuf/runtime/protoimpl
 google.golang.org/protobuf/types/descriptorpb
 google.golang.org/protobuf/types/known/anypb
 google.golang.org/protobuf/types/known/durationpb
-google.golang.org/protobuf/types/known/fieldmaskpb
 google.golang.org/protobuf/types/known/timestamppb
 google.golang.org/protobuf/types/known/wrapperspb
 # gopkg.in/inf.v0 v0.9.1
@@ -1131,3 +1130,4 @@ sigs.k8s.io/yaml
 # github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
 # github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.0
 # github.com/opencontainers/selinux => github.com/opencontainers/selinux v1.8.2
+# google.golang.org/genproto => google.golang.org/genproto v0.0.0-20200224152610-e50cd9704f63
