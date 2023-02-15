@@ -18,9 +18,9 @@ var _ = Describe("Sysctl", func() {
 	BeforeEach(func() {
 		config.TCPKeepaliveTime = intptr(100)
 		config.TCPKeepaliveInterval = intptr(200)
-		config.TCPKeepaliveProbes = intptr(300)
+		config.TCPKeepaliveProbes = intptr(20)
 		config.TCPRetries1 = intptr(255)
-		config.TCPRetries2 = intptr(500)
+		config.TCPRetries2 = intptr(100)
 	})
 
 	JustBeforeEach(func() {
@@ -46,7 +46,7 @@ var _ = Describe("Sysctl", func() {
 
 	It("sets the container tcp_keepalive_probes parameter to the specified value", func() {
 		output := runInContainerCombinedOutput(container, "/bin/cat", []string{"/proc/sys/net/ipv4/tcp_keepalive_probes"})
-		Expect(strings.TrimSpace(output)).To(Equal("300"))
+		Expect(strings.TrimSpace(output)).To(Equal("20"))
 	})
 
 	It("sets the container tcp_retries1 parameter to the specified value", func() {
@@ -56,7 +56,7 @@ var _ = Describe("Sysctl", func() {
 
 	It("sets the container tcp_retries2 parameter to the specified value", func() {
 		output := runInContainerCombinedOutput(container, "/bin/cat", []string{"/proc/sys/net/ipv4/tcp_retries2"})
-		Expect(strings.TrimSpace(output)).To(Equal("500"))
+		Expect(strings.TrimSpace(output)).To(Equal("100"))
 	})
 
 	When("the tcp_keepalive_time specified value is 0", func() {
