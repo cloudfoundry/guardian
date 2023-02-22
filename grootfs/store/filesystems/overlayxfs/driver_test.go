@@ -581,7 +581,7 @@ var _ = Describe("Driver", func() {
 						sess, err = gexec.Start(dd, GinkgoWriter, GinkgoWriter)
 						Expect(err).NotTo(HaveOccurred())
 						Eventually(sess, 5*time.Second).Should(gexec.Exit(1))
-						Eventually(sess.Err).Should(gbytes.Say("Disk quota exceeded"))
+						Eventually(sess.Err).Should(gbytes.Say("No space left"))
 					})
 				})
 			})
