@@ -5,7 +5,7 @@ go 1.19
 require (
 	code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b
 	code.cloudfoundry.org/idmapper v0.0.0-20210608104755-adcde2231d2c
-	code.cloudfoundry.org/lager v0.0.0-20181119165122-baf208c4c56b
+	code.cloudfoundry.org/lager v2.0.0+incompatible
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20200416163440-a42463ba266b
 	github.com/containers/image/v5 v5.24.1-0.20230203082804-e3c7fbb51604
