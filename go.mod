@@ -36,7 +36,7 @@ require (
 	github.com/st3v/glager v0.3.0
 	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00
 	github.com/urfave/cli/v2 v2.24.3
-	github.com/vishvananda/netlink v1.1.1-0.20210330154013-f5de75959ad5
+	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f
 	golang.org/x/sys v0.5.0
 	gopkg.in/yaml.v2 v2.4.0
