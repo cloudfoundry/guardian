@@ -8,7 +8,7 @@ require (
 	code.cloudfoundry.org/lager v0.0.0-20181119165122-baf208c4c56b
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20200416163440-a42463ba266b
-	github.com/containers/image/v5 v5.24.1-0.20230203082804-e3c7fbb51604
+	github.com/containers/image/v5 v5.24.2
 	github.com/containers/storage v1.45.3
 	github.com/docker/distribution v2.8.1+incompatible
 	github.com/docker/docker v23.0.1+incompatible
@@ -41,6 +41,7 @@ require (
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
