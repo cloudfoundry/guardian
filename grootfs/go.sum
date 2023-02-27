@@ -4,6 +4,8 @@ code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b h1:wkgiiF
 code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b/go.mod h1:m1fP94N1mbq7Myq1Z3W8g5jTk+wgf82AjaH+aU0Fzek=
 code.cloudfoundry.org/lager v0.0.0-20181119165122-baf208c4c56b h1:Gv3xu+th8LCusyr1NnzS+mstSKyvaiMyHdVLwMtWQ24=
 code.cloudfoundry.org/lager v0.0.0-20181119165122-baf208c4c56b/go.mod h1:O2sS7gKP3HM2iemG+EnwvyNQK7pTSC6Foi4QiMp9sSk=
+code.cloudfoundry.org/lager v2.0.0+incompatible h1:WZwDKDB2PLd/oL+USK4b4aEjUymIej9My2nUQ9oWEwQ=
+code.cloudfoundry.org/lager v2.0.0+incompatible/go.mod h1:O2sS7gKP3HM2iemG+EnwvyNQK7pTSC6Foi4QiMp9sSk=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/toml v1.2.1 h1:9F2/+DoOYIOksmaJFPw1tGFy1eDnIJXg+UHjuD8lTak=
 github.com/BurntSushi/toml v1.2.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
