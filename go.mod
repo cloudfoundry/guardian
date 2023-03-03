@@ -175,7 +175,6 @@ replace (
 	github.com/docker/distribution => github.com/docker/distribution v2.8.1+incompatible
 	github.com/docker/docker => github.com/docker/docker v20.10.13+incompatible
 	github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
-	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.0
 	github.com/opencontainers/selinux => github.com/opencontainers/selinux v1.8.2
 	google.golang.org/genproto => google.golang.org/genproto v0.0.0-20200224152610-e50cd9704f63 //for building containerd https://github.com/containerd/ttrpc/issues/62
 )
