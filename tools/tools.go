@@ -10,6 +10,7 @@ import (
 	_ "github.com/containerd/containerd/cmd/containerd-shim-runc-v2"
 	_ "github.com/containerd/containerd/cmd/ctr"
 	_ "github.com/onsi/ginkgo/ginkgo"
+	_ "github.com/opencontainers/runc"
 )
 
 // This file imports packages that are used when running go generate, or used
