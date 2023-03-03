@@ -149,7 +149,7 @@ func getGardenBinaries() runner.Binaries {
 func findInGoPathBin(binary string) string {
 	binariesPath, ok := os.LookupEnv("BINARIES")
 	Expect(ok).To(BeTrue(), "BINARIES must be set")
-	binPath := filepath.Join(binariesPath, "bin", binary)
+	binPath := filepath.Join(binariesPath, binary)
 	Expect(binPath).To(BeAnExistingFile(), fmt.Sprintf("%s does not exist", binPath))
 	return binPath
 }
