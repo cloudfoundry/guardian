@@ -20,7 +20,7 @@ require (
 	github.com/docker/docker v23.0.1+incompatible
 	github.com/eapache/go-resiliency v1.3.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/jessevdk/go-flags v1.5.0
+	github.com/jessevdk/go-flags v1.5.1-0.20210607101731-3927b71304df
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
@@ -171,5 +171,4 @@ replace (
 	code.cloudfoundry.org/garden => ../garden
 	code.cloudfoundry.org/grootfs => ../grootfs
 	code.cloudfoundry.org/idmapper => ../idmapper
-	github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
 )
