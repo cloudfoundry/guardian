@@ -173,6 +173,7 @@ replace (
 	code.cloudfoundry.org/grootfs => ../grootfs
 	code.cloudfoundry.org/idmapper => ../idmapper
 	github.com/gogo/googleapis => github.com/gogo/googleapis v1.3.2
+	github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
 
 	// urfave/cli must be <= v1.22.1 due to a regression: https://github.com/urfave/cli/issues/1092
 	github.com/urfave/cli => github.com/urfave/cli v1.22.1

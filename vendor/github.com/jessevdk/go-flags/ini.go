@@ -325,19 +325,19 @@ func writeCommandIni(command *Command, namespace string, writer io.Writer, optio
 	})
 
 	for _, c := range command.commands {
-		var fqn string
+		var nns string
 
 		if c.Hidden {
 			continue
 		}
 
 		if len(namespace) != 0 {
-			fqn = namespace + "." + c.Name
+			nns = c.Name + "." + nns
 		} else {
-			fqn = c.Name
+			nns = c.Name
 		}
 
-		writeCommandIni(c, fqn, writer, options)
+		writeCommandIni(c, nns, writer, options)
 	}
 }
 
@@ -499,21 +499,13 @@ func (i *IniParser) matchingGroups(name string) []*Group {
 func (i *IniParser) parse(ini *ini) error {
 	p := i.parser
 
-	p.eachOption(func(cmd *Command, group *Group, option *Option) {
-		option.clearReferenceBeforeSet = true
-	})
-
 	var quotesLookup = make(map[*Option]bool)
 
 	for name, section := range ini.Sections {
 		groups := i.matchingGroups(name)
 
 		if len(groups) == 0 {
-			if (p.Options & IgnoreUnknown) == None {
-				return newErrorf(ErrUnknownGroup, "could not find option group `%s'", name)
-			}
-
-			continue
+			return newErrorf(ErrUnknownGroup, "could not find option group `%s'", name)
 		}
 
 		for _, inival := range section {
@@ -545,8 +537,9 @@ func (i *IniParser) parse(ini *ini) error {
 				continue
 			}
 
-			// ini value is ignored if parsed as default but defaults are prevented
-			if i.ParseAsDefaults && opt.preventDefault {
+			// ini value is ignored if override is set and
+			// value was previously set from non default
+			if i.ParseAsDefaults && !opt.isSetDefault {
 				continue
 			}
 
@@ -579,24 +572,13 @@ func (i *IniParser) parse(ini *ini) error {
 				}
 			}
 
-			var err error
-
-			if i.ParseAsDefaults {
-				err = opt.setDefault(pval)
-			} else {
-				err = opt.Set(pval)
-			}
-
-			if err != nil {
+			if err := opt.set(pval); err != nil {
 				return &IniError{
 					Message:    err.Error(),
 					File:       ini.File,
 					LineNumber: inival.LineNumber,
 				}
 			}
-
-			// Defaults from ini files take precendence over defaults from parser
-			opt.preventDefault = true
 
 			// either all INI values are quoted or only values who need quoting
 			if _, ok := quotesLookup[opt]; !inival.Quoted || !ok {
