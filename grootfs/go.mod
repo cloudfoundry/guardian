@@ -78,6 +78,5 @@ require (
 
 replace (
 	code.cloudfoundry.org/idmapper => ../idmapper
-	github.com/docker/distribution => github.com/docker/distribution v2.8.1+incompatible
 	golang.org/x/text => golang.org/x/text v0.3.7
 )

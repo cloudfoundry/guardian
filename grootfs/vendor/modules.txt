@@ -108,7 +108,7 @@ github.com/containers/storage/pkg/unshare
 # github.com/cpuguy83/go-md2man/v2 v2.0.2
 ## explicit; go 1.11
 github.com/cpuguy83/go-md2man/v2/md2man
-# github.com/docker/distribution v2.8.1+incompatible => github.com/docker/distribution v2.8.1+incompatible
+# github.com/docker/distribution v2.8.1+incompatible
 ## explicit
 github.com/docker/distribution/digestset
 github.com/docker/distribution/reference
@@ -371,5 +371,4 @@ gopkg.in/yaml.v3
 # launchpad.net/gocheck v0.0.0-20140225173054-000000000087
 ## explicit
 # code.cloudfoundry.org/idmapper => ../idmapper
-# github.com/docker/distribution => github.com/docker/distribution v2.8.1+incompatible
 # golang.org/x/text => golang.org/x/text v0.3.7
