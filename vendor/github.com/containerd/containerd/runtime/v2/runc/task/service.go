@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 /*
    Copyright The containerd Authors.
@@ -25,9 +24,11 @@ import (
 	"os"
 	"sync"
 
-	"github.com/containerd/cgroups"
-	cgroupsv2 "github.com/containerd/cgroups/v2"
+	"github.com/containerd/cgroups/v3"
+	"github.com/containerd/cgroups/v3/cgroup1"
+	cgroupsv2 "github.com/containerd/cgroups/v3/cgroup2"
 	eventstypes "github.com/containerd/containerd/api/events"
+	taskAPI "github.com/containerd/containerd/api/runtime/task/v2"
 	"github.com/containerd/containerd/api/types/task"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/namespaces"
@@ -38,16 +39,15 @@ import (
 	"github.com/containerd/containerd/pkg/shutdown"
 	"github.com/containerd/containerd/pkg/stdio"
 	"github.com/containerd/containerd/pkg/userns"
+	"github.com/containerd/containerd/protobuf"
+	ptypes "github.com/containerd/containerd/protobuf/types"
 	"github.com/containerd/containerd/runtime/v2/runc"
 	"github.com/containerd/containerd/runtime/v2/runc/options"
 	"github.com/containerd/containerd/runtime/v2/shim"
-	shimapi "github.com/containerd/containerd/runtime/v2/task"
-	taskAPI "github.com/containerd/containerd/runtime/v2/task"
 	"github.com/containerd/containerd/sys/reaper"
 	runcC "github.com/containerd/go-runc"
 	"github.com/containerd/ttrpc"
-	"github.com/containerd/typeurl"
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/containerd/typeurl/v2"
 	"github.com/sirupsen/logrus"
 )
 
@@ -146,7 +146,7 @@ func (s *service) Create(ctx context.Context, r *taskAPI.CreateTaskRequest) (_ *
 }
 
 func (s *service) RegisterTTRPC(server *ttrpc.Server) error {
-	shimapi.RegisterTaskService(server, s)
+	taskAPI.RegisterTaskService(server, s)
 	return nil
 }
 
@@ -168,7 +168,7 @@ func (s *service) Start(ctx context.Context, r *taskAPI.StartRequest) (*taskAPI.
 	switch r.ExecID {
 	case "":
 		switch cg := container.Cgroup().(type) {
-		case cgroups.Cgroup:
+		case cgroup1.Cgroup:
 			if err := s.ep.Add(container.ID, cg); err != nil {
 				logrus.WithError(err).Error("add cg to OOM monitor")
 			}
@@ -226,12 +226,12 @@ func (s *service) Delete(ctx context.Context, r *taskAPI.DeleteRequest) (*taskAP
 			ContainerID: container.ID,
 			Pid:         uint32(p.Pid()),
 			ExitStatus:  uint32(p.ExitStatus()),
-			ExitedAt:    p.ExitedAt(),
+			ExitedAt:    protobuf.ToTimestamp(p.ExitedAt()),
 		})
 	}
 	return &taskAPI.DeleteResponse{
 		ExitStatus: uint32(p.ExitStatus()),
-		ExitedAt:   p.ExitedAt(),
+		ExitedAt:   protobuf.ToTimestamp(p.ExitedAt()),
 		Pid:        uint32(p.Pid()),
 	}, nil
 }
@@ -285,18 +285,18 @@ func (s *service) State(ctx context.Context, r *taskAPI.StateRequest) (*taskAPI.
 	if err != nil {
 		return nil, err
 	}
-	status := task.StatusUnknown
+	status := task.Status_UNKNOWN
 	switch st {
 	case "created":
-		status = task.StatusCreated
+		status = task.Status_CREATED
 	case "running":
-		status = task.StatusRunning
+		status = task.Status_RUNNING
 	case "stopped":
-		status = task.StatusStopped
+		status = task.Status_STOPPED
 	case "paused":
-		status = task.StatusPaused
+		status = task.Status_PAUSED
 	case "pausing":
-		status = task.StatusPausing
+		status = task.Status_PAUSING
 	}
 	sio := p.Stdio()
 	return &taskAPI.StateResponse{
@@ -309,7 +309,7 @@ func (s *service) State(ctx context.Context, r *taskAPI.StateRequest) (*taskAPI.
 		Stderr:     sio.Stderr,
 		Terminal:   sio.Terminal,
 		ExitStatus: uint32(p.ExitStatus()),
-		ExitedAt:   p.ExitedAt(),
+		ExitedAt:   protobuf.ToTimestamp(p.ExitedAt()),
 	}, nil
 }
 
@@ -375,7 +375,7 @@ func (s *service) Pids(ctx context.Context, r *taskAPI.PidsRequest) (*taskAPI.Pi
 				d := &options.ProcessDetails{
 					ExecID: p.ID(),
 				}
-				a, err := typeurl.MarshalAny(d)
+				a, err := protobuf.MarshalAnyToProto(d)
 				if err != nil {
 					return nil, fmt.Errorf("failed to marshal process %d info: %w", pid, err)
 				}
@@ -440,7 +440,7 @@ func (s *service) Wait(ctx context.Context, r *taskAPI.WaitRequest) (*taskAPI.Wa
 
 	return &taskAPI.WaitResponse{
 		ExitStatus: uint32(p.ExitStatus()),
-		ExitedAt:   p.ExitedAt(),
+		ExitedAt:   protobuf.ToTimestamp(p.ExitedAt()),
 	}, nil
 }
 
@@ -483,8 +483,8 @@ func (s *service) Stats(ctx context.Context, r *taskAPI.StatsRequest) (*taskAPI.
 	}
 	var statsx interface{}
 	switch cg := cgx.(type) {
-	case cgroups.Cgroup:
-		stats, err := cg.Stat(cgroups.IgnoreNotExist)
+	case cgroup1.Cgroup:
+		stats, err := cg.Stat(cgroup1.IgnoreNotExist)
 		if err != nil {
 			return nil, err
 		}
@@ -503,7 +503,7 @@ func (s *service) Stats(ctx context.Context, r *taskAPI.StatsRequest) (*taskAPI.
 		return nil, err
 	}
 	return &taskAPI.StatsResponse{
-		Stats: data,
+		Stats: protobuf.FromAny(data),
 	}, nil
 }
 
@@ -553,7 +553,7 @@ func (s *service) checkProcesses(e runcC.Exit) {
 				ID:          p.ID(),
 				Pid:         uint32(e.Pid),
 				ExitStatus:  uint32(e.Status),
-				ExitedAt:    p.ExitedAt(),
+				ExitedAt:    protobuf.ToTimestamp(p.ExitedAt()),
 			})
 			return
 		}

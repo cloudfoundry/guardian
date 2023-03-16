@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 /*
    Copyright The containerd Authors.
@@ -20,7 +19,7 @@
 package cgroups
 
 import (
-	"github.com/containerd/cgroups"
+	"github.com/containerd/cgroups/v3"
 	"github.com/containerd/containerd/events"
 	v1 "github.com/containerd/containerd/metrics/cgroups/v1"
 	v2 "github.com/containerd/containerd/metrics/cgroups/v2"

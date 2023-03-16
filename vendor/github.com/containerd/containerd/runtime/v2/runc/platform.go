@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 /*
    Copyright The containerd Authors.
@@ -86,6 +85,7 @@ func (p *linuxPlatform) CopyConsole(ctx context.Context, console console.Console
 			// we need to shutdown epollConsole when pipe broken
 			epollConsole.Shutdown(p.epoller.CloseConsole)
 			epollConsole.Close()
+			in.Close()
 		}()
 	}
 

@@ -28,20 +28,20 @@ import (
 
 var checkpointCommand = cli.Command{
 	Name:      "checkpoint",
-	Usage:     "checkpoint a container",
+	Usage:     "Checkpoint a container",
 	ArgsUsage: "CONTAINER REF",
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "rw",
-			Usage: "include the rw layer in the checkpoint",
+			Usage: "Include the rw layer in the checkpoint",
 		},
 		cli.BoolFlag{
 			Name:  "image",
-			Usage: "include the image in the checkpoint",
+			Usage: "Include the image in the checkpoint",
 		},
 		cli.BoolFlag{
 			Name:  "task",
-			Usage: "checkpoint container task",
+			Usage: "Checkpoint container task",
 		},
 	},
 	Action: func(context *cli.Context) error {

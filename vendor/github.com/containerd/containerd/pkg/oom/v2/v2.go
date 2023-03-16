@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 /*
    Copyright The containerd Authors.
@@ -23,7 +22,7 @@ import (
 	"context"
 	"fmt"
 
-	cgroupsv2 "github.com/containerd/cgroups/v2"
+	cgroupsv2 "github.com/containerd/cgroups/v3/cgroup2"
 	eventstypes "github.com/containerd/containerd/api/events"
 	"github.com/containerd/containerd/pkg/oom"
 	"github.com/containerd/containerd/runtime"

@@ -39,7 +39,6 @@ import (
 	"github.com/containerd/containerd/plugin"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -99,7 +98,7 @@ func (s windowsLcowDiff) Apply(ctx context.Context, desc ocispec.Descriptor, mou
 	t1 := time.Now()
 	defer func() {
 		if err == nil {
-			log.G(ctx).WithFields(logrus.Fields{
+			log.G(ctx).WithFields(log.Fields{
 				"d":      time.Since(t1),
 				"digest": desc.Digest,
 				"size":   desc.Size,
@@ -205,7 +204,7 @@ func mountsToLayerAndParents(mounts []mount.Mount) (string, []string, error) {
 	}
 	mnt := mounts[0]
 	if mnt.Type != "lcow-layer" {
-		return "", nil, fmt.Errorf("mount layer type must be lcow-layer: %w", errdefs.ErrInvalidArgument)
+		return "", nil, fmt.Errorf("mount layer type must be lcow-layer: %w", errdefs.ErrNotImplemented)
 	}
 
 	parentLayerPaths, err := mnt.GetParentPaths()

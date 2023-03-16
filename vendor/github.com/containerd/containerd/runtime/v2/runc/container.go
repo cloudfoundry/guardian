@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 /*
    Copyright The containerd Authors.
@@ -27,17 +26,18 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/containerd/cgroups"
-	cgroupsv2 "github.com/containerd/cgroups/v2"
+	"github.com/containerd/cgroups/v3"
+	"github.com/containerd/cgroups/v3/cgroup1"
+	cgroupsv2 "github.com/containerd/cgroups/v3/cgroup2"
 	"github.com/containerd/console"
+	"github.com/containerd/containerd/api/runtime/task/v2"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/mount"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/pkg/process"
 	"github.com/containerd/containerd/pkg/stdio"
 	"github.com/containerd/containerd/runtime/v2/runc/options"
-	"github.com/containerd/containerd/runtime/v2/task"
-	"github.com/containerd/typeurl"
+	"github.com/containerd/typeurl/v2"
 	"github.com/sirupsen/logrus"
 )
 
@@ -48,18 +48,20 @@ func NewContainer(ctx context.Context, platform stdio.Platform, r *task.CreateTa
 		return nil, fmt.Errorf("create namespace: %w", err)
 	}
 
-	var opts options.Options
-	if r.Options != nil && r.Options.GetTypeUrl() != "" {
+	opts := &options.Options{}
+	if r.Options.GetValue() != nil {
 		v, err := typeurl.UnmarshalAny(r.Options)
 		if err != nil {
 			return nil, err
 		}
-		opts = *v.(*options.Options)
+		if v != nil {
+			opts = v.(*options.Options)
+		}
 	}
 
-	var mounts []process.Mount
+	var pmounts []process.Mount
 	for _, m := range r.Rootfs {
-		mounts = append(mounts, process.Mount{
+		pmounts = append(pmounts, process.Mount{
 			Type:    m.Type,
 			Source:  m.Source,
 			Target:  m.Target,
@@ -68,7 +70,7 @@ func NewContainer(ctx context.Context, platform stdio.Platform, r *task.CreateTa
 	}
 
 	rootfs := ""
-	if len(mounts) > 0 {
+	if len(pmounts) > 0 {
 		rootfs = filepath.Join(r.Bundle, "rootfs")
 		if err := os.Mkdir(rootfs, 0711); err != nil && !os.IsExist(err) {
 			return nil, err
@@ -79,7 +81,7 @@ func NewContainer(ctx context.Context, platform stdio.Platform, r *task.CreateTa
 		ID:               r.ID,
 		Bundle:           r.Bundle,
 		Runtime:          opts.BinaryName,
-		Rootfs:           mounts,
+		Rootfs:           pmounts,
 		Terminal:         r.Terminal,
 		Stdin:            r.Stdin,
 		Stdout:           r.Stdout,
@@ -96,22 +98,25 @@ func NewContainer(ctx context.Context, platform stdio.Platform, r *task.CreateTa
 	if err := WriteRuntime(r.Bundle, opts.BinaryName); err != nil {
 		return nil, err
 	}
+
+	var mounts []mount.Mount
+	for _, pm := range pmounts {
+		mounts = append(mounts, mount.Mount{
+			Type:    pm.Type,
+			Source:  pm.Source,
+			Target:  pm.Target,
+			Options: pm.Options,
+		})
+	}
 	defer func() {
 		if retErr != nil {
-			if err := mount.UnmountAll(rootfs, 0); err != nil {
+			if err := mount.UnmountMounts(mounts, rootfs, 0); err != nil {
 				logrus.WithError(err).Warn("failed to cleanup rootfs mount")
 			}
 		}
 	}()
-	for _, rm := range mounts {
-		m := &mount.Mount{
-			Type:    rm.Type,
-			Source:  rm.Source,
-			Options: rm.Options,
-		}
-		if err := m.Mount(rootfs); err != nil {
-			return nil, fmt.Errorf("failed to mount rootfs component %v: %w", m, err)
-		}
+	if err := mount.All(mounts, rootfs); err != nil {
+		return nil, fmt.Errorf("failed to mount rootfs component: %w", err)
 	}
 
 	p, err := newInit(
@@ -121,7 +126,7 @@ func NewContainer(ctx context.Context, platform stdio.Platform, r *task.CreateTa
 		ns,
 		platform,
 		config,
-		&opts,
+		opts,
 		rootfs,
 	)
 	if err != nil {
@@ -146,12 +151,12 @@ func NewContainer(ctx context.Context, platform stdio.Platform, r *task.CreateTa
 				logrus.WithError(err).Errorf("loading cgroup2 for %d", pid)
 				return container, nil
 			}
-			cg, err = cgroupsv2.LoadManager("/sys/fs/cgroup", g)
+			cg, err = cgroupsv2.Load(g)
 			if err != nil {
 				logrus.WithError(err).Errorf("loading cgroup2 for %d", pid)
 			}
 		} else {
-			cg, err = cgroups.Load(cgroups.V1, cgroups.PidPath(pid))
+			cg, err = cgroup1.Load(cgroup1.PidPath(pid))
 			if err != nil {
 				logrus.WithError(err).Errorf("loading cgroup for %d", pid)
 			}
@@ -186,7 +191,7 @@ func ReadOptions(path string) (*options.Options, error) {
 }
 
 // WriteOptions writes the options information into the path
-func WriteOptions(path string, opts options.Options) error {
+func WriteOptions(path string, opts *options.Options) error {
 	data, err := json.Marshal(opts)
 	if err != nil {
 		return err
@@ -210,7 +215,7 @@ func WriteRuntime(path, runtime string) error {
 
 func newInit(ctx context.Context, path, workDir, namespace string, platform stdio.Platform,
 	r *process.CreateConfig, options *options.Options, rootfs string) (*process.Init, error) {
-	runtime := process.NewRunc(options.Root, path, namespace, options.BinaryName, options.CriuPath, options.SystemdCgroup)
+	runtime := process.NewRunc(options.Root, path, namespace, options.BinaryName, options.SystemdCgroup)
 	p := process.New(r.ID, runtime, stdio.Stdio{
 		Stdin:    r.Stdin,
 		Stdout:   r.Stdout,
@@ -366,12 +371,12 @@ func (c *Container) Start(ctx context.Context, r *task.StartRequest) (process.Pr
 			if err != nil {
 				logrus.WithError(err).Errorf("loading cgroup2 for %d", p.Pid())
 			}
-			cg, err = cgroupsv2.LoadManager("/sys/fs/cgroup", g)
+			cg, err = cgroupsv2.Load(g)
 			if err != nil {
 				logrus.WithError(err).Errorf("loading cgroup2 for %d", p.Pid())
 			}
 		} else {
-			cg, err = cgroups.Load(cgroups.V1, cgroups.PidPath(p.Pid()))
+			cg, err = cgroup1.Load(cgroup1.PidPath(p.Pid()))
 			if err != nil {
 				logrus.WithError(err).Errorf("loading cgroup for %d", p.Pid())
 			}
@@ -465,13 +470,13 @@ func (c *Container) Checkpoint(ctx context.Context, r *task.CheckpointTaskReques
 	if err != nil {
 		return err
 	}
-	var opts options.CheckpointOptions
+	var opts *options.CheckpointOptions
 	if r.Options != nil {
 		v, err := typeurl.UnmarshalAny(r.Options)
 		if err != nil {
 			return err
 		}
-		opts = *v.(*options.CheckpointOptions)
+		opts = v.(*options.CheckpointOptions)
 	}
 	return p.(*process.Init).Checkpoint(ctx, &process.CheckpointConfig{
 		Path:                     r.Path,

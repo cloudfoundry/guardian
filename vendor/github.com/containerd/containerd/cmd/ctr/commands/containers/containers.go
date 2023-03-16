@@ -30,14 +30,14 @@ import (
 	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/log"
-	"github.com/containerd/typeurl"
+	"github.com/containerd/typeurl/v2"
 	"github.com/urfave/cli"
 )
 
 // Command is the cli command for managing containers
 var Command = cli.Command{
 	Name:    "containers",
-	Usage:   "manage containers",
+	Usage:   "Manage containers",
 	Aliases: []string{"c", "container"},
 	Subcommands: []cli.Command{
 		createCommand,
@@ -51,10 +51,11 @@ var Command = cli.Command{
 }
 
 var createCommand = cli.Command{
-	Name:      "create",
-	Usage:     "create container",
-	ArgsUsage: "[flags] Image|RootFS CONTAINER [COMMAND] [ARG...]",
-	Flags:     append(append(commands.SnapshotterFlags, []cli.Flag{commands.SnapshotterLabels}...), commands.ContainerFlags...),
+	Name:           "create",
+	Usage:          "Create container",
+	ArgsUsage:      "[flags] Image|RootFS CONTAINER [COMMAND] [ARG...]",
+	SkipArgReorder: true,
+	Flags:          append(append(commands.SnapshotterFlags, []cli.Flag{commands.SnapshotterLabels}...), commands.ContainerFlags...),
 	Action: func(context *cli.Context) error {
 		var (
 			id     string
@@ -93,12 +94,12 @@ var createCommand = cli.Command{
 var listCommand = cli.Command{
 	Name:      "list",
 	Aliases:   []string{"ls"},
-	Usage:     "list containers",
+	Usage:     "List containers",
 	ArgsUsage: "[flags] [<filter>, ...]",
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "quiet, q",
-			Usage: "print only the container id",
+			Usage: "Print only the container id",
 		},
 	},
 	Action: func(context *cli.Context) error {
@@ -146,13 +147,13 @@ var listCommand = cli.Command{
 
 var deleteCommand = cli.Command{
 	Name:      "delete",
-	Usage:     "delete one or more existing containers",
+	Usage:     "Delete one or more existing containers",
 	ArgsUsage: "[flags] CONTAINER [CONTAINER, ...]",
 	Aliases:   []string{"del", "remove", "rm"},
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "keep-snapshot",
-			Usage: "do not clean up snapshot with container",
+			Usage: "Do not clean up snapshot with container",
 		},
 	},
 	Action: func(context *cli.Context) error {
@@ -207,7 +208,7 @@ func deleteContainer(ctx context.Context, client *containerd.Client, id string, 
 
 var setLabelsCommand = cli.Command{
 	Name:        "label",
-	Usage:       "set and clear labels for a container",
+	Usage:       "Set and clear labels for a container",
 	ArgsUsage:   "[flags] CONTAINER [<key>=<value>, ...]",
 	Description: "set and clear labels for a container",
 	Flags:       []cli.Flag{},
@@ -245,12 +246,12 @@ var setLabelsCommand = cli.Command{
 
 var infoCommand = cli.Command{
 	Name:      "info",
-	Usage:     "get info about a container",
+	Usage:     "Get info about a container",
 	ArgsUsage: "CONTAINER",
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "spec",
-			Usage: "only display the spec",
+			Usage: "Only display the spec",
 		},
 	},
 	Action: func(context *cli.Context) error {
@@ -280,7 +281,7 @@ var infoCommand = cli.Command{
 			return nil
 		}
 
-		if info.Spec != nil && info.Spec.Value != nil {
+		if info.Spec != nil && info.Spec.GetValue() != nil {
 			v, err := typeurl.UnmarshalAny(info.Spec)
 			if err != nil {
 				return err

@@ -27,20 +27,21 @@ import (
 	"io"
 	"time"
 
-	winio "github.com/Microsoft/go-winio"
+	"github.com/Microsoft/go-winio"
 	"github.com/containerd/containerd/archive"
 	"github.com/containerd/containerd/archive/compression"
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/diff"
 	"github.com/containerd/containerd/errdefs"
+	"github.com/containerd/containerd/labels"
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/metadata"
 	"github.com/containerd/containerd/mount"
+	"github.com/containerd/containerd/pkg/epoch"
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/plugin"
-	digest "github.com/opencontainers/go-digest"
+	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -76,7 +77,6 @@ type windowsDiff struct {
 }
 
 var emptyDesc = ocispec.Descriptor{}
-var uncompressed = "containerd.io/uncompressed"
 
 // NewWindowsDiff is the Windows container layer implementation
 // for comparing and applying filesystem layers
@@ -93,7 +93,7 @@ func (s windowsDiff) Apply(ctx context.Context, desc ocispec.Descriptor, mounts 
 	t1 := time.Now()
 	defer func() {
 		if err == nil {
-			log.G(ctx).WithFields(logrus.Fields{
+			log.G(ctx).WithFields(log.Fields{
 				"d":      time.Since(t1),
 				"digest": desc.Digest,
 				"size":   desc.Size,
@@ -144,7 +144,13 @@ func (s windowsDiff) Apply(ctx context.Context, desc ocispec.Descriptor, mounts 
 		return emptyDesc, err
 	}
 
-	if _, err := archive.Apply(ctx, layer, rc, archive.WithParents(parentLayerPaths), archive.AsWindowsContainerLayer()); err != nil {
+	archiveOpts := []archive.ApplyOpt{
+		archive.WithParents(parentLayerPaths),
+		archive.AsWindowsContainerLayer(),
+		archive.WithNoSameOwner(), // Lchown is not supported on Windows
+	}
+
+	if _, err := archive.Apply(ctx, layer, rc, archiveOpts...); err != nil {
 		return emptyDesc, err
 	}
 
@@ -170,6 +176,9 @@ func (s windowsDiff) Compare(ctx context.Context, lower, upper []mount.Mount, op
 		if err := opt(&config); err != nil {
 			return emptyDesc, err
 		}
+	}
+	if tm := epoch.FromContext(ctx); tm != nil && config.SourceDateEpoch == nil {
+		config.SourceDateEpoch = tm
 	}
 
 	layers, err := mountPairToLayerStack(lower, upper)
@@ -245,7 +254,7 @@ func (s windowsDiff) Compare(ctx context.Context, lower, upper []mount.Mount, op
 		if config.Labels == nil {
 			config.Labels = map[string]string{}
 		}
-		config.Labels[uncompressed] = dgstr.Digest().String()
+		config.Labels[labels.LabelUncompressed] = dgstr.Digest().String()
 	} else {
 		if err = archive.WriteDiff(ctx, cw, "", layers[0], archive.AsWindowsContainerLayerPair(), archive.WithParentLayers(layers[1:])); err != nil {
 			return emptyDesc, fmt.Errorf("failed to write diff: %w", err)
@@ -271,10 +280,10 @@ func (s windowsDiff) Compare(ctx context.Context, lower, upper []mount.Mount, op
 	if info.Labels == nil {
 		info.Labels = make(map[string]string)
 	}
-	// Set uncompressed label if digest already existed without label
-	if _, ok := info.Labels[uncompressed]; !ok {
-		info.Labels[uncompressed] = config.Labels[uncompressed]
-		if _, err := s.store.Update(ctx, info, "labels."+uncompressed); err != nil {
+	// Set "containerd.io/uncompressed" label if digest already existed without label
+	if _, ok := info.Labels[labels.LabelUncompressed]; !ok {
+		info.Labels[labels.LabelUncompressed] = config.Labels[labels.LabelUncompressed]
+		if _, err := s.store.Update(ctx, info, "labels."+labels.LabelUncompressed); err != nil {
 			return emptyDesc, fmt.Errorf("error setting uncompressed label: %w", err)
 		}
 	}
@@ -285,7 +294,7 @@ func (s windowsDiff) Compare(ctx context.Context, lower, upper []mount.Mount, op
 		Digest:    info.Digest,
 	}
 
-	log.G(ctx).WithFields(logrus.Fields{
+	log.G(ctx).WithFields(log.Fields{
 		"d":     time.Since(t1),
 		"dgst":  desc.Digest,
 		"size":  desc.Size,

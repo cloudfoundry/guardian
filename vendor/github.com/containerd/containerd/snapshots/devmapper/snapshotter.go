@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 /*
    Copyright The containerd Authors.
@@ -35,17 +34,20 @@ import (
 	"github.com/containerd/containerd/snapshots/devmapper/dmsetup"
 	"github.com/containerd/containerd/snapshots/storage"
 	"github.com/hashicorp/go-multierror"
-	"github.com/sirupsen/logrus"
 	exec "golang.org/x/sys/execabs"
 )
 
 type fsType string
 
 const (
-	metadataFileName               = "metadata.db"
-	fsTypeExt4              fsType = "ext4"
-	fsTypeXFS               fsType = "xfs"
-	devmapperSnapshotFsType        = "containerd.io/snapshot/devmapper/fstype"
+	fsTypeExt4 fsType = "ext4"
+	fsTypeExt2 fsType = "ext2"
+	fsTypeXFS  fsType = "xfs"
+)
+
+const (
+	metadataFileName        = "metadata.db"
+	devmapperSnapshotFsType = "containerd.io/snapshot/devmapper/fstype"
 )
 
 type closeFunc func() error
@@ -110,7 +112,7 @@ func (s *Snapshotter) Stat(ctx context.Context, key string) (snapshots.Info, err
 		err  error
 	)
 
-	err = s.withTransaction(ctx, false, func(ctx context.Context) error {
+	err = s.store.WithTransaction(ctx, false, func(ctx context.Context) error {
 		_, info, _, err = storage.GetInfo(ctx, key)
 		return err
 	})
@@ -123,7 +125,7 @@ func (s *Snapshotter) Update(ctx context.Context, info snapshots.Info, fieldpath
 	log.G(ctx).Debugf("update: %s", strings.Join(fieldpaths, ", "))
 
 	var err error
-	err = s.withTransaction(ctx, true, func(ctx context.Context) error {
+	err = s.store.WithTransaction(ctx, true, func(ctx context.Context) error {
 		info, err = storage.UpdateInfo(ctx, info, fieldpaths...)
 		return err
 	})
@@ -142,7 +144,7 @@ func (s *Snapshotter) Usage(ctx context.Context, key string) (snapshots.Usage, e
 		usage snapshots.Usage
 	)
 
-	err = s.withTransaction(ctx, false, func(ctx context.Context) error {
+	err = s.store.WithTransaction(ctx, false, func(ctx context.Context) error {
 		id, info, usage, err = storage.GetInfo(ctx, key)
 		if err != nil {
 			return err
@@ -182,7 +184,7 @@ func (s *Snapshotter) Mounts(ctx context.Context, key string) ([]mount.Mount, er
 		err  error
 	)
 
-	err = s.withTransaction(ctx, false, func(ctx context.Context) error {
+	err = s.store.WithTransaction(ctx, false, func(ctx context.Context) error {
 		snap, err = storage.GetSnapshot(ctx, key)
 		return err
 	})
@@ -198,14 +200,14 @@ func (s *Snapshotter) Mounts(ctx context.Context, key string) ([]mount.Mount, er
 
 // Prepare creates thin device for an active snapshot identified by key
 func (s *Snapshotter) Prepare(ctx context.Context, key, parent string, opts ...snapshots.Opt) ([]mount.Mount, error) {
-	log.G(ctx).WithFields(logrus.Fields{"key": key, "parent": parent}).Debug("prepare")
+	log.G(ctx).WithFields(log.Fields{"key": key, "parent": parent}).Debug("prepare")
 
 	var (
 		mounts []mount.Mount
 		err    error
 	)
 
-	err = s.withTransaction(ctx, true, func(ctx context.Context) error {
+	err = s.store.WithTransaction(ctx, true, func(ctx context.Context) error {
 		mounts, err = s.createSnapshot(ctx, snapshots.KindActive, key, parent, opts...)
 		return err
 	})
@@ -215,14 +217,14 @@ func (s *Snapshotter) Prepare(ctx context.Context, key, parent string, opts ...s
 
 // View creates readonly thin device for the given snapshot key
 func (s *Snapshotter) View(ctx context.Context, key, parent string, opts ...snapshots.Opt) ([]mount.Mount, error) {
-	log.G(ctx).WithFields(logrus.Fields{"key": key, "parent": parent}).Debug("view")
+	log.G(ctx).WithFields(log.Fields{"key": key, "parent": parent}).Debug("view")
 
 	var (
 		mounts []mount.Mount
 		err    error
 	)
 
-	err = s.withTransaction(ctx, true, func(ctx context.Context) error {
+	err = s.store.WithTransaction(ctx, true, func(ctx context.Context) error {
 		mounts, err = s.createSnapshot(ctx, snapshots.KindView, key, parent, opts...)
 		return err
 	})
@@ -234,9 +236,9 @@ func (s *Snapshotter) View(ctx context.Context, key, parent string, opts ...snap
 // Block device unmount operation captures snapshot changes by itself, so no
 // additional actions needed within Commit operation.
 func (s *Snapshotter) Commit(ctx context.Context, name, key string, opts ...snapshots.Opt) error {
-	log.G(ctx).WithFields(logrus.Fields{"name": name, "key": key}).Debug("commit")
+	log.G(ctx).WithFields(log.Fields{"name": name, "key": key}).Debug("commit")
 
-	return s.withTransaction(ctx, true, func(ctx context.Context) error {
+	return s.store.WithTransaction(ctx, true, func(ctx context.Context) error {
 		id, snapInfo, _, err := storage.GetInfo(ctx, key)
 		if err != nil {
 			return err
@@ -293,7 +295,7 @@ func (s *Snapshotter) Commit(ctx context.Context, name, key string, opts ...snap
 func (s *Snapshotter) Remove(ctx context.Context, key string) error {
 	log.G(ctx).WithField("key", key).Debug("remove")
 
-	return s.withTransaction(ctx, true, func(ctx context.Context) error {
+	return s.store.WithTransaction(ctx, true, func(ctx context.Context) error {
 		return s.removeDevice(ctx, key)
 	})
 }
@@ -329,7 +331,7 @@ func (s *Snapshotter) removeDevice(ctx context.Context, key string) error {
 // Walk iterates through all metadata Info for the stored snapshots and calls the provided function for each.
 func (s *Snapshotter) Walk(ctx context.Context, fn snapshots.WalkFunc, fs ...string) error {
 	log.G(ctx).Debug("walk")
-	return s.withTransaction(ctx, false, func(ctx context.Context) error {
+	return s.store.WithTransaction(ctx, false, func(ctx context.Context) error {
 		return storage.WalkInfo(ctx, fn, fs...)
 	})
 }
@@ -468,6 +470,13 @@ func mkfs(ctx context.Context, fs fsType, fsOptions string, path string) error {
 			fsOptions,
 			path,
 		}
+	case fsTypeExt2:
+		mkfsCommand = "mkfs.ext2"
+		args = []string{
+			"-E",
+			fsOptions,
+			path,
+		}
 	case fsTypeXFS:
 		mkfsCommand = "mkfs.xfs"
 		args = []string{
@@ -520,48 +529,6 @@ func (s *Snapshotter) buildMounts(ctx context.Context, snap storage.Snapshot, fi
 	}
 
 	return mounts
-}
-
-// withTransaction wraps fn callback with containerd's meta store transaction.
-// If callback returns an error or transaction is not writable, database transaction will be discarded.
-func (s *Snapshotter) withTransaction(ctx context.Context, writable bool, fn func(ctx context.Context) error) error {
-	ctx, trans, err := s.store.TransactionContext(ctx, writable)
-	if err != nil {
-		return err
-	}
-
-	var result *multierror.Error
-
-	err = fn(ctx)
-	if err != nil {
-		result = multierror.Append(result, err)
-	}
-
-	// Always rollback if transaction is not writable
-	if err != nil || !writable {
-		if terr := trans.Rollback(); terr != nil {
-			log.G(ctx).WithError(terr).Error("failed to rollback transaction")
-			result = multierror.Append(result, fmt.Errorf("rollback failed: %w", terr))
-		}
-	} else {
-		if terr := trans.Commit(); terr != nil {
-			log.G(ctx).WithError(terr).Error("failed to commit transaction")
-			result = multierror.Append(result, fmt.Errorf("commit failed: %w", terr))
-		}
-	}
-
-	if err := result.ErrorOrNil(); err != nil {
-		log.G(ctx).WithError(err).Debug("snapshotter error")
-
-		// Unwrap if just one error
-		if len(result.Errors) == 1 {
-			return result.Errors[0]
-		}
-
-		return err
-	}
-
-	return nil
 }
 
 // Cleanup cleans up all removed and unused resources

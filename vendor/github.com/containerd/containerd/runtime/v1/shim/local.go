@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 /*
    Copyright The containerd Authors.
@@ -24,8 +23,8 @@ import (
 	"path/filepath"
 
 	"github.com/containerd/containerd/mount"
+	ptypes "github.com/containerd/containerd/protobuf/types"
 	shimapi "github.com/containerd/containerd/runtime/v1/shim/v1"
-	ptypes "github.com/gogo/protobuf/types"
 )
 
 // NewLocal returns a shim client implementation for issue commands to a shim

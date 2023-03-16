@@ -27,8 +27,8 @@ import (
 	"github.com/containerd/containerd/metadata"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/plugin"
+	ptypes "github.com/containerd/containerd/protobuf/types"
 	"github.com/containerd/containerd/services"
-	ptypes "github.com/gogo/protobuf/types"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -79,7 +79,7 @@ func (l *local) Get(ctx context.Context, req *api.GetNamespaceRequest, _ ...grpc
 			return errdefs.ToGRPC(err)
 		}
 
-		resp.Namespace = api.Namespace{
+		resp.Namespace = &api.Namespace{
 			Name:   req.Name,
 			Labels: labels,
 		}
@@ -105,7 +105,7 @@ func (l *local) List(ctx context.Context, req *api.ListNamespacesRequest, _ ...g
 				return errdefs.ToGRPC(err)
 			}
 
-			resp.Namespaces = append(resp.Namespaces, api.Namespace{
+			resp.Namespaces = append(resp.Namespaces, &api.Namespace{
 				Name:   namespace,
 				Labels: labels,
 			})
@@ -135,6 +135,7 @@ func (l *local) Create(ctx context.Context, req *api.CreateNamespaceRequest, _ .
 		return &resp, err
 	}
 
+	ctx = namespaces.WithNamespace(ctx, req.Namespace.Name)
 	if err := l.publisher.Publish(ctx, "/namespaces/create", &eventstypes.NamespaceCreate{
 		Name:   req.Namespace.Name,
 		Labels: req.Namespace.Labels,
@@ -188,6 +189,7 @@ func (l *local) Update(ctx context.Context, req *api.UpdateNamespaceRequest, _ .
 		return &resp, err
 	}
 
+	ctx = namespaces.WithNamespace(ctx, req.Namespace.Name)
 	if err := l.publisher.Publish(ctx, "/namespaces/update", &eventstypes.NamespaceUpdate{
 		Name:   req.Namespace.Name,
 		Labels: req.Namespace.Labels,

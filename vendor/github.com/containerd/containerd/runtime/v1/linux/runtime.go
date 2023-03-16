@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 /*
    Copyright The containerd Authors.
@@ -38,18 +37,19 @@ import (
 	"github.com/containerd/containerd/metadata"
 	"github.com/containerd/containerd/mount"
 	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/pkg/cleanup"
 	"github.com/containerd/containerd/pkg/process"
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/plugin"
+	"github.com/containerd/containerd/protobuf"
+	ptypes "github.com/containerd/containerd/protobuf/types"
 	"github.com/containerd/containerd/runtime"
 	"github.com/containerd/containerd/runtime/linux/runctypes"
 	v1 "github.com/containerd/containerd/runtime/v1"
 	"github.com/containerd/containerd/runtime/v1/shim/v1"
 	"github.com/containerd/go-runc"
-	"github.com/containerd/typeurl"
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/containerd/typeurl/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
@@ -123,7 +123,7 @@ func New(ic *plugin.InitContext) (interface{}, error) {
 	r := &Runtime{
 		root:       ic.Root,
 		state:      ic.State,
-		tasks:      runtime.NewTaskList(),
+		tasks:      runtime.NewNSMap[runtime.Task](),
 		containers: metadata.NewContainerStore(m.(*metadata.DB)),
 		address:    ic.Address,
 		events:     ep.(*exchange.Exchange),
@@ -147,7 +147,7 @@ type Runtime struct {
 	state   string
 	address string
 
-	tasks      *runtime.TaskList
+	tasks      *runtime.NSMap[runtime.Task]
 	containers containers.Store
 	events     *exchange.Exchange
 
@@ -165,6 +165,10 @@ func (r *Runtime) Create(ctx context.Context, id string, opts runtime.CreateOpts
 	if err != nil {
 		return nil, err
 	}
+	ctx = log.WithLogger(ctx, log.G(ctx).WithError(err).WithFields(log.Fields{
+		"id":        id,
+		"namespace": namespace,
+	}))
 
 	if err := identifiers.Validate(id); err != nil {
 		return nil, fmt.Errorf("invalid task id: %w", err)
@@ -178,7 +182,7 @@ func (r *Runtime) Create(ctx context.Context, id string, opts runtime.CreateOpts
 	bundle, err := newBundle(id,
 		filepath.Join(r.state, namespace),
 		filepath.Join(r.root, namespace),
-		opts.Spec.Value)
+		opts.Spec.GetValue())
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +195,7 @@ func (r *Runtime) Create(ctx context.Context, id string, opts runtime.CreateOpts
 	shimopt := ShimLocal(r.config, r.events)
 	if !r.config.NoShim {
 		var cgroup string
-		if opts.TaskOptions != nil {
+		if opts.TaskOptions != nil && opts.TaskOptions.GetValue() != nil {
 			v, err := typeurl.UnmarshalAny(opts.TaskOptions)
 			if err != nil {
 				return nil, err
@@ -206,11 +210,8 @@ func (r *Runtime) Create(ctx context.Context, id string, opts runtime.CreateOpts
 				return
 			}
 
-			if err = r.cleanupAfterDeadShim(context.Background(), bundle, namespace, id); err != nil {
-				log.G(ctx).WithError(err).WithFields(logrus.Fields{
-					"id":        id,
-					"namespace": namespace,
-				}).Warn("failed to clean up after killed shim")
+			if err = r.cleanupAfterDeadShim(cleanup.Background(ctx), bundle, namespace, id); err != nil {
+				log.G(ctx).WithError(err).Warn("failed to clean up after killed shim")
 			}
 		}
 		shimopt = ShimRemote(r.config, r.address, cgroup, exitHandler)
@@ -222,8 +223,7 @@ func (r *Runtime) Create(ctx context.Context, id string, opts runtime.CreateOpts
 	}
 	defer func() {
 		if err != nil {
-			deferCtx, deferCancel := context.WithTimeout(
-				namespaces.WithNamespace(context.TODO(), namespace), cleanupTimeout)
+			deferCtx, deferCancel := context.WithTimeout(cleanup.Background(ctx), cleanupTimeout)
 			defer deferCancel()
 			if kerr := s.KillShim(deferCtx); kerr != nil {
 				log.G(ctx).WithError(kerr).Error("failed to kill shim")
@@ -244,12 +244,13 @@ func (r *Runtime) Create(ctx context.Context, id string, opts runtime.CreateOpts
 		Stderr:     opts.IO.Stderr,
 		Terminal:   opts.IO.Terminal,
 		Checkpoint: opts.Checkpoint,
-		Options:    opts.TaskOptions,
+		Options:    protobuf.FromAny(opts.TaskOptions),
 	}
 	for _, m := range opts.Rootfs {
 		sopts.Rootfs = append(sopts.Rootfs, &types.Mount{
 			Type:    m.Type,
 			Source:  m.Source,
+			Target:  m.Target,
 			Options: m.Options,
 		})
 	}
@@ -359,6 +360,11 @@ func (r *Runtime) loadTasks(ctx context.Context, ns string) ([]*Task, error) {
 			filepath.Join(r.root, ns, id),
 		)
 		ctx = namespaces.WithNamespace(ctx, ns)
+		ctx = log.WithLogger(ctx, log.G(ctx).WithError(err).WithFields(log.Fields{
+			"id":        id,
+			"namespace": ns,
+		}))
+
 		pid, _ := runc.ReadPidFile(filepath.Join(bundle.path, process.InitPidFile))
 		shimExit := make(chan struct{})
 		s, err := bundle.NewShimClient(ctx, ns, ShimConnect(r.config, func() {
@@ -374,10 +380,7 @@ func (r *Runtime) loadTasks(ctx context.Context, ns string) ([]*Task, error) {
 			}
 		}), nil)
 		if err != nil {
-			log.G(ctx).WithError(err).WithFields(logrus.Fields{
-				"id":        id,
-				"namespace": ns,
-			}).Error("connecting to shim")
+			log.G(ctx).WithError(err).Error("connecting to shim")
 			err := r.cleanupAfterDeadShim(ctx, bundle, ns, id)
 			if err != nil {
 				log.G(ctx).WithError(err).WithField("bundle", bundle.path).
@@ -402,11 +405,8 @@ func (r *Runtime) loadTasks(ctx context.Context, ns string) ([]*Task, error) {
 		}
 		shimStdoutLog, err := v1.OpenShimStdoutLog(ctx, logDirPath)
 		if err != nil {
-			log.G(ctx).WithError(err).WithFields(logrus.Fields{
-				"id":         id,
-				"namespace":  ns,
-				"logDirPath": logDirPath,
-			}).Error("opening shim stdout log pipe")
+			log.G(ctx).WithError(err).WithField("logDirPath", logDirPath).
+				Error("opening shim stdout log pipe")
 			continue
 		}
 		if r.config.ShimDebug {
@@ -417,11 +417,8 @@ func (r *Runtime) loadTasks(ctx context.Context, ns string) ([]*Task, error) {
 
 		shimStderrLog, err := v1.OpenShimStderrLog(ctx, logDirPath)
 		if err != nil {
-			log.G(ctx).WithError(err).WithFields(logrus.Fields{
-				"id":         id,
-				"namespace":  ns,
-				"logDirPath": logDirPath,
-			}).Error("opening shim stderr log pipe")
+			log.G(ctx).WithError(err).WithField("logDirPath", logDirPath).
+				Error("opening shim stderr log pipe")
 			continue
 		}
 		if r.config.ShimDebug {
@@ -441,13 +438,9 @@ func (r *Runtime) loadTasks(ctx context.Context, ns string) ([]*Task, error) {
 }
 
 func (r *Runtime) cleanupAfterDeadShim(ctx context.Context, bundle *bundle, ns, id string) error {
-	log.G(ctx).WithFields(logrus.Fields{
-		"id":        id,
-		"namespace": ns,
-	}).Warn("cleaning up after shim dead")
+	log.G(ctx).Warn("cleaning up after shim dead")
 
 	pid, _ := runc.ReadPidFile(filepath.Join(bundle.path, process.InitPidFile))
-	ctx = namespaces.WithNamespace(ctx, ns)
 	if err := r.terminate(ctx, bundle, ns, id); err != nil {
 		if r.config.ShimDebug {
 			return fmt.Errorf("failed to terminate task, leaving bundle for debugging: %w", err)
@@ -462,7 +455,7 @@ func (r *Runtime) cleanupAfterDeadShim(ctx context.Context, bundle *bundle, ns, 
 		ID:          id,
 		Pid:         uint32(pid),
 		ExitStatus:  128 + uint32(unix.SIGKILL),
-		ExitedAt:    exitedAt,
+		ExitedAt:    protobuf.ToTimestamp(exitedAt),
 	})
 
 	r.tasks.Delete(ctx, id)
@@ -478,7 +471,7 @@ func (r *Runtime) cleanupAfterDeadShim(ctx context.Context, bundle *bundle, ns, 
 		ContainerID: id,
 		Pid:         uint32(pid),
 		ExitStatus:  128 + uint32(unix.SIGKILL),
-		ExitedAt:    exitedAt,
+		ExitedAt:    protobuf.ToTimestamp(exitedAt),
 	})
 
 	return nil
@@ -495,7 +488,7 @@ func (r *Runtime) terminate(ctx context.Context, bundle *bundle, ns, id string) 
 		log.G(ctx).WithError(err).Warnf("delete runtime state %s", id)
 	}
 	if err := mount.Unmount(filepath.Join(bundle.path, "rootfs"), 0); err != nil {
-		log.G(ctx).WithError(err).WithFields(logrus.Fields{
+		log.G(ctx).WithError(err).WithFields(log.Fields{
 			"path": bundle.path,
 			"id":   id,
 		}).Warnf("unmount task rootfs")
@@ -537,7 +530,7 @@ func (r *Runtime) getRuncOptions(ctx context.Context, id string) (*runctypes.Run
 		return nil, err
 	}
 
-	if container.Runtime.Options != nil {
+	if container.Runtime.Options != nil && container.Runtime.Options.GetValue() != nil {
 		v, err := typeurl.UnmarshalAny(container.Runtime.Options)
 		if err != nil {
 			return nil, err

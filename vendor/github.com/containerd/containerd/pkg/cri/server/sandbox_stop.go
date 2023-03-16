@@ -17,6 +17,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"syscall"
@@ -25,7 +26,7 @@ import (
 	eventtypes "github.com/containerd/containerd/api/events"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/log"
-	"golang.org/x/net/context"
+	"github.com/containerd/containerd/protobuf"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 
 	sandboxstore "github.com/containerd/containerd/pkg/cri/store/sandbox"
@@ -81,6 +82,11 @@ func (c *criService) stopPodSandbox(ctx context.Context, sandbox sandboxstore.Sa
 	}
 	sandboxRuntimeStopTimer.WithValues(sandbox.RuntimeHandler).UpdateSince(stop)
 
+	err := c.nri.StopPodSandbox(ctx, &sandbox)
+	if err != nil {
+		log.G(ctx).WithError(err).Errorf("NRI sandbox stop notification failed")
+	}
+
 	// Teardown network for sandbox.
 	if sandbox.NetNS != nil {
 		netStop := time.Now()
@@ -119,7 +125,7 @@ func (c *criService) stopSandboxContainer(ctx context.Context, sandbox sandboxst
 		}
 		// Don't return for unknown state, some cleanup needs to be done.
 		if state == sandboxstore.StateUnknown {
-			return cleanupUnknownSandbox(ctx, id, sandbox)
+			return c.cleanupUnknownSandbox(ctx, id, sandbox)
 		}
 		return nil
 	}
@@ -135,7 +141,7 @@ func (c *criService) stopSandboxContainer(ctx context.Context, sandbox sandboxst
 			if !errdefs.IsNotFound(err) {
 				return fmt.Errorf("failed to wait for task: %w", err)
 			}
-			return cleanupUnknownSandbox(ctx, id, sandbox)
+			return c.cleanupUnknownSandbox(ctx, id, sandbox)
 		}
 
 		exitCtx, exitCancel := context.WithCancel(context.Background())
@@ -197,13 +203,13 @@ func (c *criService) teardownPodNetwork(ctx context.Context, sandbox sandboxstor
 }
 
 // cleanupUnknownSandbox cleanup stopped sandbox in unknown state.
-func cleanupUnknownSandbox(ctx context.Context, id string, sandbox sandboxstore.Sandbox) error {
+func (c *criService) cleanupUnknownSandbox(ctx context.Context, id string, sandbox sandboxstore.Sandbox) error {
 	// Reuse handleSandboxExit to do the cleanup.
 	return handleSandboxExit(ctx, &eventtypes.TaskExit{
 		ContainerID: id,
 		ID:          id,
 		Pid:         0,
 		ExitStatus:  unknownExitCode,
-		ExitedAt:    time.Now(),
-	}, sandbox)
+		ExitedAt:    protobuf.ToTimestamp(time.Now()),
+	}, sandbox, c)
 }

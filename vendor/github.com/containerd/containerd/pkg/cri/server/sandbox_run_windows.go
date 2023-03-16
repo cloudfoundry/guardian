@@ -22,6 +22,7 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/oci"
+	"github.com/containerd/containerd/snapshots"
 	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 	runtimespec "github.com/opencontainers/runtime-spec/specs-go"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
@@ -51,7 +52,7 @@ func (c *criService) sandboxContainerSpec(id string, config *runtime.PodSandboxC
 		// Clear the root location since hcsshim expects it.
 		// NOTE: readonly rootfs doesn't work on windows.
 		customopts.WithoutRoot,
-		customopts.WithWindowsNetworkNamespace(nsPath),
+		oci.WithWindowsNetworkNamespace(nsPath),
 	)
 
 	specOpts = append(specOpts, customopts.WithWindowsDefaultSandboxShares)
@@ -80,14 +81,9 @@ func (c *criService) sandboxContainerSpec(id string, config *runtime.PodSandboxC
 		specOpts = append(specOpts, customopts.WithAnnotation(pKey, pValue))
 	}
 
+	specOpts = append(specOpts, customopts.WithAnnotation(annotations.WindowsHostProcess, strconv.FormatBool(config.GetWindows().GetSecurityContext().GetHostProcess())))
 	specOpts = append(specOpts,
-		customopts.WithAnnotation(annotations.ContainerType, annotations.ContainerTypeSandbox),
-		customopts.WithAnnotation(annotations.SandboxID, id),
-		customopts.WithAnnotation(annotations.SandboxNamespace, config.GetMetadata().GetNamespace()),
-		customopts.WithAnnotation(annotations.SandboxUID, config.GetMetadata().GetUid()),
-		customopts.WithAnnotation(annotations.SandboxName, config.GetMetadata().GetName()),
-		customopts.WithAnnotation(annotations.SandboxLogDir, config.GetLogDirectory()),
-		customopts.WithAnnotation(annotations.WindowsHostProcess, strconv.FormatBool(config.GetWindows().GetSecurityContext().GetHostProcess())),
+		annotations.DefaultCRIAnnotations(id, "", "", config, true)...,
 	)
 
 	return c.runtimeSpec(id, "", specOpts...)
@@ -115,4 +111,9 @@ func (c *criService) taskOpts(runtimeType string) []containerd.NewTaskOpts {
 
 func (c *criService) updateNetNamespacePath(spec *runtimespec.Spec, nsPath string) {
 	spec.Windows.Network.NetworkNamespace = nsPath
+}
+
+// No sandbox snapshotter options needed for windows.
+func sandboxSnapshotterOpts(config *runtime.PodSandboxConfig) ([]snapshots.Opt, error) {
+	return []snapshots.Opt{}, nil
 }

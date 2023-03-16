@@ -17,6 +17,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -26,7 +27,6 @@ import (
 	"github.com/containerd/containerd/log"
 	containerstore "github.com/containerd/containerd/pkg/cri/store/container"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
@@ -73,6 +73,16 @@ func (c *criService) RemoveContainer(ctx context.Context, r *runtime.RemoveConta
 		}
 	}()
 
+	sandbox, err := c.sandboxStore.Get(container.SandboxID)
+	if err != nil {
+		err = c.nri.RemoveContainer(ctx, nil, &container)
+	} else {
+		err = c.nri.RemoveContainer(ctx, &sandbox, &container)
+	}
+	if err != nil {
+		log.G(ctx).WithError(err).Error("NRI failed to remove container")
+	}
+
 	// NOTE(random-liu): Docker set container to "Dead" state when start removing the
 	// container so as to avoid start/restart the container again. However, for current
 	// kubelet implementation, we'll never start a container once we decide to remove it,
@@ -105,6 +115,8 @@ func (c *criService) RemoveContainer(ctx context.Context, r *runtime.RemoveConta
 	c.containerStore.Delete(id)
 
 	c.containerNameIndex.ReleaseByKey(id)
+
+	c.generateAndSendContainerEvent(ctx, id, container.SandboxID, runtime.ContainerEventType_CONTAINER_DELETED_EVENT)
 
 	containerRemoveTimer.WithValues(i.Runtime.Name).UpdateSince(start)
 

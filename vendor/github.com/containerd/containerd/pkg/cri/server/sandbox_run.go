@@ -17,6 +17,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,29 +27,25 @@ import (
 	"strings"
 	"time"
 
+	cni "github.com/containerd/go-cni"
+	"github.com/containerd/typeurl/v2"
+	"github.com/davecgh/go-spew/spew"
+	selinux "github.com/opencontainers/selinux/go-selinux"
+	"github.com/sirupsen/logrus"
+	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
+
 	"github.com/containerd/containerd"
 	containerdio "github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/log"
-	"github.com/containerd/containerd/snapshots"
-	cni "github.com/containerd/go-cni"
-	"github.com/containerd/nri"
-	v1 "github.com/containerd/nri/types/v1"
-	"github.com/containerd/typeurl"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
-	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
-
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	criconfig "github.com/containerd/containerd/pkg/cri/config"
 	customopts "github.com/containerd/containerd/pkg/cri/opts"
 	"github.com/containerd/containerd/pkg/cri/server/bandwidth"
 	sandboxstore "github.com/containerd/containerd/pkg/cri/store/sandbox"
 	"github.com/containerd/containerd/pkg/cri/util"
-	ctrdutil "github.com/containerd/containerd/pkg/cri/util"
 	"github.com/containerd/containerd/pkg/netns"
-	selinux "github.com/opencontainers/selinux/go-selinux"
+	"github.com/containerd/containerd/snapshots"
 )
 
 func init() {
@@ -151,7 +148,7 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	// Generate spec options that will be applied to the spec later.
 	specOpts, err := c.sandboxContainerSpecOpts(config, &image.ImageSpec.Config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate sanbdox container spec options: %w", err)
+		return nil, fmt.Errorf("failed to generate sandbox container spec options: %w", err)
 	}
 
 	sandboxLabels := buildLabels(config.Labels, image.ImageSpec.Config.Labels, containerKindSandbox)
@@ -160,10 +157,17 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate runtime options: %w", err)
 	}
-	snapshotterOpt := snapshots.WithLabels(snapshots.FilterInheritedLabels(config.Annotations))
+
+	sOpts := []snapshots.Opt{snapshots.WithLabels(snapshots.FilterInheritedLabels(config.Annotations))}
+	extraSOpts, err := sandboxSnapshotterOpts(config)
+	if err != nil {
+		return nil, err
+	}
+	sOpts = append(sOpts, extraSOpts...)
+
 	opts := []containerd.NewContainerOpts{
-		containerd.WithSnapshotter(c.config.ContainerdConfig.Snapshotter),
-		customopts.WithNewSnapshot(id, containerdImage, snapshotterOpt),
+		containerd.WithSnapshotter(c.runtimeSnapshotter(ctx, ociRuntime)),
+		customopts.WithNewSnapshot(id, containerdImage, sOpts...),
 		containerd.WithSpec(spec, specOpts...),
 		containerd.WithContainerLabels(sandboxLabels),
 		containerd.WithContainerExtension(sandboxMetadataExtension, &sandbox.Metadata),
@@ -190,7 +194,7 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	defer func() {
 		// Delete container only if all the resource cleanup is done.
 		if retErr != nil && cleanupErr == nil {
-			deferCtx, deferCancel := ctrdutil.DeferContext()
+			deferCtx, deferCancel := util.DeferContext()
 			defer deferCancel()
 			if cleanupErr = container.Delete(deferCtx, containerd.WithSnapshotCleanup); cleanupErr != nil {
 				log.G(ctx).WithError(cleanupErr).Errorf("Failed to delete containerd container %q", id)
@@ -247,20 +251,27 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 		return nil, fmt.Errorf("failed to get sandbox container info: %w", err)
 	}
 
-	podNetwork := true
-
-	if goruntime.GOOS != "windows" &&
-		config.GetLinux().GetSecurityContext().GetNamespaceOptions().GetNetwork() == runtime.NamespaceMode_NODE {
-		// Pod network is not needed on linux with host network.
-		podNetwork = false
-	}
-	if goruntime.GOOS == "windows" &&
-		config.GetWindows().GetSecurityContext().GetHostProcess() {
-		// Windows HostProcess pods can only run on the host network
-		podNetwork = false
+	userNsEnabled := false
+	if goruntime.GOOS != "windows" {
+		usernsOpts := config.GetLinux().GetSecurityContext().GetNamespaceOptions().GetUsernsOptions()
+		if usernsOpts != nil && usernsOpts.GetMode() == runtime.NamespaceMode_POD {
+			userNsEnabled = true
+		}
 	}
 
-	if podNetwork {
+	// Setup the network namespace if host networking wasn't requested.
+	if !hostNetwork(config) && !userNsEnabled {
+		// XXX: We do c&p of this code later for the podNetwork && userNsEnabled case too.
+		// We can't move this to a function, as the defer calls need to be executed if other
+		// errors are returned in this function. So, we would need more refactors to move
+		// this code to a function and the idea was to not change the current code for
+		// !userNsEnabled case, therefore doing it would defeat the purpose.
+		//
+		// The difference between the cases is the use of netns.NewNetNS() vs
+		// netns.NewNetNSFromPID() and we verify the task is still running in the other case.
+		//
+		// To simplify this, in the future, we should just remove this case (podNetwork &&
+		// !userNsEnabled) and just keep the other case (podNetwork && userNsEnabled).
 		netStart := time.Now()
 
 		// If it is not in host network namespace then create a namespace and set the sandbox
@@ -305,7 +316,7 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 		defer func() {
 			// Teardown the network only if all the resource cleanup is done.
 			if retErr != nil && cleanupErr == nil {
-				deferCtx, deferCancel := ctrdutil.DeferContext()
+				deferCtx, deferCancel := util.DeferContext()
 				defer deferCancel()
 				// Teardown network if an error is returned.
 				if cleanupErr = c.teardownPodNetwork(deferCtx, sandbox); cleanupErr != nil {
@@ -352,10 +363,10 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	}
 	defer func() {
 		if retErr != nil {
-			deferCtx, deferCancel := ctrdutil.DeferContext()
+			deferCtx, deferCancel := util.DeferContext()
 			defer deferCancel()
 			// Cleanup the sandbox container if an error is returned.
-			if _, err := task.Delete(deferCtx, WithNRISandboxDelete(id), containerd.WithProcessKill); err != nil && !errdefs.IsNotFound(err) {
+			if _, err := task.Delete(deferCtx, containerd.WithProcessKill); err != nil && !errdefs.IsNotFound(err) {
 				log.G(ctx).WithError(err).Errorf("Failed to delete sandbox container %q", id)
 				cleanupErr = err
 			}
@@ -363,24 +374,105 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 	}()
 
 	// wait is a long running background request, no timeout needed.
-	exitCh, err := task.Wait(ctrdutil.NamespacedContext())
+	exitCh, err := task.Wait(util.NamespacedContext())
 	if err != nil {
 		return nil, fmt.Errorf("failed to wait for sandbox container task: %w", err)
 	}
 
-	nric, err := nri.New()
+	if !hostNetwork(config) && userNsEnabled {
+		// If userns is enabled, then the netns was created by the OCI runtime
+		// when creating "task". The OCI runtime needs to create the netns
+		// because, if userns is in use, the netns needs to be owned by the
+		// userns. So, let the OCI runtime just handle this for us.
+		// If the netns is not owned by the userns several problems will happen.
+		// For instance, the container will lack permission (even if
+		// capabilities are present) to modify the netns or, even worse, the OCI
+		// runtime will fail to mount sysfs:
+		// 	https://github.com/torvalds/linux/commit/7dc5dbc879bd0779924b5132a48b731a0bc04a1e#diff-4839664cd0c8eab716e064323c7cd71fR1164
+		netStart := time.Now()
+
+		// If it is not in host network namespace then create a namespace and set the sandbox
+		// handle. NetNSPath in sandbox metadata and NetNS is non empty only for non host network
+		// namespaces. If the pod is in host network namespace then both are empty and should not
+		// be used.
+		var netnsMountDir = "/var/run/netns"
+		if c.config.NetNSMountsUnderStateDir {
+			netnsMountDir = filepath.Join(c.config.StateDir, "netns")
+		}
+		sandbox.NetNS, err = netns.NewNetNSFromPID(netnsMountDir, task.Pid())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create network namespace for sandbox %q: %w", id, err)
+		}
+
+		// Verify task is still in created state.
+		if st, err := task.Status(ctx); err != nil || st.Status != containerd.Created {
+			return nil, fmt.Errorf("failed to create pod sandbox %q: err is %v - status is %q and is expected %q", id, err, st.Status, containerd.Created)
+		}
+		sandbox.NetNSPath = sandbox.NetNS.GetPath()
+
+		defer func() {
+			// Remove the network namespace only if all the resource cleanup is done.
+			if retErr != nil && cleanupErr == nil {
+				if cleanupErr = sandbox.NetNS.Remove(); cleanupErr != nil {
+					log.G(ctx).WithError(cleanupErr).Errorf("Failed to remove network namespace %s for sandbox %q", sandbox.NetNSPath, id)
+					return
+				}
+				sandbox.NetNSPath = ""
+			}
+		}()
+
+		// Update network namespace in the container's spec
+		c.updateNetNamespacePath(spec, sandbox.NetNSPath)
+
+		if err := container.Update(ctx,
+			// Update spec of the container
+			containerd.UpdateContainerOpts(containerd.WithSpec(spec)),
+			// Update sandbox metadata to include NetNS info
+			containerd.UpdateContainerOpts(containerd.WithContainerExtension(sandboxMetadataExtension, &sandbox.Metadata))); err != nil {
+			return nil, fmt.Errorf("failed to update the network namespace for the sandbox container %q: %w", id, err)
+		}
+
+		// Define this defer to teardownPodNetwork prior to the setupPodNetwork function call.
+		// This is because in setupPodNetwork the resource is allocated even if it returns error, unlike other resource creation functions.
+		defer func() {
+			// Teardown the network only if all the resource cleanup is done.
+			if retErr != nil && cleanupErr == nil {
+				deferCtx, deferCancel := util.DeferContext()
+				defer deferCancel()
+				// Teardown network if an error is returned.
+				if cleanupErr = c.teardownPodNetwork(deferCtx, sandbox); cleanupErr != nil {
+					log.G(ctx).WithError(cleanupErr).Errorf("Failed to destroy network for sandbox %q", id)
+				}
+			}
+		}()
+
+		// Setup network for sandbox.
+		// Certain VM based solutions like clear containers (Issue containerd/cri-containerd#524)
+		// rely on the assumption that CRI shim will not be querying the network namespace to check the
+		// network states such as IP.
+		// In future runtime implementation should avoid relying on CRI shim implementation details.
+		// In this case however caching the IP will add a subtle performance enhancement by avoiding
+		// calls to network namespace of the pod to query the IP of the veth interface on every
+		// SandboxStatus request.
+		if err := c.setupPodNetwork(ctx, &sandbox); err != nil {
+			return nil, fmt.Errorf("failed to setup network for sandbox %q: %w", id, err)
+		}
+
+		sandboxCreateNetworkTimer.UpdateSince(netStart)
+	}
+
+	err = c.nri.RunPodSandbox(ctx, &sandbox)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create nri client: %w", err)
+		return nil, fmt.Errorf("NRI RunPodSandbox failed: %w", err)
 	}
-	if nric != nil {
-		nriSB := &nri.Sandbox{
-			ID:     id,
-			Labels: config.Labels,
+
+	defer func() {
+		if retErr != nil {
+			deferCtx, deferCancel := util.DeferContext()
+			defer deferCancel()
+			c.nri.RemovePodSandbox(deferCtx, &sandbox)
 		}
-		if _, err := nric.InvokeWithSandbox(ctx, task, v1.Create, nriSB); err != nil {
-			return nil, fmt.Errorf("nri invoke: %w", err)
-		}
-	}
+	}()
 
 	if err := task.Start(ctx); err != nil {
 		return nil, fmt.Errorf("failed to start sandbox container task %q: %w", id, err)
@@ -400,12 +492,20 @@ func (c *criService) RunPodSandbox(ctx context.Context, r *runtime.RunPodSandbox
 		return nil, fmt.Errorf("failed to add sandbox %+v into store: %w", sandbox, err)
 	}
 
+	// Send CONTAINER_CREATED event with both ContainerId and SandboxId equal to SandboxId.
+	// Note that this has to be done after sandboxStore.Add() because we need to get
+	// SandboxStatus from the store and include it in the event.
+	c.generateAndSendContainerEvent(ctx, id, id, runtime.ContainerEventType_CONTAINER_CREATED_EVENT)
+
 	// start the monitor after adding sandbox into the store, this ensures
 	// that sandbox is in the store, when event monitor receives the TaskExit event.
 	//
 	// TaskOOM from containerd may come before sandbox is added to store,
 	// but we don't care about sandbox TaskOOM right now, so it is fine.
 	c.eventMonitor.startSandboxExitMonitor(context.Background(), id, task.Pid(), exitCh)
+
+	// Send CONTAINER_STARTED event with both ContainerId and SandboxId equal to SandboxId.
+	c.generateAndSendContainerEvent(ctx, id, id, runtime.ContainerEventType_CONTAINER_STARTED_EVENT)
 
 	sandboxRuntimeCreateTimer.WithValues(ociRuntime.Type).UpdateSince(runtimeStart)
 
@@ -434,6 +534,8 @@ func (c *criService) setupPodNetwork(ctx context.Context, sandbox *sandboxstore.
 		config    = sandbox.Config
 		path      = sandbox.NetNSPath
 		netPlugin = c.getNetworkPlugin(sandbox.RuntimeHandler)
+		err       error
+		result    *cni.Result
 	)
 	if netPlugin == nil {
 		return errors.New("cni config not initialized")
@@ -445,7 +547,11 @@ func (c *criService) setupPodNetwork(ctx context.Context, sandbox *sandboxstore.
 	}
 	log.G(ctx).WithField("podsandboxid", id).Debugf("begin cni setup")
 	netStart := time.Now()
-	result, err := netPlugin.Setup(ctx, id, path, opts...)
+	if c.config.CniConfig.NetworkPluginSetupSerially {
+		result, err = netPlugin.SetupSerially(ctx, id, path, opts...)
+	} else {
+		result, err = netPlugin.Setup(ctx, id, path, opts...)
+	}
 	networkPluginOperations.WithValues(networkSetUpOp).Inc()
 	networkPluginOperationsLatency.WithValues(networkSetUpOp).UpdateSince(netStart)
 	if err != nil {
@@ -487,6 +593,10 @@ func cniNamespaceOpts(id string, config *runtime.PodSandboxConfig) ([]cni.Namesp
 	dns := toCNIDNS(config.GetDnsConfig())
 	if dns != nil {
 		opts = append(opts, cni.WithCapabilityDNS(*dns))
+	}
+
+	if cgroup := config.GetLinux().GetCgroupParent(); cgroup != "" {
+		opts = append(opts, cni.WithCapabilityCgroupPath(cgroup))
 	}
 
 	return opts, nil

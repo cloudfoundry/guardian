@@ -24,16 +24,17 @@ import (
 	"os"
 	"path/filepath"
 	gruntime "runtime"
-	"strings"
 
+	"github.com/sirupsen/logrus"
+
+	"github.com/containerd/containerd/api/runtime/task/v2"
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/protobuf"
+	"github.com/containerd/containerd/protobuf/proto"
+	"github.com/containerd/containerd/protobuf/types"
 	"github.com/containerd/containerd/runtime"
 	client "github.com/containerd/containerd/runtime/v2/shim"
-	"github.com/containerd/containerd/runtime/v2/task"
-	"github.com/containerd/ttrpc"
-	"github.com/gogo/protobuf/types"
-	"github.com/sirupsen/logrus"
 )
 
 type shimBinaryConfig struct {
@@ -118,11 +119,8 @@ func (b *binary) Start(ctx context.Context, opts *types.Any, onClose func()) (_ 
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", out, err)
 	}
-	address := strings.TrimSpace(string(out))
-	conn, err := client.Connect(address, client.AnonDialer)
-	if err != nil {
-		return nil, err
-	}
+	response := bytes.TrimSpace(out)
+
 	onCloseWithShimLog := func() {
 		onClose()
 		cancelShimLog()
@@ -132,10 +130,20 @@ func (b *binary) Start(ctx context.Context, opts *types.Any, onClose func()) (_ 
 	if err := os.WriteFile(filepath.Join(b.bundle.Path, "shim-binary-path"), []byte(b.runtime), 0600); err != nil {
 		return nil, err
 	}
-	client := ttrpc.NewClient(conn, ttrpc.WithOnClose(onCloseWithShimLog))
+
+	params, err := parseStartResponse(ctx, response)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := makeConnection(ctx, params, onCloseWithShimLog)
+	if err != nil {
+		return nil, err
+	}
+
 	return &shim{
 		bundle: b.bundle,
-		client: client,
+		client: conn,
 	}, nil
 }
 
@@ -143,7 +151,7 @@ func (b *binary) Delete(ctx context.Context) (*runtime.Exit, error) {
 	log.G(ctx).Info("cleaning up dead shim")
 
 	// On Windows and FreeBSD, the current working directory of the shim should
-	// not be the bundle path during the delete operation.  Instead, we invoke
+	// not be the bundle path during the delete operation. Instead, we invoke
 	// with the default work dir and forward the bundle path on the cmdline.
 	// Windows cannot delete the current working directory while an executable
 	// is in use with it. On FreeBSD, fork/exec can fail.
@@ -151,6 +159,15 @@ func (b *binary) Delete(ctx context.Context) (*runtime.Exit, error) {
 	if gruntime.GOOS != "windows" && gruntime.GOOS != "freebsd" {
 		bundlePath = b.bundle.Path
 	}
+	args := []string{
+		"-id", b.bundle.ID,
+		"-bundle", b.bundle.Path,
+	}
+	switch logrus.GetLevel() {
+	case logrus.DebugLevel, logrus.TraceLevel:
+		args = append(args, "-debug")
+	}
+	args = append(args, "delete")
 
 	cmd, err := client.Command(ctx,
 		&client.CommandConfig{
@@ -159,11 +176,7 @@ func (b *binary) Delete(ctx context.Context) (*runtime.Exit, error) {
 			TTRPCAddress: b.containerdTTRPCAddress,
 			Path:         bundlePath,
 			Opts:         nil,
-			Args: []string{
-				"-id", b.bundle.ID,
-				"-bundle", b.bundle.Path,
-				"delete",
-			},
+			Args:         args,
 		})
 
 	if err != nil {
@@ -184,7 +197,7 @@ func (b *binary) Delete(ctx context.Context) (*runtime.Exit, error) {
 		log.G(ctx).Warnf("cleanup warnings %s", s)
 	}
 	var response task.DeleteResponse
-	if err := response.Unmarshal(out.Bytes()); err != nil {
+	if err := proto.Unmarshal(out.Bytes(), &response); err != nil {
 		return nil, err
 	}
 	if err := b.bundle.Delete(); err != nil {
@@ -192,7 +205,7 @@ func (b *binary) Delete(ctx context.Context) (*runtime.Exit, error) {
 	}
 	return &runtime.Exit{
 		Status:    response.ExitStatus,
-		Timestamp: response.ExitedAt,
+		Timestamp: protobuf.FromTimestamp(response.ExitedAt),
 		Pid:       response.Pid,
 	}, nil
 }

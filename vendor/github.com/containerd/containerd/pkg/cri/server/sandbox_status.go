@@ -17,15 +17,14 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	goruntime "runtime"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/errdefs"
 	cni "github.com/containerd/go-cni"
 	runtimespec "github.com/opencontainers/runtime-spec/specs-go"
-	"golang.org/x/net/context"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 
 	sandboxstore "github.com/containerd/containerd/pkg/cri/store/sandbox"
@@ -70,13 +69,9 @@ func (c *criService) PodSandboxStatus(ctx context.Context, r *runtime.PodSandbox
 func (c *criService) getIPs(sandbox sandboxstore.Sandbox) (string, []string, error) {
 	config := sandbox.Config
 
-	if goruntime.GOOS != "windows" &&
-		config.GetLinux().GetSecurityContext().GetNamespaceOptions().GetNetwork() == runtime.NamespaceMode_NODE {
-		// For sandboxes using the node network we are not
-		// responsible for reporting the IP.
-		return "", nil, nil
-	}
-	if goruntime.GOOS == "windows" && config.GetWindows().GetSecurityContext().GetHostProcess() {
+	// For sandboxes using the node network we are not
+	// responsible for reporting the IP.
+	if hostNetwork(config) {
 		return "", nil, nil
 	}
 

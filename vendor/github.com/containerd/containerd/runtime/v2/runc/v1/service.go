@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 /*
    Copyright The containerd Authors.
@@ -30,8 +29,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/containerd/cgroups"
+	"github.com/containerd/cgroups/v3/cgroup1"
 	eventstypes "github.com/containerd/containerd/api/events"
+	taskAPI "github.com/containerd/containerd/api/runtime/task/v2"
 	"github.com/containerd/containerd/api/types/task"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/mount"
@@ -41,15 +41,15 @@ import (
 	"github.com/containerd/containerd/pkg/process"
 	"github.com/containerd/containerd/pkg/schedcore"
 	"github.com/containerd/containerd/pkg/stdio"
+	"github.com/containerd/containerd/protobuf"
+	"github.com/containerd/containerd/protobuf/proto"
+	ptypes "github.com/containerd/containerd/protobuf/types"
 	"github.com/containerd/containerd/runtime/v2/runc"
 	"github.com/containerd/containerd/runtime/v2/runc/options"
 	"github.com/containerd/containerd/runtime/v2/shim"
-	taskAPI "github.com/containerd/containerd/runtime/v2/task"
 	"github.com/containerd/containerd/sys/reaper"
 	runcC "github.com/containerd/go-runc"
-	"github.com/containerd/typeurl"
-	"github.com/gogo/protobuf/proto"
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/containerd/typeurl/v2"
 	"github.com/sirupsen/logrus"
 	exec "golang.org/x/sys/execabs"
 	"golang.org/x/sys/unix"
@@ -102,7 +102,7 @@ type service struct {
 	cancel func()
 }
 
-func newCommand(ctx context.Context, id, containerdBinary, containerdAddress, containerdTTRPCAddress string) (*exec.Cmd, error) {
+func newCommand(ctx context.Context, id, containerdAddress, containerdTTRPCAddress string) (*exec.Cmd, error) {
 	ns, err := namespaces.NamespaceRequired(ctx)
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func newCommand(ctx context.Context, id, containerdBinary, containerdAddress, co
 }
 
 func (s *service) StartShim(ctx context.Context, opts shim.StartOpts) (_ string, retErr error) {
-	cmd, err := newCommand(ctx, opts.ID, opts.ContainerdBinary, opts.Address, opts.TTRPCAddress)
+	cmd, err := newCommand(ctx, opts.ID, opts.Address, opts.TTRPCAddress)
 	if err != nil {
 		return "", err
 	}
@@ -203,13 +203,11 @@ func (s *service) StartShim(ctx context.Context, opts shim.StartOpts) (_ string,
 			}
 			if opts, ok := v.(*options.Options); ok {
 				if opts.ShimCgroup != "" {
-					cg, err := cgroups.Load(cgroups.V1, cgroups.StaticPath(opts.ShimCgroup))
+					cg, err := cgroup1.Load(cgroup1.StaticPath(opts.ShimCgroup))
 					if err != nil {
 						return "", fmt.Errorf("failed to load cgroup %s: %w", opts.ShimCgroup, err)
 					}
-					if err := cg.Add(cgroups.Process{
-						Pid: cmd.Process.Pid,
-					}); err != nil {
+					if err := cg.AddProc(uint64(cmd.Process.Pid)); err != nil {
 						return "", fmt.Errorf("failed to join cgroup %s: %w", opts.ShimCgroup, err)
 					}
 				}
@@ -250,13 +248,13 @@ func (s *service) Cleanup(ctx context.Context) (*taskAPI.DeleteResponse, error) 
 		root = opts.Root
 	}
 
-	r := process.NewRunc(root, path, ns, runtime, "", false)
+	r := process.NewRunc(root, path, ns, runtime, false)
 	if err := r.Delete(ctx, s.id, &runcC.DeleteOpts{
 		Force: true,
 	}); err != nil {
 		logrus.WithError(err).Warn("failed to remove runc container")
 	}
-	if err := mount.UnmountAll(filepath.Join(path, "rootfs"), 0); err != nil {
+	if err := mount.UnmountRecursive(filepath.Join(path, "rootfs"), 0); err != nil {
 		logrus.WithError(err).Warn("failed to cleanup rootfs mount")
 	}
 
@@ -266,7 +264,7 @@ func (s *service) Cleanup(ctx context.Context) (*taskAPI.DeleteResponse, error) 
 	}
 
 	return &taskAPI.DeleteResponse{
-		ExitedAt:   time.Now(),
+		ExitedAt:   protobuf.ToTimestamp(time.Now()),
 		ExitStatus: 128 + uint32(unix.SIGKILL),
 		Pid:        uint32(pid),
 	}, nil
@@ -319,7 +317,7 @@ func (s *service) Start(ctx context.Context, r *taskAPI.StartRequest) (*taskAPI.
 	}
 	switch r.ExecID {
 	case "":
-		if cg, ok := container.Cgroup().(cgroups.Cgroup); ok {
+		if cg, ok := container.Cgroup().(cgroup1.Cgroup); ok {
 			if err := s.ep.Add(container.ID, cg); err != nil {
 				logrus.WithError(err).Error("add cg to OOM monitor")
 			}
@@ -362,12 +360,12 @@ func (s *service) Delete(ctx context.Context, r *taskAPI.DeleteRequest) (*taskAP
 			ContainerID: container.ID,
 			Pid:         uint32(p.Pid()),
 			ExitStatus:  uint32(p.ExitStatus()),
-			ExitedAt:    p.ExitedAt(),
+			ExitedAt:    protobuf.ToTimestamp(p.ExitedAt()),
 		})
 	}
 	return &taskAPI.DeleteResponse{
 		ExitStatus: uint32(p.ExitStatus()),
-		ExitedAt:   p.ExitedAt(),
+		ExitedAt:   protobuf.ToTimestamp(p.ExitedAt()),
 		Pid:        uint32(p.Pid()),
 	}, nil
 }
@@ -417,18 +415,18 @@ func (s *service) State(ctx context.Context, r *taskAPI.StateRequest) (*taskAPI.
 	if err != nil {
 		return nil, err
 	}
-	status := task.StatusUnknown
+	status := task.Status_UNKNOWN
 	switch st {
 	case "created":
-		status = task.StatusCreated
+		status = task.Status_CREATED
 	case "running":
-		status = task.StatusRunning
+		status = task.Status_RUNNING
 	case "stopped":
-		status = task.StatusStopped
+		status = task.Status_STOPPED
 	case "paused":
-		status = task.StatusPaused
+		status = task.Status_PAUSED
 	case "pausing":
-		status = task.StatusPausing
+		status = task.Status_PAUSING
 	}
 	sio := p.Stdio()
 	return &taskAPI.StateResponse{
@@ -441,7 +439,7 @@ func (s *service) State(ctx context.Context, r *taskAPI.StateRequest) (*taskAPI.
 		Stderr:     sio.Stderr,
 		Terminal:   sio.Terminal,
 		ExitStatus: uint32(p.ExitStatus()),
-		ExitedAt:   p.ExitedAt(),
+		ExitedAt:   protobuf.ToTimestamp(p.ExitedAt()),
 	}, nil
 }
 
@@ -507,7 +505,7 @@ func (s *service) Pids(ctx context.Context, r *taskAPI.PidsRequest) (*taskAPI.Pi
 				d := &options.ProcessDetails{
 					ExecID: p.ID(),
 				}
-				a, err := typeurl.MarshalAny(d)
+				a, err := protobuf.MarshalAnyToProto(d)
 				if err != nil {
 					return nil, fmt.Errorf("failed to marshal process %d info: %w", pid, err)
 				}
@@ -572,7 +570,7 @@ func (s *service) Wait(ctx context.Context, r *taskAPI.WaitRequest) (*taskAPI.Wa
 
 	return &taskAPI.WaitResponse{
 		ExitStatus: uint32(p.ExitStatus()),
-		ExitedAt:   p.ExitedAt(),
+		ExitedAt:   protobuf.ToTimestamp(p.ExitedAt()),
 	}, nil
 }
 
@@ -605,14 +603,14 @@ func (s *service) Stats(ctx context.Context, r *taskAPI.StatsRequest) (*taskAPI.
 	if cgx == nil {
 		return nil, errdefs.ToGRPCf(errdefs.ErrNotFound, "cgroup does not exist")
 	}
-	cg, ok := cgx.(cgroups.Cgroup)
+	cg, ok := cgx.(cgroup1.Cgroup)
 	if !ok {
 		return nil, errdefs.ToGRPCf(errdefs.ErrNotImplemented, "cgroup v2 not implemented for Stats")
 	}
 	if cg == nil {
 		return nil, errdefs.ToGRPCf(errdefs.ErrNotFound, "cgroup does not exist")
 	}
-	stats, err := cg.Stat(cgroups.IgnoreNotExist)
+	stats, err := cg.Stat(cgroup1.IgnoreNotExist)
 	if err != nil {
 		return nil, err
 	}
@@ -621,7 +619,7 @@ func (s *service) Stats(ctx context.Context, r *taskAPI.StatsRequest) (*taskAPI.
 		return nil, err
 	}
 	return &taskAPI.StatsResponse{
-		Stats: data,
+		Stats: protobuf.FromAny(data),
 	}, nil
 }
 
@@ -664,7 +662,7 @@ func (s *service) checkProcesses(e runcC.Exit) {
 				ID:          p.ID(),
 				Pid:         uint32(e.Pid),
 				ExitStatus:  uint32(e.Status),
-				ExitedAt:    p.ExitedAt(),
+				ExitedAt:    protobuf.ToTimestamp(p.ExitedAt()),
 			})
 			return
 		}

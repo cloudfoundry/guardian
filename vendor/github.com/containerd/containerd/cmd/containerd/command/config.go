@@ -92,20 +92,24 @@ func outputConfig(cfg *srvconfig.Config) error {
 	return err
 }
 
+func defaultConfig() *srvconfig.Config {
+	return platformAgnosticDefaultConfig()
+}
+
 var configCommand = cli.Command{
 	Name:  "config",
-	Usage: "information on the containerd config",
+	Usage: "Information on the containerd config",
 	Subcommands: []cli.Command{
 		{
 			Name:  "default",
-			Usage: "see the output of the default config",
+			Usage: "See the output of the default config",
 			Action: func(context *cli.Context) error {
 				return outputConfig(defaultConfig())
 			},
 		},
 		{
 			Name:  "dump",
-			Usage: "see the output of the final main config with imported in subconfig files",
+			Usage: "See the output of the final main config with imported in subconfig files",
 			Action: func(context *cli.Context) error {
 				config := defaultConfig()
 				if err := srvconfig.LoadConfig(context.GlobalString("config"), config); err != nil && !os.IsNotExist(err) {

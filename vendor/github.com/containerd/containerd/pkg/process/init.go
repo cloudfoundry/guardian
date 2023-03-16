@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 /*
    Copyright The containerd Authors.
@@ -34,9 +33,9 @@ import (
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/mount"
 	"github.com/containerd/containerd/pkg/stdio"
+	google_protobuf "github.com/containerd/containerd/protobuf/types"
 	"github.com/containerd/fifo"
 	runc "github.com/containerd/go-runc"
-	google_protobuf "github.com/gogo/protobuf/types"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
@@ -47,7 +46,7 @@ type Init struct {
 	initState initState
 
 	// mu is used to ensure that `Start()` and `Exited()` calls return in
-	// the right order when invoked in separate go routines.
+	// the right order when invoked in separate goroutines.
 	// This is the case within the shim implementation as it makes use of
 	// the reaper interface.
 	mu sync.Mutex
@@ -79,7 +78,7 @@ type Init struct {
 }
 
 // NewRunc returns a new runc instance for a process
-func NewRunc(root, path, namespace, runtime, criu string, systemd bool) *runc.Runc {
+func NewRunc(root, path, namespace, runtime string, systemd bool) *runc.Runc {
 	if root == "" {
 		root = RuncRoot
 	}
@@ -89,7 +88,6 @@ func NewRunc(root, path, namespace, runtime, criu string, systemd bool) *runc.Ru
 		LogFormat:     runc.JSON,
 		PdeathSignal:  unix.SIGKILL,
 		Root:          filepath.Join(root, namespace),
-		Criu:          criu,
 		SystemdCgroup: systemd,
 	}
 }
@@ -309,7 +307,7 @@ func (p *Init) delete(ctx context.Context) error {
 		}
 		p.io.Close()
 	}
-	if err2 := mount.UnmountAll(p.Rootfs, 0); err2 != nil {
+	if err2 := mount.UnmountRecursive(p.Rootfs, 0); err2 != nil {
 		log.G(ctx).WithError(err2).Warn("failed to cleanup rootfs mount")
 		if err == nil {
 			err = fmt.Errorf("failed rootfs umount: %w", err2)

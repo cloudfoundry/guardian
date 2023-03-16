@@ -17,6 +17,12 @@ This will be translated by containerd into a binary name for the shim.
 
 `io.containerd.runc.v1` -> `containerd-shim-runc-v1`
 
+Since 1.6 release, it's also possible to specify absolute runtime path:
+
+```bash
+> ctr run --runtime /usr/local/bin/containerd-shim-runc-v1
+```
+
 containerd keeps the `containerd-shim-*` prefix so that users can `ps aux | grep containerd-shim` to see running shims on their system.
 
 ## Shim Authoring
@@ -36,13 +42,32 @@ This command will launch new shims.
 The start command MUST accept the following flags:
 
 * `-namespace` the namespace for the container
-* `-address` the address of the containerd's main socket
+* `-address` the address of the containerd's main grpc socket
 * `-publish-binary` the binary path to publish events back to containerd
 * `-id` the id of the container
 
 The start command, as well as all binary calls to the shim, has the bundle for the container set as the `cwd`.
 
-The start command MUST return an address to a shim for containerd to issue API requests for container operations.
+The start command may have the following containerd specific environment variables set:
+
+* `TTRPC_ADDRESS` the address of containerd's ttrpc API socket
+* `GRPC_ADDRESS` the address of containerd's grpc API socket (1.7+)
+* `MAX_SHIM_VERSION` the maximum shim version supported by the client, always `2` for shim v2 (1.7+)
+* `SCHED_CORE` enable core scheduling if available (1.6+)
+* `NAMESPACE` an optional namespace the shim is operating in or inheriting (1.7+)
+
+The start command MUST write to stdout either the ttrpc address that the shim is serving its API on, or _(experimental)_
+a JSON structure in the following format (where protocol can be either "ttrpc" or "grpc"):
+
+```json
+{
+	"version": 2,
+	"address": "/address/of/task/service",
+	"protocol": "grpc"
+}
+```
+
+The address will be used by containerd to issue API requests for container operations.
 
 The start command can either start a new shim or return an address to an existing shim based on the shim's logic.
 
@@ -61,9 +86,9 @@ The delete command MUST accept the following flags:
 * `-address` the address of the containerd's main socket
 * `-publish-binary` the binary path to publish events back to containerd
 * `-id` the id of the container
-* `-bundle` the path to the bundle to delete. On non-Windows platforms this will match `cwd`
+* `-bundle` the path to the bundle to delete. On non-Windows and non-FreeBSD platforms this will match `cwd`
 
-The delete command will be executed in the container's bundle as its `cwd` except for on the Windows platform.
+The delete command will be executed in the container's bundle as its `cwd` except for on Windows and FreeBSD platforms.
 
 ### Host Level Shim Configuration
 
@@ -173,6 +198,90 @@ The Runtime v2 supports an async event model. In order for the an upstream calle
 | `runtime.TaskExitEventTopic`        | MUST (follow `TaskExecStartedEventTopic`) | When an exec (other than the init exec) exits expected or unexpected |
 | `runtime.TaskDeleteEventTopic`      | SHOULD (follow `TaskExitEventTopic` or `TaskExecAddedEventTopic` if never started) | When an exec is removed from a shim |
 
+### Flow
+
+The following sequence diagram shows the flow of actions when `ctr run` command executed.
+
+```mermaid
+sequenceDiagram
+    participant ctr
+    participant containerd
+    participant shim
+
+    autonumber
+
+    ctr->>containerd: Create container
+    Note right of containerd: Save container metadata
+    containerd-->>ctr: Container ID
+
+    ctr->>containerd: Create task
+
+    %% Start shim
+    containerd-->shim: Prepare bundle
+    containerd->>shim: Execute binary: containerd-shim-runc-v1 start
+    shim->shim: Start TTRPC server
+    shim-->>containerd: Respond with address: unix://containerd/container.sock
+
+    containerd-->>shim: Create TTRPC client
+
+    %% Schedule task
+
+    Note right of containerd: Schedule new task
+
+    containerd->>shim: TaskService.CreateTaskRequest
+    shim-->>containerd: Task PID
+
+    containerd-->>ctr: Task ID
+
+    %% Start task
+
+    ctr->>containerd: Start task
+
+    containerd->>shim: TaskService.StartRequest
+    shim-->>containerd: OK
+
+    %% Wait task
+
+    ctr->>containerd: Wait task
+
+    containerd->>shim: TaskService.WaitRequest
+    Note right of shim: Block until task exits
+    shim-->>containerd: Exit status
+
+    containerd-->>ctr: OK
+
+    Note over ctr,shim: Other task requests (Kill, Pause, Resume, CloseIO, Exec, etc)
+
+    %% Kill signal
+
+    opt Kill task
+
+    ctr->>containerd: Kill task
+
+    containerd->>shim: TaskService.KillRequest
+    shim-->>containerd: OK
+
+    containerd-->>ctr: OK
+
+    end
+
+    %% Delete task
+
+    ctr->>containerd: Task Delete
+
+    containerd->>shim: TaskService.DeleteRequest
+    shim-->>containerd: Exit information
+
+    containerd->>shim: TaskService.ShutdownRequest
+    shim-->>containerd: OK
+
+    containerd-->shim: Close client
+    containerd->>shim: Execute binary: containerd-shim-runc-v1 delete
+    containerd-->shim: Delete bundle
+
+    containerd-->>ctr: Exit code
+```
+
 #### Logging
 
 Shims may support pluggable logging via STDIO URIs.
@@ -247,8 +356,8 @@ Messages will automatically be output in the containerd's daemon logs with the c
 
 #### ttrpc
 
-[ttrpc](https://github.com/containerd/ttrpc) is the only currently supported protocol for shims.
+[ttrpc](https://github.com/containerd/ttrpc) is one of the supported protocols for shims.
 It works with standard protobufs and GRPC services as well as generating clients.
 The only difference between grpc and ttrpc is the wire protocol.
 ttrpc removes the http stack in order to save memory and binary size to keep shims small.
-It is recommended to use ttrpc in your shim but grpc support is also in development.
+It is recommended to use ttrpc in your shim but grpc support is currently an experimental feature.

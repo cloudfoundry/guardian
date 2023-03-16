@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 /*
    Copyright The containerd Authors.
@@ -184,7 +183,7 @@ func (b *bundle) Delete() error {
 	if err2 == nil {
 		return err
 	}
-	return fmt.Errorf("Failed to remove both bundle and workdir locations: %v: %w", err2, err)
+	return fmt.Errorf("failed to remove both bundle and workdir locations: %v: %w", err2, err)
 }
 
 func (b *bundle) legacyShimAddress(namespace string) string {
@@ -217,12 +216,10 @@ func (b *bundle) decideShimAddress(namespace string) string {
 
 func (b *bundle) shimConfig(namespace string, c *Config, runcOptions *runctypes.RuncOptions) shim.Config {
 	var (
-		criuPath      string
 		runtimeRoot   = c.RuntimeRoot
 		systemdCgroup bool
 	)
 	if runcOptions != nil {
-		criuPath = runcOptions.CriuPath
 		systemdCgroup = runcOptions.SystemdCgroup
 		if runcOptions.RuntimeRoot != "" {
 			runtimeRoot = runcOptions.RuntimeRoot
@@ -232,7 +229,6 @@ func (b *bundle) shimConfig(namespace string, c *Config, runcOptions *runctypes.
 		Path:          b.path,
 		WorkDir:       b.workDir,
 		Namespace:     namespace,
-		Criu:          criuPath,
 		RuntimeRoot:   runtimeRoot,
 		SystemdCgroup: systemdCgroup,
 	}

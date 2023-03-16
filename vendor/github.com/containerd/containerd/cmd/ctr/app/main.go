@@ -24,6 +24,7 @@ import (
 	"github.com/containerd/containerd/cmd/ctr/commands/content"
 	"github.com/containerd/containerd/cmd/ctr/commands/events"
 	"github.com/containerd/containerd/cmd/ctr/commands/images"
+	"github.com/containerd/containerd/cmd/ctr/commands/info"
 	"github.com/containerd/containerd/cmd/ctr/commands/install"
 	"github.com/containerd/containerd/cmd/ctr/commands/leases"
 	namespacesCmd "github.com/containerd/containerd/cmd/ctr/commands/namespaces"
@@ -31,6 +32,7 @@ import (
 	"github.com/containerd/containerd/cmd/ctr/commands/plugins"
 	"github.com/containerd/containerd/cmd/ctr/commands/pprof"
 	"github.com/containerd/containerd/cmd/ctr/commands/run"
+	"github.com/containerd/containerd/cmd/ctr/commands/sandboxes"
 	"github.com/containerd/containerd/cmd/ctr/commands/snapshots"
 	"github.com/containerd/containerd/cmd/ctr/commands/tasks"
 	versionCmd "github.com/containerd/containerd/cmd/ctr/commands/version"
@@ -76,25 +78,25 @@ containerd CLI
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "debug",
-			Usage: "enable debug output in logs",
+			Usage: "Enable debug output in logs",
 		},
 		cli.StringFlag{
 			Name:   "address, a",
-			Usage:  "address for containerd's GRPC server",
+			Usage:  "Address for containerd's GRPC server",
 			Value:  defaults.DefaultAddress,
 			EnvVar: "CONTAINERD_ADDRESS",
 		},
 		cli.DurationFlag{
 			Name:  "timeout",
-			Usage: "total timeout for ctr commands",
+			Usage: "Total timeout for ctr commands",
 		},
 		cli.DurationFlag{
 			Name:  "connect-timeout",
-			Usage: "timeout for connecting to containerd",
+			Usage: "Timeout for connecting to containerd",
 		},
 		cli.StringFlag{
 			Name:   "namespace, n",
-			Usage:  "namespace to use with commands",
+			Usage:  "Namespace to use with commands",
 			Value:  namespaces.Default,
 			EnvVar: namespaces.NamespaceEnvVar,
 		},
@@ -114,6 +116,8 @@ containerd CLI
 		tasks.Command,
 		install.Command,
 		ociCmd.Command,
+		sandboxes.Command,
+		info.Command,
 	}, extraCmds...)
 	app.Before = func(context *cli.Context) error {
 		if context.GlobalBool("debug") {

@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 /*
    Copyright The containerd Authors.
@@ -22,7 +21,7 @@ package common
 import (
 	"context"
 
-	"github.com/gogo/protobuf/types"
+	"github.com/containerd/containerd/protobuf/types"
 )
 
 // Statable type that returns cgroup metrics

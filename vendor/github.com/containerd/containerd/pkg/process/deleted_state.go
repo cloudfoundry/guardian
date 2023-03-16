@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 /*
    Copyright The containerd Authors.
@@ -26,7 +25,7 @@ import (
 
 	"github.com/containerd/console"
 	"github.com/containerd/containerd/errdefs"
-	google_protobuf "github.com/gogo/protobuf/types"
+	google_protobuf "github.com/containerd/containerd/protobuf/types"
 )
 
 type deletedState struct {

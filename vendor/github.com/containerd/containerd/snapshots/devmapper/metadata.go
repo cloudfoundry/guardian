@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 /*
    Copyright The containerd Authors.
@@ -26,6 +25,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/containerd/containerd/errdefs"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -50,18 +50,18 @@ var (
 
 var (
 	// ErrNotFound represents an error returned when object not found in meta store
-	ErrNotFound = errors.New("not found")
+	ErrNotFound = errdefs.ErrNotFound
 	// ErrAlreadyExists represents an error returned when object can't be duplicated in meta store
-	ErrAlreadyExists = errors.New("object already exists")
+	ErrAlreadyExists = errdefs.ErrAlreadyExists
 )
 
-// PoolMetadata keeps device info for the given thin-pool device, it also responsible for
-// generating next available device ids and tracking devmapper transaction numbers
+// PoolMetadata keeps device info for the given thin-pool device, generates next available device ids,
+// and tracks devmapper transaction numbers
 type PoolMetadata struct {
 	db *bolt.DB
 }
 
-// NewPoolMetadata creates new or open existing pool metadata database
+// NewPoolMetadata creates new or opens existing pool metadata database
 func NewPoolMetadata(dbfile string) (*PoolMetadata, error) {
 	db, err := bolt.Open(dbfile, 0600, nil)
 	if err != nil {
@@ -133,7 +133,7 @@ func (m *PoolMetadata) ChangeDeviceState(ctx context.Context, name string, state
 
 // MarkFaulty marks the given device and corresponding devmapper device ID as faulty.
 // The snapshotter might attempt to recreate a device in 'Faulty' state with another devmapper ID in
-// subsequent calls, and in case of success it's status will be changed to 'Created' or 'Activated'.
+// subsequent calls, and in case of success its status will be changed to 'Created' or 'Activated'.
 // The devmapper dev ID will remain in 'deviceFaulty' state until manually handled by a user.
 func (m *PoolMetadata) MarkFaulty(ctx context.Context, name string) error {
 	return m.db.Update(func(tx *bolt.Tx) error {

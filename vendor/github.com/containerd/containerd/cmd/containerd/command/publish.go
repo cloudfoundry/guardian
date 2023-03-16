@@ -28,7 +28,8 @@ import (
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/pkg/dialer"
-	"github.com/gogo/protobuf/types"
+	"github.com/containerd/containerd/protobuf/proto"
+	"github.com/containerd/containerd/protobuf/types"
 	"github.com/urfave/cli"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
@@ -37,15 +38,15 @@ import (
 
 var publishCommand = cli.Command{
 	Name:  "publish",
-	Usage: "binary to publish events to containerd",
+	Usage: "Binary to publish events to containerd",
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "namespace",
-			Usage: "namespace to publish to",
+			Usage: "Namespace to publish to",
 		},
 		cli.StringFlag{
 			Name:  "topic",
-			Usage: "topic of the event",
+			Usage: "Topic of the event",
 		},
 	},
 	Action: func(context *cli.Context) error {
@@ -78,7 +79,7 @@ func getEventPayload(r io.Reader) (*types.Any, error) {
 		return nil, err
 	}
 	var any types.Any
-	if err := any.Unmarshal(data); err != nil {
+	if err := proto.Unmarshal(data, &any); err != nil {
 		return nil, err
 	}
 	return &any, nil

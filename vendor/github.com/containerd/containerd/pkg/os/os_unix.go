@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 /*
    Copyright The containerd Authors.
@@ -22,17 +21,7 @@ package os
 import (
 	"os"
 	"path/filepath"
-
-	"github.com/containerd/containerd/mount"
 )
-
-// UNIX collects unix system level operations that need to be
-// mocked out during tests.
-type UNIX interface {
-	Mount(source string, target string, fstype string, flags uintptr, data string) error
-	Unmount(target string) error
-	LookupMount(path string) (mount.Info, error)
-}
 
 // ResolveSymbolicLink will follow any symbolic links
 func (RealOS) ResolveSymbolicLink(path string) (string, error) {

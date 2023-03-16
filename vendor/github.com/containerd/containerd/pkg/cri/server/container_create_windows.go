@@ -18,12 +18,15 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
-	"github.com/containerd/containerd/oci"
 	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 	runtimespec "github.com/opencontainers/runtime-spec/specs-go"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
+
+	"github.com/containerd/containerd/oci"
+	"github.com/containerd/containerd/snapshots"
 
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	"github.com/containerd/containerd/pkg/cri/config"
@@ -48,9 +51,8 @@ func (c *criService) containerSpec(
 	extraMounts []*runtime.Mount,
 	ociRuntime config.Runtime,
 ) (*runtimespec.Spec, error) {
-	specOpts := []oci.SpecOpts{
-		customopts.WithProcessArgs(config, imageConfig),
-	}
+	var specOpts []oci.SpecOpts
+	specOpts = append(specOpts, customopts.WithProcessCommandLineOrArgsForWindows(config, imageConfig))
 
 	// All containers in a pod need to have HostProcess set if it was set on the pod,
 	// and vice versa no containers in the pod can be HostProcess if the pods spec
@@ -83,11 +85,11 @@ func (c *criService) containerSpec(
 		// Clear the root location since hcsshim expects it.
 		// NOTE: readonly rootfs doesn't work on windows.
 		customopts.WithoutRoot,
-		customopts.WithWindowsNetworkNamespace(netNSPath),
+		oci.WithWindowsNetworkNamespace(netNSPath),
 		oci.WithHostname(sandboxConfig.GetHostname()),
 	)
 
-	specOpts = append(specOpts, customopts.WithWindowsMounts(c.os, config, extraMounts))
+	specOpts = append(specOpts, customopts.WithWindowsMounts(c.os, config, extraMounts), customopts.WithWindowsDevices(config))
 
 	// Start with the image config user and override below if RunAsUsername is not "".
 	username := imageConfig.User
@@ -124,20 +126,34 @@ func (c *criService) containerSpec(
 		specOpts = append(specOpts, customopts.WithAnnotation(pKey, pValue))
 	}
 
+	specOpts = append(specOpts, customopts.WithAnnotation(annotations.WindowsHostProcess, strconv.FormatBool(sandboxHpc)))
 	specOpts = append(specOpts,
-		customopts.WithAnnotation(annotations.ContainerType, annotations.ContainerTypeContainer),
-		customopts.WithAnnotation(annotations.SandboxID, sandboxID),
-		customopts.WithAnnotation(annotations.SandboxNamespace, sandboxConfig.GetMetadata().GetNamespace()),
-		customopts.WithAnnotation(annotations.SandboxUID, sandboxConfig.GetMetadata().GetUid()),
-		customopts.WithAnnotation(annotations.SandboxName, sandboxConfig.GetMetadata().GetName()),
-		customopts.WithAnnotation(annotations.ContainerName, containerName),
-		customopts.WithAnnotation(annotations.ImageName, imageName),
-		customopts.WithAnnotation(annotations.WindowsHostProcess, strconv.FormatBool(sandboxHpc)),
+		annotations.DefaultCRIAnnotations(sandboxID, containerName, imageName, sandboxConfig, false)...,
 	)
+
 	return c.runtimeSpec(id, ociRuntime.BaseRuntimeSpec, specOpts...)
 }
 
 // No extra spec options needed for windows.
 func (c *criService) containerSpecOpts(config *runtime.ContainerConfig, imageConfig *imagespec.ImageConfig) ([]oci.SpecOpts, error) {
 	return nil, nil
+}
+
+// snapshotterOpts returns any Windows specific snapshotter options for the r/w layer
+func snapshotterOpts(snapshotterName string, config *runtime.ContainerConfig) ([]snapshots.Opt, error) {
+	var opts []snapshots.Opt
+
+	switch snapshotterName {
+	case "windows":
+		rootfsSize := config.GetWindows().GetResources().GetRootfsSizeInBytes()
+		if rootfsSize != 0 {
+			sizeStr := fmt.Sprintf("%d", rootfsSize)
+			labels := map[string]string{
+				"containerd.io/snapshot/windows/rootfs.sizebytes": sizeStr,
+			}
+			opts = append(opts, snapshots.WithLabels(labels))
+		}
+	}
+
+	return opts, nil
 }

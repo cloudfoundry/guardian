@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 /*
    Copyright The containerd Authors.
@@ -37,13 +36,14 @@ import (
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/pkg/process"
 	"github.com/containerd/containerd/pkg/stdio"
+	"github.com/containerd/containerd/protobuf"
+	ptypes "github.com/containerd/containerd/protobuf/types"
 	"github.com/containerd/containerd/runtime"
 	"github.com/containerd/containerd/runtime/linux/runctypes"
 	shimapi "github.com/containerd/containerd/runtime/v1/shim/v1"
 	"github.com/containerd/containerd/sys/reaper"
 	runc "github.com/containerd/go-runc"
-	"github.com/containerd/typeurl"
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/containerd/typeurl/v2"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -62,9 +62,15 @@ var (
 
 // Config contains shim specific configuration
 type Config struct {
-	Path          string
-	Namespace     string
-	WorkDir       string
+	Path      string
+	Namespace string
+	WorkDir   string
+	// Criu is the path to the criu binary used for checkpoint and restore.
+	//
+	// Deprecated: runc option --criu is now ignored (with a warning), and the
+	// option will be removed entirely in a future release. Users who need a non-
+	// standard criu binary should rely on the standard way of looking up binaries
+	// in $PATH.
 	Criu          string
 	RuntimeRoot   string
 	SystemdCgroup bool
@@ -76,7 +82,7 @@ func NewService(config Config, publisher events.Publisher) (*Service, error) {
 		return nil, fmt.Errorf("shim namespace cannot be empty")
 	}
 	ctx := namespaces.WithNamespace(context.Background(), config.Namespace)
-	ctx = log.WithLogger(ctx, logrus.WithFields(logrus.Fields{
+	ctx = log.WithLogger(ctx, logrus.WithFields(log.Fields{
 		"namespace": config.Namespace,
 		"path":      config.Path,
 		"pid":       os.Getpid(),
@@ -114,9 +120,9 @@ type Service struct {
 
 // Create a new initial process and container with the underlying OCI runtime
 func (s *Service) Create(ctx context.Context, r *shimapi.CreateTaskRequest) (_ *shimapi.CreateTaskResponse, err error) {
-	var mounts []process.Mount
+	var pmounts []process.Mount
 	for _, m := range r.Rootfs {
-		mounts = append(mounts, process.Mount{
+		pmounts = append(pmounts, process.Mount{
 			Type:    m.Type,
 			Source:  m.Source,
 			Target:  m.Target,
@@ -125,7 +131,7 @@ func (s *Service) Create(ctx context.Context, r *shimapi.CreateTaskRequest) (_ *
 	}
 
 	rootfs := ""
-	if len(mounts) > 0 {
+	if len(pmounts) > 0 {
 		rootfs = filepath.Join(r.Bundle, "rootfs")
 		if err := os.Mkdir(rootfs, 0711); err != nil && !os.IsExist(err) {
 			return nil, err
@@ -136,7 +142,7 @@ func (s *Service) Create(ctx context.Context, r *shimapi.CreateTaskRequest) (_ *
 		ID:               r.ID,
 		Bundle:           r.Bundle,
 		Runtime:          r.Runtime,
-		Rootfs:           mounts,
+		Rootfs:           pmounts,
 		Terminal:         r.Terminal,
 		Stdin:            r.Stdin,
 		Stdout:           r.Stdout,
@@ -145,22 +151,24 @@ func (s *Service) Create(ctx context.Context, r *shimapi.CreateTaskRequest) (_ *
 		ParentCheckpoint: r.ParentCheckpoint,
 		Options:          r.Options,
 	}
+	var mounts []mount.Mount
+	for _, pm := range pmounts {
+		mounts = append(mounts, mount.Mount{
+			Type:    pm.Type,
+			Source:  pm.Source,
+			Target:  pm.Target,
+			Options: pm.Options,
+		})
+	}
 	defer func() {
 		if err != nil {
-			if err2 := mount.UnmountAll(rootfs, 0); err2 != nil {
+			if err2 := mount.UnmountMounts(mounts, rootfs, 0); err2 != nil {
 				log.G(ctx).WithError(err2).Warn("Failed to cleanup rootfs mount")
 			}
 		}
 	}()
-	for _, rm := range mounts {
-		m := &mount.Mount{
-			Type:    rm.Type,
-			Source:  rm.Source,
-			Options: rm.Options,
-		}
-		if err := m.Mount(rootfs); err != nil {
-			return nil, fmt.Errorf("failed to mount rootfs component %v: %w", m, err)
-		}
+	if err := mount.All(mounts, rootfs); err != nil {
+		return nil, fmt.Errorf("failed to mount rootfs component: %w", err)
 	}
 
 	s.mu.Lock()
@@ -172,7 +180,6 @@ func (s *Service) Create(ctx context.Context, r *shimapi.CreateTaskRequest) (_ *
 		s.config.WorkDir,
 		s.config.RuntimeRoot,
 		s.config.Namespace,
-		s.config.Criu,
 		s.config.SystemdCgroup,
 		s.platform,
 		config,
@@ -224,7 +231,7 @@ func (s *Service) Delete(ctx context.Context, r *ptypes.Empty) (*shimapi.DeleteR
 	s.platform.Close()
 	return &shimapi.DeleteResponse{
 		ExitStatus: uint32(p.ExitStatus()),
-		ExitedAt:   p.ExitedAt(),
+		ExitedAt:   protobuf.ToTimestamp(p.ExitedAt()),
 		Pid:        uint32(p.Pid()),
 	}, nil
 }
@@ -246,7 +253,7 @@ func (s *Service) DeleteProcess(ctx context.Context, r *shimapi.DeleteProcessReq
 	s.mu.Unlock()
 	return &shimapi.DeleteResponse{
 		ExitStatus: uint32(p.ExitStatus()),
-		ExitedAt:   p.ExitedAt(),
+		ExitedAt:   protobuf.ToTimestamp(p.ExitedAt()),
 		Pid:        uint32(p.Pid()),
 	}, nil
 }
@@ -314,18 +321,18 @@ func (s *Service) State(ctx context.Context, r *shimapi.StateRequest) (*shimapi.
 	if err != nil {
 		return nil, err
 	}
-	status := task.StatusUnknown
+	status := task.Status_UNKNOWN
 	switch st {
 	case "created":
-		status = task.StatusCreated
+		status = task.Status_CREATED
 	case "running":
-		status = task.StatusRunning
+		status = task.Status_RUNNING
 	case "stopped":
-		status = task.StatusStopped
+		status = task.Status_STOPPED
 	case "paused":
-		status = task.StatusPaused
+		status = task.Status_PAUSED
 	case "pausing":
-		status = task.StatusPausing
+		status = task.Status_PAUSING
 	}
 	sio := p.Stdio()
 	return &shimapi.StateResponse{
@@ -338,7 +345,7 @@ func (s *Service) State(ctx context.Context, r *shimapi.StateRequest) (*shimapi.
 		Stderr:     sio.Stderr,
 		Terminal:   sio.Terminal,
 		ExitStatus: uint32(p.ExitStatus()),
-		ExitedAt:   p.ExitedAt(),
+		ExitedAt:   protobuf.ToTimestamp(p.ExitedAt()),
 	}, nil
 }
 
@@ -412,7 +419,7 @@ func (s *Service) ListPids(ctx context.Context, r *shimapi.ListPidsRequest) (*sh
 				if err != nil {
 					return nil, fmt.Errorf("failed to marshal process %d info: %w", pid, err)
 				}
-				pInfo.Info = a
+				pInfo.Info = protobuf.FromAny(a)
 				break
 			}
 		}
@@ -443,13 +450,13 @@ func (s *Service) Checkpoint(ctx context.Context, r *shimapi.CheckpointTaskReque
 	if err != nil {
 		return nil, err
 	}
-	var options runctypes.CheckpointOptions
+	var options *runctypes.CheckpointOptions
 	if r.Options != nil {
 		v, err := typeurl.UnmarshalAny(r.Options)
 		if err != nil {
 			return nil, err
 		}
-		options = *v.(*runctypes.CheckpointOptions)
+		options = v.(*runctypes.CheckpointOptions)
 	}
 	if err := p.(*process.Init).Checkpoint(ctx, &process.CheckpointConfig{
 		Path:                     r.Path,
@@ -495,7 +502,7 @@ func (s *Service) Wait(ctx context.Context, r *shimapi.WaitRequest) (*shimapi.Wa
 
 	return &shimapi.WaitResponse{
 		ExitStatus: uint32(p.ExitStatus()),
-		ExitedAt:   p.ExitedAt(),
+		ExitedAt:   protobuf.ToTimestamp(p.ExitedAt()),
 	}, nil
 }
 
@@ -535,7 +542,7 @@ func (s *Service) checkProcesses(e runc.Exit) {
 		ID:          p.ID(),
 		Pid:         uint32(e.Pid),
 		ExitStatus:  uint32(e.Status),
-		ExitedAt:    p.ExitedAt(),
+		ExitedAt:    protobuf.ToTimestamp(p.ExitedAt()),
 	}
 }
 
@@ -637,17 +644,17 @@ func getTopic(ctx context.Context, e interface{}) string {
 	return runtime.TaskUnknownTopic
 }
 
-func newInit(ctx context.Context, path, workDir, runtimeRoot, namespace, criu string, systemdCgroup bool, platform stdio.Platform, r *process.CreateConfig, rootfs string) (*process.Init, error) {
-	var options runctypes.CreateOptions
+func newInit(ctx context.Context, path, workDir, runtimeRoot, namespace string, systemdCgroup bool, platform stdio.Platform, r *process.CreateConfig, rootfs string) (*process.Init, error) {
+	options := &runctypes.CreateOptions{}
 	if r.Options != nil {
 		v, err := typeurl.UnmarshalAny(r.Options)
 		if err != nil {
 			return nil, err
 		}
-		options = *v.(*runctypes.CreateOptions)
+		options = v.(*runctypes.CreateOptions)
 	}
 
-	runtime := process.NewRunc(runtimeRoot, path, namespace, r.Runtime, criu, systemdCgroup)
+	runtime := process.NewRunc(runtimeRoot, path, namespace, r.Runtime, systemdCgroup)
 	p := process.New(r.ID, runtime, stdio.Stdio{
 		Stdin:    r.Stdin,
 		Stdout:   r.Stdout,

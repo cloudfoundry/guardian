@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 /*
    Copyright The containerd Authors.
@@ -20,7 +19,7 @@
 package v2
 
 import (
-	v2 "github.com/containerd/cgroups/v2/stats"
+	v2 "github.com/containerd/cgroups/v3/cgroup2/stats"
 )
 
 type (

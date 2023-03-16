@@ -1,5 +1,4 @@
 //go:build !darwin && !freebsd
-// +build !darwin,!freebsd
 
 /*
    Copyright The containerd Authors.
@@ -20,6 +19,7 @@
 package server
 
 import (
+	"context"
 	gocontext "context"
 	"fmt"
 
@@ -27,9 +27,8 @@ import (
 	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/log"
-	"github.com/containerd/typeurl"
+	"github.com/containerd/typeurl/v2"
 	runtimespec "github.com/opencontainers/runtime-spec/specs-go"
-	"golang.org/x/net/context"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 
 	containerstore "github.com/containerd/containerd/pkg/cri/store/container"
@@ -42,6 +41,21 @@ func (c *criService) UpdateContainerResources(ctx context.Context, r *runtime.Up
 	if err != nil {
 		return nil, fmt.Errorf("failed to find container: %w", err)
 	}
+
+	sandbox, err := c.sandboxStore.Get(container.SandboxID)
+	if err != nil {
+		return nil, err
+	}
+
+	resources := r.GetLinux()
+	updated, err := c.nri.UpdateContainerResources(ctx, &sandbox, &container, resources)
+	if err != nil {
+		return nil, fmt.Errorf("NRI container update failed: %w", err)
+	}
+	if updated != nil {
+		*resources = *updated
+	}
+
 	// Update resources in status update transaction, so that:
 	// 1) There won't be race condition with container start.
 	// 2) There won't be concurrent resource update to the same container.
@@ -50,6 +64,12 @@ func (c *criService) UpdateContainerResources(ctx context.Context, r *runtime.Up
 	}); err != nil {
 		return nil, fmt.Errorf("failed to update resources: %w", err)
 	}
+
+	err = c.nri.PostUpdateContainerResources(ctx, &sandbox, &container)
+	if err != nil {
+		log.G(ctx).WithError(err).Errorf("NRI post-update notification failed")
+	}
+
 	return &runtime.UpdateContainerResourcesResponse{}, nil
 }
 

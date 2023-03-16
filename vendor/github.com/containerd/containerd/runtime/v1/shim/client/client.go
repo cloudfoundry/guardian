@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 /*
    Copyright The containerd Authors.
@@ -35,13 +34,12 @@ import (
 
 	"github.com/containerd/containerd/events"
 	"github.com/containerd/containerd/log"
+	ptypes "github.com/containerd/containerd/protobuf/types"
 	v1 "github.com/containerd/containerd/runtime/v1"
 	"github.com/containerd/containerd/runtime/v1/shim"
 	shimapi "github.com/containerd/containerd/runtime/v1/shim/v1"
 	"github.com/containerd/containerd/sys"
 	"github.com/containerd/ttrpc"
-	ptypes "github.com/gogo/protobuf/types"
-	"github.com/sirupsen/logrus"
 	exec "golang.org/x/sys/execabs"
 	"golang.org/x/sys/unix"
 )
@@ -116,7 +114,7 @@ func WithStart(binary, address, daemonAddress, cgroup string, debug bool, exitHa
 			socket.Close()
 			RemoveSocket(address)
 		}()
-		log.G(ctx).WithFields(logrus.Fields{
+		log.G(ctx).WithFields(log.Fields{
 			"pid":     cmd.Process.Pid,
 			"address": address,
 			"debug":   debug,
@@ -133,7 +131,7 @@ func WithStart(binary, address, daemonAddress, cgroup string, debug bool, exitHa
 			if err := setCgroup(cgroup, cmd); err != nil {
 				return nil, nil, err
 			}
-			log.G(ctx).WithFields(logrus.Fields{
+			log.G(ctx).WithFields(log.Fields{
 				"pid":     cmd.Process.Pid,
 				"address": address,
 			}).Infof("shim placed in cgroup %s", cgroup)
@@ -197,9 +195,6 @@ func newCommand(binary, daemonAddress string, debug bool, config shim.Config, so
 		"-containerd-binary", selfExe,
 	}
 
-	if config.Criu != "" {
-		args = append(args, "-criu-path", config.Criu)
-	}
 	if config.RuntimeRoot != "" {
 		args = append(args, "-runtime-root", config.RuntimeRoot)
 	}

@@ -1,5 +1,4 @@
 //go:build !windows && !linux
-// +build !windows,!linux
 
 /*
    Copyright The containerd Authors.
@@ -22,6 +21,8 @@ package server
 import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/oci"
+	"github.com/containerd/containerd/pkg/cri/annotations"
+	"github.com/containerd/containerd/snapshots"
 	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 	runtimespec "github.com/opencontainers/runtime-spec/specs-go"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
@@ -29,7 +30,7 @@ import (
 
 func (c *criService) sandboxContainerSpec(id string, config *runtime.PodSandboxConfig,
 	imageConfig *imagespec.ImageConfig, nsPath string, runtimePodAnnotations []string) (_ *runtimespec.Spec, retErr error) {
-	return c.runtimeSpec(id, "")
+	return c.runtimeSpec(id, "", annotations.DefaultCRIAnnotations(id, "", "", config, true)...)
 }
 
 // sandboxContainerSpecOpts generates OCI spec options for
@@ -56,4 +57,10 @@ func (c *criService) taskOpts(runtimeType string) []containerd.NewTaskOpts {
 }
 
 func (c *criService) updateNetNamespacePath(spec *runtimespec.Spec, nsPath string) {
+}
+
+// sandboxSnapshotterOpts generates any platform specific snapshotter options
+// for a sandbox container.
+func sandboxSnapshotterOpts(config *runtime.PodSandboxConfig) ([]snapshots.Opt, error) {
+	return []snapshots.Opt{}, nil
 }

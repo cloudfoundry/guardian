@@ -27,9 +27,10 @@ import (
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/metadata"
+	"github.com/containerd/containerd/pkg/epoch"
 	"github.com/containerd/containerd/plugin"
+	ptypes "github.com/containerd/containerd/protobuf/types"
 	"github.com/containerd/containerd/services"
-	ptypes "github.com/gogo/protobuf/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -82,7 +83,7 @@ func (l *local) Get(ctx context.Context, req *imagesapi.GetImageRequest, _ ...gr
 
 	imagepb := imageToProto(&image)
 	return &imagesapi.GetImageResponse{
-		Image: &imagepb,
+		Image: imagepb,
 	}, nil
 }
 
@@ -104,9 +105,13 @@ func (l *local) Create(ctx context.Context, req *imagesapi.CreateImageRequest, _
 	}
 
 	var (
-		image = imageFromProto(&req.Image)
+		image = imageFromProto(req.Image)
 		resp  imagesapi.CreateImageResponse
 	)
+	if req.SourceDateEpoch != nil {
+		tm := req.SourceDateEpoch.AsTime()
+		ctx = epoch.WithSourceDateEpoch(ctx, &tm)
+	}
 	created, err := l.store.Create(ctx, image)
 	if err != nil {
 		return nil, errdefs.ToGRPC(err)
@@ -131,13 +136,18 @@ func (l *local) Update(ctx context.Context, req *imagesapi.UpdateImageRequest, _
 	}
 
 	var (
-		image      = imageFromProto(&req.Image)
+		image      = imageFromProto(req.Image)
 		resp       imagesapi.UpdateImageResponse
 		fieldpaths []string
 	)
 
 	if req.UpdateMask != nil && len(req.UpdateMask.Paths) > 0 {
 		fieldpaths = append(fieldpaths, req.UpdateMask.Paths...)
+	}
+
+	if req.SourceDateEpoch != nil {
+		tm := req.SourceDateEpoch.AsTime()
+		ctx = epoch.WithSourceDateEpoch(ctx, &tm)
 	}
 
 	updated, err := l.store.Update(ctx, image, fieldpaths...)

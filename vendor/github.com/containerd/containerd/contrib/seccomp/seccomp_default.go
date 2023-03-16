@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 /*
    Copyright The containerd Authors.
@@ -357,7 +356,6 @@ func DefaultProfile(sp *specs.Spec) *specs.LinuxSeccomp {
 				"signalfd4",
 				"sigprocmask",
 				"sigreturn",
-				"socket",
 				"socketcall",
 				"socketpair",
 				"splice",
@@ -410,6 +408,17 @@ func DefaultProfile(sp *specs.Spec) *specs.LinuxSeccomp {
 			},
 			Action: specs.ActAllow,
 			Args:   []specs.LinuxSeccompArg{},
+		},
+		{
+			Names:  []string{"socket"},
+			Action: specs.ActAllow,
+			Args: []specs.LinuxSeccompArg{
+				{
+					Index: 0,
+					Value: unix.AF_VSOCK,
+					Op:    specs.OpNotEqual,
+				},
+			},
 		},
 		{
 			Names:  []string{"personality"},
@@ -479,7 +488,11 @@ func DefaultProfile(sp *specs.Spec) *specs.LinuxSeccomp {
 		kernelversion.KernelVersion{Kernel: 4, Major: 8}); err == nil {
 		if ok {
 			s.Syscalls = append(s.Syscalls, specs.LinuxSyscall{
-				Names:  []string{"ptrace"},
+				Names: []string{
+					"process_vm_readv",
+					"process_vm_writev",
+					"ptrace",
+				},
 				Action: specs.ActAllow,
 				Args:   []specs.LinuxSeccompArg{},
 			})

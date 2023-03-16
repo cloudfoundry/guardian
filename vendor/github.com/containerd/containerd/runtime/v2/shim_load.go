@@ -18,12 +18,15 @@ package v2
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 
+	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/mount"
 	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/pkg/cleanup"
 )
 
 func (m *ShimManager) loadExistingTasks(ctx context.Context) error {
@@ -58,6 +61,8 @@ func (m *ShimManager) loadShims(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	ctx = log.WithLogger(ctx, log.G(ctx).WithField("namespace", ns))
+
 	shimDirs, err := os.ReadDir(filepath.Join(m.state, ns))
 	if err != nil {
 		return err
@@ -105,7 +110,7 @@ func (m *ShimManager) loadShims(ctx context.Context) error {
 			container, err := m.containers.Get(ctx, id)
 			if err != nil {
 				log.G(ctx).WithError(err).Errorf("loading container %s", id)
-				if err := mount.UnmountAll(filepath.Join(bundle.Path, "rootfs"), 0); err != nil {
+				if err := mount.UnmountRecursive(filepath.Join(bundle.Path, "rootfs"), 0); err != nil {
 					log.G(ctx).WithError(err).Errorf("failed to unmount of rootfs %s", id)
 				}
 				bundle.Delete()
@@ -128,18 +133,41 @@ func (m *ShimManager) loadShims(ctx context.Context) error {
 				ttrpcAddress: m.containerdTTRPCAddress,
 				schedCore:    m.schedCore,
 			})
-		shim, err := loadShim(ctx, bundle, func() {
+		instance, err := loadShim(ctx, bundle, func() {
 			log.G(ctx).WithField("id", id).Info("shim disconnected")
 
-			cleanupAfterDeadShim(context.Background(), id, ns, m.shims, m.events, binaryCall)
+			cleanupAfterDeadShim(cleanup.Background(ctx), id, m.shims, m.events, binaryCall)
 			// Remove self from the runtime task list.
 			m.shims.Delete(ctx, id)
 		})
 		if err != nil {
-			cleanupAfterDeadShim(ctx, id, ns, m.shims, m.events, binaryCall)
+			cleanupAfterDeadShim(ctx, id, m.shims, m.events, binaryCall)
 			continue
 		}
-		m.shims.Add(ctx, shim)
+		shim, err := newShimTask(instance)
+		if err != nil {
+			return err
+		}
+
+		// There are 3 possibilities for the loaded shim here:
+		// 1. It could be a shim that is running a task.
+		// 2. It could be a sandbox shim.
+		// 3. Or it could be a shim that was created for running a task but
+		// something happened (probably a containerd crash) and the task was never
+		// created. This shim process should be cleaned up here. Look at
+		// containerd/containerd#6860 for further details.
+
+		_, sgetErr := m.sandboxStore.Get(ctx, id)
+		pInfo, pidErr := shim.Pids(ctx)
+		if sgetErr != nil && errors.Is(sgetErr, errdefs.ErrNotFound) && (len(pInfo) == 0 || errors.Is(pidErr, errdefs.ErrNotFound)) {
+			log.G(ctx).WithField("id", id).Info("cleaning leaked shim process")
+			// We are unable to get Pids from the shim and it's not a sandbox
+			// shim. We should clean it up her.
+			// No need to do anything for removeTask since we never added this shim.
+			shim.delete(ctx, false, func(ctx context.Context, id string) {})
+		} else {
+			m.shims.Add(ctx, shim.ShimInstance)
+		}
 	}
 	return nil
 }

@@ -27,8 +27,18 @@ import (
 	"github.com/containerd/containerd/plugin"
 )
 
+type SandboxControllerMode string
+
+const (
+	// ModePodSandbox means use Controller implementation from sbserver podsandbox package.
+	// We take this one as a default mode.
+	ModePodSandbox SandboxControllerMode = "podsandbox"
+	// ModeShim means use whatever Controller implementation provided by shim.
+	ModeShim SandboxControllerMode = "shim"
+)
+
 // Runtime struct to contain the type(ID), engine, and root variables for a default runtime
-// and a runtime for untrusted worload.
+// and a runtime for untrusted workload.
 type Runtime struct {
 	// Type is the runtime type to use in containerd e.g. io.containerd.runtime.v1.linux
 	Type string `toml:"runtime_type" json:"runtimeType"`
@@ -59,6 +69,10 @@ type Runtime struct {
 	// PrivilegedWithoutHostDevices overloads the default behaviour for adding host devices to the
 	// runtime spec when the container is privileged. Defaults to false.
 	PrivilegedWithoutHostDevices bool `toml:"privileged_without_host_devices" json:"privileged_without_host_devices"`
+	// PrivilegedWithoutHostDevicesAllDevicesAllowed overloads the default behaviour device allowlisting when
+	// to the runtime spec when the container when PrivilegedWithoutHostDevices is already enabled. Requires
+	// PrivilegedWithoutHostDevices to be enabled. Defaults to false.
+	PrivilegedWithoutHostDevicesAllDevicesAllowed bool `toml:"privileged_without_host_devices_all_devices_allowed" json:"privileged_without_host_devices_all_devices_allowed"`
 	// BaseRuntimeSpec is a json file with OCI spec to use as base spec that all container's will be created from.
 	BaseRuntimeSpec string `toml:"base_runtime_spec" json:"baseRuntimeSpec"`
 	// NetworkPluginConfDir is a directory containing the CNI network information for the runtime class.
@@ -67,6 +81,16 @@ type Runtime struct {
 	// be loaded from the cni config directory by go-cni. Set the value to 0 to
 	// load all config files (no arbitrary limit). The legacy default value is 1.
 	NetworkPluginMaxConfNum int `toml:"cni_max_conf_num" json:"cniMaxConfNum"`
+	// Snapshotter setting snapshotter at runtime level instead of making it as a global configuration.
+	// An example use case is to use devmapper or other snapshotters in Kata containers for performance and security
+	// while using default snapshotters for operational simplicity.
+	// See https://github.com/containerd/containerd/issues/6657 for details.
+	Snapshotter string `toml:"snapshotter" json:"snapshotter"`
+	// SandboxMode defines which sandbox runtime to use when scheduling pods
+	// This features requires experimental CRI server to be enabled (use ENABLE_CRI_SANDBOXES=1)
+	// shim - means use whatever Controller implementation provided by shim (e.g. use RemoteController).
+	// podsandbox - means use Controller implementation from sbserver podsandbox package.
+	SandboxMode string `toml:"sandbox_mode" json:"sandboxMode"`
 }
 
 // ContainerdConfig contains toml config related to containerd
@@ -99,6 +123,11 @@ type ContainerdConfig struct {
 	// layers to the snapshotter.
 	DiscardUnpackedLayers bool `toml:"discard_unpacked_layers" json:"discardUnpackedLayers"`
 
+	// IgnoreBlockIONotEnabledErrors is a boolean flag to ignore
+	// blockio related errors when blockio support has not been
+	// enabled.
+	IgnoreBlockIONotEnabledErrors bool `toml:"ignore_blockio_not_enabled_errors" json:"ignoreBlockIONotEnabledErrors"`
+
 	// IgnoreRdtNotEnabledErrors is a boolean flag to ignore RDT related errors
 	// when RDT support has not been enabled.
 	IgnoreRdtNotEnabledErrors bool `toml:"ignore_rdt_not_enabled_errors" json:"ignoreRdtNotEnabledErrors"`
@@ -114,6 +143,9 @@ type CniConfig struct {
 	// be loaded from the cni config directory by go-cni. Set the value to 0 to
 	// load all config files (no arbitrary limit). The legacy default value is 1.
 	NetworkPluginMaxConfNum int `toml:"max_conf_num" json:"maxConfNum"`
+	// NetworkPluginSetupSerially is a boolean flag to specify whether containerd sets up networks serially
+	// if there are multiple CNI plugin config files existing and NetworkPluginMaxConfNum is larger than 1.
+	NetworkPluginSetupSerially bool `toml:"setup_serially" json:"setupSerially"`
 	// NetworkPluginConfTemplate is the file path of golang template used to generate
 	// cni config.
 	// When it is set, containerd will get cidr(s) from kubelet to replace {{.PodCIDR}},
@@ -124,7 +156,7 @@ type CniConfig struct {
 	// (https://kubernetes.io/docs/concepts/cluster-administration/network-plugins/#kubenet)
 	// today, who don't have a cni daemonset in production. NetworkPluginConfTemplate is
 	// a temporary backward-compatible solution for them.
-	// TODO(random-liu): Deprecate this option when kubenet is deprecated.
+	// DEPRECATED: use CNI configs
 	NetworkPluginConfTemplate string `toml:"conf_template" json:"confTemplate"`
 	// IPPreference specifies the strategy to use when selecting the main IP address for a pod.
 	//
@@ -174,11 +206,11 @@ type Registry struct {
 	ConfigPath string `toml:"config_path" json:"configPath"`
 	// Mirrors are namespace to mirror mapping for all namespaces.
 	// This option will not be used when ConfigPath is provided.
-	// DEPRECATED: Use ConfigPath instead. Remove in containerd 1.7.
+	// DEPRECATED: Use ConfigPath instead. Remove in containerd 2.0.
 	Mirrors map[string]Mirror `toml:"mirrors" json:"mirrors"`
 	// Configs are configs for each registry.
 	// The key is the domain name or IP of the registry.
-	// This option will be fully deprecated for ConfigPath in the future.
+	// DEPRECATED: Use ConfigPath instead.
 	Configs map[string]RegistryConfig `toml:"configs" json:"configs"`
 	// Auths are registry endpoint to auth config mapping. The registry endpoint must
 	// be a valid url with host specified.
@@ -302,6 +334,32 @@ type PluginConfig struct {
 	// and if it is not overwritten by PodSandboxConfig
 	// Note that currently default is set to disabled but target change it in future together with EnableUnprivilegedPorts
 	EnableUnprivilegedICMP bool `toml:"enable_unprivileged_icmp" json:"enableUnprivilegedICMP"`
+	// EnableCDI indicates to enable injection of the Container Device Interface Specifications
+	// into the OCI config
+	// For more details about CDI and the syntax of CDI Spec files please refer to
+	// https://github.com/container-orchestrated-devices/container-device-interface.
+	EnableCDI bool `toml:"enable_cdi" json:"enableCDI"`
+	// CDISpecDirs is the list of directories to scan for Container Device Interface Specifications
+	// For more details about CDI configuration please refer to
+	// https://github.com/container-orchestrated-devices/container-device-interface#containerd-configuration
+	CDISpecDirs []string `toml:"cdi_spec_dirs" json:"cdiSpecDirs"`
+	// ImagePullProgressTimeout is the maximum duration that there is no
+	// image data read from image registry in the open connection. It will
+	// be reset whatever a new byte has been read. If timeout, the image
+	// pulling will be cancelled. A zero value means there is no timeout.
+	//
+	// The string is in the golang duration format, see:
+	//   https://golang.org/pkg/time/#ParseDuration
+	ImagePullProgressTimeout string `toml:"image_pull_progress_timeout" json:"imagePullProgressTimeout"`
+	// DrainExecSyncIOTimeout is the maximum duration to wait for ExecSync
+	// API' IO EOF event after exec init process exits. A zero value means
+	// there is no timeout.
+	//
+	// The string is in the golang duration format, see:
+	//   https://golang.org/pkg/time/#ParseDuration
+	//
+	// For example, the value can be '5h', '2h30m', '10s'.
+	DrainExecSyncIOTimeout string `toml:"drain_exec_sync_io_timeout" json:"drainExecSyncIOTimeout"`
 }
 
 // X509KeyPairStreaming contains the x509 configuration for streaming
@@ -381,7 +439,7 @@ func ValidatePluginConfig(ctx context.Context, c *PluginConfig) error {
 		// NoPivot can't be deprecated yet, because there is no alternative config option
 		// for `io.containerd.runtime.v1.linux`.
 	}
-	for _, r := range c.ContainerdConfig.Runtimes {
+	for k, r := range c.ContainerdConfig.Runtimes {
 		if r.Engine != "" {
 			if r.Type != plugin.RuntimeLinuxV1 {
 				return fmt.Errorf("`runtime_engine` only works for runtime %s", plugin.RuntimeLinuxV1)
@@ -393,6 +451,14 @@ func ValidatePluginConfig(ctx context.Context, c *PluginConfig) error {
 				return fmt.Errorf("`runtime_root` only works for runtime %s", plugin.RuntimeLinuxV1)
 			}
 			log.G(ctx).Warning("`runtime_root` is deprecated, please use runtime `options` instead")
+		}
+		if !r.PrivilegedWithoutHostDevices && r.PrivilegedWithoutHostDevicesAllDevicesAllowed {
+			return errors.New("`privileged_without_host_devices_all_devices_allowed` requires `privileged_without_host_devices` to be enabled")
+		}
+		// If empty, use default podSandbox mode
+		if len(r.SandboxMode) == 0 {
+			r.SandboxMode = string(ModePodSandbox)
+			c.ContainerdConfig.Runtimes[k] = r
 		}
 	}
 
@@ -443,6 +509,20 @@ func ValidatePluginConfig(ctx context.Context, c *PluginConfig) error {
 	if c.StreamIdleTimeout != "" {
 		if _, err := time.ParseDuration(c.StreamIdleTimeout); err != nil {
 			return fmt.Errorf("invalid stream idle timeout: %w", err)
+		}
+	}
+
+	// Validation for image_pull_progress_timeout
+	if c.ImagePullProgressTimeout != "" {
+		if _, err := time.ParseDuration(c.ImagePullProgressTimeout); err != nil {
+			return fmt.Errorf("invalid image pull progress timeout: %w", err)
+		}
+	}
+
+	// Validation for drain_exec_sync_io_timeout
+	if c.DrainExecSyncIOTimeout != "" {
+		if _, err := time.ParseDuration(c.DrainExecSyncIOTimeout); err != nil {
+			return fmt.Errorf("invalid `drain_exec_sync_io_timeout`: %w", err)
 		}
 	}
 	return nil
