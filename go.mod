@@ -14,7 +14,7 @@ require (
 	code.cloudfoundry.org/localip v0.0.0-20230220195659-7420c1036ae7
 	github.com/BurntSushi/toml v1.2.1
 	github.com/cloudfoundry/dropsonde v1.0.0
-	github.com/cloudfoundry/gosigar v1.3.8
+	github.com/cloudfoundry/gosigar v1.3.9
 	github.com/containerd/containerd v1.7.0
 	github.com/containerd/typeurl v1.0.2
 	github.com/docker/docker v23.0.1+incompatible
@@ -150,7 +150,7 @@ require (
 	golang.org/x/term v0.6.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
-	golang.org/x/tools v0.6.0 // indirect
+	golang.org/x/tools v0.7.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
 	google.golang.org/grpc v1.53.0 // indirect
