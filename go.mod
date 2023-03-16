@@ -14,7 +14,7 @@ require (
 	code.cloudfoundry.org/localip v0.0.0-20230220195659-7420c1036ae7
 	github.com/BurntSushi/toml v1.2.1
 	github.com/cloudfoundry/dropsonde v1.0.0
-	github.com/cloudfoundry/gosigar v1.3.8
+	github.com/cloudfoundry/gosigar v1.3.9
 	github.com/containerd/containerd v1.7.0
 	github.com/containerd/typeurl v1.0.2
 	github.com/docker/docker v23.0.1+incompatible
