@@ -885,7 +885,7 @@ github.com/tedsuo/ifrit/sigmon
 # github.com/tedsuo/rata v1.0.0
 ## explicit
 github.com/tedsuo/rata
-# github.com/urfave/cli v1.22.12 => github.com/urfave/cli v1.22.1
+# github.com/urfave/cli v1.22.12
 ## explicit; go 1.11
 github.com/urfave/cli
 # github.com/urfave/cli/v2 v2.25.0
@@ -1077,8 +1077,8 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 => google.golang.org/genproto v0.0.0-20200224152610-e50cd9704f63
-## explicit; go 1.11
+# google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4
+## explicit; go 1.19
 google.golang.org/genproto/googleapis/api/httpbody
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/errdetails
@@ -1313,11 +1313,7 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# cloud.google.com/go => cloud.google.com/go v0.107.0
 # code.cloudfoundry.org/garden => ../garden
 # code.cloudfoundry.org/grootfs => ../grootfs
 # code.cloudfoundry.org/idmapper => ../idmapper
-# github.com/gogo/googleapis => github.com/gogo/googleapis v1.3.2
 # github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
-# github.com/urfave/cli => github.com/urfave/cli v1.22.1
-# google.golang.org/genproto => google.golang.org/genproto v0.0.0-20200224152610-e50cd9704f63
