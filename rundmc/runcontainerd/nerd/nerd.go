@@ -20,7 +20,7 @@ import (
 	"github.com/containerd/containerd/errdefs"
 	ctrdevents "github.com/containerd/containerd/events"
 	v2types "github.com/containerd/containerd/runtime/v2/runc/options"
-	"github.com/containerd/typeurl"
+	"github.com/containerd/typeurl/v2"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 

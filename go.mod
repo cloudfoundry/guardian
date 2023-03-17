@@ -16,7 +16,7 @@ require (
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.3.9
 	github.com/containerd/containerd v1.7.0
-	github.com/containerd/typeurl v1.0.2
+	github.com/containerd/typeurl/v2 v2.1.0
 	github.com/docker/docker v23.0.1+incompatible
 	github.com/eapache/go-resiliency v1.3.0
 	github.com/hashicorp/go-multierror v1.1.1
@@ -43,7 +43,6 @@ require (
 )
 
 require (
-	code.cloudfoundry.org/lager/v3 v3.0.0 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1 // indirect
 	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20221215162035-5330a85ea652 // indirect
 	github.com/Microsoft/go-winio v0.6.0 // indirect
@@ -70,7 +69,7 @@ require (
 	github.com/containerd/imgcrypt v1.1.7 // indirect
 	github.com/containerd/nri v0.3.0 // indirect
 	github.com/containerd/ttrpc v1.2.1 // indirect
-	github.com/containerd/typeurl/v2 v2.1.0 // indirect
+	github.com/containerd/typeurl v1.0.2 // indirect
 	github.com/containerd/zfs v1.0.0 // indirect
 	github.com/containernetworking/cni v1.1.2 // indirect
 	github.com/containernetworking/plugins v1.2.0 // indirect
@@ -93,7 +92,6 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
@@ -121,7 +119,6 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mrunalp/fileutils v0.5.0 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
-	github.com/onsi/ginkgo/v2 v2.9.1 // indirect
 	github.com/opencontainers/runtime-tools v0.9.1-0.20221107090550-2e043c6bd626 // indirect
 	github.com/opencontainers/selinux v1.11.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect

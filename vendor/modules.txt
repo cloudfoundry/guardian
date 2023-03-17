@@ -39,10 +39,6 @@ code.cloudfoundry.org/lager
 code.cloudfoundry.org/lager/chug
 code.cloudfoundry.org/lager/lagerctx
 code.cloudfoundry.org/lager/lagertest
-# code.cloudfoundry.org/lager/v3 v3.0.0
-## explicit; go 1.19
-code.cloudfoundry.org/lager/v3
-code.cloudfoundry.org/lager/v3/internal/truncate
 # code.cloudfoundry.org/localip v0.0.0-20230220195659-7420c1036ae7
 ## explicit; go 1.19
 code.cloudfoundry.org/localip
@@ -589,9 +585,6 @@ github.com/google/go-cmp/cmp/internal/value
 ## explicit; go 1.12
 github.com/google/gofuzz
 github.com/google/gofuzz/bytesource
-# github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38
-## explicit; go 1.14
-github.com/google/pprof/profile
 # github.com/google/uuid v1.3.0
 ## explicit
 github.com/google/uuid
@@ -740,24 +733,6 @@ github.com/onsi/ginkgo/reporters/stenographer
 github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
-# github.com/onsi/ginkgo/v2 v2.9.1
-## explicit; go 1.18
-github.com/onsi/ginkgo/v2/config
-github.com/onsi/ginkgo/v2/formatter
-github.com/onsi/ginkgo/v2/ginkgo
-github.com/onsi/ginkgo/v2/ginkgo/build
-github.com/onsi/ginkgo/v2/ginkgo/command
-github.com/onsi/ginkgo/v2/ginkgo/generators
-github.com/onsi/ginkgo/v2/ginkgo/internal
-github.com/onsi/ginkgo/v2/ginkgo/labels
-github.com/onsi/ginkgo/v2/ginkgo/outline
-github.com/onsi/ginkgo/v2/ginkgo/run
-github.com/onsi/ginkgo/v2/ginkgo/unfocus
-github.com/onsi/ginkgo/v2/ginkgo/watch
-github.com/onsi/ginkgo/v2/internal/interrupt_handler
-github.com/onsi/ginkgo/v2/internal/parallel_support
-github.com/onsi/ginkgo/v2/reporters
-github.com/onsi/ginkgo/v2/types
 # github.com/onsi/gomega v1.27.4
 ## explicit; go 1.18
 github.com/onsi/gomega
