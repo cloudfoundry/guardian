@@ -25,9 +25,10 @@ func (fake *FakeKiller) Kill(arg1 syscall.Signal, arg2 ...int) {
 		arg1 syscall.Signal
 		arg2 []int
 	}{arg1, arg2})
+	stub := fake.KillStub
 	fake.recordInvocation("Kill", []interface{}{arg1, arg2})
 	fake.killMutex.Unlock()
-	if fake.KillStub != nil {
+	if stub != nil {
 		fake.KillStub(arg1, arg2...)
 	}
 }

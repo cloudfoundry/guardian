@@ -14,8 +14,8 @@ import (
 	"code.cloudfoundry.org/guardian/kawasaki/kawasakifakes"
 	"code.cloudfoundry.org/guardian/netplugin"
 	"code.cloudfoundry.org/guardian/properties"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
+	"code.cloudfoundry.org/lager/v3"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

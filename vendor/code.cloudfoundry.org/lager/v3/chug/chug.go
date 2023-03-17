@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type Entry struct {
@@ -32,14 +32,6 @@ type LogEntry struct {
 	Trace string
 
 	Data lager.Data
-}
-
-type lagerTime struct {
-	t time.Time
-}
-
-func (t lagerTime) Time() time.Time {
-	return t.t
 }
 
 func toTimestamp(d string) (time.Time, error) {
@@ -65,7 +57,7 @@ func Chug(reader io.Reader, out chan<- Entry) {
 	scanner := bufio.NewReader(reader)
 	for {
 		line, err := scanner.ReadBytes('\n')
-		if line != nil {
+		if len(line) > 0 {
 			out <- entry(bytes.TrimSuffix(line, []byte{'\n'}))
 		}
 		if err != nil {

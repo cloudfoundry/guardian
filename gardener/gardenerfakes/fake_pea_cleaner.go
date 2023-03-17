@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/gardener"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakePeaCleaner struct {
@@ -43,15 +43,16 @@ func (fake *FakePeaCleaner) Clean(arg1 lager.Logger, arg2 string) error {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.CleanStub
+	fakeReturns := fake.cleanReturns
 	fake.recordInvocation("Clean", []interface{}{arg1, arg2})
 	fake.cleanMutex.Unlock()
-	if fake.CleanStub != nil {
-		return fake.CleanStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.cleanReturns
 	return fakeReturns.result1
 }
 
@@ -103,15 +104,16 @@ func (fake *FakePeaCleaner) CleanAll(arg1 lager.Logger) error {
 	fake.cleanAllArgsForCall = append(fake.cleanAllArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.CleanAllStub
+	fakeReturns := fake.cleanAllReturns
 	fake.recordInvocation("CleanAll", []interface{}{arg1})
 	fake.cleanAllMutex.Unlock()
-	if fake.CleanAllStub != nil {
-		return fake.CleanAllStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.cleanAllReturns
 	return fakeReturns.result1
 }
 

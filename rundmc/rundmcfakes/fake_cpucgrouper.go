@@ -54,15 +54,16 @@ func (fake *FakeCPUCgrouper) CreateBadCgroup(arg1 string) error {
 	fake.createBadCgroupArgsForCall = append(fake.createBadCgroupArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.CreateBadCgroupStub
+	fakeReturns := fake.createBadCgroupReturns
 	fake.recordInvocation("CreateBadCgroup", []interface{}{arg1})
 	fake.createBadCgroupMutex.Unlock()
-	if fake.CreateBadCgroupStub != nil {
-		return fake.CreateBadCgroupStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.createBadCgroupReturns
 	return fakeReturns.result1
 }
 
@@ -114,15 +115,16 @@ func (fake *FakeCPUCgrouper) DestroyBadCgroup(arg1 string) error {
 	fake.destroyBadCgroupArgsForCall = append(fake.destroyBadCgroupArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.DestroyBadCgroupStub
+	fakeReturns := fake.destroyBadCgroupReturns
 	fake.recordInvocation("DestroyBadCgroup", []interface{}{arg1})
 	fake.destroyBadCgroupMutex.Unlock()
-	if fake.DestroyBadCgroupStub != nil {
-		return fake.DestroyBadCgroupStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.destroyBadCgroupReturns
 	return fakeReturns.result1
 }
 
@@ -174,15 +176,16 @@ func (fake *FakeCPUCgrouper) ReadBadCgroupUsage(arg1 string) (garden.ContainerCP
 	fake.readBadCgroupUsageArgsForCall = append(fake.readBadCgroupUsageArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.ReadBadCgroupUsageStub
+	fakeReturns := fake.readBadCgroupUsageReturns
 	fake.recordInvocation("ReadBadCgroupUsage", []interface{}{arg1})
 	fake.readBadCgroupUsageMutex.Unlock()
-	if fake.ReadBadCgroupUsageStub != nil {
-		return fake.ReadBadCgroupUsageStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.readBadCgroupUsageReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

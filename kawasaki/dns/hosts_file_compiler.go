@@ -5,7 +5,7 @@ import (
 	"net"
 	"strings"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type HostsFileCompiler struct {

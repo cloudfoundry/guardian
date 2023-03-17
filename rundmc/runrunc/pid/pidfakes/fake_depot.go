@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/pid"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeDepot struct {
@@ -34,15 +34,16 @@ func (fake *FakeDepot) Lookup(arg1 lager.Logger, arg2 string) (string, error) {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.LookupStub
+	fakeReturns := fake.lookupReturns
 	fake.recordInvocation("Lookup", []interface{}{arg1, arg2})
 	fake.lookupMutex.Unlock()
-	if fake.LookupStub != nil {
-		return fake.LookupStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.lookupReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

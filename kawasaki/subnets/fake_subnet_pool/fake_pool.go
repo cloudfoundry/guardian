@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/kawasaki/subnets"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakePool struct {
@@ -85,15 +85,16 @@ func (fake *FakePool) Acquire(arg1 lager.Logger, arg2 subnets.SubnetSelector, ar
 		arg2 subnets.SubnetSelector
 		arg3 subnets.IPSelector
 	}{arg1, arg2, arg3})
+	stub := fake.AcquireStub
+	fakeReturns := fake.acquireReturns
 	fake.recordInvocation("Acquire", []interface{}{arg1, arg2, arg3})
 	fake.acquireMutex.Unlock()
-	if fake.AcquireStub != nil {
-		return fake.AcquireStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
 	}
-	fakeReturns := fake.acquireReturns
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
@@ -150,15 +151,16 @@ func (fake *FakePool) Capacity() int {
 	ret, specificReturn := fake.capacityReturnsOnCall[len(fake.capacityArgsForCall)]
 	fake.capacityArgsForCall = append(fake.capacityArgsForCall, struct {
 	}{})
+	stub := fake.CapacityStub
+	fakeReturns := fake.capacityReturns
 	fake.recordInvocation("Capacity", []interface{}{})
 	fake.capacityMutex.Unlock()
-	if fake.CapacityStub != nil {
-		return fake.CapacityStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.capacityReturns
 	return fakeReturns.result1
 }
 
@@ -204,15 +206,16 @@ func (fake *FakePool) Release(arg1 *net.IPNet, arg2 net.IP) error {
 		arg1 *net.IPNet
 		arg2 net.IP
 	}{arg1, arg2})
+	stub := fake.ReleaseStub
+	fakeReturns := fake.releaseReturns
 	fake.recordInvocation("Release", []interface{}{arg1, arg2})
 	fake.releaseMutex.Unlock()
-	if fake.ReleaseStub != nil {
-		return fake.ReleaseStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.releaseReturns
 	return fakeReturns.result1
 }
 
@@ -265,15 +268,16 @@ func (fake *FakePool) Remove(arg1 *net.IPNet, arg2 net.IP) error {
 		arg1 *net.IPNet
 		arg2 net.IP
 	}{arg1, arg2})
+	stub := fake.RemoveStub
+	fakeReturns := fake.removeReturns
 	fake.recordInvocation("Remove", []interface{}{arg1, arg2})
 	fake.removeMutex.Unlock()
-	if fake.RemoveStub != nil {
-		return fake.RemoveStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.removeReturns
 	return fakeReturns.result1
 }
 
@@ -326,15 +330,16 @@ func (fake *FakePool) RunIfFree(arg1 *net.IPNet, arg2 func() error) error {
 		arg1 *net.IPNet
 		arg2 func() error
 	}{arg1, arg2})
+	stub := fake.RunIfFreeStub
+	fakeReturns := fake.runIfFreeReturns
 	fake.recordInvocation("RunIfFree", []interface{}{arg1, arg2})
 	fake.runIfFreeMutex.Unlock()
-	if fake.RunIfFreeStub != nil {
-		return fake.RunIfFreeStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.runIfFreeReturns
 	return fakeReturns.result1
 }
 

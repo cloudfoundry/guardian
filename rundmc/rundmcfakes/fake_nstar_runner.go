@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeNstarRunner struct {
@@ -55,15 +55,16 @@ func (fake *FakeNstarRunner) StreamIn(arg1 lager.Logger, arg2 int, arg3 string, 
 		arg4 string
 		arg5 io.Reader
 	}{arg1, arg2, arg3, arg4, arg5})
+	stub := fake.StreamInStub
+	fakeReturns := fake.streamInReturns
 	fake.recordInvocation("StreamIn", []interface{}{arg1, arg2, arg3, arg4, arg5})
 	fake.streamInMutex.Unlock()
-	if fake.StreamInStub != nil {
-		return fake.StreamInStub(arg1, arg2, arg3, arg4, arg5)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.streamInReturns
 	return fakeReturns.result1
 }
 
@@ -118,15 +119,16 @@ func (fake *FakeNstarRunner) StreamOut(arg1 lager.Logger, arg2 int, arg3 string,
 		arg3 string
 		arg4 string
 	}{arg1, arg2, arg3, arg4})
+	stub := fake.StreamOutStub
+	fakeReturns := fake.streamOutReturns
 	fake.recordInvocation("StreamOut", []interface{}{arg1, arg2, arg3, arg4})
 	fake.streamOutMutex.Unlock()
-	if fake.StreamOutStub != nil {
-		return fake.StreamOutStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.streamOutReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

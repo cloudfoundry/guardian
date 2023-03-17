@@ -39,15 +39,16 @@ func (fake *FakeIPSelector) SelectIP(arg1 *net.IPNet, arg2 []net.IP) (net.IP, er
 		arg1 *net.IPNet
 		arg2 []net.IP
 	}{arg1, arg2Copy})
+	stub := fake.SelectIPStub
+	fakeReturns := fake.selectIPReturns
 	fake.recordInvocation("SelectIP", []interface{}{arg1, arg2Copy})
 	fake.selectIPMutex.Unlock()
-	if fake.SelectIPStub != nil {
-		return fake.SelectIPStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.selectIPReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

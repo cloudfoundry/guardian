@@ -2,12 +2,12 @@ package runrunc
 
 import (
 	"bytes"
-	"code.cloudfoundry.org/guardian/rundmc"
 	"encoding/json"
 	"fmt"
 	"os/exec"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/guardian/rundmc"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type Stater struct {

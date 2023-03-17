@@ -31,15 +31,16 @@ func (fake *FakePrivilegedGetter) Privileged(arg1 string) (bool, error) {
 	fake.privilegedArgsForCall = append(fake.privilegedArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.PrivilegedStub
+	fakeReturns := fake.privilegedReturns
 	fake.recordInvocation("Privileged", []interface{}{arg1})
 	fake.privilegedMutex.Unlock()
-	if fake.PrivilegedStub != nil {
-		return fake.PrivilegedStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.privilegedReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

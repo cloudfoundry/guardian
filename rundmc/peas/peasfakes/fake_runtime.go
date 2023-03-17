@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/peas"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeRuntime struct {
@@ -44,15 +44,16 @@ func (fake *FakeRuntime) ContainerHandles() ([]string, error) {
 	ret, specificReturn := fake.containerHandlesReturnsOnCall[len(fake.containerHandlesArgsForCall)]
 	fake.containerHandlesArgsForCall = append(fake.containerHandlesArgsForCall, struct {
 	}{})
+	stub := fake.ContainerHandlesStub
+	fakeReturns := fake.containerHandlesReturns
 	fake.recordInvocation("ContainerHandles", []interface{}{})
 	fake.containerHandlesMutex.Unlock()
-	if fake.ContainerHandlesStub != nil {
-		return fake.ContainerHandlesStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.containerHandlesReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -101,15 +102,16 @@ func (fake *FakeRuntime) ContainerPeaHandles(arg1 lager.Logger, arg2 string) ([]
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.ContainerPeaHandlesStub
+	fakeReturns := fake.containerPeaHandlesReturns
 	fake.recordInvocation("ContainerPeaHandles", []interface{}{arg1, arg2})
 	fake.containerPeaHandlesMutex.Unlock()
-	if fake.ContainerPeaHandlesStub != nil {
-		return fake.ContainerPeaHandlesStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.containerPeaHandlesReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

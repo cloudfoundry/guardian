@@ -1,8 +1,6 @@
 package guardiancmd
 
-import (
-	"code.cloudfoundry.org/lager"
-)
+import "code.cloudfoundry.org/lager/v3"
 
 type SetupCommand struct {
 	LogLevel LagerFlag

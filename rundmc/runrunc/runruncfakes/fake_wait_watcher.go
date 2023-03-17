@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeWaitWatcher struct {
@@ -27,9 +27,10 @@ func (fake *FakeWaitWatcher) OnExit(arg1 lager.Logger, arg2 runrunc.Waiter, arg3
 		arg2 runrunc.Waiter
 		arg3 runrunc.Runner
 	}{arg1, arg2, arg3})
+	stub := fake.OnExitStub
 	fake.recordInvocation("OnExit", []interface{}{arg1, arg2, arg3})
 	fake.onExitMutex.Unlock()
-	if fake.OnExitStub != nil {
+	if stub != nil {
 		fake.OnExitStub(arg1, arg2, arg3)
 	}
 }

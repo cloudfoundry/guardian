@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/kawasaki"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeHostFileCompiler struct {
@@ -44,15 +44,16 @@ func (fake *FakeHostFileCompiler) Compile(arg1 lager.Logger, arg2 net.IP, arg3 s
 		arg3 string
 		arg4 []string
 	}{arg1, arg2, arg3, arg4Copy})
+	stub := fake.CompileStub
+	fakeReturns := fake.compileReturns
 	fake.recordInvocation("Compile", []interface{}{arg1, arg2, arg3, arg4Copy})
 	fake.compileMutex.Unlock()
-	if fake.CompileStub != nil {
-		return fake.CompileStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.compileReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

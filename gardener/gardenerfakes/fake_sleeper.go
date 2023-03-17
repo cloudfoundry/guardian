@@ -23,9 +23,10 @@ func (fake *FakeSleeper) Spy(arg1 time.Duration) {
 	fake.argsForCall = append(fake.argsForCall, struct {
 		arg1 time.Duration
 	}{arg1})
+	stub := fake.Stub
 	fake.recordInvocation("Sleeper", []interface{}{arg1})
 	fake.mutex.Unlock()
-	if fake.Stub != nil {
+	if stub != nil {
 		fake.Stub(arg1)
 	}
 }

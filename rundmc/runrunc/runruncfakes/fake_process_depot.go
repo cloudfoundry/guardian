@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeProcessDepot struct {
@@ -49,15 +49,16 @@ func (fake *FakeProcessDepot) CreatedTime(arg1 lager.Logger, arg2 string) (time.
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.CreatedTimeStub
+	fakeReturns := fake.createdTimeReturns
 	fake.recordInvocation("CreatedTime", []interface{}{arg1, arg2})
 	fake.createdTimeMutex.Unlock()
-	if fake.CreatedTimeStub != nil {
-		return fake.CreatedTimeStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createdTimeReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -113,15 +114,16 @@ func (fake *FakeProcessDepot) ListProcessDirs(arg1 lager.Logger, arg2 string) ([
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.ListProcessDirsStub
+	fakeReturns := fake.listProcessDirsReturns
 	fake.recordInvocation("ListProcessDirs", []interface{}{arg1, arg2})
 	fake.listProcessDirsMutex.Unlock()
-	if fake.ListProcessDirsStub != nil {
-		return fake.ListProcessDirsStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.listProcessDirsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

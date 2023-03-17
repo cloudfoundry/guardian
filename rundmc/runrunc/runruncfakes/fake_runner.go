@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeRunner struct {
@@ -23,9 +23,10 @@ func (fake *FakeRunner) Run(arg1 lager.Logger) {
 	fake.runArgsForCall = append(fake.runArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.RunStub
 	fake.recordInvocation("Run", []interface{}{arg1})
 	fake.runMutex.Unlock()
-	if fake.RunStub != nil {
+	if stub != nil {
 		fake.RunStub(arg1)
 	}
 }

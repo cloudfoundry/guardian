@@ -3,7 +3,7 @@ package peas
 import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/peas/processwaiter"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	multierror "github.com/hashicorp/go-multierror"
 )
 

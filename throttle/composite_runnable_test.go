@@ -5,7 +5,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/throttle"
 	"code.cloudfoundry.org/guardian/throttle/throttlefakes"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	multierror "github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

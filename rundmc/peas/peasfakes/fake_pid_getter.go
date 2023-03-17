@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/peas"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakePidGetter struct {
@@ -34,15 +34,16 @@ func (fake *FakePidGetter) GetPid(arg1 lager.Logger, arg2 string) (int, error) {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.GetPidStub
+	fakeReturns := fake.getPidReturns
 	fake.recordInvocation("GetPid", []interface{}{arg1, arg2})
 	fake.getPidMutex.Unlock()
-	if fake.GetPidStub != nil {
-		return fake.GetPidStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.getPidReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

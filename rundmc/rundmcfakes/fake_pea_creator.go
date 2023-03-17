@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakePeaCreator struct {
@@ -39,15 +39,16 @@ func (fake *FakePeaCreator) CreatePea(arg1 lager.Logger, arg2 garden.ProcessSpec
 		arg3 garden.ProcessIO
 		arg4 string
 	}{arg1, arg2, arg3, arg4})
+	stub := fake.CreatePeaStub
+	fakeReturns := fake.createPeaReturns
 	fake.recordInvocation("CreatePea", []interface{}{arg1, arg2, arg3, arg4})
 	fake.createPeaMutex.Unlock()
-	if fake.CreatePeaStub != nil {
-		return fake.CreatePeaStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createPeaReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

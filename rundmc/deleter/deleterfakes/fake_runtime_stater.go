@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/deleter"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeRuntimeStater struct {
@@ -35,15 +35,16 @@ func (fake *FakeRuntimeStater) State(arg1 lager.Logger, arg2 string) (rundmc.Sta
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.StateStub
+	fakeReturns := fake.stateReturns
 	fake.recordInvocation("State", []interface{}{arg1, arg2})
 	fake.stateMutex.Unlock()
-	if fake.StateStub != nil {
-		return fake.StateStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.stateReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

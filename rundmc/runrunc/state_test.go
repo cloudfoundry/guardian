@@ -1,14 +1,15 @@
 package runrunc_test
 
 import (
-	"code.cloudfoundry.org/guardian/rundmc"
 	"errors"
 	"os/exec"
 
+	"code.cloudfoundry.org/guardian/rundmc"
+	"code.cloudfoundry.org/lager/v3"
+
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	fakes "code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 

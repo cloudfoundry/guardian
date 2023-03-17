@@ -34,15 +34,16 @@ func (fake *FakeStateStore) IsStopped(arg1 string) bool {
 	fake.isStoppedArgsForCall = append(fake.isStoppedArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.IsStoppedStub
+	fakeReturns := fake.isStoppedReturns
 	fake.recordInvocation("IsStopped", []interface{}{arg1})
 	fake.isStoppedMutex.Unlock()
-	if fake.IsStoppedStub != nil {
-		return fake.IsStoppedStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.isStoppedReturns
 	return fakeReturns.result1
 }
 
@@ -93,9 +94,10 @@ func (fake *FakeStateStore) StoreStopped(arg1 string) {
 	fake.storeStoppedArgsForCall = append(fake.storeStoppedArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.StoreStoppedStub
 	fake.recordInvocation("StoreStopped", []interface{}{arg1})
 	fake.storeStoppedMutex.Unlock()
-	if fake.StoreStoppedStub != nil {
+	if stub != nil {
 		fake.StoreStoppedStub(arg1)
 	}
 }

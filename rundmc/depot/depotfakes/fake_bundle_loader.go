@@ -32,15 +32,16 @@ func (fake *FakeBundleLoader) Load(arg1 string) (goci.Bndl, error) {
 	fake.loadArgsForCall = append(fake.loadArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.LoadStub
+	fakeReturns := fake.loadReturns
 	fake.recordInvocation("Load", []interface{}{arg1})
 	fake.loadMutex.Unlock()
-	if fake.LoadStub != nil {
-		return fake.LoadStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.loadReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

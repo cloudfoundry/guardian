@@ -4,7 +4,7 @@ import (
 	"os/exec"
 
 	"code.cloudfoundry.org/guardian/gardener"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type NotImplementedCommandCreator struct {

@@ -6,8 +6,8 @@ import (
 	"runtime"
 
 	"code.cloudfoundry.org/guardian/kawasaki/subnets"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
+	"code.cloudfoundry.org/lager/v3"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

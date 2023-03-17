@@ -9,8 +9,8 @@ import (
 
 	"code.cloudfoundry.org/guardian/kawasaki"
 	fakes "code.cloudfoundry.org/guardian/kawasaki/kawasakifakes"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

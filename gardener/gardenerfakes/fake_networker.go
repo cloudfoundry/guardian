@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeNetworker struct {
@@ -134,15 +134,16 @@ func (fake *FakeNetworker) BulkNetOut(arg1 lager.Logger, arg2 string, arg3 []gar
 		arg2 string
 		arg3 []garden.NetOutRule
 	}{arg1, arg2, arg3Copy})
+	stub := fake.BulkNetOutStub
+	fakeReturns := fake.bulkNetOutReturns
 	fake.recordInvocation("BulkNetOut", []interface{}{arg1, arg2, arg3Copy})
 	fake.bulkNetOutMutex.Unlock()
-	if fake.BulkNetOutStub != nil {
-		return fake.BulkNetOutStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.bulkNetOutReturns
 	return fakeReturns.result1
 }
 
@@ -193,15 +194,16 @@ func (fake *FakeNetworker) Capacity() uint64 {
 	ret, specificReturn := fake.capacityReturnsOnCall[len(fake.capacityArgsForCall)]
 	fake.capacityArgsForCall = append(fake.capacityArgsForCall, struct {
 	}{})
+	stub := fake.CapacityStub
+	fakeReturns := fake.capacityReturns
 	fake.recordInvocation("Capacity", []interface{}{})
 	fake.capacityMutex.Unlock()
-	if fake.CapacityStub != nil {
-		return fake.CapacityStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.capacityReturns
 	return fakeReturns.result1
 }
 
@@ -247,15 +249,16 @@ func (fake *FakeNetworker) Destroy(arg1 lager.Logger, arg2 string) error {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DestroyStub
+	fakeReturns := fake.destroyReturns
 	fake.recordInvocation("Destroy", []interface{}{arg1, arg2})
 	fake.destroyMutex.Unlock()
-	if fake.DestroyStub != nil {
-		return fake.DestroyStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.destroyReturns
 	return fakeReturns.result1
 }
 
@@ -310,15 +313,16 @@ func (fake *FakeNetworker) NetIn(arg1 lager.Logger, arg2 string, arg3 uint32, ar
 		arg3 uint32
 		arg4 uint32
 	}{arg1, arg2, arg3, arg4})
+	stub := fake.NetInStub
+	fakeReturns := fake.netInReturns
 	fake.recordInvocation("NetIn", []interface{}{arg1, arg2, arg3, arg4})
 	fake.netInMutex.Unlock()
-	if fake.NetInStub != nil {
-		return fake.NetInStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
 	}
-	fakeReturns := fake.netInReturns
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
@@ -378,15 +382,16 @@ func (fake *FakeNetworker) NetOut(arg1 lager.Logger, arg2 string, arg3 garden.Ne
 		arg2 string
 		arg3 garden.NetOutRule
 	}{arg1, arg2, arg3})
+	stub := fake.NetOutStub
+	fakeReturns := fake.netOutReturns
 	fake.recordInvocation("NetOut", []interface{}{arg1, arg2, arg3})
 	fake.netOutMutex.Unlock()
-	if fake.NetOutStub != nil {
-		return fake.NetOutStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.netOutReturns
 	return fakeReturns.result1
 }
 
@@ -440,15 +445,16 @@ func (fake *FakeNetworker) Network(arg1 lager.Logger, arg2 garden.ContainerSpec,
 		arg2 garden.ContainerSpec
 		arg3 int
 	}{arg1, arg2, arg3})
+	stub := fake.NetworkStub
+	fakeReturns := fake.networkReturns
 	fake.recordInvocation("Network", []interface{}{arg1, arg2, arg3})
 	fake.networkMutex.Unlock()
-	if fake.NetworkStub != nil {
-		return fake.NetworkStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.networkReturns
 	return fakeReturns.result1
 }
 
@@ -501,15 +507,16 @@ func (fake *FakeNetworker) Restore(arg1 lager.Logger, arg2 string) error {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.RestoreStub
+	fakeReturns := fake.restoreReturns
 	fake.recordInvocation("Restore", []interface{}{arg1, arg2})
 	fake.restoreMutex.Unlock()
-	if fake.RestoreStub != nil {
-		return fake.RestoreStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.restoreReturns
 	return fakeReturns.result1
 }
 
@@ -564,15 +571,16 @@ func (fake *FakeNetworker) SetupBindMounts(arg1 lager.Logger, arg2 string, arg3 
 		arg3 bool
 		arg4 string
 	}{arg1, arg2, arg3, arg4})
+	stub := fake.SetupBindMountsStub
+	fakeReturns := fake.setupBindMountsReturns
 	fake.recordInvocation("SetupBindMounts", []interface{}{arg1, arg2, arg3, arg4})
 	fake.setupBindMountsMutex.Unlock()
-	if fake.SetupBindMountsStub != nil {
-		return fake.SetupBindMountsStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.setupBindMountsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

@@ -3,8 +3,8 @@ package imageplugin
 import (
 	"bytes"
 
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/chug"
+	"code.cloudfoundry.org/lager/v3"
+	"code.cloudfoundry.org/lager/v3/chug"
 )
 
 //go:generate counterfeiter -o imagepluginfakes/fake_logger.go . Logger

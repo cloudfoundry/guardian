@@ -16,7 +16,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/throttle"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/docker/docker/pkg/reexec"
 	specs "github.com/opencontainers/runtime-spec/specs-go"

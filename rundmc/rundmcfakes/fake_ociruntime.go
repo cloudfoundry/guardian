@@ -9,7 +9,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeOCIRuntime struct {
@@ -179,15 +179,16 @@ func (fake *FakeOCIRuntime) Attach(arg1 lager.Logger, arg2 string, arg3 string, 
 		arg3 string
 		arg4 garden.ProcessIO
 	}{arg1, arg2, arg3, arg4})
+	stub := fake.AttachStub
+	fakeReturns := fake.attachReturns
 	fake.recordInvocation("Attach", []interface{}{arg1, arg2, arg3, arg4})
 	fake.attachMutex.Unlock()
-	if fake.AttachStub != nil {
-		return fake.AttachStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.attachReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -243,15 +244,16 @@ func (fake *FakeOCIRuntime) BundleInfo(arg1 lager.Logger, arg2 string) (string, 
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.BundleInfoStub
+	fakeReturns := fake.bundleInfoReturns
 	fake.recordInvocation("BundleInfo", []interface{}{arg1, arg2})
 	fake.bundleInfoMutex.Unlock()
-	if fake.BundleInfoStub != nil {
-		return fake.BundleInfoStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
 	}
-	fakeReturns := fake.bundleInfoReturns
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
@@ -308,15 +310,16 @@ func (fake *FakeOCIRuntime) ContainerHandles() ([]string, error) {
 	ret, specificReturn := fake.containerHandlesReturnsOnCall[len(fake.containerHandlesArgsForCall)]
 	fake.containerHandlesArgsForCall = append(fake.containerHandlesArgsForCall, struct {
 	}{})
+	stub := fake.ContainerHandlesStub
+	fakeReturns := fake.containerHandlesReturns
 	fake.recordInvocation("ContainerHandles", []interface{}{})
 	fake.containerHandlesMutex.Unlock()
-	if fake.ContainerHandlesStub != nil {
-		return fake.ContainerHandlesStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.containerHandlesReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -365,15 +368,16 @@ func (fake *FakeOCIRuntime) ContainerPeaHandles(arg1 lager.Logger, arg2 string) 
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.ContainerPeaHandlesStub
+	fakeReturns := fake.containerPeaHandlesReturns
 	fake.recordInvocation("ContainerPeaHandles", []interface{}{arg1, arg2})
 	fake.containerPeaHandlesMutex.Unlock()
-	if fake.ContainerPeaHandlesStub != nil {
-		return fake.ContainerPeaHandlesStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.containerPeaHandlesReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -431,15 +435,16 @@ func (fake *FakeOCIRuntime) Create(arg1 lager.Logger, arg2 string, arg3 goci.Bnd
 		arg3 goci.Bndl
 		arg4 garden.ProcessIO
 	}{arg1, arg2, arg3, arg4})
+	stub := fake.CreateStub
+	fakeReturns := fake.createReturns
 	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3, arg4})
 	fake.createMutex.Unlock()
-	if fake.CreateStub != nil {
-		return fake.CreateStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.createReturns
 	return fakeReturns.result1
 }
 
@@ -492,15 +497,16 @@ func (fake *FakeOCIRuntime) Delete(arg1 lager.Logger, arg2 string) error {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DeleteStub
+	fakeReturns := fake.deleteReturns
 	fake.recordInvocation("Delete", []interface{}{arg1, arg2})
 	fake.deleteMutex.Unlock()
-	if fake.DeleteStub != nil {
-		return fake.DeleteStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.deleteReturns
 	return fakeReturns.result1
 }
 
@@ -552,15 +558,16 @@ func (fake *FakeOCIRuntime) Events(arg1 lager.Logger) (<-chan event.Event, error
 	fake.eventsArgsForCall = append(fake.eventsArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.EventsStub
+	fakeReturns := fake.eventsReturns
 	fake.recordInvocation("Events", []interface{}{arg1})
 	fake.eventsMutex.Unlock()
-	if fake.EventsStub != nil {
-		return fake.EventsStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.eventsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -618,15 +625,16 @@ func (fake *FakeOCIRuntime) Exec(arg1 lager.Logger, arg2 string, arg3 garden.Pro
 		arg3 garden.ProcessSpec
 		arg4 garden.ProcessIO
 	}{arg1, arg2, arg3, arg4})
+	stub := fake.ExecStub
+	fakeReturns := fake.execReturns
 	fake.recordInvocation("Exec", []interface{}{arg1, arg2, arg3, arg4})
 	fake.execMutex.Unlock()
-	if fake.ExecStub != nil {
-		return fake.ExecStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.execReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -682,15 +690,16 @@ func (fake *FakeOCIRuntime) RemoveBundle(arg1 lager.Logger, arg2 string) error {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.RemoveBundleStub
+	fakeReturns := fake.removeBundleReturns
 	fake.recordInvocation("RemoveBundle", []interface{}{arg1, arg2})
 	fake.removeBundleMutex.Unlock()
-	if fake.RemoveBundleStub != nil {
-		return fake.RemoveBundleStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.removeBundleReturns
 	return fakeReturns.result1
 }
 
@@ -743,15 +752,16 @@ func (fake *FakeOCIRuntime) State(arg1 lager.Logger, arg2 string) (rundmc.State,
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.StateStub
+	fakeReturns := fake.stateReturns
 	fake.recordInvocation("State", []interface{}{arg1, arg2})
 	fake.stateMutex.Unlock()
-	if fake.StateStub != nil {
-		return fake.StateStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.stateReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -807,15 +817,16 @@ func (fake *FakeOCIRuntime) Stats(arg1 lager.Logger, arg2 string) (gardener.Stat
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.StatsStub
+	fakeReturns := fake.statsReturns
 	fake.recordInvocation("Stats", []interface{}{arg1, arg2})
 	fake.statsMutex.Unlock()
-	if fake.StatsStub != nil {
-		return fake.StatsStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.statsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/throttle"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeContainerManager struct {
@@ -45,15 +45,16 @@ func (fake *FakeContainerManager) Handles() ([]string, error) {
 	ret, specificReturn := fake.handlesReturnsOnCall[len(fake.handlesArgsForCall)]
 	fake.handlesArgsForCall = append(fake.handlesArgsForCall, struct {
 	}{})
+	stub := fake.HandlesStub
+	fakeReturns := fake.handlesReturns
 	fake.recordInvocation("Handles", []interface{}{})
 	fake.handlesMutex.Unlock()
-	if fake.HandlesStub != nil {
-		return fake.HandlesStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.handlesReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -102,15 +103,16 @@ func (fake *FakeContainerManager) Metrics(arg1 lager.Logger, arg2 string) (garde
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.MetricsStub
+	fakeReturns := fake.metricsReturns
 	fake.recordInvocation("Metrics", []interface{}{arg1, arg2})
 	fake.metricsMutex.Unlock()
-	if fake.MetricsStub != nil {
-		return fake.MetricsStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.metricsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

@@ -13,8 +13,8 @@ import (
 	fakes "code.cloudfoundry.org/guardian/kawasaki/kawasakifakes"
 	"code.cloudfoundry.org/guardian/kawasaki/subnets"
 	"code.cloudfoundry.org/guardian/kawasaki/subnets/fake_subnet_pool"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

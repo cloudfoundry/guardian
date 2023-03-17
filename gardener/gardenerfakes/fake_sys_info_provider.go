@@ -53,15 +53,16 @@ func (fake *FakeSysInfoProvider) CPUCores() (int, error) {
 	ret, specificReturn := fake.cPUCoresReturnsOnCall[len(fake.cPUCoresArgsForCall)]
 	fake.cPUCoresArgsForCall = append(fake.cPUCoresArgsForCall, struct {
 	}{})
+	stub := fake.CPUCoresStub
+	fakeReturns := fake.cPUCoresReturns
 	fake.recordInvocation("CPUCores", []interface{}{})
 	fake.cPUCoresMutex.Unlock()
-	if fake.CPUCoresStub != nil {
-		return fake.CPUCoresStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.cPUCoresReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -108,15 +109,16 @@ func (fake *FakeSysInfoProvider) TotalDisk() (uint64, error) {
 	ret, specificReturn := fake.totalDiskReturnsOnCall[len(fake.totalDiskArgsForCall)]
 	fake.totalDiskArgsForCall = append(fake.totalDiskArgsForCall, struct {
 	}{})
+	stub := fake.TotalDiskStub
+	fakeReturns := fake.totalDiskReturns
 	fake.recordInvocation("TotalDisk", []interface{}{})
 	fake.totalDiskMutex.Unlock()
-	if fake.TotalDiskStub != nil {
-		return fake.TotalDiskStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.totalDiskReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -163,15 +165,16 @@ func (fake *FakeSysInfoProvider) TotalMemory() (uint64, error) {
 	ret, specificReturn := fake.totalMemoryReturnsOnCall[len(fake.totalMemoryArgsForCall)]
 	fake.totalMemoryArgsForCall = append(fake.totalMemoryArgsForCall, struct {
 	}{})
+	stub := fake.TotalMemoryStub
+	fakeReturns := fake.totalMemoryReturns
 	fake.recordInvocation("TotalMemory", []interface{}{})
 	fake.totalMemoryMutex.Unlock()
-	if fake.TotalMemoryStub != nil {
-		return fake.TotalMemoryStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.totalMemoryReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

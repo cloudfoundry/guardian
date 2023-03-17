@@ -33,15 +33,16 @@ func (fake *FakeBundleGenerator) Generate(arg1 spec.DesiredContainerSpec) (goci.
 	fake.generateArgsForCall = append(fake.generateArgsForCall, struct {
 		arg1 spec.DesiredContainerSpec
 	}{arg1})
+	stub := fake.GenerateStub
+	fakeReturns := fake.generateReturns
 	fake.recordInvocation("Generate", []interface{}{arg1})
 	fake.generateMutex.Unlock()
-	if fake.GenerateStub != nil {
-		return fake.GenerateStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.generateReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

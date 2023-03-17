@@ -7,11 +7,11 @@ import (
 	"io"
 	"sync"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega/gbytes"
 
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagerctx"
+	"code.cloudfoundry.org/lager/v3"
+	"code.cloudfoundry.org/lager/v3/lagerctx"
 )
 
 type TestLogger struct {
@@ -67,8 +67,6 @@ func (s *TestSink) Logs() []lager.LogFormat {
 		}
 		logs = append(logs, log)
 	}
-
-	return logs
 }
 
 func (s *TestSink) LogMessages() []string {

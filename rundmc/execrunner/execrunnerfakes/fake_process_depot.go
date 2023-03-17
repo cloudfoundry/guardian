@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeProcessDepot struct {
@@ -51,15 +51,16 @@ func (fake *FakeProcessDepot) CreateProcessDir(arg1 lager.Logger, arg2 string, a
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.CreateProcessDirStub
+	fakeReturns := fake.createProcessDirReturns
 	fake.recordInvocation("CreateProcessDir", []interface{}{arg1, arg2, arg3})
 	fake.createProcessDirMutex.Unlock()
-	if fake.CreateProcessDirStub != nil {
-		return fake.CreateProcessDirStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createProcessDirReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -116,15 +117,16 @@ func (fake *FakeProcessDepot) LookupProcessDir(arg1 lager.Logger, arg2 string, a
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.LookupProcessDirStub
+	fakeReturns := fake.lookupProcessDirReturns
 	fake.recordInvocation("LookupProcessDir", []interface{}{arg1, arg2, arg3})
 	fake.lookupProcessDirMutex.Unlock()
-	if fake.LookupProcessDirStub != nil {
-		return fake.LookupProcessDirStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.lookupProcessDirReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

@@ -11,8 +11,8 @@ import (
 
 	"code.cloudfoundry.org/guardian/throttle"
 	"code.cloudfoundry.org/guardian/throttle/throttlefakes"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 var _ = Describe("PollingService", func() {

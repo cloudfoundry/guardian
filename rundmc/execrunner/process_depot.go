@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/guardian/rundmc/depot"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 //go:generate counterfeiter . ProcessDepot

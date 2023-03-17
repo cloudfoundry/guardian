@@ -33,15 +33,16 @@ func (fake *FakeCgroupPathResolver) Resolve(arg1 string, arg2 string) (string, e
 		arg1 string
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.ResolveStub
+	fakeReturns := fake.resolveReturns
 	fake.recordInvocation("Resolve", []interface{}{arg1, arg2})
 	fake.resolveMutex.Unlock()
-	if fake.ResolveStub != nil {
-		return fake.ResolveStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.resolveReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

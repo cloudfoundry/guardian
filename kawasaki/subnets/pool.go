@@ -8,7 +8,7 @@ import (
 	"net"
 	"sync"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 //go:generate counterfeiter -o fake_subnet_pool/fake_pool.go . Pool

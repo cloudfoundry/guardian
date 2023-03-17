@@ -29,15 +29,16 @@ func (fake *FakePortForwarder) Forward(arg1 kawasaki.PortForwarderSpec) error {
 	fake.forwardArgsForCall = append(fake.forwardArgsForCall, struct {
 		arg1 kawasaki.PortForwarderSpec
 	}{arg1})
+	stub := fake.ForwardStub
+	fakeReturns := fake.forwardReturns
 	fake.recordInvocation("Forward", []interface{}{arg1})
 	fake.forwardMutex.Unlock()
-	if fake.ForwardStub != nil {
-		return fake.ForwardStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.forwardReturns
 	return fakeReturns.result1
 }
 

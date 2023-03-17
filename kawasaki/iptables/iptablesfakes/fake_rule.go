@@ -29,15 +29,16 @@ func (fake *FakeRule) Flags(arg1 string) []string {
 	fake.flagsArgsForCall = append(fake.flagsArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.FlagsStub
+	fakeReturns := fake.flagsReturns
 	fake.recordInvocation("Flags", []interface{}{arg1})
 	fake.flagsMutex.Unlock()
-	if fake.FlagsStub != nil {
-		return fake.FlagsStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.flagsReturns
 	return fakeReturns.result1
 }
 

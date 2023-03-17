@@ -10,8 +10,8 @@ import (
 	"code.cloudfoundry.org/guardian/kawasaki/configure"
 	"code.cloudfoundry.org/guardian/kawasaki/devices/fakedevices"
 	"code.cloudfoundry.org/guardian/kawasaki/netns"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
+	"code.cloudfoundry.org/lager/v3"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

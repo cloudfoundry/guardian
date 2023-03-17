@@ -31,15 +31,17 @@ func (fake *FakeMountPointChecker) Spy(arg1 string) (bool, error) {
 	fake.argsForCall = append(fake.argsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.Stub
+	returns := fake.returns
 	fake.recordInvocation("MountPointChecker", []interface{}{arg1})
 	fake.mutex.Unlock()
-	if fake.Stub != nil {
-		return fake.Stub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.returns.result1, fake.returns.result2
+	return returns.result1, returns.result2
 }
 
 func (fake *FakeMountPointChecker) CallCount() int {

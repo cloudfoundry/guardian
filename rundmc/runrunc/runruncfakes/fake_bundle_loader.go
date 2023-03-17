@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeBundleLoader struct {
@@ -35,15 +35,16 @@ func (fake *FakeBundleLoader) Load(arg1 lager.Logger, arg2 string) (goci.Bndl, e
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.LoadStub
+	fakeReturns := fake.loadReturns
 	fake.recordInvocation("Load", []interface{}{arg1, arg2})
 	fake.loadMutex.Unlock()
-	if fake.LoadStub != nil {
-		return fake.LoadStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.loadReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

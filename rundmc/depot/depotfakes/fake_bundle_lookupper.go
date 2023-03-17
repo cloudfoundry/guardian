@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/depot"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeBundleLookupper struct {
@@ -44,15 +44,16 @@ func (fake *FakeBundleLookupper) Handles() ([]string, error) {
 	ret, specificReturn := fake.handlesReturnsOnCall[len(fake.handlesArgsForCall)]
 	fake.handlesArgsForCall = append(fake.handlesArgsForCall, struct {
 	}{})
+	stub := fake.HandlesStub
+	fakeReturns := fake.handlesReturns
 	fake.recordInvocation("Handles", []interface{}{})
 	fake.handlesMutex.Unlock()
-	if fake.HandlesStub != nil {
-		return fake.HandlesStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.handlesReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -101,15 +102,16 @@ func (fake *FakeBundleLookupper) Lookup(arg1 lager.Logger, arg2 string) (string,
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.LookupStub
+	fakeReturns := fake.lookupReturns
 	fake.recordInvocation("Lookup", []interface{}{arg1, arg2})
 	fake.lookupMutex.Unlock()
-	if fake.LookupStub != nil {
-		return fake.LookupStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.lookupReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

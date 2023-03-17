@@ -35,15 +35,16 @@ func (fake *FakeEnvDeterminer) EnvFor(arg1 goci.Bndl, arg2 garden.ProcessSpec, a
 		arg2 garden.ProcessSpec
 		arg3 int
 	}{arg1, arg2, arg3})
+	stub := fake.EnvForStub
+	fakeReturns := fake.envForReturns
 	fake.recordInvocation("EnvFor", []interface{}{arg1, arg2, arg3})
 	fake.envForMutex.Unlock()
-	if fake.EnvForStub != nil {
-		return fake.EnvForStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.envForReturns
 	return fakeReturns.result1
 }
 

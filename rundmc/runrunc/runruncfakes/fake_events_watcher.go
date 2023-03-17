@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeEventsWatcher struct {
@@ -32,15 +32,16 @@ func (fake *FakeEventsWatcher) WatchEvents(arg1 lager.Logger, arg2 string) error
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.WatchEventsStub
+	fakeReturns := fake.watchEventsReturns
 	fake.recordInvocation("WatchEvents", []interface{}{arg1, arg2})
 	fake.watchEventsMutex.Unlock()
-	if fake.WatchEventsStub != nil {
-		return fake.WatchEventsStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.watchEventsReturns
 	return fakeReturns.result1
 }
 

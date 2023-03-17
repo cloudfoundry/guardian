@@ -39,15 +39,16 @@ func (fake *FakeSubnetSelector) SelectSubnet(arg1 *net.IPNet, arg2 []*net.IPNet)
 		arg1 *net.IPNet
 		arg2 []*net.IPNet
 	}{arg1, arg2Copy})
+	stub := fake.SelectSubnetStub
+	fakeReturns := fake.selectSubnetReturns
 	fake.recordInvocation("SelectSubnet", []interface{}{arg1, arg2Copy})
 	fake.selectSubnetMutex.Unlock()
-	if fake.SelectSubnetStub != nil {
-		return fake.SelectSubnetStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.selectSubnetReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

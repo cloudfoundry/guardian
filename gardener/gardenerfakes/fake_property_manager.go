@@ -88,15 +88,16 @@ func (fake *FakePropertyManager) All(arg1 string) (garden.Properties, error) {
 	fake.allArgsForCall = append(fake.allArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.AllStub
+	fakeReturns := fake.allReturns
 	fake.recordInvocation("All", []interface{}{arg1})
 	fake.allMutex.Unlock()
-	if fake.AllStub != nil {
-		return fake.AllStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.allReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -151,15 +152,16 @@ func (fake *FakePropertyManager) DestroyKeySpace(arg1 string) error {
 	fake.destroyKeySpaceArgsForCall = append(fake.destroyKeySpaceArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.DestroyKeySpaceStub
+	fakeReturns := fake.destroyKeySpaceReturns
 	fake.recordInvocation("DestroyKeySpace", []interface{}{arg1})
 	fake.destroyKeySpaceMutex.Unlock()
-	if fake.DestroyKeySpaceStub != nil {
-		return fake.DestroyKeySpaceStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.destroyKeySpaceReturns
 	return fakeReturns.result1
 }
 
@@ -212,15 +214,16 @@ func (fake *FakePropertyManager) Get(arg1 string, arg2 string) (string, bool) {
 		arg1 string
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.GetStub
+	fakeReturns := fake.getReturns
 	fake.recordInvocation("Get", []interface{}{arg1, arg2})
 	fake.getMutex.Unlock()
-	if fake.GetStub != nil {
-		return fake.GetStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.getReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -276,15 +279,16 @@ func (fake *FakePropertyManager) MatchesAll(arg1 string, arg2 garden.Properties)
 		arg1 string
 		arg2 garden.Properties
 	}{arg1, arg2})
+	stub := fake.MatchesAllStub
+	fakeReturns := fake.matchesAllReturns
 	fake.recordInvocation("MatchesAll", []interface{}{arg1, arg2})
 	fake.matchesAllMutex.Unlock()
-	if fake.MatchesAllStub != nil {
-		return fake.MatchesAllStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.matchesAllReturns
 	return fakeReturns.result1
 }
 
@@ -337,15 +341,16 @@ func (fake *FakePropertyManager) Remove(arg1 string, arg2 string) error {
 		arg1 string
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.RemoveStub
+	fakeReturns := fake.removeReturns
 	fake.recordInvocation("Remove", []interface{}{arg1, arg2})
 	fake.removeMutex.Unlock()
-	if fake.RemoveStub != nil {
-		return fake.RemoveStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.removeReturns
 	return fakeReturns.result1
 }
 
@@ -398,9 +403,10 @@ func (fake *FakePropertyManager) Set(arg1 string, arg2 string, arg3 string) {
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.SetStub
 	fake.recordInvocation("Set", []interface{}{arg1, arg2, arg3})
 	fake.setMutex.Unlock()
-	if fake.SetStub != nil {
+	if stub != nil {
 		fake.SetStub(arg1, arg2, arg3)
 	}
 }

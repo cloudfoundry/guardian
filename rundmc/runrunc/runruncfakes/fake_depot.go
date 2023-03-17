@@ -7,7 +7,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeDepot struct {
@@ -104,15 +104,16 @@ func (fake *FakeDepot) Create(arg1 lager.Logger, arg2 string, arg3 goci.Bndl) (s
 		arg2 string
 		arg3 goci.Bndl
 	}{arg1, arg2, arg3})
+	stub := fake.CreateStub
+	fakeReturns := fake.createReturns
 	fake.recordInvocation("Create", []interface{}{arg1, arg2, arg3})
 	fake.createMutex.Unlock()
-	if fake.CreateStub != nil {
-		return fake.CreateStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -168,15 +169,16 @@ func (fake *FakeDepot) CreatedTime(arg1 lager.Logger, arg2 string) (time.Time, e
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.CreatedTimeStub
+	fakeReturns := fake.createdTimeReturns
 	fake.recordInvocation("CreatedTime", []interface{}{arg1, arg2})
 	fake.createdTimeMutex.Unlock()
-	if fake.CreatedTimeStub != nil {
-		return fake.CreatedTimeStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createdTimeReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -232,15 +234,16 @@ func (fake *FakeDepot) Destroy(arg1 lager.Logger, arg2 string) error {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DestroyStub
+	fakeReturns := fake.destroyReturns
 	fake.recordInvocation("Destroy", []interface{}{arg1, arg2})
 	fake.destroyMutex.Unlock()
-	if fake.DestroyStub != nil {
-		return fake.DestroyStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.destroyReturns
 	return fakeReturns.result1
 }
 
@@ -291,15 +294,16 @@ func (fake *FakeDepot) Handles() ([]string, error) {
 	ret, specificReturn := fake.handlesReturnsOnCall[len(fake.handlesArgsForCall)]
 	fake.handlesArgsForCall = append(fake.handlesArgsForCall, struct {
 	}{})
+	stub := fake.HandlesStub
+	fakeReturns := fake.handlesReturns
 	fake.recordInvocation("Handles", []interface{}{})
 	fake.handlesMutex.Unlock()
-	if fake.HandlesStub != nil {
-		return fake.HandlesStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.handlesReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -348,15 +352,16 @@ func (fake *FakeDepot) Load(arg1 lager.Logger, arg2 string) (goci.Bndl, error) {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.LoadStub
+	fakeReturns := fake.loadReturns
 	fake.recordInvocation("Load", []interface{}{arg1, arg2})
 	fake.loadMutex.Unlock()
-	if fake.LoadStub != nil {
-		return fake.LoadStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.loadReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -412,15 +417,16 @@ func (fake *FakeDepot) Lookup(arg1 lager.Logger, arg2 string) (string, error) {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.LookupStub
+	fakeReturns := fake.lookupReturns
 	fake.recordInvocation("Lookup", []interface{}{arg1, arg2})
 	fake.lookupMutex.Unlock()
-	if fake.LookupStub != nil {
-		return fake.LookupStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.lookupReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

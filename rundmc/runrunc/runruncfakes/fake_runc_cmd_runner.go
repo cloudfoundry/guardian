@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeRuncCmdRunner struct {
@@ -32,15 +32,16 @@ func (fake *FakeRuncCmdRunner) RunAndLog(arg1 lager.Logger, arg2 runrunc.Logging
 		arg1 lager.Logger
 		arg2 runrunc.LoggingCmd
 	}{arg1, arg2})
+	stub := fake.RunAndLogStub
+	fakeReturns := fake.runAndLogReturns
 	fake.recordInvocation("RunAndLog", []interface{}{arg1, arg2})
 	fake.runAndLogMutex.Unlock()
-	if fake.RunAndLogStub != nil {
-		return fake.RunAndLogStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.runAndLogReturns
 	return fakeReturns.result1
 }
 

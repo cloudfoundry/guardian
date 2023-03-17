@@ -1,7 +1,7 @@
 package privchecker
 
 import (
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 

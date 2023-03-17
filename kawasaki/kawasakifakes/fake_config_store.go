@@ -40,15 +40,16 @@ func (fake *FakeConfigStore) Get(arg1 string, arg2 string) (string, bool) {
 		arg1 string
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.GetStub
+	fakeReturns := fake.getReturns
 	fake.recordInvocation("Get", []interface{}{arg1, arg2})
 	fake.getMutex.Unlock()
-	if fake.GetStub != nil {
-		return fake.GetStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.getReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -104,9 +105,10 @@ func (fake *FakeConfigStore) Set(arg1 string, arg2 string, arg3 string) {
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.SetStub
 	fake.recordInvocation("Set", []interface{}{arg1, arg2, arg3})
 	fake.setMutex.Unlock()
-	if fake.SetStub != nil {
+	if stub != nil {
 		fake.SetStub(arg1, arg2, arg3)
 	}
 }

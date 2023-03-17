@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/kawasaki"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeConfigurer struct {
@@ -58,15 +58,16 @@ func (fake *FakeConfigurer) Apply(arg1 lager.Logger, arg2 kawasaki.NetworkConfig
 		arg2 kawasaki.NetworkConfig
 		arg3 int
 	}{arg1, arg2, arg3})
+	stub := fake.ApplyStub
+	fakeReturns := fake.applyReturns
 	fake.recordInvocation("Apply", []interface{}{arg1, arg2, arg3})
 	fake.applyMutex.Unlock()
-	if fake.ApplyStub != nil {
-		return fake.ApplyStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.applyReturns
 	return fakeReturns.result1
 }
 
@@ -119,15 +120,16 @@ func (fake *FakeConfigurer) DestroyBridge(arg1 lager.Logger, arg2 kawasaki.Netwo
 		arg1 lager.Logger
 		arg2 kawasaki.NetworkConfig
 	}{arg1, arg2})
+	stub := fake.DestroyBridgeStub
+	fakeReturns := fake.destroyBridgeReturns
 	fake.recordInvocation("DestroyBridge", []interface{}{arg1, arg2})
 	fake.destroyBridgeMutex.Unlock()
-	if fake.DestroyBridgeStub != nil {
-		return fake.DestroyBridgeStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.destroyBridgeReturns
 	return fakeReturns.result1
 }
 
@@ -180,15 +182,16 @@ func (fake *FakeConfigurer) DestroyIPTablesRules(arg1 lager.Logger, arg2 kawasak
 		arg1 lager.Logger
 		arg2 kawasaki.NetworkConfig
 	}{arg1, arg2})
+	stub := fake.DestroyIPTablesRulesStub
+	fakeReturns := fake.destroyIPTablesRulesReturns
 	fake.recordInvocation("DestroyIPTablesRules", []interface{}{arg1, arg2})
 	fake.destroyIPTablesRulesMutex.Unlock()
-	if fake.DestroyIPTablesRulesStub != nil {
-		return fake.DestroyIPTablesRulesStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.destroyIPTablesRulesReturns
 	return fakeReturns.result1
 }
 

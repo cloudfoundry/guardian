@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/peas"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeProcessPidGetter struct {
@@ -50,15 +50,16 @@ func (fake *FakeProcessPidGetter) GetPeaPid(arg1 lager.Logger, arg2 string, arg3
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.GetPeaPidStub
+	fakeReturns := fake.getPeaPidReturns
 	fake.recordInvocation("GetPeaPid", []interface{}{arg1, arg2, arg3})
 	fake.getPeaPidMutex.Unlock()
-	if fake.GetPeaPidStub != nil {
-		return fake.GetPeaPidStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.getPeaPidReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -114,15 +115,16 @@ func (fake *FakeProcessPidGetter) GetPid(arg1 lager.Logger, arg2 string) (int, e
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.GetPidStub
+	fakeReturns := fake.getPidReturns
 	fake.recordInvocation("GetPid", []interface{}{arg1, arg2})
 	fake.getPidMutex.Unlock()
-	if fake.GetPidStub != nil {
-		return fake.GetPidStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.getPidReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

@@ -97,15 +97,16 @@ func (fake *FakeRuncBinary) DeleteCommand(arg1 string, arg2 bool, arg3 string) *
 		arg2 bool
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.DeleteCommandStub
+	fakeReturns := fake.deleteCommandReturns
 	fake.recordInvocation("DeleteCommand", []interface{}{arg1, arg2, arg3})
 	fake.deleteCommandMutex.Unlock()
-	if fake.DeleteCommandStub != nil {
-		return fake.DeleteCommandStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.deleteCommandReturns
 	return fakeReturns.result1
 }
 
@@ -157,15 +158,16 @@ func (fake *FakeRuncBinary) EventsCommand(arg1 string) *exec.Cmd {
 	fake.eventsCommandArgsForCall = append(fake.eventsCommandArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.EventsCommandStub
+	fakeReturns := fake.eventsCommandReturns
 	fake.recordInvocation("EventsCommand", []interface{}{arg1})
 	fake.eventsCommandMutex.Unlock()
-	if fake.EventsCommandStub != nil {
-		return fake.EventsCommandStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.eventsCommandReturns
 	return fakeReturns.result1
 }
 
@@ -219,15 +221,16 @@ func (fake *FakeRuncBinary) ExecCommand(arg1 string, arg2 string, arg3 string) *
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.ExecCommandStub
+	fakeReturns := fake.execCommandReturns
 	fake.recordInvocation("ExecCommand", []interface{}{arg1, arg2, arg3})
 	fake.execCommandMutex.Unlock()
-	if fake.ExecCommandStub != nil {
-		return fake.ExecCommandStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.execCommandReturns
 	return fakeReturns.result1
 }
 
@@ -288,15 +291,16 @@ func (fake *FakeRuncBinary) RunCommand(arg1 string, arg2 string, arg3 string, ar
 		arg4 string
 		arg5 []string
 	}{arg1, arg2, arg3, arg4, arg5Copy})
+	stub := fake.RunCommandStub
+	fakeReturns := fake.runCommandReturns
 	fake.recordInvocation("RunCommand", []interface{}{arg1, arg2, arg3, arg4, arg5Copy})
 	fake.runCommandMutex.Unlock()
-	if fake.RunCommandStub != nil {
-		return fake.RunCommandStub(arg1, arg2, arg3, arg4, arg5)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.runCommandReturns
 	return fakeReturns.result1
 }
 
@@ -349,15 +353,16 @@ func (fake *FakeRuncBinary) StateCommand(arg1 string, arg2 string) *exec.Cmd {
 		arg1 string
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.StateCommandStub
+	fakeReturns := fake.stateCommandReturns
 	fake.recordInvocation("StateCommand", []interface{}{arg1, arg2})
 	fake.stateCommandMutex.Unlock()
-	if fake.StateCommandStub != nil {
-		return fake.StateCommandStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.stateCommandReturns
 	return fakeReturns.result1
 }
 
@@ -410,15 +415,16 @@ func (fake *FakeRuncBinary) StatsCommand(arg1 string, arg2 string) *exec.Cmd {
 		arg1 string
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.StatsCommandStub
+	fakeReturns := fake.statsCommandReturns
 	fake.recordInvocation("StatsCommand", []interface{}{arg1, arg2})
 	fake.statsCommandMutex.Unlock()
-	if fake.StatsCommandStub != nil {
-		return fake.StatsCommandStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.statsCommandReturns
 	return fakeReturns.result1
 }
 

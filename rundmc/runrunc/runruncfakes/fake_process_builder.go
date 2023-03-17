@@ -37,15 +37,16 @@ func (fake *FakeProcessBuilder) BuildProcess(arg1 goci.Bndl, arg2 garden.Process
 		arg2 garden.ProcessSpec
 		arg3 *users.ExecUser
 	}{arg1, arg2, arg3})
+	stub := fake.BuildProcessStub
+	fakeReturns := fake.buildProcessReturns
 	fake.recordInvocation("BuildProcess", []interface{}{arg1, arg2, arg3})
 	fake.buildProcessMutex.Unlock()
-	if fake.BuildProcessStub != nil {
-		return fake.BuildProcessStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.buildProcessReturns
 	return fakeReturns.result1
 }
 

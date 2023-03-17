@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeExecRunner struct {
@@ -80,15 +80,16 @@ func (fake *FakeExecRunner) Attach(arg1 lager.Logger, arg2 string, arg3 string, 
 		arg3 string
 		arg4 garden.ProcessIO
 	}{arg1, arg2, arg3, arg4})
+	stub := fake.AttachStub
+	fakeReturns := fake.attachReturns
 	fake.recordInvocation("Attach", []interface{}{arg1, arg2, arg3, arg4})
 	fake.attachMutex.Unlock()
-	if fake.AttachStub != nil {
-		return fake.AttachStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.attachReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -149,15 +150,16 @@ func (fake *FakeExecRunner) Run(arg1 lager.Logger, arg2 string, arg3 string, arg
 		arg6 io.Reader
 		arg7 func() error
 	}{arg1, arg2, arg3, arg4, arg5, arg6, arg7})
+	stub := fake.RunStub
+	fakeReturns := fake.runReturns
 	fake.recordInvocation("Run", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6, arg7})
 	fake.runMutex.Unlock()
-	if fake.RunStub != nil {
-		return fake.RunStub(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.runReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -219,15 +221,16 @@ func (fake *FakeExecRunner) RunPea(arg1 lager.Logger, arg2 string, arg3 goci.Bnd
 		arg7 io.Reader
 		arg8 func() error
 	}{arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8})
+	stub := fake.RunPeaStub
+	fakeReturns := fake.runPeaReturns
 	fake.recordInvocation("RunPea", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8})
 	fake.runPeaMutex.Unlock()
-	if fake.RunPeaStub != nil {
-		return fake.RunPeaStub(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.runPeaReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

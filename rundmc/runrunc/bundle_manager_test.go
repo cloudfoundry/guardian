@@ -14,7 +14,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	. "code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 

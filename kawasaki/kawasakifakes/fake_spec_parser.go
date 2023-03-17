@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/kawasaki/subnets"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeSpecParser struct {
@@ -37,15 +37,16 @@ func (fake *FakeSpecParser) Parse(arg1 lager.Logger, arg2 string) (subnets.Subne
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.ParseStub
+	fakeReturns := fake.parseReturns
 	fake.recordInvocation("Parse", []interface{}{arg1, arg2})
 	fake.parseMutex.Unlock()
-	if fake.ParseStub != nil {
-		return fake.ParseStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
 	}
-	fakeReturns := fake.parseReturns
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 

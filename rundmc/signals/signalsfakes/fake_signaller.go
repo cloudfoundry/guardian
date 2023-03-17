@@ -30,15 +30,16 @@ func (fake *FakeSignaller) Signal(arg1 garden.Signal) error {
 	fake.signalArgsForCall = append(fake.signalArgsForCall, struct {
 		arg1 garden.Signal
 	}{arg1})
+	stub := fake.SignalStub
+	fakeReturns := fake.signalReturns
 	fake.recordInvocation("Signal", []interface{}{arg1})
 	fake.signalMutex.Unlock()
-	if fake.SignalStub != nil {
-		return fake.SignalStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.signalReturns
 	return fakeReturns.result1
 }
 

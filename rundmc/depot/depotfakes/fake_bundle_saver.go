@@ -32,15 +32,16 @@ func (fake *FakeBundleSaver) Save(arg1 goci.Bndl, arg2 string) error {
 		arg1 goci.Bndl
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.SaveStub
+	fakeReturns := fake.saveReturns
 	fake.recordInvocation("Save", []interface{}{arg1, arg2})
 	fake.saveMutex.Unlock()
-	if fake.SaveStub != nil {
-		return fake.SaveStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.saveReturns
 	return fakeReturns.result1
 }
 

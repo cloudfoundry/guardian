@@ -2,20 +2,20 @@
 package runruncfakes
 
 import (
-	"os"
+	"io/fs"
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 )
 
 type FakeMkdirer struct {
-	MkdirAsStub        func(string, int, int, os.FileMode, bool, ...string) error
+	MkdirAsStub        func(string, int, int, fs.FileMode, bool, ...string) error
 	mkdirAsMutex       sync.RWMutex
 	mkdirAsArgsForCall []struct {
 		arg1 string
 		arg2 int
 		arg3 int
-		arg4 os.FileMode
+		arg4 fs.FileMode
 		arg5 bool
 		arg6 []string
 	}
@@ -29,26 +29,27 @@ type FakeMkdirer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeMkdirer) MkdirAs(arg1 string, arg2 int, arg3 int, arg4 os.FileMode, arg5 bool, arg6 ...string) error {
+func (fake *FakeMkdirer) MkdirAs(arg1 string, arg2 int, arg3 int, arg4 fs.FileMode, arg5 bool, arg6 ...string) error {
 	fake.mkdirAsMutex.Lock()
 	ret, specificReturn := fake.mkdirAsReturnsOnCall[len(fake.mkdirAsArgsForCall)]
 	fake.mkdirAsArgsForCall = append(fake.mkdirAsArgsForCall, struct {
 		arg1 string
 		arg2 int
 		arg3 int
-		arg4 os.FileMode
+		arg4 fs.FileMode
 		arg5 bool
 		arg6 []string
 	}{arg1, arg2, arg3, arg4, arg5, arg6})
+	stub := fake.MkdirAsStub
+	fakeReturns := fake.mkdirAsReturns
 	fake.recordInvocation("MkdirAs", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6})
 	fake.mkdirAsMutex.Unlock()
-	if fake.MkdirAsStub != nil {
-		return fake.MkdirAsStub(arg1, arg2, arg3, arg4, arg5, arg6...)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4, arg5, arg6...)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.mkdirAsReturns
 	return fakeReturns.result1
 }
 
@@ -58,13 +59,13 @@ func (fake *FakeMkdirer) MkdirAsCallCount() int {
 	return len(fake.mkdirAsArgsForCall)
 }
 
-func (fake *FakeMkdirer) MkdirAsCalls(stub func(string, int, int, os.FileMode, bool, ...string) error) {
+func (fake *FakeMkdirer) MkdirAsCalls(stub func(string, int, int, fs.FileMode, bool, ...string) error) {
 	fake.mkdirAsMutex.Lock()
 	defer fake.mkdirAsMutex.Unlock()
 	fake.MkdirAsStub = stub
 }
 
-func (fake *FakeMkdirer) MkdirAsArgsForCall(i int) (string, int, int, os.FileMode, bool, []string) {
+func (fake *FakeMkdirer) MkdirAsArgsForCall(i int) (string, int, int, fs.FileMode, bool, []string) {
 	fake.mkdirAsMutex.RLock()
 	defer fake.mkdirAsMutex.RUnlock()
 	argsForCall := fake.mkdirAsArgsForCall[i]

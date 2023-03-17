@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/debugserver"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/http_server"

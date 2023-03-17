@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/throttle"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeMetricsSource struct {
@@ -33,15 +33,16 @@ func (fake *FakeMetricsSource) CollectMetrics(arg1 lager.Logger) (map[string]gar
 	fake.collectMetricsArgsForCall = append(fake.collectMetricsArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.CollectMetricsStub
+	fakeReturns := fake.collectMetricsReturns
 	fake.recordInvocation("CollectMetrics", []interface{}{arg1})
 	fake.collectMetricsMutex.Unlock()
-	if fake.CollectMetricsStub != nil {
-		return fake.CollectMetricsStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.collectMetricsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

@@ -27,9 +27,10 @@ func (fake *FakeStatsNotifier) OnStat(arg1 string, arg2 garden.ContainerCPUStat,
 		arg2 garden.ContainerCPUStat
 		arg3 garden.ContainerMemoryStat
 	}{arg1, arg2, arg3})
+	stub := fake.OnStatStub
 	fake.recordInvocation("OnStat", []interface{}{arg1, arg2, arg3})
 	fake.onStatMutex.Unlock()
-	if fake.OnStatStub != nil {
+	if stub != nil {
 		fake.OnStatStub(arg1, arg2, arg3)
 	}
 }

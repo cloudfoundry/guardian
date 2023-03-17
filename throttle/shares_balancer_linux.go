@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 

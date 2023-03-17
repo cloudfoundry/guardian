@@ -31,15 +31,16 @@ func (fake *FakePidGetter) Pid(arg1 string) (int, error) {
 	fake.pidArgsForCall = append(fake.pidArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.PidStub
+	fakeReturns := fake.pidReturns
 	fake.recordInvocation("Pid", []interface{}{arg1})
 	fake.pidMutex.Unlock()
-	if fake.PidStub != nil {
-		return fake.PidStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.pidReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeNetworkDepot struct {
@@ -49,15 +49,16 @@ func (fake *FakeNetworkDepot) Destroy(arg1 lager.Logger, arg2 string) error {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DestroyStub
+	fakeReturns := fake.destroyReturns
 	fake.recordInvocation("Destroy", []interface{}{arg1, arg2})
 	fake.destroyMutex.Unlock()
-	if fake.DestroyStub != nil {
-		return fake.DestroyStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.destroyReturns
 	return fakeReturns.result1
 }
 
@@ -112,15 +113,16 @@ func (fake *FakeNetworkDepot) SetupBindMounts(arg1 lager.Logger, arg2 string, ar
 		arg3 bool
 		arg4 string
 	}{arg1, arg2, arg3, arg4})
+	stub := fake.SetupBindMountsStub
+	fakeReturns := fake.setupBindMountsReturns
 	fake.recordInvocation("SetupBindMounts", []interface{}{arg1, arg2, arg3, arg4})
 	fake.setupBindMountsMutex.Unlock()
-	if fake.SetupBindMountsStub != nil {
-		return fake.SetupBindMountsStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.setupBindMountsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

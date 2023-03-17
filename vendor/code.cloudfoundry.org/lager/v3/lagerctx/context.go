@@ -5,7 +5,7 @@ package lagerctx
 import (
 	"context"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 // NewContext returns a derived context containing the logger.

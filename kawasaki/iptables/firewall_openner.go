@@ -2,7 +2,7 @@ package iptables
 
 import (
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 //go:generate counterfeiter . RuleTranslator

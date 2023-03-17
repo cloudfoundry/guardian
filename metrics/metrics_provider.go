@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"runtime"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type MetricsProvider struct {

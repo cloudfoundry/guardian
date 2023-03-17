@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/privchecker"
-	"code.cloudfoundry.org/lager"
+	lager "code.cloudfoundry.org/lager/v3"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -35,15 +35,16 @@ func (fake *FakeContainerManager) Spec(arg1 lager.Logger, arg2 string) (*specs.S
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.SpecStub
+	fakeReturns := fake.specReturns
 	fake.recordInvocation("Spec", []interface{}{arg1, arg2})
 	fake.specMutex.Unlock()
-	if fake.SpecStub != nil {
-		return fake.SpecStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.specReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
