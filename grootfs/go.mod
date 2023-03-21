@@ -76,4 +76,7 @@ require (
 	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
 
-replace code.cloudfoundry.org/idmapper => ../idmapper
+replace (
+	code.cloudfoundry.org/idmapper => ../idmapper
+	github.com/cloudfoundry/sonde-go => github.com/cloudfoundry/sonde-go v0.0.0-20200416163440-a42463ba266b
+)
