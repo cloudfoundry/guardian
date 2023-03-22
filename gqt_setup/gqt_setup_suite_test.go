@@ -13,7 +13,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"github.com/BurntSushi/toml"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 )

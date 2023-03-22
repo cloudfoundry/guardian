@@ -13,7 +13,7 @@ import (
 	. "code.cloudfoundry.org/guardian/matchers"
 
 	archiver "code.cloudfoundry.org/archiver/extractor/test_helper"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

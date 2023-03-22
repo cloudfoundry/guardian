@@ -11,7 +11,7 @@ import (
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 	fakes "code.cloudfoundry.org/guardian/kawasaki/iptables/iptablesfakes"
 	"code.cloudfoundry.org/guardian/pkg/locksmith"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

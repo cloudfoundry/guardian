@@ -1,7 +1,7 @@
 /*
-Ginkgomon provides ginkgo test helpers.
+Ginkgomon_v2 provides ginkgo test helpers that are compatible with Ginkgo v2+
 */
-package ginkgomon
+package ginkgomon_v2
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"

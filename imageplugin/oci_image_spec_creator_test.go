@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/guardian/imageplugin"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	imagespec "github.com/opencontainers/image-spec/specs-go/v1"

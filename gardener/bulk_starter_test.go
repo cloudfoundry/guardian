@@ -5,7 +5,7 @@ import (
 
 	. "code.cloudfoundry.org/guardian/gardener"
 	fakes "code.cloudfoundry.org/guardian/gardener/gardenerfakes"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
