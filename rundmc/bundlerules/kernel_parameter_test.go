@@ -3,7 +3,7 @@ package bundlerules_test
 import (
 	"errors"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"

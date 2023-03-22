@@ -3,7 +3,7 @@ package imageplugin_test
 import (
 	"code.cloudfoundry.org/guardian/imageplugin"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	digest "github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"

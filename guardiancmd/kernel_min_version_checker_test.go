@@ -5,7 +5,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/guardiancmd"
 	"code.cloudfoundry.org/guardian/guardiancmd/guardiancmdfakes"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

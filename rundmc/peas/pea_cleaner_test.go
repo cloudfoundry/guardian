@@ -10,7 +10,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/peas/peasfakes"
 	"code.cloudfoundry.org/guardian/rundmc/peas/processwaiter/processwaiterfakes"
 	"code.cloudfoundry.org/lager/lagertest"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

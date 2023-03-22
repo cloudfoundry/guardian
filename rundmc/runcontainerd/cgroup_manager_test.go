@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

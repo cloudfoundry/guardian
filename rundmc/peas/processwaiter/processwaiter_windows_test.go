@@ -5,7 +5,7 @@ import (
 	"os/exec"
 
 	"code.cloudfoundry.org/guardian/rundmc/peas/processwaiter"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

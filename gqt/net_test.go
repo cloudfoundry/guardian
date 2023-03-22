@@ -21,7 +21,7 @@ import (
 	"code.cloudfoundry.org/guardian/kawasaki/mtu"
 	"code.cloudfoundry.org/localip"
 	"github.com/eapache/go-resiliency/retrier"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 )
