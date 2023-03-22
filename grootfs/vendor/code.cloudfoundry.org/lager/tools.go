@@ -1,7 +1,7 @@
 //go:build tools
 // +build tools
 
-package main
+package lager
 
 import (
 	_ "github.com/onsi/ginkgo/v2/ginkgo"

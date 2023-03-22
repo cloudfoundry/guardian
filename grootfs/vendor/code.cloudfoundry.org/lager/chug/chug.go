@@ -34,14 +34,6 @@ type LogEntry struct {
 	Data lager.Data
 }
 
-type lagerTime struct {
-	t time.Time
-}
-
-func (t lagerTime) Time() time.Time {
-	return t.t
-}
-
 func toTimestamp(d string) (time.Time, error) {
 	f, err := strconv.ParseFloat(d, 64)
 	if err == nil {
@@ -65,7 +57,7 @@ func Chug(reader io.Reader, out chan<- Entry) {
 	scanner := bufio.NewReader(reader)
 	for {
 		line, err := scanner.ReadBytes('\n')
-		if line != nil {
+		if len(line) > 0 {
 			out <- entry(bytes.TrimSuffix(line, []byte{'\n'}))
 		}
 		if err != nil {
