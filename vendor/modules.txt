@@ -33,7 +33,7 @@ code.cloudfoundry.org/grootfs/commands/config
 # code.cloudfoundry.org/idmapper v0.0.0-20230306120024-f90a36a869cf => ../idmapper
 ## explicit; go 1.18
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager v2.0.0+incompatible => code.cloudfoundry.org/lager v1.1.1-0.20230321195817-3d52f427a2d2
+# code.cloudfoundry.org/lager v1.1.1-0.20230321195817-3d52f427a2d2
 ## explicit; go 1.19
 code.cloudfoundry.org/lager
 code.cloudfoundry.org/lager/chug
@@ -1323,5 +1323,4 @@ sigs.k8s.io/yaml
 # code.cloudfoundry.org/garden => ../garden
 # code.cloudfoundry.org/grootfs => ../grootfs
 # code.cloudfoundry.org/idmapper => ../idmapper
-# code.cloudfoundry.org/lager => code.cloudfoundry.org/lager v1.1.1-0.20230321195817-3d52f427a2d2
 # github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
