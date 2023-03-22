@@ -13,10 +13,10 @@ import (
 	fetcherpkg "code.cloudfoundry.org/grootfs/fetcher/tar_fetcher"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/opencontainers/image-spec/specs-go/v1"
-	. "github.com/st3v/glager"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/st3v/glager"
 )
 
 var _ = Describe("Tar Fetcher", func() {
@@ -25,7 +25,7 @@ var _ = Describe("Tar Fetcher", func() {
 
 		sourceImagePath string
 		baseImagePath   string
-		logger          *TestLogger
+		logger          *glager.TestLogger
 		baseImageURL    *url.URL
 	)
 
@@ -35,7 +35,7 @@ var _ = Describe("Tar Fetcher", func() {
 		sourceImagePath, err = ioutil.TempDir("", "image")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
-		logger = NewLogger("tar-fetcher")
+		logger = glager.NewLogger("tar-fetcher")
 		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
 		baseImagePath = baseImageFile.Name()
 		baseImageURL, err = url.Parse(baseImagePath)
@@ -67,10 +67,10 @@ var _ = Describe("Tar Fetcher", func() {
 			_, _, err := fetcher.StreamBlob(logger, groot.LayerInfo{})
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(logger).To(ContainSequence(
-				Debug(
-					Message("tar-fetcher.stream-blob.opening-tar"),
-					Data("baseImagePath", baseImagePath),
+			Expect(logger).To(glager.ContainSequence(
+				glager.Debug(
+					glager.Message("tar-fetcher.stream-blob.opening-tar"),
+					glager.Data("baseImagePath", baseImagePath),
 				),
 			))
 		})

@@ -12,7 +12,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/testhelpers"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
