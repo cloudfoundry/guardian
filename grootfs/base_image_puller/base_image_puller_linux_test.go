@@ -19,7 +19,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )

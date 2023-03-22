@@ -23,11 +23,11 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/docker/docker/pkg/system"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	. "github.com/st3v/glager"
+	"github.com/st3v/glager"
 	"golang.org/x/sys/unix"
 )
 
@@ -454,9 +454,9 @@ var _ = Describe("Driver", func() {
 				_, err := driver.CreateImage(logger, spec)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(logger).To(ContainSequence(
-					Debug(
-						Message("overlay+xfs.overlayxfs-creating-image.applying-quotas.no-need-for-quotas"),
+				Expect(logger).To(glager.ContainSequence(
+					glager.Debug(
+						glager.Message("overlay+xfs.overlayxfs-creating-image.applying-quotas.no-need-for-quotas"),
 					),
 				))
 			})

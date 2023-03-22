@@ -12,9 +12,9 @@ import (
 	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/st3v/glager"
+	"github.com/st3v/glager"
 )
 
 var _ = Describe("NSIdMapperUnpacker", func() {
@@ -22,7 +22,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		reexecer *grootfakes.FakeSandboxReexecer
 		unpacker *unpackerpkg.NSIdMapperUnpacker
 
-		logger                    *TestLogger
+		logger                    *glager.TestLogger
 		storePath                 string
 		shouldCloneUserNsOnUnpack bool
 		targetPath                string
@@ -35,7 +35,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		reexecer = new(grootfakes.FakeSandboxReexecer)
 		reexecer.ReexecReturns([]byte("{\"BytesWritten\":1024}"), nil)
 
-		logger = NewLogger("test-store")
+		logger = glager.NewLogger("test-store")
 
 		storePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())

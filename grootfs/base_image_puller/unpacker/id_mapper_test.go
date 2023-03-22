@@ -7,16 +7,16 @@ import (
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/groot"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/st3v/glager"
+	"github.com/st3v/glager"
 )
 
 var _ = Describe("IDMapper", func() {
 	var (
 		fakeCmdRunner *fake_command_runner.FakeCommandRunner
 		idMapper      *unpacker.CommandIDMapper
-		logger        *TestLogger
+		logger        *glager.TestLogger
 		newuidmapBin  string
 		newgidmapBin  string
 	)
@@ -26,7 +26,7 @@ var _ = Describe("IDMapper", func() {
 		newgidmapBin = "newgidmap"
 		fakeCmdRunner = fake_command_runner.New()
 		idMapper = unpacker.NewIDMapper(newuidmapBin, newgidmapBin, fakeCmdRunner)
-		logger = NewLogger("idmapper")
+		logger = glager.NewLogger("idmapper")
 	})
 
 	Describe("MapUIDs", func() {
@@ -47,11 +47,11 @@ var _ = Describe("IDMapper", func() {
 					groot.IDMappingSpec{HostID: 100, NamespaceID: 200, Size: 300},
 				})).To(Succeed())
 
-				Expect(logger).To(ContainSequence(
-					Debug(
-						Message("idmapper.mapUID.starting-id-map"),
-						Data("path", "/usr/bin/newuidmap"),
-						Data("args", []string{"newuidmap", "1000", "20", "10", "30", "200", "100", "300"}),
+				Expect(logger).To(glager.ContainSequence(
+					glager.Debug(
+						glager.Message("idmapper.mapUID.starting-id-map"),
+						glager.Data("path", "/usr/bin/newuidmap"),
+						glager.Data("args", []string{"newuidmap", "1000", "20", "10", "30", "200", "100", "300"}),
 					),
 				))
 			})
@@ -115,11 +115,11 @@ var _ = Describe("IDMapper", func() {
 					groot.IDMappingSpec{HostID: 100, NamespaceID: 200, Size: 300},
 				})).To(Succeed())
 
-				Expect(logger).To(ContainSequence(
-					Debug(
-						Message("idmapper.mapGID.starting-id-map"),
-						Data("path", "/usr/bin/newgidmap"),
-						Data("args", []string{"newgidmap", "1000", "20", "10", "30", "200", "100", "300"}),
+				Expect(logger).To(glager.ContainSequence(
+					glager.Debug(
+						glager.Message("idmapper.mapGID.starting-id-map"),
+						glager.Data("path", "/usr/bin/newgidmap"),
+						glager.Data("args", []string{"newgidmap", "1000", "20", "10", "30", "200", "100", "300"}),
 					),
 				))
 			})

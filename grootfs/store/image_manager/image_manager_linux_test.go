@@ -17,7 +17,7 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/config"
 	yaml "gopkg.in/yaml.v2"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
