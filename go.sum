@@ -51,6 +51,8 @@ code.cloudfoundry.org/debugserver v0.0.0-20230321200608-ba7cbb8c3908 h1:+XzPjcF8
 code.cloudfoundry.org/debugserver v0.0.0-20230321200608-ba7cbb8c3908/go.mod h1:zngrU131+/l99364Zvsjdr+SWjBR8IXNKt9sBj6NXsE=
 code.cloudfoundry.org/lager v1.1.1-0.20230321195817-3d52f427a2d2 h1:/XzZDmyGGMbVARg2I8/gooQHUZrnbFjLN6blLWxdcXU=
 code.cloudfoundry.org/lager v1.1.1-0.20230321195817-3d52f427a2d2/go.mod h1:4//yL08XH9xro2/KMV6cQ0INl8E+5+XFIVcXJrwrGao=
+code.cloudfoundry.org/lager v2.0.0+incompatible h1:WZwDKDB2PLd/oL+USK4b4aEjUymIej9My2nUQ9oWEwQ=
+code.cloudfoundry.org/lager v2.0.0+incompatible/go.mod h1:O2sS7gKP3HM2iemG+EnwvyNQK7pTSC6Foi4QiMp9sSk=
 code.cloudfoundry.org/localip v0.0.0-20230220195659-7420c1036ae7 h1:zE563FEUA7+D4YynXK8tYb1L2y4zQFJja4XtlEohuSQ=
 code.cloudfoundry.org/localip v0.0.0-20230220195659-7420c1036ae7/go.mod h1:1qpm2rx2qOc+5qxZ7wNzT+n3R7ksG1LEKUUF9lH7Zt4=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=

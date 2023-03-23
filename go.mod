@@ -10,7 +10,7 @@ require (
 	code.cloudfoundry.org/garden v0.0.0-20230109170928-83a99bb745e3
 	code.cloudfoundry.org/grootfs v0.0.0-00010101000000-000000000000
 	code.cloudfoundry.org/idmapper v0.0.0-20230306120024-f90a36a869cf
-	code.cloudfoundry.org/lager v1.1.1-0.20230321195817-3d52f427a2d2
+	code.cloudfoundry.org/lager v2.0.0+incompatible
 	code.cloudfoundry.org/localip v0.0.0-20230220195659-7420c1036ae7
 	github.com/BurntSushi/toml v1.2.1
 	github.com/cloudfoundry/dropsonde v1.0.0
