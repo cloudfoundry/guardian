@@ -879,6 +879,17 @@ var _ = Describe("Gardener", func() {
 
 			itOnlyMatchesFullyCreatedContainers(props)
 		})
+
+		Context("when garden state is set to all", func() {
+			It("returns all containers including non-created containers", func() {
+				props := garden.Properties{"garden.state": "all"}
+				_, err := gdnr.Containers(props)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, props = propertyManager.MatchesAllArgsForCall(0)
+				Expect(props).ToNot(HaveKey("garden.state"))
+			})
+		})
 	})
 
 	Context("when no containers exist", func() {
