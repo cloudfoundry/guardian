@@ -173,6 +173,8 @@ type Gardener struct {
 	PeaCleaner PeaCleaner
 
 	AllowPrivilgedContainers bool
+
+	brokenHandles map[string]bool
 }
 
 func New(
@@ -203,6 +205,7 @@ func New(
 		PeaCleaner:               peaCleaner,
 		AllowPrivilgedContainers: allowPrivilegedContainers,
 		Logger:                   logger,
+		brokenHandles:            map[string]bool{},
 
 		Sleep: time.Sleep,
 	}
@@ -298,6 +301,13 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 		return nil, err
 	}
 
+	if ownerName, ok := containerSpec.Properties["executor:owner"]; ok {
+		if ownerName == "executor" {
+			g.brokenHandles[containerSpec.Handle] = true
+			return nil, errors.New("failed-for-non-healthcheck-container")
+		}
+	}
+
 	if err = g.Networker.Network(log, containerSpec, actualSpec.Pid); err != nil {
 		return nil, err
 	}
@@ -364,6 +374,10 @@ func (g *Gardener) destroy(log lager.Logger, handle string) error {
 	var errs *multierror.Error
 
 	errs = multierror.Append(errs, g.Containerizer.Destroy(log, handle))
+
+	if _, ok := g.brokenHandles[handle]; ok {
+		return errors.New("failed-for-non-healthcheck-container")
+	}
 
 	errs = multierror.Append(errs, g.Networker.Destroy(log, handle))
 
