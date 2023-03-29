@@ -454,7 +454,11 @@ func (g *Gardener) Containers(props garden.Properties) ([]garden.Container, erro
 	if props == nil {
 		props = garden.Properties{}
 	}
-	props["garden.state"] = "created"
+	if _, ok := props["garden.state"]; !ok {
+		props["garden.state"] = "created"
+	} else if props["garden.state"] == "all" {
+		delete(props, "garden.state")
+	}
 
 	var containers []garden.Container
 	for _, handle := range handles {
