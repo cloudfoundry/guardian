@@ -195,6 +195,15 @@ var _ = Describe("Gardener", func() {
 				Expect(err).To(MatchError("booom!"))
 			})
 
+			It("retains container properties", func() {
+				gdnr.Create(garden.ContainerSpec{Handle: "bob", Properties: garden.Properties{"owner": "some-owner"}})
+				Expect(propertyManager.SetCallCount()).To(Equal(1))
+				handle, name, value := propertyManager.SetArgsForCall(0)
+				Expect(handle).To(Equal("bob"))
+				Expect(name).To(Equal("owner"))
+				Expect(value).To(Equal("some-owner"))
+			})
+
 			It("should not call the containerizer", func() {
 				gdnr.Create(garden.ContainerSpec{Handle: "bob"})
 				Expect(containerizer.CreateCallCount()).To(Equal(0))
@@ -239,11 +248,22 @@ var _ = Describe("Gardener", func() {
 		})
 
 		Context("when setting up bind mounts fails", func() {
-			It("returns the error", func() {
+			BeforeEach(func() {
 				networker.SetupBindMountsReturns(nil, errors.New("failed"))
+			})
 
+			It("returns the error", func() {
 				_, err := gdnr.Create(garden.ContainerSpec{Handle: "some-ctr"})
 				Expect(err).To(MatchError("failed"))
+			})
+
+			It("sets the container properties", func() {
+				gdnr.Create(garden.ContainerSpec{Handle: "bob", Properties: garden.Properties{"owner": "some-owner"}})
+				Expect(propertyManager.SetCallCount()).To(Equal(1))
+				handle, name, value := propertyManager.SetArgsForCall(0)
+				Expect(handle).To(Equal("bob"))
+				Expect(name).To(Equal("owner"))
+				Expect(value).To(Equal("some-owner"))
 			})
 		})
 
@@ -274,6 +294,15 @@ var _ = Describe("Gardener", func() {
 					Handle: "poor-banana",
 				})
 				Expect(err).To(HaveOccurred())
+			})
+
+			It("sets container properties", func() {
+				gdnr.Create(garden.ContainerSpec{Handle: "bob", Properties: garden.Properties{"owner": "some-owner"}})
+				Expect(propertyManager.SetCallCount()).To(Equal(1))
+				handle, name, value := propertyManager.SetArgsForCall(0)
+				Expect(handle).To(Equal("bob"))
+				Expect(name).To(Equal("owner"))
+				Expect(value).To(Equal("some-owner"))
 			})
 
 			ItDestroysEverything()
@@ -318,6 +347,16 @@ var _ = Describe("Gardener", func() {
 					_, handle := containerizer.DestroyArgsForCall(0)
 					Expect(handle).To(Equal("poor-banana"))
 				})
+
+				It("sets container properties", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana", Properties: garden.Properties{"owner": "some-owner"}})
+					Expect(err).To(HaveOccurred())
+					Expect(propertyManager.SetCallCount()).To(Equal(1))
+					handle, name, value := propertyManager.SetArgsForCall(0)
+					Expect(handle).To(Equal("poor-banana"))
+					Expect(name).To(Equal("owner"))
+					Expect(value).To(Equal("some-owner"))
+				})
 			})
 
 			Context("when network destroy operation fails", func() {
@@ -335,6 +374,16 @@ var _ = Describe("Gardener", func() {
 					_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
 					Expect(err).To(HaveOccurred())
 					Expect(containerizer.RemoveBundleCallCount()).To(BeZero())
+				})
+
+				It("sets container properties", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana", Properties: garden.Properties{"owner": "some-owner"}})
+					Expect(err).To(HaveOccurred())
+					Expect(propertyManager.SetCallCount()).To(Equal(1))
+					handle, name, value := propertyManager.SetArgsForCall(0)
+					Expect(handle).To(Equal("poor-banana"))
+					Expect(name).To(Equal("owner"))
+					Expect(value).To(Equal("some-owner"))
 				})
 			})
 		})
@@ -405,6 +454,15 @@ var _ = Describe("Gardener", func() {
 
 				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
 				Expect(err).To(MatchError("network-failed"))
+			})
+
+			It("sets container properties", func() {
+				gdnr.Create(garden.ContainerSpec{Handle: "bob", Properties: garden.Properties{"owner": "some-owner"}})
+				Expect(propertyManager.SetCallCount()).To(Equal(2)) // TODO chnage to 1 once we stop failure for non-healtcheck
+				handle, name, value := propertyManager.SetArgsForCall(0)
+				Expect(handle).To(Equal("bob"))
+				Expect(name).To(Equal("owner"))
+				Expect(value).To(Equal("some-owner"))
 			})
 		})
 
