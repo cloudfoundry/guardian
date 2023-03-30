@@ -173,8 +173,6 @@ type Gardener struct {
 	PeaCleaner PeaCleaner
 
 	AllowPrivilgedContainers bool
-
-	brokenHandles map[string]bool
 }
 
 func New(
@@ -205,7 +203,6 @@ func New(
 		PeaCleaner:               peaCleaner,
 		AllowPrivilgedContainers: allowPrivilegedContainers,
 		Logger:                   logger,
-		brokenHandles:            map[string]bool{},
 
 		Sleep: time.Sleep,
 	}
@@ -299,13 +296,6 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 		err := errors.New("container init PID was 0")
 		log.Error("checking-init-pid", err)
 		return nil, err
-	}
-
-	if ownerName, ok := containerSpec.Properties["executor:owner"]; ok {
-		if ownerName == "executor" {
-			g.brokenHandles[containerSpec.Handle] = true
-			return nil, errors.New("failed-for-non-healthcheck-container")
-		}
 	}
 
 	if err = g.Networker.Network(log, containerSpec, actualSpec.Pid); err != nil {
