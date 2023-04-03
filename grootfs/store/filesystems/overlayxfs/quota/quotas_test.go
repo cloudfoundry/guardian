@@ -51,6 +51,10 @@ var _ = Describe("Quotas", func() {
 		})
 
 		Context("when setting the quota to an unexisting path", func() {
+			AfterEach(func() {
+				XfsMountPointPool.Put(xfsMountPoint)
+			})
+
 			It("returns an error", func() {
 				err := quota.Set(logger, 100, "/crazy-path", 1024)
 				Expect(err).To(MatchError(ContainSubstring("opening directory: /crazy-path")))
@@ -85,6 +89,7 @@ var _ = Describe("Quotas", func() {
 
 			AfterEach(func() {
 				Expect(os.RemoveAll(filepath.Dir(otherDir))).To(Succeed())
+				XfsMountPointPool.Put(xfsMountPoint)
 			})
 
 			It("returns 0 usage", func() {
@@ -96,6 +101,10 @@ var _ = Describe("Quotas", func() {
 		})
 
 		Context("when getting the quota to an unexisting path", func() {
+			AfterEach(func() {
+				XfsMountPointPool.Put(xfsMountPoint)
+			})
+
 			It("returns an error", func() {
 				_, err := quota.Get(logger, "/crazy-path")
 				Expect(err).To(MatchError(ContainSubstring("opening directory: /crazy-path")))
@@ -116,6 +125,10 @@ var _ = Describe("Quotas", func() {
 		})
 
 		Context("when getting the projectID from an unexisting path", func() {
+			AfterEach(func() {
+				XfsMountPointPool.Put(xfsMountPoint)
+			})
+
 			It("returns an error", func() {
 				_, err := quota.GetProjectID(logger, "/crazy-path")
 				Expect(err).To(MatchError(ContainSubstring("opening directory: /crazy-path")))
@@ -135,6 +148,7 @@ var _ = Describe("Quotas", func() {
 
 			AfterEach(func() {
 				Expect(os.RemoveAll(filepath.Dir(otherDir))).To(Succeed())
+				XfsMountPointPool.Put(xfsMountPoint)
 			})
 
 			It("returns 0", func() {
