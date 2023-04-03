@@ -24,7 +24,9 @@ var _ = Describe("Quotas", func() {
 
 	BeforeEach(func() {
 		var err error
-		directory, err = ioutil.TempDir(XfsMountPoint, "images")
+		xfsMountPoint := XfsMountPointPool.Get().(string)
+		Expect(xfsMountPoint).NotTo(BeEmpty())
+		directory, err = ioutil.TempDir(xfsMountPoint, "images")
 		Expect(err).NotTo(HaveOccurred())
 		directory = filepath.Join(directory, "my-image")
 		Expect(os.Mkdir(directory, 0755)).To(Succeed())
@@ -72,8 +74,10 @@ var _ = Describe("Quotas", func() {
 			var otherDir string
 
 			BeforeEach(func() {
+				xfsMountPoint := XfsMountPointPool.Get().(string)
+				Expect(xfsMountPoint).NotTo(BeEmpty())
 				var err error
-				otherDir, err = ioutil.TempDir(XfsMountPoint, "images")
+				otherDir, err = ioutil.TempDir(xfsMountPoint, "images")
 				Expect(err).NotTo(HaveOccurred())
 				otherDir = filepath.Join(otherDir, "my-image")
 				Expect(os.Mkdir(otherDir, 0755)).To(Succeed())
@@ -123,8 +127,10 @@ var _ = Describe("Quotas", func() {
 			var otherDir string
 
 			BeforeEach(func() {
+				xfsMountPoint := XfsMountPointPool.Get().(string)
+				Expect(xfsMountPoint).NotTo(BeEmpty())
 				var err error
-				otherDir, err = ioutil.TempDir(XfsMountPoint, "images")
+				otherDir, err = ioutil.TempDir(xfsMountPoint, "images")
 				Expect(err).NotTo(HaveOccurred())
 				otherDir = filepath.Join(otherDir, "my-image")
 				Expect(os.Mkdir(otherDir, 0755)).To(Succeed())
