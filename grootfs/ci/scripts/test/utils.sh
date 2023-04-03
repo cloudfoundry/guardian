@@ -25,7 +25,7 @@ mount_storage() {
   mount /ext4_volume /mnt/ext4
   chmod 777 /mnt/ext4
 
-  for i in {1..5}
+  for i in {1..10}
   do
     # Make XFS Volume
     truncate -s 3G /xfs_volume_${i}

@@ -18,13 +18,14 @@ import (
 
 var _ = Describe("Quotas", func() {
 	var (
-		directory string
-		logger    *lagertest.TestLogger
+		directory     string
+		xfsMountPoint string
+		logger        *lagertest.TestLogger
 	)
 
 	BeforeEach(func() {
 		var err error
-		xfsMountPoint := XfsMountPointPool.Get().(string)
+		xfsMountPoint = XfsMountPointPool.Get().(string)
 		Expect(xfsMountPoint).NotTo(BeEmpty())
 		directory, err = ioutil.TempDir(xfsMountPoint, "images")
 		Expect(err).NotTo(HaveOccurred())
@@ -74,8 +75,6 @@ var _ = Describe("Quotas", func() {
 			var otherDir string
 
 			BeforeEach(func() {
-				xfsMountPoint := XfsMountPointPool.Get().(string)
-				Expect(xfsMountPoint).NotTo(BeEmpty())
 				var err error
 				otherDir, err = ioutil.TempDir(xfsMountPoint, "images")
 				Expect(err).NotTo(HaveOccurred())
@@ -127,8 +126,6 @@ var _ = Describe("Quotas", func() {
 			var otherDir string
 
 			BeforeEach(func() {
-				xfsMountPoint := XfsMountPointPool.Get().(string)
-				Expect(xfsMountPoint).NotTo(BeEmpty())
 				var err error
 				otherDir, err = ioutil.TempDir(xfsMountPoint, "images")
 				Expect(err).NotTo(HaveOccurred())

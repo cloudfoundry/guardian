@@ -20,7 +20,7 @@ func TestQuota(t *testing.T) {
 			New: func() any { return "" },
 		}
 		// 5 mount points created in test
-		for i := 1; i < 5; i++ {
+		for i := 1; i < 10; i++ {
 			XfsMountPointPool.Put(fmt.Sprintf("/mnt/xfs-%d", i))
 		}
 	})
