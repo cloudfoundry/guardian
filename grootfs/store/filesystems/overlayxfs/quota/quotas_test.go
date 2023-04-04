@@ -25,7 +25,7 @@ var _ = Describe("Quotas", func() {
 
 	BeforeEach(func() {
 		var err error
-		xfsMountPoint = XfsMountPointPool.Get().(string)
+		xfsMountPoint = <-XfsMountPointPool
 		Expect(xfsMountPoint).NotTo(BeEmpty())
 		directory, err = ioutil.TempDir(xfsMountPoint, "images")
 		Expect(err).NotTo(HaveOccurred())
@@ -52,7 +52,7 @@ var _ = Describe("Quotas", func() {
 
 		Context("when setting the quota to an unexisting path", func() {
 			AfterEach(func() {
-				XfsMountPointPool.Put(xfsMountPoint)
+				XfsMountPointPool <- xfsMountPoint
 			})
 
 			It("returns an error", func() {
@@ -89,7 +89,7 @@ var _ = Describe("Quotas", func() {
 
 			AfterEach(func() {
 				Expect(os.RemoveAll(filepath.Dir(otherDir))).To(Succeed())
-				XfsMountPointPool.Put(xfsMountPoint)
+				XfsMountPointPool <- xfsMountPoint
 			})
 
 			It("returns 0 usage", func() {
@@ -102,7 +102,7 @@ var _ = Describe("Quotas", func() {
 
 		Context("when getting the quota to an unexisting path", func() {
 			AfterEach(func() {
-				XfsMountPointPool.Put(xfsMountPoint)
+				XfsMountPointPool <- xfsMountPoint
 			})
 
 			It("returns an error", func() {
@@ -126,7 +126,7 @@ var _ = Describe("Quotas", func() {
 
 		Context("when getting the projectID from an unexisting path", func() {
 			AfterEach(func() {
-				XfsMountPointPool.Put(xfsMountPoint)
+				XfsMountPointPool <- xfsMountPoint
 			})
 
 			It("returns an error", func() {
@@ -148,7 +148,7 @@ var _ = Describe("Quotas", func() {
 
 			AfterEach(func() {
 				Expect(os.RemoveAll(filepath.Dir(otherDir))).To(Succeed())
-				XfsMountPointPool.Put(xfsMountPoint)
+				XfsMountPointPool <- xfsMountPoint
 			})
 
 			It("returns 0", func() {
