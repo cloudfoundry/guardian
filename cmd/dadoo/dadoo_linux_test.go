@@ -634,42 +634,47 @@ var _ = Describe("Dadoo", func() {
 			})
 
 			Context("not requesting a TTY", func() {
-				It("should write to the sync pipe when streaming pipes are open", func(done Done) {
-					processSpec, err := json.Marshal(specs.Process{
-						Args:        []string{"/bin/sh", "-c", "echo hello-world; exit 24"},
-						Cwd:         "/",
-						ConsoleSize: &specs.Box{},
-					})
-					Expect(err).NotTo(HaveOccurred())
+				It("should write to the sync pipe when streaming pipes are open", func() {
+					done := make(chan interface{})
+					go func() {
+						processSpec, err := json.Marshal(specs.Process{
+							Args:        []string{"/bin/sh", "-c", "echo hello-world; exit 24"},
+							Cwd:         "/",
+							ConsoleSize: &specs.Box{},
+						})
+						Expect(err).NotTo(HaveOccurred())
 
-					syncPipeR, syncPipeW, err := os.Pipe()
-					Expect(err).NotTo(HaveOccurred())
-					defer syncPipeR.Close()
-					defer syncPipeW.Close()
+						syncPipeR, syncPipeW, err := os.Pipe()
+						Expect(err).NotTo(HaveOccurred())
+						defer syncPipeR.Close()
+						defer syncPipeW.Close()
 
-					cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
-					cmd.Stdin = bytes.NewReader(processSpec)
-					cmd.ExtraFiles = []*os.File{
-						mustOpen("/dev/null"),
-						runcLogFile,
-						syncPipeW,
-					}
+						cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
+						cmd.Stdin = bytes.NewReader(processSpec)
+						cmd.ExtraFiles = []*os.File{
+							mustOpen("/dev/null"),
+							runcLogFile,
+							syncPipeW,
+						}
 
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
+						sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+						Expect(err).NotTo(HaveOccurred())
 
-					openIOPipes()
+						openIOPipes()
 
-					// This is a weak assertion that there is a sync message when the pipes are open
-					// but does not tell us anything about the timing between the two unfortunately
-					syncMsg := make([]byte, 1)
-					_, err = syncPipeR.Read(syncMsg)
-					Expect(err).NotTo(HaveOccurred())
+						// This is a weak assertion that there is a sync message when the pipes are open
+						// but does not tell us anything about the timing between the two unfortunately
+						syncMsg := make([]byte, 1)
+						_, err = syncPipeR.Read(syncMsg)
+						Expect(err).NotTo(HaveOccurred())
 
-					Expect(sess.Wait().ExitCode()).To(Equal(24))
+						Expect(sess.Wait().ExitCode()).To(Equal(24))
 
-					close(done)
-				}, 10.0)
+						close(done)
+					}()
+
+					Eventually(done, 10.0).Should(BeClosed())
+				})
 			})
 
 			Context("requesting a TTY", func() {
@@ -763,41 +768,46 @@ var _ = Describe("Dadoo", func() {
 
 		Describe("dadoo run", func() {
 			Context("not requesting a TTY", func() {
-				It("should write to the sync pipe when streaming pipes are open", func(done Done) {
-					bundle = bundle.WithProcess(specs.Process{
-						Args:        []string{"/bin/sh", "-c", "echo hello-world; exit 24"},
-						Cwd:         "/",
-						ConsoleSize: new(specs.Box),
-					})
-					Expect(bundleSaver.Save(bundle, bundlePath)).To(Succeed())
+				It("should write to the sync pipe when streaming pipes are open", func() {
+					done := make(chan interface{})
+					go func() {
+						bundle = bundle.WithProcess(specs.Process{
+							Args:        []string{"/bin/sh", "-c", "echo hello-world; exit 24"},
+							Cwd:         "/",
+							ConsoleSize: new(specs.Box),
+						})
+						Expect(bundleSaver.Save(bundle, bundlePath)).To(Succeed())
 
-					syncPipeR, syncPipeW, err := os.Pipe()
-					Expect(err).NotTo(HaveOccurred())
-					defer syncPipeR.Close()
-					defer syncPipeW.Close()
+						syncPipeR, syncPipeW, err := os.Pipe()
+						Expect(err).NotTo(HaveOccurred())
+						defer syncPipeR.Close()
+						defer syncPipeW.Close()
 
-					cmd := exec.Command(dadooBinPath, "run", "runc", processDir, filepath.Base(bundlePath))
-					cmd.ExtraFiles = []*os.File{
-						mustOpen("/dev/null"),
-						runcLogFile,
-						syncPipeW,
-					}
+						cmd := exec.Command(dadooBinPath, "run", "runc", processDir, filepath.Base(bundlePath))
+						cmd.ExtraFiles = []*os.File{
+							mustOpen("/dev/null"),
+							runcLogFile,
+							syncPipeW,
+						}
 
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
+						sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+						Expect(err).NotTo(HaveOccurred())
 
-					openIOPipes()
+						openIOPipes()
 
-					// This is a weak assertion that there is a sync message when the pipes are open
-					// but does not tell us anything about the timing between the two unfortunately
-					syncMsg := make([]byte, 1)
-					_, err = syncPipeR.Read(syncMsg)
-					Expect(err).NotTo(HaveOccurred())
+						// This is a weak assertion that there is a sync message when the pipes are open
+						// but does not tell us anything about the timing between the two unfortunately
+						syncMsg := make([]byte, 1)
+						_, err = syncPipeR.Read(syncMsg)
+						Expect(err).NotTo(HaveOccurred())
 
-					Expect(sess.Wait().ExitCode()).To(Equal(24))
+						Expect(sess.Wait().ExitCode()).To(Equal(24))
 
-					close(done)
-				}, 10.0)
+						close(done)
+					}()
+
+					Eventually(done, 10.0).Should(BeClosed())
+				})
 			})
 
 			Context("requesting a TTY", func() {
