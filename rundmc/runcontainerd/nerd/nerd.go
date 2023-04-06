@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	"github.com/containerd/containerd"
 	apievents "github.com/containerd/containerd/api/events"
 	"github.com/containerd/containerd/cio"

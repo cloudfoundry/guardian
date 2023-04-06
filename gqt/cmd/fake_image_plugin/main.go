@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli/v2"

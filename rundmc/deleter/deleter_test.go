@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"code.cloudfoundry.org/guardian/rundmc/deleter/deleterfakes"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 

@@ -6,11 +6,11 @@ require (
 	code.cloudfoundry.org/archiver v0.0.0-20210609160716-67523bd33dbf
 	code.cloudfoundry.org/clock v1.0.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b
-	code.cloudfoundry.org/debugserver v0.0.0-20230321200608-ba7cbb8c3908
+	code.cloudfoundry.org/debugserver v0.0.0-20230329140605-8c21649a9a42
 	code.cloudfoundry.org/garden v0.0.0-20230109170928-83a99bb745e3
 	code.cloudfoundry.org/grootfs v0.0.0-00010101000000-000000000000
 	code.cloudfoundry.org/idmapper v0.0.0-20230306120024-f90a36a869cf
-	code.cloudfoundry.org/lager v1.1.1-0.20230321195817-3d52f427a2d2
+	code.cloudfoundry.org/lager/v3 v3.0.1
 	code.cloudfoundry.org/localip v0.0.0-20230220195659-7420c1036ae7
 	github.com/BurntSushi/toml v1.2.1
 	github.com/cloudfoundry/dropsonde v1.0.0
@@ -24,7 +24,7 @@ require (
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo/v2 v2.9.1
+	github.com/onsi/ginkgo/v2 v2.9.2
 	github.com/onsi/gomega v1.27.4
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b
@@ -33,7 +33,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/pflag v1.0.5
-	github.com/st3v/glager v0.3.0
 	github.com/tedsuo/ifrit v0.0.0-20220120221754-dd274de71113
 	github.com/urfave/cli/v2 v2.25.0
 	github.com/vishvananda/netlink v1.2.1-beta.2
@@ -86,14 +85,14 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
+	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20230309165930-d61513b1440d // indirect
+	github.com/google/pprof v0.0.0-20230323073829-e72429f035bd // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect

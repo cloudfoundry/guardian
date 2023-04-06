@@ -5,7 +5,7 @@ import (
 
 	"code.cloudfoundry.org/clock/fakeclock"
 	"code.cloudfoundry.org/guardian/metrics"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	dropsonde_metrics "github.com/cloudfoundry/dropsonde/metrics"
 	. "github.com/onsi/ginkgo/v2"

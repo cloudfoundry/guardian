@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/throttle"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type FakeEnforcer struct {

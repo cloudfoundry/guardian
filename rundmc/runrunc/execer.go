@@ -11,7 +11,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/idmapper"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	uuid "github.com/nu7hatch/gouuid"
 )
 

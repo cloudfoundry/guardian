@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type FakeRunner struct {

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/guardian/kawasaki/subnets"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type SpecParserFunc func(spec string) (subnets.SubnetSelector, subnets.IPSelector, error)

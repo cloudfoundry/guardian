@@ -10,8 +10,8 @@ import (
 	. "code.cloudfoundry.org/commandrunner/fake_command_runner/matchers"
 	"code.cloudfoundry.org/commandrunner/windows_command_runner"
 	"code.cloudfoundry.org/guardian/logging"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

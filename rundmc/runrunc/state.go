@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os/exec"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type Stater struct {

@@ -3,7 +3,7 @@ package runrunc
 import (
 	"os/exec"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type RuncDeleter struct {

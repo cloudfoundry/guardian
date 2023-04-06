@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/guardian/rundmc/goci"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 var ErrDoesNotExist = errors.New("does not exist")

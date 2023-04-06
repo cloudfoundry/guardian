@@ -12,7 +12,7 @@ code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.0.0-20230321200608-ba7cbb8c3908
+# code.cloudfoundry.org/debugserver v0.0.0-20230329140605-8c21649a9a42
 ## explicit; go 1.19
 code.cloudfoundry.org/debugserver
 # code.cloudfoundry.org/garden v0.0.0-20230109170928-83a99bb745e3 => ../garden
@@ -33,13 +33,13 @@ code.cloudfoundry.org/grootfs/commands/config
 # code.cloudfoundry.org/idmapper v0.0.0-20230306120024-f90a36a869cf => ../idmapper
 ## explicit; go 1.18
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager v1.1.1-0.20230321195817-3d52f427a2d2
+# code.cloudfoundry.org/lager/v3 v3.0.1
 ## explicit; go 1.19
-code.cloudfoundry.org/lager
-code.cloudfoundry.org/lager/chug
-code.cloudfoundry.org/lager/internal/truncate
-code.cloudfoundry.org/lager/lagerctx
-code.cloudfoundry.org/lager/lagertest
+code.cloudfoundry.org/lager/v3
+code.cloudfoundry.org/lager/v3/chug
+code.cloudfoundry.org/lager/v3/internal/truncate
+code.cloudfoundry.org/lager/v3/lagerctx
+code.cloudfoundry.org/lager/v3/lagertest
 # code.cloudfoundry.org/localip v0.0.0-20230220195659-7420c1036ae7
 ## explicit; go 1.19
 code.cloudfoundry.org/localip
@@ -553,7 +553,7 @@ github.com/go-logr/logr/funcr
 # github.com/go-logr/stdr v1.2.2
 ## explicit; go 1.16
 github.com/go-logr/stdr
-# github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0
+# github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572
 ## explicit; go 1.13
 github.com/go-task/slim-sprig
 # github.com/godbus/dbus/v5 v5.1.0
@@ -588,7 +588,7 @@ github.com/google/go-cmp/cmp/internal/value
 ## explicit; go 1.12
 github.com/google/gofuzz
 github.com/google/gofuzz/bytesource
-# github.com/google/pprof v0.0.0-20230309165930-d61513b1440d
+# github.com/google/pprof v0.0.0-20230323073829-e72429f035bd
 ## explicit; go 1.19
 github.com/google/pprof/profile
 # github.com/google/uuid v1.3.0
@@ -701,7 +701,7 @@ github.com/mrunalp/fileutils
 # github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 ## explicit
 github.com/nu7hatch/gouuid
-# github.com/onsi/ginkgo/v2 v2.9.1
+# github.com/onsi/ginkgo/v2 v2.9.2
 ## explicit; go 1.18
 github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config
@@ -833,9 +833,6 @@ github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.5
 ## explicit; go 1.12
 github.com/spf13/pflag
-# github.com/st3v/glager v0.3.0
-## explicit
-github.com/st3v/glager
 # github.com/stefanberger/go-pkcs11uri v0.0.0-20201008174630-78d3cae3a980
 ## explicit
 github.com/stefanberger/go-pkcs11uri

@@ -1,6 +1,6 @@
 package logging
 
-import "code.cloudfoundry.org/lager"
+import "code.cloudfoundry.org/lager/v3"
 
 type writer struct {
 	lager.Logger

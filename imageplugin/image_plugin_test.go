@@ -12,12 +12,12 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	fakes "code.cloudfoundry.org/guardian/imageplugin/imagepluginfakes"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/st3v/glager"
 )
 
 var _ = Describe("ImagePlugin", func() {
@@ -41,7 +41,7 @@ var _ = Describe("ImagePlugin", func() {
 		fakeImageSpecCreator = new(fakes.FakeImageSpecCreator)
 		fakeCommandRunner = fake_command_runner.New()
 
-		fakeLogger = glager.NewLogger("image-plugin")
+		fakeLogger = lagertest.NewTestLogger("image-plugin")
 
 		defaultRootfs = "/default-rootfs"
 	})
@@ -321,12 +321,8 @@ var _ = Describe("ImagePlugin", func() {
 			})
 
 			It("relogs the log entries", func() {
-				Expect(fakeLogger).To(glager.ContainSequence(
-					glager.Info(
-						glager.Message("image-plugin.image-plugin-create.external-plugin.info-message"),
-						glager.Data("type", "info"),
-					),
-				))
+				Eventually(fakeLogger).Should(gbytes.Say("image-plugin.image-plugin-create.external-plugin.info-message"))
+				Eventually(fakeLogger).Should(gbytes.Say(`"type":"info"`))
 			})
 		})
 	})
@@ -435,13 +431,9 @@ var _ = Describe("ImagePlugin", func() {
 				})
 
 				It("relogs the log entries", func() {
-					Expect(fakeLogger).To(glager.ContainSequence(
-						glager.Error(
-							errors.New("failed!"),
-							glager.Message("image-plugin.image-plugin-destroy.external-plugin.error-message"),
-							glager.Data("type", "error"),
-						),
-					))
+					Eventually(fakeLogger).Should(gbytes.Say("image-plugin.image-plugin-destroy.external-plugin.error-message"))
+					Eventually(fakeLogger).Should(gbytes.Say("failed!"))
+					Eventually(fakeLogger).Should(gbytes.Say(`"type":"error"`))
 				})
 			})
 		})
@@ -487,13 +479,9 @@ var _ = Describe("ImagePlugin", func() {
 				})
 
 				It("relogs the log entries", func() {
-					Expect(fakeLogger).To(glager.ContainSequence(
-						glager.Error(
-							errors.New("failed!"),
-							glager.Message("image-plugin.image-plugin-destroy.external-plugin.error-message"),
-							glager.Data("type", "error"),
-						),
-					))
+					Eventually(fakeLogger).Should(gbytes.Say("image-plugin.image-plugin-destroy.external-plugin.error-message"))
+					Eventually(fakeLogger).Should(gbytes.Say("failed!"))
+					Eventually(fakeLogger).Should(gbytes.Say(`"type":"error"`))
 				})
 			})
 		})
@@ -638,13 +626,9 @@ var _ = Describe("ImagePlugin", func() {
 			})
 
 			It("relogs the log entries", func() {
-				Expect(fakeLogger).To(glager.ContainSequence(
-					glager.Error(
-						errors.New("failed!"),
-						glager.Message("image-plugin.image-plugin-metrics.external-plugin.error-message"),
-						glager.Data("type", "error"),
-					),
-				))
+				Eventually(fakeLogger).Should(gbytes.Say("image-plugin.image-plugin-metrics.external-plugin.error-message"))
+				Eventually(fakeLogger).Should(gbytes.Say("failed!"))
+				Eventually(fakeLogger).Should(gbytes.Say(`"type":"error"`))
 			})
 		})
 	})
@@ -727,13 +711,9 @@ var _ = Describe("ImagePlugin", func() {
 			})
 
 			It("relogs the log entries", func() {
-				Expect(fakeLogger).To(glager.ContainSequence(
-					glager.Error(
-						errors.New("failed!"),
-						glager.Message("image-plugin.image-plugin-capacity.external-plugin.error-message"),
-						glager.Data("type", "error"),
-					),
-				))
+				Eventually(fakeLogger).Should(gbytes.Say("image-plugin.image-plugin-capacity.external-plugin.error-message"))
+				Eventually(fakeLogger).Should(gbytes.Say("failed!"))
+				Eventually(fakeLogger).Should(gbytes.Say(`"type":"error"`))
 			})
 		})
 	})

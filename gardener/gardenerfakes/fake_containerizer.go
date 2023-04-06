@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type FakeContainerizer struct {

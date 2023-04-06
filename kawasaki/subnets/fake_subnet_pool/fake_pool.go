@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/kawasaki/subnets"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type FakePool struct {

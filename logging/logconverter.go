@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type LogLine struct {

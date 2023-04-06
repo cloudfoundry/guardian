@@ -19,7 +19,7 @@ import (
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/kawasaki/devices"
 	"code.cloudfoundry.org/guardian/kawasaki/netns"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 func init() {

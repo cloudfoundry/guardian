@@ -8,7 +8,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/pid"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/pid/pidfakes"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

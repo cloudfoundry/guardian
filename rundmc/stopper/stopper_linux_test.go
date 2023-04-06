@@ -9,7 +9,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	fakes "code.cloudfoundry.org/guardian/rundmc/stopper/stopperfakes"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 
 	. "github.com/onsi/ginkgo/v2"

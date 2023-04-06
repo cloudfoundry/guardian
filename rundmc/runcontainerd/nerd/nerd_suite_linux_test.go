@@ -17,7 +17,7 @@ import (
 	"code.cloudfoundry.org/guardian/gqt/containerdrunner"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	"github.com/BurntSushi/toml"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/leases"
