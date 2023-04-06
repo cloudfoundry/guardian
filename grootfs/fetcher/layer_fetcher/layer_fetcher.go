@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 
 	"github.com/containers/image/v5/types"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"

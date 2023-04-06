@@ -7,7 +7,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	quotapkg "code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/quota"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis/ids"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )

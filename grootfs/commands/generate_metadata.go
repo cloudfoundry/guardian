@@ -6,7 +6,7 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/store/filesystems/loopback"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli/v2"

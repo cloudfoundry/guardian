@@ -14,7 +14,7 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega/gexec"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type Runner struct {

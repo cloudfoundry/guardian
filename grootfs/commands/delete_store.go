@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/mount"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/manager"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	"github.com/urfave/cli/v2"
 )
 

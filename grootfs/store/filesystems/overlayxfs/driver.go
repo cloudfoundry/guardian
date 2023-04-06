@@ -15,14 +15,14 @@ import (
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/relogger"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/filesystems"
 	quotapkg "code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/quota"
 	"code.cloudfoundry.org/grootfs/store/filesystems/spec"
 	"code.cloudfoundry.org/grootfs/store/image_manager"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	errorspkg "github.com/pkg/errors"
-	"github.com/tscolari/lagregator"
 	shortid "github.com/ventu-io/go-shortid"
 	"golang.org/x/sys/unix"
 )
@@ -712,7 +712,7 @@ func (d *Driver) runTardis(logger lager.Logger, args ...string) (*bytes.Buffer, 
 
 	cmd := exec.Command(d.tardisBinPath, args...)
 	stdout := new(bytes.Buffer)
-	relogger := lagregator.NewRelogger(logger)
+	relogger := relogger.NewRelogger(logger)
 	cmd.Stdout = io.MultiWriter(stdout, relogger)
 	cmd.Stderr = relogger
 

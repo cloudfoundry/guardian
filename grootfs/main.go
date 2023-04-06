@@ -11,7 +11,7 @@ import (
 	"code.cloudfoundry.org/grootfs/commands"
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 
 	"github.com/containers/storage/pkg/reexec"
 	"github.com/pkg/errors"

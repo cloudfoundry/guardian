@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type FakeBaseDirHandler struct {

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

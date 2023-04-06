@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type FakeGarbageCollector struct {

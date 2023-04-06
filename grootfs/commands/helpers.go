@@ -15,7 +15,7 @@ import (
 	"code.cloudfoundry.org/grootfs/sandbox"
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
 	"code.cloudfoundry.org/grootfs/store/image_manager"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	"github.com/opencontainers/runc/libcontainer/user"
 )
 

@@ -15,7 +15,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	_ "github.com/containers/image/v5/docker"
 	"github.com/containers/image/v5/image"
 	manifestpkg "github.com/containers/image/v5/manifest"

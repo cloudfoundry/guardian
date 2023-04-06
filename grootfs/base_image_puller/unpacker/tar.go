@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 const (

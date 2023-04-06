@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 
 	"github.com/pkg/errors"
 )

@@ -7,7 +7,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/sandbox"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	"github.com/containers/storage/pkg/reexec"
 	errorspkg "github.com/pkg/errors"
 )

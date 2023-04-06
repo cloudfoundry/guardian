@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type asyncCleaner struct {

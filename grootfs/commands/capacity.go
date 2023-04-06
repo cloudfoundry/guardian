@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	"github.com/urfave/cli/v2"
 )
 

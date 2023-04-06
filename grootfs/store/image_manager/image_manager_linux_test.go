@@ -13,8 +13,8 @@ import (
 	"code.cloudfoundry.org/grootfs/store"
 	imagemanager "code.cloudfoundry.org/grootfs/store/image_manager"
 	"code.cloudfoundry.org/grootfs/store/image_manager/image_managerfakes"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 
 	. "github.com/onsi/ginkgo/v2"

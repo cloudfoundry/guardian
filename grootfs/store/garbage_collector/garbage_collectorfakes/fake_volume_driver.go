@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type FakeVolumeDriver struct {

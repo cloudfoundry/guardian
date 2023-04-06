@@ -58,7 +58,7 @@ import (
 	"path/filepath"
 	"unsafe"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 )

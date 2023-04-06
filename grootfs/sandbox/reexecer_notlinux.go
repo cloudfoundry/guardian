@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 func Register(commandName string, action func(logger lager.Logger, extraFiles []*os.File, args ...string) error) {

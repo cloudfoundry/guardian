@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/url"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	"github.com/containers/image/v5/transports"
 	"github.com/containers/image/v5/types"
 	errorspkg "github.com/pkg/errors"

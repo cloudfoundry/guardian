@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/store/manager"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type FakeStoreDriver struct {

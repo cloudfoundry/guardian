@@ -12,7 +12,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/spec"
 	"code.cloudfoundry.org/grootfs/store/image_manager"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	"github.com/containers/storage/pkg/reexec"
 	"github.com/pkg/errors"
 )

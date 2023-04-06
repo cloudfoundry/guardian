@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	errorspkg "github.com/pkg/errors"
 )
 

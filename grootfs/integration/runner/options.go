@@ -10,7 +10,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 ///////////////////////////////////////////////////////////////////////////////

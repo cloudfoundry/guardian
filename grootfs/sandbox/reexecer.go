@@ -2,7 +2,7 @@ package sandbox // import "code.cloudfoundry.org/grootfs/sandbox"
 
 import (
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 //go:generate counterfeiter . IDMapper

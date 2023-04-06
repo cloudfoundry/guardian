@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 

@@ -5,7 +5,7 @@ go 1.19
 require (
 	code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b
 	code.cloudfoundry.org/idmapper v0.0.0-20210608104755-adcde2231d2c
-	code.cloudfoundry.org/lager v1.1.1-0.20230321195817-3d52f427a2d2
+	code.cloudfoundry.org/lager/v3 v3.0.1
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20200416163440-a42463ba266b
 	github.com/containers/image/v5 v5.24.2
@@ -21,8 +21,6 @@ require (
 	github.com/opencontainers/runtime-spec v1.1.0-rc.1
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
-	github.com/st3v/glager v0.3.0
-	github.com/tscolari/lagregator v0.0.0-20161103133944-b0fb43b01861
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125
 	golang.org/x/sys v0.6.0

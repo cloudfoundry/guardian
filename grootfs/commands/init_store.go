@@ -12,7 +12,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/manager"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli/v2"

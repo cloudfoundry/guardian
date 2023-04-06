@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	errorspkg "github.com/pkg/errors"
 )
 

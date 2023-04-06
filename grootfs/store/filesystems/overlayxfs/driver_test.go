@@ -20,14 +20,13 @@ import (
 	fakes "code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/overlayxfsfakes"
 	"code.cloudfoundry.org/grootfs/store/image_manager"
 	"code.cloudfoundry.org/grootfs/testhelpers"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	"github.com/docker/docker/pkg/system"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"github.com/st3v/glager"
 	"golang.org/x/sys/unix"
 )
 
@@ -454,11 +453,7 @@ var _ = Describe("Driver", func() {
 				_, err := driver.CreateImage(logger, spec)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(logger).To(glager.ContainSequence(
-					glager.Debug(
-						glager.Message("overlay+xfs.overlayxfs-creating-image.applying-quotas.no-need-for-quotas"),
-					),
-				))
+				Eventually(logger).Should(gbytes.Say("overlay+xfs.overlayxfs-creating-image.applying-quotas.no-need-for-quotas"))
 			})
 
 			It("does not create an image quota file containing the requested quota", func() {

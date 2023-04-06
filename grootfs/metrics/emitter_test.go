@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/testhelpers"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	"github.com/cloudfoundry/sonde-go/events"
 
 	. "github.com/onsi/ginkgo/v2"

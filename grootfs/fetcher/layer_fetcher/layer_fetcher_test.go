@@ -11,7 +11,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/layer_fetcherfakes"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	"github.com/containers/image/v5/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

@@ -31,7 +31,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/image_manager"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/manager"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 
 	"github.com/containers/image/v5/types"
 	"github.com/docker/distribution/registry/api/errcode"

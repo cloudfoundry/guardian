@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 )
 
 type Deleter struct {

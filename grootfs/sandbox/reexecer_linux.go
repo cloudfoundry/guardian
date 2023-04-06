@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package sandbox // import "code.cloudfoundry.org/grootfs/sandbox"
@@ -12,10 +13,10 @@ import (
 	"syscall"
 
 	"github.com/containers/storage/pkg/reexec"
-	"github.com/tscolari/lagregator"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/grootfs/relogger"
+	"code.cloudfoundry.org/lager/v3"
 	errorspkg "github.com/pkg/errors"
 )
 
@@ -126,7 +127,7 @@ func (r *reexecer) Reexec(commandName string, spec groot.ReexecSpec) ([]byte, er
 
 	outBuffer := bytes.NewBuffer([]byte{})
 	reexecCmd.Stdout = outBuffer
-	reexecCmd.Stderr = lagregator.NewRelogger(r.logger)
+	reexecCmd.Stderr = relogger.NewRelogger(r.logger)
 	reexecCmd.ExtraFiles = []*os.File{ctrlPipeR}
 	if spec.ChrootDir != "" {
 		reexecCmd.Env = append(reexecCmd.Env, fmt.Sprintf("%s=%s", reexecChrootDirEnv, spec.ChrootDir))

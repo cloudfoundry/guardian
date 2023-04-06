@@ -8,8 +8,8 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 
 	. "github.com/onsi/ginkgo/v2"

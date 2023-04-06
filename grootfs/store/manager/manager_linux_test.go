@@ -15,8 +15,8 @@ import (
 	"code.cloudfoundry.org/grootfs/store/image_manager/image_managerfakes"
 	managerpkg "code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/grootfs/store/manager/managerfakes"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager/v3"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	"golang.org/x/sys/unix"
 
 	. "github.com/onsi/ginkgo/v2"

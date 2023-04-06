@@ -16,7 +16,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	"code.cloudfoundry.org/grootfs/store/image_manager"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )

@@ -7,16 +7,18 @@ import (
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/lager/v3"
+	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/st3v/glager"
+	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("IDMapper", func() {
 	var (
 		fakeCmdRunner *fake_command_runner.FakeCommandRunner
 		idMapper      *unpacker.CommandIDMapper
-		logger        *glager.TestLogger
+		logger        lager.Logger
 		newuidmapBin  string
 		newgidmapBin  string
 	)
@@ -26,7 +28,7 @@ var _ = Describe("IDMapper", func() {
 		newgidmapBin = "newgidmap"
 		fakeCmdRunner = fake_command_runner.New()
 		idMapper = unpacker.NewIDMapper(newuidmapBin, newgidmapBin, fakeCmdRunner)
-		logger = glager.NewLogger("idmapper")
+		logger = lagertest.NewTestLogger("idmapper")
 	})
 
 	Describe("MapUIDs", func() {
@@ -47,13 +49,9 @@ var _ = Describe("IDMapper", func() {
 					groot.IDMappingSpec{HostID: 100, NamespaceID: 200, Size: 300},
 				})).To(Succeed())
 
-				Expect(logger).To(glager.ContainSequence(
-					glager.Debug(
-						glager.Message("idmapper.mapUID.starting-id-map"),
-						glager.Data("path", "/usr/bin/newuidmap"),
-						glager.Data("args", []string{"newuidmap", "1000", "20", "10", "30", "200", "100", "300"}),
-					),
-				))
+				Eventually(logger).Should(gbytes.Say("idmapper.mapUID.starting-id-map"))
+				Eventually(logger).Should(gbytes.Say(`"args":\["newuidmap","1000","20","10","30","200","100","300"\]`))
+				Eventually(logger).Should(gbytes.Say(`"path":"/usr/bin/newuidmap"`))
 			})
 
 			It("uses the newuidmap from systemIDMappers correctly", func() {
@@ -115,13 +113,9 @@ var _ = Describe("IDMapper", func() {
 					groot.IDMappingSpec{HostID: 100, NamespaceID: 200, Size: 300},
 				})).To(Succeed())
 
-				Expect(logger).To(glager.ContainSequence(
-					glager.Debug(
-						glager.Message("idmapper.mapGID.starting-id-map"),
-						glager.Data("path", "/usr/bin/newgidmap"),
-						glager.Data("args", []string{"newgidmap", "1000", "20", "10", "30", "200", "100", "300"}),
-					),
-				))
+				Eventually(logger).Should(gbytes.Say("idmapper.mapGID.starting-id-map"))
+				Eventually(logger).Should(gbytes.Say(`"args":\["newgidmap","1000","20","10","30","200","100","300"\]`))
+				Eventually(logger).Should(gbytes.Say(`"path":"/usr/bin/newgidmap"`))
 			})
 
 			It("uses the newgidmap from systemIDMappers correctly", func() {

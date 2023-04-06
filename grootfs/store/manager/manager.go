@@ -11,7 +11,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/image_manager"
-	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/v3"
 	"github.com/containers/storage/pkg/mount"
 	errorspkg "github.com/pkg/errors"
 	"golang.org/x/sys/unix"
