@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"syscall"
 	"time"
@@ -453,7 +454,7 @@ var _ = Describe("Driver", func() {
 				_, err := driver.CreateImage(logger, spec)
 				Expect(err).ToNot(HaveOccurred())
 
-				Eventually(logger).Should(gbytes.Say(`overlay+xfs.overlayxfs-creating-image.applying-quotas.no-need-for-quotas`))
+				Eventually(logger).Should(gbytes.Say(regexp.QuoteMeta(`overlay+xfs.overlayxfs-creating-image.applying-quotas.no-need-for-quotas`)))
 			})
 
 			It("does not create an image quota file containing the requested quota", func() {
