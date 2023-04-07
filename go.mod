@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	code.cloudfoundry.org/archiver v0.0.0-20210609160716-67523bd33dbf
-	code.cloudfoundry.org/clock v1.0.0
+	code.cloudfoundry.org/clock v1.1.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b
 	code.cloudfoundry.org/debugserver v0.0.0-20230329140605-8c21649a9a42
 	code.cloudfoundry.org/garden v0.0.0-20230109170928-83a99bb745e3
@@ -25,7 +25,7 @@ require (
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/onsi/ginkgo/v2 v2.9.2
-	github.com/onsi/gomega v1.27.4
+	github.com/onsi/gomega v1.27.6
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b
 	github.com/opencontainers/runc v1.1.4
@@ -33,7 +33,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/pflag v1.0.5
-	github.com/tedsuo/ifrit v0.0.0-20220120221754-dd274de71113
+	github.com/tedsuo/ifrit v0.0.0-20230330192023-5cba443a66c4
 	github.com/urfave/cli/v2 v2.25.0
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vishvananda/netns v0.0.4
