@@ -6,8 +6,6 @@ code.cloudfoundry.org/commandrunner/linux_command_runner
 # code.cloudfoundry.org/idmapper v0.0.0-20210608104755-adcde2231d2c => ../idmapper
 ## explicit; go 1.18
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager v1.1.1-0.20230321195817-3d52f427a2d2
-## explicit; go 1.19
 # code.cloudfoundry.org/lager/v3 v3.0.1
 ## explicit; go 1.19
 code.cloudfoundry.org/lager/v3
@@ -274,8 +272,6 @@ github.com/russross/blackfriday/v2
 # github.com/sirupsen/logrus v1.9.0
 ## explicit; go 1.13
 github.com/sirupsen/logrus
-# github.com/st3v/glager v0.3.0
-## explicit
 # github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 ## explicit
 github.com/syndtr/gocapability/capability
