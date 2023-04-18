@@ -50,7 +50,7 @@ release: runcimage
 		$(RUNC_IMAGE) make localrelease
 	script/release_sign.sh -S $(GPG_KEYID) -r release/$(VERSION) -v $(VERSION)
 
-localrelease:
+localrelease: verify-changelog
 	script/release_build.sh -r release/$(VERSION) -v $(VERSION) $(RELEASE_ARGS)
 
 dbuild: runcimage
@@ -133,12 +133,16 @@ cfmt:
 shellcheck:
 	shellcheck tests/integration/*.bats tests/integration/*.sh \
 		tests/integration/*.bash tests/*.sh \
-		script/release_*.sh script/seccomp.sh script/lib.sh
-	# TODO: add shellcheck for more sh files
+		man/*.sh script/*
+	# TODO: add shellcheck for more sh files (contrib/completions/bash/runc).
 
 shfmt:
-	shfmt -ln bats -d -w tests/integration/*.bats
-	shfmt -ln bash -d -w man/*.sh script/* tests/*.sh tests/integration/*.bash
+	$(CONTAINER_ENGINE) run $(CONTAINER_ENGINE_RUN_FLAGS) \
+		--rm -v $(CURDIR):/src -w /src \
+		mvdan/shfmt:v3.5.1 -d -w .
+
+localshfmt:
+	shfmt -d -w .
 
 vendor:
 	$(GO) mod tidy
@@ -146,8 +150,6 @@ vendor:
 	$(GO) mod verify
 
 verify-changelog:
-	# No non-ASCII characters.
-	! LC_ALL=C grep -n -P '[\x80-\xFF]' CHANGELOG.md
 	# No space at EOL.
 	! grep -n '\s$$' CHANGELOG.md
 	# Period before issue/PR references.
@@ -162,5 +164,5 @@ verify-dependencies: vendor
 	localrelease dbuild lint man runcimage \
 	test localtest unittest localunittest integration localintegration \
 	rootlessintegration localrootlessintegration shell install install-bash \
-	install-man clean cfmt shfmt shellcheck \
+	install-man clean cfmt shfmt localshfmt shellcheck \
 	vendor verify-changelog verify-dependencies

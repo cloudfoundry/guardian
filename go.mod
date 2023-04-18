@@ -4,20 +4,20 @@ go 1.19
 
 require (
 	code.cloudfoundry.org/archiver v0.0.0-20210609160716-67523bd33dbf
-	code.cloudfoundry.org/clock v1.0.0
-	code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b
-	code.cloudfoundry.org/debugserver v0.0.0-20230329140605-8c21649a9a42
-	code.cloudfoundry.org/garden v0.0.0-20230109170928-83a99bb745e3
+	code.cloudfoundry.org/clock v1.1.0
+	code.cloudfoundry.org/commandrunner v0.0.0-20230406174834-03aed0535eb9
+	code.cloudfoundry.org/debugserver v0.0.0-20230411203424-7d38b2728d52
+	code.cloudfoundry.org/garden v0.0.0-20230418162742-6c127706d54f
 	code.cloudfoundry.org/grootfs v0.0.0-00010101000000-000000000000
-	code.cloudfoundry.org/idmapper v0.0.0-20230306120024-f90a36a869cf
+	code.cloudfoundry.org/idmapper v0.0.0-20230313115908-390987bf5bbe
 	code.cloudfoundry.org/lager/v3 v3.0.1
-	code.cloudfoundry.org/localip v0.0.0-20230220195659-7420c1036ae7
+	code.cloudfoundry.org/localip v0.0.0-20230406154131-9ff4293aa842
 	github.com/BurntSushi/toml v1.2.1
 	github.com/cloudfoundry/dropsonde v1.0.0
-	github.com/cloudfoundry/gosigar v1.3.9
+	github.com/cloudfoundry/gosigar v1.3.10
 	github.com/containerd/containerd v1.7.0
 	github.com/containerd/typeurl/v2 v2.1.0
-	github.com/docker/docker v23.0.1+incompatible
+	github.com/docker/docker v23.0.4+incompatible
 	github.com/eapache/go-resiliency v1.3.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jessevdk/go-flags v1.5.1-0.20210607101731-3927b71304df
@@ -25,26 +25,26 @@ require (
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/onsi/ginkgo/v2 v2.9.2
-	github.com/onsi/gomega v1.27.4
+	github.com/onsi/gomega v1.27.6
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b
-	github.com/opencontainers/runc v1.1.4
-	github.com/opencontainers/runtime-spec v1.1.0-rc.1
+	github.com/opencontainers/runc v1.1.6
+	github.com/opencontainers/runtime-spec v1.1.0-rc.2
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/pflag v1.0.5
-	github.com/tedsuo/ifrit v0.0.0-20220120221754-dd274de71113
-	github.com/urfave/cli/v2 v2.25.0
+	github.com/tedsuo/ifrit v0.0.0-20230330192023-5cba443a66c4
+	github.com/urfave/cli/v2 v2.25.1
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vishvananda/netns v0.0.4
-	golang.org/x/sys v0.6.0
+	golang.org/x/sys v0.7.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1 // indirect
-	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20221215162035-5330a85ea652 // indirect
-	github.com/Microsoft/go-winio v0.6.0 // indirect
+	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20230306123547-8075edf89bb0 // indirect
+	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Microsoft/hcsshim v0.10.0-rc.7 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
@@ -55,7 +55,7 @@ require (
 	github.com/cilium/ebpf v0.9.1 // indirect
 	github.com/cloudfoundry/gosteno v0.0.0-20150423193413-0c8581caea35 // indirect
 	github.com/cloudfoundry/loggregatorlib v0.0.0-20211215163756-5115dcd2d2f5 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20220627221915-ff36de9c3435 // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20230412182205-eaf74d09b55a // indirect
 	github.com/container-orchestrated-devices/container-device-interface v0.5.4 // indirect
 	github.com/containerd/aufs v1.0.0 // indirect
 	github.com/containerd/btrfs/v2 v2.0.0 // indirect
@@ -83,7 +83,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/go-logr/logr v1.2.3 // indirect
+	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
@@ -92,7 +92,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20230323073829-e72429f035bd // indirect
+	github.com/google/pprof v0.0.0-20230406165453-00490a63f317 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
@@ -100,11 +100,9 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/intel/goresctrl v0.3.0 // indirect
-	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.16.0 // indirect
+	github.com/klauspost/compress v1.16.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.4 // indirect
-	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/miekg/pkcs11 v1.1.1 // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
@@ -149,18 +147,18 @@ require (
 	go.opentelemetry.io/otel/trace v1.14.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
-	golang.org/x/mod v0.9.0 // indirect
-	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/mod v0.10.0 // indirect
+	golang.org/x/net v0.9.0 // indirect
 	golang.org/x/oauth2 v0.4.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/term v0.6.0 // indirect
-	golang.org/x/text v0.8.0 // indirect
+	golang.org/x/term v0.7.0 // indirect
+	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
-	golang.org/x/tools v0.7.0 // indirect
+	golang.org/x/tools v0.8.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
-	google.golang.org/grpc v1.53.0 // indirect
-	google.golang.org/protobuf v1.28.1 // indirect
+	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
+	google.golang.org/grpc v1.54.0 // indirect
+	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

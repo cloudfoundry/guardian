@@ -1,21 +1,21 @@
 # code.cloudfoundry.org/archiver v0.0.0-20210609160716-67523bd33dbf
 ## explicit; go 1.16
 code.cloudfoundry.org/archiver/extractor/test_helper
-# code.cloudfoundry.org/clock v1.0.0
-## explicit
+# code.cloudfoundry.org/clock v1.1.0
+## explicit; go 1.20
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
-# code.cloudfoundry.org/commandrunner v0.0.0-20180212143422-501fd662150b
-## explicit
+# code.cloudfoundry.org/commandrunner v0.0.0-20230406174834-03aed0535eb9
+## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.0.0-20230329140605-8c21649a9a42
+# code.cloudfoundry.org/debugserver v0.0.0-20230411203424-7d38b2728d52
 ## explicit; go 1.19
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20230109170928-83a99bb745e3 => ../garden
+# code.cloudfoundry.org/garden v0.0.0-20230418162742-6c127706d54f => ../garden
 ## explicit; go 1.20
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
@@ -30,7 +30,7 @@ code.cloudfoundry.org/garden/transport
 # code.cloudfoundry.org/grootfs v0.0.0-00010101000000-000000000000 => ../grootfs
 ## explicit; go 1.19
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20230306120024-f90a36a869cf => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20230313115908-390987bf5bbe => ../idmapper
 ## explicit; go 1.18
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.0.1
@@ -40,24 +40,26 @@ code.cloudfoundry.org/lager/v3/chug
 code.cloudfoundry.org/lager/v3/internal/truncate
 code.cloudfoundry.org/lager/v3/lagerctx
 code.cloudfoundry.org/lager/v3/lagertest
-# code.cloudfoundry.org/localip v0.0.0-20230220195659-7420c1036ae7
-## explicit; go 1.19
+# code.cloudfoundry.org/localip v0.0.0-20230406154131-9ff4293aa842
+## explicit; go 1.20
 code.cloudfoundry.org/localip
 # github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1
 ## explicit; go 1.18
 github.com/AdaLogics/go-fuzz-headers
-# github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20221215162035-5330a85ea652
+# github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20230306123547-8075edf89bb0
 ## explicit; go 1.18
 github.com/AdamKorcz/go-118-fuzz-build/testing
 # github.com/BurntSushi/toml v1.2.1
 ## explicit; go 1.16
 github.com/BurntSushi/toml
 github.com/BurntSushi/toml/internal
-# github.com/Microsoft/go-winio v0.6.0
+# github.com/Microsoft/go-winio v0.6.1
 ## explicit; go 1.17
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/backuptar
+github.com/Microsoft/go-winio/internal/fs
 github.com/Microsoft/go-winio/internal/socket
+github.com/Microsoft/go-winio/internal/stringbuffer
 github.com/Microsoft/go-winio/pkg/etw
 github.com/Microsoft/go-winio/pkg/etwlogrus
 github.com/Microsoft/go-winio/pkg/fs
@@ -148,7 +150,7 @@ github.com/cloudfoundry/dropsonde/metric_sender/fake
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/gosigar v1.3.9
+# github.com/cloudfoundry/gosigar v1.3.10
 ## explicit; go 1.20
 github.com/cloudfoundry/gosigar
 github.com/cloudfoundry/gosigar/sys/windows
@@ -158,7 +160,7 @@ github.com/cloudfoundry/gosteno
 github.com/cloudfoundry/gosteno/syslog
 # github.com/cloudfoundry/loggregatorlib v0.0.0-20211215163756-5115dcd2d2f5
 ## explicit
-# github.com/cloudfoundry/sonde-go v0.0.0-20220627221915-ff36de9c3435
+# github.com/cloudfoundry/sonde-go v0.0.0-20230412182205-eaf74d09b55a
 ## explicit; go 1.17
 github.com/cloudfoundry/sonde-go/events
 # github.com/container-orchestrated-devices/container-device-interface v0.5.4
@@ -524,7 +526,7 @@ github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/docker/docker v23.0.1+incompatible
+# github.com/docker/docker v23.0.4+incompatible
 ## explicit
 github.com/docker/docker/pkg/reexec
 # github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c
@@ -546,7 +548,7 @@ github.com/emicklei/go-restful/v3/log
 # github.com/fsnotify/fsnotify v1.6.0
 ## explicit; go 1.16
 github.com/fsnotify/fsnotify
-# github.com/go-logr/logr v1.2.3
+# github.com/go-logr/logr v1.2.4
 ## explicit; go 1.16
 github.com/go-logr/logr
 github.com/go-logr/logr/funcr
@@ -588,7 +590,7 @@ github.com/google/go-cmp/cmp/internal/value
 ## explicit; go 1.12
 github.com/google/gofuzz
 github.com/google/gofuzz/bytesource
-# github.com/google/pprof v0.0.0-20230323073829-e72429f035bd
+# github.com/google/pprof v0.0.0-20230406165453-00490a63f317
 ## explicit; go 1.19
 github.com/google/pprof/profile
 # github.com/google/uuid v1.3.0
@@ -625,16 +627,13 @@ github.com/intel/goresctrl/pkg/utils
 # github.com/jessevdk/go-flags v1.5.1-0.20210607101731-3927b71304df => github.com/jessevdk/go-flags v1.4.0
 ## explicit
 github.com/jessevdk/go-flags
-# github.com/josharian/intern v1.0.0
-## explicit; go 1.5
-github.com/josharian/intern
 # github.com/json-iterator/go v1.1.12
 ## explicit; go 1.12
 github.com/json-iterator/go
 # github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 ## explicit
 github.com/kardianos/osext
-# github.com/klauspost/compress v1.16.0
+# github.com/klauspost/compress v1.16.5
 ## explicit; go 1.18
 github.com/klauspost/compress
 github.com/klauspost/compress/fse
@@ -646,12 +645,6 @@ github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/klauspost/cpuid/v2 v2.0.4
 ## explicit; go 1.13
 github.com/klauspost/cpuid/v2
-# github.com/mailru/easyjson v0.7.7
-## explicit; go 1.12
-github.com/mailru/easyjson
-github.com/mailru/easyjson/buffer
-github.com/mailru/easyjson/jlexer
-github.com/mailru/easyjson/jwriter
 # github.com/matttproud/golang_protobuf_extensions v1.0.4
 ## explicit; go 1.9
 github.com/matttproud/golang_protobuf_extensions/pbutil
@@ -723,7 +716,7 @@ github.com/onsi/ginkgo/v2/internal/parallel_support
 github.com/onsi/ginkgo/v2/internal/testingtproxy
 github.com/onsi/ginkgo/v2/reporters
 github.com/onsi/ginkgo/v2/types
-# github.com/onsi/gomega v1.27.4
+# github.com/onsi/gomega v1.27.6
 ## explicit; go 1.18
 github.com/onsi/gomega
 github.com/onsi/gomega/format
@@ -748,8 +741,8 @@ github.com/opencontainers/go-digest/digestset
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.1.4
-## explicit; go 1.16
+# github.com/opencontainers/runc v1.1.6
+## explicit; go 1.17
 github.com/opencontainers/runc
 github.com/opencontainers/runc/libcontainer
 github.com/opencontainers/runc/libcontainer/apparmor
@@ -779,7 +772,7 @@ github.com/opencontainers/runc/libcontainer/userns
 github.com/opencontainers/runc/libcontainer/utils
 github.com/opencontainers/runc/types
 github.com/opencontainers/runc/types/features
-# github.com/opencontainers/runtime-spec v1.1.0-rc.1
+# github.com/opencontainers/runtime-spec v1.1.0-rc.2
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/opencontainers/runtime-tools v0.9.1-0.20221107090550-2e043c6bd626
@@ -842,7 +835,7 @@ github.com/syndtr/gocapability/capability
 # github.com/tchap/go-patricia/v2 v2.3.1
 ## explicit; go 1.16
 github.com/tchap/go-patricia/v2/patricia
-# github.com/tedsuo/ifrit v0.0.0-20220120221754-dd274de71113
+# github.com/tedsuo/ifrit v0.0.0-20230330192023-5cba443a66c4
 ## explicit
 github.com/tedsuo/ifrit
 github.com/tedsuo/ifrit/ginkgomon_v2
@@ -854,7 +847,7 @@ github.com/tedsuo/rata
 # github.com/urfave/cli v1.22.12
 ## explicit; go 1.11
 github.com/urfave/cli
-# github.com/urfave/cli/v2 v2.25.0
+# github.com/urfave/cli/v2 v2.25.1
 ## explicit; go 1.18
 github.com/urfave/cli/v2
 # github.com/vishvananda/netlink v1.2.1-beta.2
@@ -947,10 +940,10 @@ golang.org/x/crypto/openpgp/errors
 golang.org/x/crypto/openpgp/packet
 golang.org/x/crypto/openpgp/s2k
 golang.org/x/crypto/pbkdf2
-# golang.org/x/mod v0.9.0
+# golang.org/x/mod v0.10.0
 ## explicit; go 1.17
 golang.org/x/mod/semver
-# golang.org/x/net v0.8.0
+# golang.org/x/net v0.9.0
 ## explicit; go 1.17
 golang.org/x/net/bpf
 golang.org/x/net/context
@@ -975,7 +968,7 @@ golang.org/x/oauth2/internal
 ## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.6.0
+# golang.org/x/sys v0.7.0
 ## explicit; go 1.17
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
@@ -987,10 +980,10 @@ golang.org/x/sys/windows/registry
 golang.org/x/sys/windows/svc
 golang.org/x/sys/windows/svc/debug
 golang.org/x/sys/windows/svc/mgr
-# golang.org/x/term v0.6.0
+# golang.org/x/term v0.7.0
 ## explicit; go 1.17
 golang.org/x/term
-# golang.org/x/text v0.8.0
+# golang.org/x/text v0.9.0
 ## explicit; go 1.17
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
@@ -1015,7 +1008,7 @@ golang.org/x/text/unicode/norm
 # golang.org/x/time v0.0.0-20220210224613-90d013bbcef8
 ## explicit
 golang.org/x/time/rate
-# golang.org/x/tools v0.7.0
+# golang.org/x/tools v0.8.0
 ## explicit; go 1.18
 golang.org/x/tools/cmd/stringer
 golang.org/x/tools/go/ast/inspector
@@ -1043,14 +1036,14 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4
+# google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 ## explicit; go 1.19
 google.golang.org/genproto/googleapis/api/httpbody
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/protobuf/field_mask
-# google.golang.org/grpc v1.53.0
+# google.golang.org/grpc v1.54.0
 ## explicit; go 1.17
 google.golang.org/grpc
 google.golang.org/grpc/attributes
@@ -1103,7 +1096,7 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-# google.golang.org/protobuf v1.28.1
+# google.golang.org/protobuf v1.30.0
 ## explicit; go 1.11
 google.golang.org/protobuf/encoding/protojson
 google.golang.org/protobuf/encoding/prototext
