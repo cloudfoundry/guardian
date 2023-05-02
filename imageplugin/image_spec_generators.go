@@ -18,8 +18,11 @@ func GenerateImageConfig(layerSHAs ...string) imagespec.Image {
 		digests = append(digests, digest)
 	}
 	return imagespec.Image{
-		Architecture: "amd64",
-		OS:           "linux",
+		Platform: imagespec.Platform{
+			Architecture: "amd64",
+			OS:           "linux",
+		},
+
 		RootFS: imagespec.RootFS{
 			DiffIDs: digests,
 			Type:    "layers",

@@ -5,7 +5,7 @@ code.cloudfoundry.org/archiver/extractor/test_helper
 ## explicit; go 1.20
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
-# code.cloudfoundry.org/commandrunner v0.0.0-20230406174834-03aed0535eb9
+# code.cloudfoundry.org/commandrunner v0.0.0-20230427153105-c662e812fa6f
 ## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
@@ -15,7 +15,7 @@ code.cloudfoundry.org/commandrunner/windows_command_runner
 # code.cloudfoundry.org/debugserver v0.0.0-20230411203424-7d38b2728d52
 ## explicit; go 1.19
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20230418162742-6c127706d54f => ../garden
+# code.cloudfoundry.org/garden v0.0.0-20230502174816-a9f4f2ffa548 => ../garden
 ## explicit; go 1.20
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
@@ -526,7 +526,7 @@ github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/docker/docker v23.0.4+incompatible
+# github.com/docker/docker v23.0.5+incompatible
 ## explicit
 github.com/docker/docker/pkg/reexec
 # github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c
@@ -590,7 +590,7 @@ github.com/google/go-cmp/cmp/internal/value
 ## explicit; go 1.12
 github.com/google/gofuzz
 github.com/google/gofuzz/bytesource
-# github.com/google/pprof v0.0.0-20230406165453-00490a63f317
+# github.com/google/pprof v0.0.0-20230502171905-255e3b9b56de
 ## explicit; go 1.19
 github.com/google/pprof/profile
 # github.com/google/uuid v1.3.0
@@ -736,12 +736,12 @@ github.com/onsi/gomega/types
 ## explicit; go 1.13
 github.com/opencontainers/go-digest
 github.com/opencontainers/go-digest/digestset
-# github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b
-## explicit; go 1.17
+# github.com/opencontainers/image-spec v1.1.0-rc3
+## explicit; go 1.18
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.1.6
+# github.com/opencontainers/runc v1.1.7
 ## explicit; go 1.17
 github.com/opencontainers/runc
 github.com/opencontainers/runc/libcontainer
@@ -847,7 +847,7 @@ github.com/tedsuo/rata
 # github.com/urfave/cli v1.22.12
 ## explicit; go 1.11
 github.com/urfave/cli
-# github.com/urfave/cli/v2 v2.25.1
+# github.com/urfave/cli/v2 v2.25.3
 ## explicit; go 1.18
 github.com/urfave/cli/v2
 # github.com/vishvananda/netlink v1.2.1-beta.2
@@ -877,8 +877,8 @@ go.opencensus.io/trace/tracestate
 ## explicit; go 1.18
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal
-# go.opentelemetry.io/otel v1.14.0
-## explicit; go 1.18
+# go.opentelemetry.io/otel v1.15.1
+## explicit; go 1.19
 go.opentelemetry.io/otel
 go.opentelemetry.io/otel/attribute
 go.opentelemetry.io/otel/baggage
@@ -920,8 +920,8 @@ go.opentelemetry.io/otel/sdk/internal
 go.opentelemetry.io/otel/sdk/internal/env
 go.opentelemetry.io/otel/sdk/resource
 go.opentelemetry.io/otel/sdk/trace
-# go.opentelemetry.io/otel/trace v1.14.0
-## explicit; go 1.18
+# go.opentelemetry.io/otel/trace v1.15.1
+## explicit; go 1.19
 go.opentelemetry.io/otel/trace
 # go.opentelemetry.io/proto/otlp v0.19.0
 ## explicit; go 1.14

@@ -14,8 +14,10 @@ var _ = Describe("GenerateImageConfig", func() {
 	It("creates an image config", func() {
 		config := imageplugin.GenerateImageConfig("sha1", "sha2")
 		Expect(config).To(Equal(imagespec.Image{
-			OS:           "linux",
-			Architecture: "amd64",
+			Platform: imagespec.Platform{
+				OS:           "linux",
+				Architecture: "amd64",
+			},
 			RootFS: imagespec.RootFS{
 				DiffIDs: []digest.Digest{"sha256:sha1", "sha256:sha2"},
 				Type:    "layers",

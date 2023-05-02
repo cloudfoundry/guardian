@@ -5,9 +5,9 @@ go 1.20
 require (
 	code.cloudfoundry.org/archiver v0.0.0-20210609160716-67523bd33dbf
 	code.cloudfoundry.org/clock v1.1.0
-	code.cloudfoundry.org/commandrunner v0.0.0-20230406174834-03aed0535eb9
+	code.cloudfoundry.org/commandrunner v0.0.0-20230427153105-c662e812fa6f
 	code.cloudfoundry.org/debugserver v0.0.0-20230411203424-7d38b2728d52
-	code.cloudfoundry.org/garden v0.0.0-20230418162742-6c127706d54f
+	code.cloudfoundry.org/garden v0.0.0-20230502174816-a9f4f2ffa548
 	code.cloudfoundry.org/grootfs v0.0.0-00010101000000-000000000000
 	code.cloudfoundry.org/idmapper v0.0.0-20230313115908-390987bf5bbe
 	code.cloudfoundry.org/lager/v3 v3.0.1
@@ -17,7 +17,7 @@ require (
 	github.com/cloudfoundry/gosigar v1.3.10
 	github.com/containerd/containerd v1.7.0
 	github.com/containerd/typeurl/v2 v2.1.0
-	github.com/docker/docker v23.0.4+incompatible
+	github.com/docker/docker v23.0.5+incompatible
 	github.com/eapache/go-resiliency v1.3.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jessevdk/go-flags v1.5.1-0.20210607101731-3927b71304df
@@ -27,14 +27,14 @@ require (
 	github.com/onsi/ginkgo/v2 v2.9.2
 	github.com/onsi/gomega v1.27.6
 	github.com/opencontainers/go-digest v1.0.0
-	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b
-	github.com/opencontainers/runc v1.1.6
+	github.com/opencontainers/image-spec v1.1.0-rc3
+	github.com/opencontainers/runc v1.1.7
 	github.com/opencontainers/runtime-spec v1.1.0-rc.2
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/pflag v1.0.5
 	github.com/tedsuo/ifrit v0.0.0-20230330192023-5cba443a66c4
-	github.com/urfave/cli/v2 v2.25.1
+	github.com/urfave/cli/v2 v2.25.3
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vishvananda/netns v0.0.4
 	golang.org/x/sys v0.7.0
@@ -92,7 +92,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20230406165453-00490a63f317 // indirect
+	github.com/google/pprof v0.0.0-20230502171905-255e3b9b56de // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
@@ -137,14 +137,14 @@ require (
 	go.mozilla.org/pkcs7 v0.0.0-20200128120323-432b2356ecb1 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.40.0 // indirect
-	go.opentelemetry.io/otel v1.14.0 // indirect
+	go.opentelemetry.io/otel v1.15.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.14.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.14.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.14.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.14.0 // indirect
 	go.opentelemetry.io/otel/metric v0.37.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.14.0 // indirect
-	go.opentelemetry.io/otel/trace v1.14.0 // indirect
+	go.opentelemetry.io/otel/trace v1.15.1 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
