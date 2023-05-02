@@ -12,17 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal // import "go.opentelemetry.io/otel/sdk/internal"
+package internal // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal"
 
-import "time"
+import (
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+)
 
-// MonotonicEndTime returns the end time at present
-// but offset from start, monotonically.
-//
-// The monotonic clock is used in subtractions hence
-// the duration since start added back to start gives
-// end as a monotonic time.
-// See https://golang.org/pkg/time/#hdr-Monotonic_Clocks
-func MonotonicEndTime(start time.Time) time.Time {
-	return start.Add(time.Since(start))
+// GetUserAgentHeader returns an OTLP header value form "OTel OTLP Exporter Go/{{ .Version }}"
+// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md#user-agent
+func GetUserAgentHeader() string {
+	return "OTel OTLP Exporter Go/" + otlptrace.Version()
 }
