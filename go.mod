@@ -14,7 +14,7 @@ require (
 	code.cloudfoundry.org/localip v0.0.0-20230406154131-9ff4293aa842
 	github.com/BurntSushi/toml v1.2.1
 	github.com/cloudfoundry/dropsonde v1.0.0
-	github.com/cloudfoundry/gosigar v1.3.10
+	github.com/cloudfoundry/gosigar v1.3.11
 	github.com/containerd/containerd v1.7.0
 	github.com/containerd/typeurl/v2 v2.1.0
 	github.com/docker/docker v23.0.5+incompatible
@@ -37,7 +37,7 @@ require (
 	github.com/urfave/cli/v2 v2.25.3
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vishvananda/netns v0.0.4
-	golang.org/x/sys v0.7.0
+	golang.org/x/sys v0.8.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
