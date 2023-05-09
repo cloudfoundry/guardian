@@ -16,7 +16,7 @@ require (
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.3.10
 	github.com/containerd/containerd v1.7.0
-	github.com/containerd/typeurl/v2 v2.1.0
+	github.com/containerd/typeurl/v2 v2.1.1
 	github.com/docker/docker v23.0.5+incompatible
 	github.com/eapache/go-resiliency v1.3.0
 	github.com/hashicorp/go-multierror v1.1.1
