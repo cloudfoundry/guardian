@@ -15,7 +15,7 @@ require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/gosigar v1.3.11
-	github.com/containerd/containerd v1.7.0
+	github.com/containerd/containerd v1.7.1
 	github.com/containerd/typeurl/v2 v2.1.1
 	github.com/docker/docker v23.0.6+incompatible
 	github.com/eapache/go-resiliency v1.3.0
@@ -167,7 +167,7 @@ require (
 	k8s.io/apiserver v0.26.2 // indirect
 	k8s.io/client-go v0.26.2 // indirect
 	k8s.io/component-base v0.26.2 // indirect
-	k8s.io/cri-api v0.26.2 // indirect
+	k8s.io/cri-api v0.27.1 // indirect
 	k8s.io/klog/v2 v2.90.1 // indirect
 	k8s.io/utils v0.0.0-20230220204549-a5ecb0141aa5 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
