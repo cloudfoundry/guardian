@@ -4,16 +4,16 @@ go 1.19
 
 require (
 	code.cloudfoundry.org/commandrunner v0.0.0-20230427153105-c662e812fa6f
-	code.cloudfoundry.org/idmapper v0.0.0-20230504115801-54a7a0bca161
+	code.cloudfoundry.org/idmapper v0.0.0-20230516115813-a41052025abf
 	code.cloudfoundry.org/lager/v3 v3.0.1
 	github.com/cloudfoundry/dropsonde v1.0.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20230412182205-eaf74d09b55a
 	github.com/containers/image/v5 v5.25.0
 	github.com/containers/storage v1.46.1
 	github.com/docker/distribution v2.8.2+incompatible
-	github.com/docker/docker v23.0.6+incompatible
+	github.com/docker/docker v24.0.0+incompatible
 	github.com/docker/go-units v0.5.0
-	github.com/onsi/ginkgo/v2 v2.9.4
+	github.com/onsi/ginkgo/v2 v2.9.5
 	github.com/onsi/gomega v1.27.6
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0-rc3
@@ -32,7 +32,6 @@ require (
 	github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77 // indirect
 	github.com/cloudfoundry/gosteno v0.0.0-20150423193413-0c8581caea35 // indirect
 	github.com/cloudfoundry/loggregatorlib v0.0.0-20170823162133-36eddf15ef12 // indirect
-	github.com/containerd/continuity v0.1.0 // indirect
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/containers/ocicrypt v1.1.7 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
@@ -43,7 +42,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
-	github.com/google/pprof v0.0.0-20230509042627-b1315fad0c5a // indirect
+	github.com/google/pprof v0.0.0-20230510103437-eeec1cb781c3 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -53,7 +52,6 @@ require (
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/moby/sys/mountinfo v0.6.2 // indirect
-	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
@@ -65,7 +63,7 @@ require (
 	github.com/ulikunitz/xz v0.5.11 // indirect
 	github.com/vbatts/tar-split v0.11.3 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53 // indirect
+	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/tools v0.9.1 // indirect
