@@ -31,7 +31,7 @@ require (
 	github.com/opencontainers/runc v1.1.7
 	github.com/opencontainers/runtime-spec v1.1.0-rc.2
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.9.0
+	github.com/sirupsen/logrus v1.9.2
 	github.com/spf13/pflag v1.0.5
 	github.com/tedsuo/ifrit v0.0.0-20230516164442-7862c310ad26
 	github.com/urfave/cli/v2 v2.25.3
