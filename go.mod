@@ -13,7 +13,7 @@ require (
 	code.cloudfoundry.org/lager/v3 v3.0.1
 	code.cloudfoundry.org/localip v0.0.0-20230515195708-6e10f6f76fc4
 	github.com/BurntSushi/toml v1.2.1
-	github.com/cloudfoundry/dropsonde v1.0.0
+	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.12
 	github.com/containerd/containerd v1.7.1
 	github.com/containerd/typeurl/v2 v2.1.1
