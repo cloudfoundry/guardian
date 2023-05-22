@@ -6,7 +6,7 @@ require (
 	code.cloudfoundry.org/commandrunner v0.0.0-20230427153105-c662e812fa6f
 	code.cloudfoundry.org/idmapper v0.0.0-20230516115813-a41052025abf
 	code.cloudfoundry.org/lager/v3 v3.0.1
-	github.com/cloudfoundry/dropsonde v1.0.0
+	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20230412182205-eaf74d09b55a
 	github.com/containers/image/v5 v5.25.0
 	github.com/containers/storage v1.46.1

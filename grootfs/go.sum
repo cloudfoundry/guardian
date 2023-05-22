@@ -12,6 +12,8 @@ github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cloudfoundry/dropsonde v1.0.0 h1:9MT6WFmhU96fQjhTiglx4b1X3ObNjk/Sze7KPntNitE=
 github.com/cloudfoundry/dropsonde v1.0.0/go.mod h1:6zwvrWK5TpxBVYi1cdkE5WDsIO8E0n7qAJg3wR9B67c=
+github.com/cloudfoundry/dropsonde v1.1.0 h1:nerhj8K0heOsv/U/Ddou5Esw56YlNeHHJH6MP9QlACQ=
+github.com/cloudfoundry/dropsonde v1.1.0/go.mod h1:OrkxsBrAvM8X0Ve9vaSNKLR+/Jeohu3+J0M4JEaTmnM=
 github.com/cloudfoundry/gosteno v0.0.0-20150423193413-0c8581caea35 h1:HdAWGlVEbFxuALqHXYu14XvAbRbyWZLd817ojygGnk0=
 github.com/cloudfoundry/gosteno v0.0.0-20150423193413-0c8581caea35/go.mod h1:3YBPUR85RIrvaUTdA1dL38YSp6s3OHu1xrWLkGt2Mog=
 github.com/cloudfoundry/loggregatorlib v0.0.0-20170823162133-36eddf15ef12 h1:A+SRy/ndY6QSrN+bVWIhKDLU4t7OLFWVlLPxUWL/oGE=
