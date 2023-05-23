@@ -203,7 +203,7 @@ github.com/onsi/ginkgo/v2/internal/parallel_support
 github.com/onsi/ginkgo/v2/internal/testingtproxy
 github.com/onsi/ginkgo/v2/reporters
 github.com/onsi/ginkgo/v2/types
-# github.com/onsi/gomega v1.27.6
+# github.com/onsi/gomega v1.27.7
 ## explicit; go 1.18
 github.com/onsi/gomega
 github.com/onsi/gomega/format
@@ -241,7 +241,7 @@ github.com/pkg/errors
 # github.com/russross/blackfriday/v2 v2.1.0
 ## explicit
 github.com/russross/blackfriday/v2
-# github.com/sirupsen/logrus v1.9.0
+# github.com/sirupsen/logrus v1.9.2
 ## explicit; go 1.13
 github.com/sirupsen/logrus
 # github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
@@ -267,7 +267,7 @@ github.com/ventu-io/go-shortid
 # github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673
 ## explicit
 github.com/xrash/smetrics
-# golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
+# golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 ## explicit; go 1.20
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
