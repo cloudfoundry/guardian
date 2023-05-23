@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/sonde-go/events"
+	"google.golang.org/protobuf/proto"
 )
 
 type FakeMetron struct {
@@ -22,12 +23,12 @@ type FakeMetron struct {
 
 func NewFakeMetron(port uint16) *FakeMetron {
 	return &FakeMetron{
-		port: port,
-		dropsondeUnmarshaller: dropsonde_unmarshaller.NewDropsondeUnmarshaller(nil),
-		mtx:           sync.RWMutex{},
-		valueMetrics:  make(map[string][]events.ValueMetric),
-		counterEvents: make(map[string][]events.CounterEvent),
-		errors:        make([]events.Error, 0),
+		port:                  port,
+		dropsondeUnmarshaller: dropsonde_unmarshaller.NewDropsondeUnmarshaller(),
+		mtx:                   sync.RWMutex{},
+		valueMetrics:          make(map[string][]events.ValueMetric),
+		counterEvents:         make(map[string][]events.CounterEvent),
+		errors:                make([]events.Error, 0),
 	}
 }
 
@@ -64,18 +65,30 @@ func (m *FakeMetron) Run() error {
 		m.mtx.Lock()
 		switch *envelope.EventType {
 		case events.Envelope_ValueMetric:
-			metric := *envelope.ValueMetric
-			key := *metric.Name
-			m.valueMetrics[key] = append(m.valueMetrics[key], metric)
+			metric := *envelope.GetValueMetric()
+			key := metric.GetName()
+			m.valueMetrics[key] = append(m.valueMetrics[key], events.ValueMetric{
+				Name:  proto.String(metric.GetName()),
+				Value: proto.Float64(metric.GetValue()),
+				Unit:  proto.String(metric.GetUnit()),
+			})
 
 		case events.Envelope_Error:
-			err := *envelope.Error
-			m.errors = append(m.errors, err)
+			err := *envelope.GetError()
+			m.errors = append(m.errors, events.Error{
+				Source:  proto.String(err.GetSource()),
+				Code:    proto.Int32(err.GetCode()),
+				Message: proto.String(err.GetMessage()),
+			})
 
 		case events.Envelope_CounterEvent:
-			counter := *envelope.CounterEvent
-			name := *counter.Name
-			m.counterEvents[name] = append(m.counterEvents[name], counter)
+			counter := *envelope.GetCounterEvent()
+			name := counter.GetName()
+			m.counterEvents[name] = append(m.counterEvents[name], events.CounterEvent{
+				Name:  proto.String(counter.GetName()),
+				Delta: proto.Uint64(counter.GetDelta()),
+				Total: proto.Uint64(counter.GetTotal()),
+			})
 		}
 		m.mtx.Unlock()
 	}
