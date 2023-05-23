@@ -15,4 +15,4 @@ export HOME=/home/groot
 
 args=$@
 [ "$args" == "" ] && args="-r"
-ginkgo -mod vendor -p -nodes 5 -race -skipPackage integration $args
+ginkgo -p -nodes 5 -race -skip-package integration $args
