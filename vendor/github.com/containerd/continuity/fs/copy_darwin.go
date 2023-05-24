@@ -14,18 +14,22 @@
    limitations under the License.
 */
 
-package runc
+package fs
 
-// Runc is the client to the runc cli
-type Runc struct {
-	//If command is empty, DefaultCommand is used
-	Command       string
-	Root          string
-	Debug         bool
-	Log           string
-	LogFormat     Format
-	Setpgid       bool
-	Criu          string
-	SystemdCgroup bool
-	Rootless      *bool // nil stands for "auto"
+import (
+	"errors"
+	"fmt"
+
+	"golang.org/x/sys/unix"
+)
+
+func copyFile(target, source string) error {
+	if err := unix.Clonefile(source, target, unix.CLONE_NOFOLLOW); err != nil {
+		if !errors.Is(err, unix.ENOTSUP) && !errors.Is(err, unix.EXDEV) {
+			return fmt.Errorf("clonefile failed: %w", err)
+		}
+
+		return openAndCopyFile(target, source)
+	}
+	return nil
 }
