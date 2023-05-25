@@ -19,4 +19,5 @@ umask 077
 
 args=$@
 [ "$args" == "" ] && args="-r integration"
-go run github.com/onsi/ginkgo/v2/ginkgo -mod vendor -p -nodes 5 -race $args
+go run github.com/onsi/ginkgo/v2/ginkgo@latest -mod vendor -p -nodes 5 -race $args
+
