@@ -5,6 +5,8 @@ go 1.20
 // force otel back to 1.15.1 since 1.16.0 is incompatible with containerd  1.7.1
 replace go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.15.1
 
+replace github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
+
 require (
 	code.cloudfoundry.org/archiver v0.0.0-20210609160716-67523bd33dbf
 	code.cloudfoundry.org/clock v1.1.0
@@ -157,7 +159,7 @@ require (
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.9.1 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
+	google.golang.org/genproto v0.0.0-20230525154841-bd750badd5c6 // indirect
 	google.golang.org/grpc v1.55.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
