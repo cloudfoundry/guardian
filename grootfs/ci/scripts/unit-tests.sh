@@ -15,4 +15,4 @@ export HOME=/home/groot
 
 args=$@
 [ "$args" == "" ] && args="-r"
-ginkgo -p -nodes 5 -race -skip-package integration $args
+go run github.com/onsi/ginkgo/v2/ginkgo -p -nodes 5 -race -skip-package integration $args
