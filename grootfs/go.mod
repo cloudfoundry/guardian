@@ -1,6 +1,6 @@
 module code.cloudfoundry.org/grootfs
 
-go 1.19
+go 1.20
 
 require (
 	code.cloudfoundry.org/commandrunner v0.0.0-20230427153105-c662e812fa6f
