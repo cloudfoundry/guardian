@@ -64,7 +64,8 @@ var _ = Describe("Quotas", func() {
 
 	Describe("Get", func() {
 		BeforeEach(func() {
-			quota.Set(logger, 500, directory, 10*1024*1024)
+			err := quota.Set(logger, 500, directory, 10*1024*1024)
+			Expect(err).ToNot(HaveOccurred())
 			Eventually(writeFile(filepath.Join(directory, "small-file"), 1024)).Should(gexec.Exit(0))
 		})
 
