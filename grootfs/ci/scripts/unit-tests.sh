@@ -15,7 +15,4 @@ export HOME=/home/groot
 
 args=$@
 [ "$args" == "" ] && args="-r"
-go mod vendor # i don't know why this is necessary, but in CI this is required for the
-              # go run to work. when done locally this isn't necessary. no files end up changing
-              # in the repo. 
 go run github.com/onsi/ginkgo/v2/ginkgo -p -nodes 5 -race -skip-package integration $args
