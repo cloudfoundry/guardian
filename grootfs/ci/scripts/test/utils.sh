@@ -46,9 +46,18 @@ mount_storage() {
 unmount_storage() {
   umount -l /mnt/ext4
 
-  for i in {1..5}
+  for i in {1..10}
   do
     umount -l /mnt/xfs-${i}
+    rmdir /mnt/xfs-${i}
+    rm /xfs_volume_${i}
+  done
+
+  rmdir /mnt/ext4
+  rm /ext4_volume
+
+  for i in {0..256}; do
+    rm /dev/loop$i
   done
 }
 
