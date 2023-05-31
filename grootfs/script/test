@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
 # Default fly target
 [ -z "$FLY_TARGET" ] && FLY_TARGET="runtime-garden"
@@ -108,9 +108,9 @@ RECURSIVE=0
 if [ -z "$DOCKER_REGISTRY_PASSWORD" ]
 then
   export DOCKER_REGISTRY_USERNAME
-  DOCKER_REGISTRY_USERNAME="$(gcloud secrets versions access latest --secret=dockerhub-garden | grep user | cut -d\  -f 2)"
+  DOCKER_REGISTRY_USERNAME="$(gcloud secrets versions access latest --secret=dockerhub-tasruntime | grep user | cut -d\  -f 2)"
   export DOCKER_REGISTRY_PASSWORD
-  DOCKER_REGISTRY_PASSWORD="$(gcloud secrets versions access latest --secret=dockerhub-garden | grep pass| cut -d\  -f 2)"
+  DOCKER_REGISTRY_PASSWORD="$(gcloud secrets versions access latest --secret=dockerhub-tasruntime | grep pass| cut -d\  -f 2)"
 fi
 
 while getopts "uia" OPTION
