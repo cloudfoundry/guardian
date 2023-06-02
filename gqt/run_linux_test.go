@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	. "github.com/onsi/gomega/gleak"
 	"golang.org/x/sys/unix"
 )
 
@@ -490,10 +491,9 @@ var _ = Describe("Run", func() {
 	Describe("Errors", func() {
 		Context("when trying to run an executable which does not exist", func() {
 			var (
-				runErr              error
-				binaryPath          string
-				numGoRoutinesBefore int
-				stackBefore         string
+				runErr      error
+				binaryPath  string
+				stackBefore []Goroutine
 			)
 
 			BeforeEach(func() {
@@ -505,10 +505,7 @@ var _ = Describe("Run", func() {
 				config.DebugPort = intptr(8080 + GinkgoParallelProcess())
 				client = restartGarden(client, config)
 
-				var err error
-				stackBefore, err = client.StackDump()
-				Expect(err).NotTo(HaveOccurred())
-				numGoRoutinesBefore = numGoRoutines(client)
+				stackBefore = Goroutines()
 
 				_, runErr = container.Run(garden.ProcessSpec{
 					Path: binaryPath,
@@ -530,18 +527,7 @@ var _ = Describe("Run", func() {
 			})
 
 			It("should not leak go routines", func() {
-				getStackDump := func() string {
-					s, e := client.StackDump()
-					if e != nil {
-						return fmt.Sprintf("<Failed to get stack dump: %v>", e)
-					}
-					return s
-				}
-
-				Eventually(pollNumGoRoutines(client), time.Minute).Should(
-					Equal(numGoRoutinesBefore),
-					fmt.Sprintf("possible go routine leak\n\n--- stack dump before ---\n%s\n\n--- stack dump after ---\n%s\n", stackBefore, getStackDump()),
-				)
+				Eventually(Goroutines, time.Minute).ShouldNot(HaveLeaked(stackBefore))
 			})
 		})
 	})

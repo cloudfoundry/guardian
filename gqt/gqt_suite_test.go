@@ -550,18 +550,6 @@ func waitForContainerd(client *runner.RunningGarden) {
 	}).Should(Succeed())
 }
 
-func numGoRoutines(client *runner.RunningGarden) int {
-	numGoroutines, err := client.NumGoroutines()
-	ExpectWithOffset(1, err).NotTo(HaveOccurred())
-	return numGoroutines
-}
-
-func pollNumGoRoutines(client *runner.RunningGarden) func() int {
-	return func() int {
-		return numGoRoutines(client)
-	}
-}
-
 func runInContainerWithIO(container garden.Container, processIO garden.ProcessIO, path string, args []string) {
 	proc, err := container.Run(
 		garden.ProcessSpec{

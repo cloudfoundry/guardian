@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	. "github.com/onsi/gomega/gleak"
 )
 
 var _ = Describe("Destroying a Container", func() {
@@ -36,7 +37,7 @@ var _ = Describe("Destroying a Container", func() {
 	})
 
 	It("should not leak goroutines", func() {
-		numGoroutinesBefore := numGoRoutines(client)
+		beforeStack := Goroutines()
 
 		handle := fmt.Sprintf("goroutine-leak-test-%d", GinkgoParallelProcess())
 		_, err := client.Create(garden.ContainerSpec{
@@ -45,7 +46,7 @@ var _ = Describe("Destroying a Container", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(client.Destroy(handle)).To(Succeed())
 
-		Eventually(pollNumGoRoutines(client)).Should(BeNumerically("<=", numGoroutinesBefore))
+		Eventually(Goroutines).ShouldNot(HaveLeaked(beforeStack))
 	})
 
 	It("should destroy the container's rootfs", func() {
