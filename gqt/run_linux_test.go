@@ -417,16 +417,20 @@ var _ = Describe("Run", func() {
 				Expect(os.RemoveAll(propertiesDir)).To(Succeed())
 			})
 
-			It("does not deadlock", func(done Done) {
-				_, err := container.Run(garden.ProcessSpec{
-					Path: "ps",
-				}, garden.ProcessIO{
-					Stderr: gbytes.NewBuffer(),
-				})
-				Expect(err).To(MatchError(ContainSubstring("exit status 100")))
+			It("does not deadlock", func() {
+				done := make(chan interface{})
+				go func() {
+					_, err := container.Run(garden.ProcessSpec{
+						Path: "ps",
+					}, garden.ProcessIO{
+						Stderr: gbytes.NewBuffer(),
+					})
+					Expect(err).To(MatchError(ContainSubstring("exit status 100")))
 
-				close(done)
-			}, 30.0)
+					close(done)
+				}()
+				Eventually(done, 30*time.Second).Should(BeClosed())
+			})
 		})
 
 		It("forwards runc logs to lager when exec fails, and gives proper error messages", func() {

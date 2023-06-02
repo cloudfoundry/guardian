@@ -61,52 +61,60 @@ var _ = Describe("FileReader", func() {
 		})
 
 		Context("and it is eventually created", func() {
-			It("should read the pid file", func(done Done) {
-				pidReturns := make(chan struct{})
+			It("should read the pid file", func() {
+				done := make(chan interface{})
 				go func() {
-					defer GinkgoRecover()
+					pidReturns := make(chan struct{})
+					go func() {
+						defer GinkgoRecover()
 
-					pid, err := pdr.Pid(pidFilePath)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(pid).To(Equal(5621))
+						pid, err := pdr.Pid(pidFilePath)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(pid).To(Equal(5621))
 
-					close(pidReturns)
+						close(pidReturns)
+					}()
+
+					// WaitForWatchersAndIncrement ensures that the implementation will try
+					// first time and sleep. However the sleep interval is 20ms so
+					// incrementing by 10ms won't get the loop moving. We do that to ensure
+					// that the file write will happen before the implementation tries to
+					// read the file. Hence, after we write the file the clock is
+					// incremented by a further 10ms.
+					clk.WaitForWatcherAndIncrement(time.Millisecond * 10)
+					Expect(ioutil.WriteFile(pidFilePath, []byte("5621"), 0766)).To(Succeed())
+					clk.Increment(time.Millisecond * 10)
+
+					Eventually(pidReturns).Should(BeClosed())
+					close(done)
 				}()
-
-				// WaitForWatchersAndIncrement ensures that the implementation will try
-				// first time and sleep. However the sleep interval is 20ms so
-				// incrementing by 10ms won't get the loop moving. We do that to ensure
-				// that the file write will happen before the implementation tries to
-				// read the file. Hence, after we write the file the clock is
-				// incremented by a further 10ms.
-				clk.WaitForWatcherAndIncrement(time.Millisecond * 10)
-				Expect(ioutil.WriteFile(pidFilePath, []byte("5621"), 0766)).To(Succeed())
-				clk.Increment(time.Millisecond * 10)
-
-				Eventually(pidReturns).Should(BeClosed())
-				close(done)
-			}, 1.0)
+				Eventually(done, 1*time.Second).Should(BeClosed())
+			})
 		})
 
 		Context("and it is never created", func() {
-			It("should return error after the timeout", func(done Done) {
-				pidReturns := make(chan struct{})
+			It("should return error after the timeout", func() {
+				done := make(chan interface{})
 				go func() {
-					defer GinkgoRecover()
+					pidReturns := make(chan struct{})
+					go func() {
+						defer GinkgoRecover()
 
-					_, err := pdr.Pid(pidFilePath)
-					Expect(err).To(MatchError(ContainSubstring("timeout")))
+						_, err := pdr.Pid(pidFilePath)
+						Expect(err).To(MatchError(ContainSubstring("timeout")))
 
-					close(pidReturns)
+						close(pidReturns)
+					}()
+
+					for i := 0; i < 3; i++ {
+						clk.WaitForWatcherAndIncrement(time.Millisecond * 20)
+					} // 3 * 20ms = 60ms
+
+					Eventually(pidReturns).Should(BeClosed())
+					close(done)
 				}()
-
-				for i := 0; i < 3; i++ {
-					clk.WaitForWatcherAndIncrement(time.Millisecond * 20)
-				} // 3 * 20ms = 60ms
-
-				Eventually(pidReturns).Should(BeClosed())
-				close(done)
-			}, 1.0)
+				Eventually(done, 1*time.Second).Should(BeClosed())
+			})
 		})
 	})
 
@@ -116,52 +124,60 @@ var _ = Describe("FileReader", func() {
 		})
 
 		Context("and it is eventually populated", func() {
-			It("should read the pid file", func(done Done) {
-				pidReturns := make(chan struct{})
+			It("should read the pid file", func() {
+				done := make(chan interface{})
 				go func() {
-					defer GinkgoRecover()
+					pidReturns := make(chan struct{})
+					go func() {
+						defer GinkgoRecover()
 
-					pid, err := pdr.Pid(pidFilePath)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(pid).To(Equal(5621))
+						pid, err := pdr.Pid(pidFilePath)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(pid).To(Equal(5621))
 
-					close(pidReturns)
+						close(pidReturns)
+					}()
+
+					// WaitForWatchersAndIncrement ensures that the implementation will try
+					// first time and sleep. However the sleep interval is 20ms so
+					// incrementing by 10ms won't get the loop moving. We do that to ensure
+					// that the file write will happen before the implementation tries to
+					// read the file. Hence, after we write the file the clock is
+					// incremented by a further 10ms.
+					clk.WaitForWatcherAndIncrement(time.Millisecond * 10)
+					Expect(ioutil.WriteFile(pidFilePath, []byte("5621"), 0766)).To(Succeed())
+					clk.Increment(time.Millisecond * 10)
+
+					Eventually(pidReturns).Should(BeClosed())
+					close(done)
 				}()
-
-				// WaitForWatchersAndIncrement ensures that the implementation will try
-				// first time and sleep. However the sleep interval is 20ms so
-				// incrementing by 10ms won't get the loop moving. We do that to ensure
-				// that the file write will happen before the implementation tries to
-				// read the file. Hence, after we write the file the clock is
-				// incremented by a further 10ms.
-				clk.WaitForWatcherAndIncrement(time.Millisecond * 10)
-				Expect(ioutil.WriteFile(pidFilePath, []byte("5621"), 0766)).To(Succeed())
-				clk.Increment(time.Millisecond * 10)
-
-				Eventually(pidReturns).Should(BeClosed())
-				close(done)
-			}, 1.0)
+				Eventually(done, 1*time.Second).Should(BeClosed())
+			})
 		})
 
 		Context("and it is never populated", func() {
-			It("should return error after the timeout", func(done Done) {
-				pidReturns := make(chan struct{})
+			It("should return error after the timeout", func() {
+				done := make(chan interface{})
 				go func() {
-					defer GinkgoRecover()
+					pidReturns := make(chan struct{})
+					go func() {
+						defer GinkgoRecover()
 
-					_, err := pdr.Pid(pidFilePath)
-					Expect(err).To(MatchError(ContainSubstring("timeout")))
+						_, err := pdr.Pid(pidFilePath)
+						Expect(err).To(MatchError(ContainSubstring("timeout")))
 
-					close(pidReturns)
+						close(pidReturns)
+					}()
+
+					for i := 0; i < 3; i++ {
+						clk.WaitForWatcherAndIncrement(time.Millisecond * 20)
+					} // 3 * 20ms = 60ms
+
+					Eventually(pidReturns).Should(BeClosed())
+					close(done)
 				}()
-
-				for i := 0; i < 3; i++ {
-					clk.WaitForWatcherAndIncrement(time.Millisecond * 20)
-				} // 3 * 20ms = 60ms
-
-				Eventually(pidReturns).Should(BeClosed())
-				close(done)
-			}, 1.0)
+				Eventually(done, 1*time.Second).Should(BeClosed())
+			})
 		})
 	})
 

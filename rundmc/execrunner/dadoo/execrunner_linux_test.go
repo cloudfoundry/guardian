@@ -407,14 +407,18 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					}
 				})
 
-				It("does not deadlock", func(done Done) {
-					updatedProcessIO := defaultProcessIO()
-					updatedProcessIO.Stderr = new(bytes.Buffer)
-					_, err := runner.Run(log, processID, "some-handle", updatedProcessIO, false, nil, nil)
-					Expect(err).To(MatchError(ContainSubstring("exit status 3")))
+				It("does not deadlock", func() {
+					done := make(chan interface{})
+					go func() {
+						updatedProcessIO := defaultProcessIO()
+						updatedProcessIO.Stderr = new(bytes.Buffer)
+						_, err := runner.Run(log, processID, "some-handle", updatedProcessIO, false, nil, nil)
+						Expect(err).To(MatchError(ContainSubstring("exit status 3")))
 
-					close(done)
-				}, 10.0)
+						close(done)
+					}()
+					Eventually(done, 10*time.Second).Should(BeClosed())
+				})
 			})
 
 			Context("when runc tries to exec a non-existent binary", func() {
@@ -1077,14 +1081,18 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					}
 				})
 
-				It("does not deadlock", func(done Done) {
-					updatedProcessIO := defaultProcessIO()
-					updatedProcessIO.Stderr = new(bytes.Buffer)
-					_, err := runner.RunPea(log, processID, goci.Bndl{}, "some-handle", updatedProcessIO, false, nil, nil)
-					Expect(err).To(MatchError(ContainSubstring("exit status 3")))
+				It("does not deadlock", func() {
+					done := make(chan interface{})
+					go func() {
+						updatedProcessIO := defaultProcessIO()
+						updatedProcessIO.Stderr = new(bytes.Buffer)
+						_, err := runner.RunPea(log, processID, goci.Bndl{}, "some-handle", updatedProcessIO, false, nil, nil)
+						Expect(err).To(MatchError(ContainSubstring("exit status 3")))
 
-					close(done)
-				}, 10.0)
+						close(done)
+					}()
+					Eventually(done, 10*time.Second).Should(BeClosed())
+				})
 			})
 
 			Context("when runc tries to run a non-existent binary", func() {
