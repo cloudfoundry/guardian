@@ -20,7 +20,7 @@ require (
 	github.com/BurntSushi/toml v1.3.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.12
-	github.com/containerd/containerd v1.7.1
+	github.com/containerd/containerd v1.7.2
 	github.com/containerd/typeurl/v2 v2.1.1
 	github.com/docker/docker v24.0.2+incompatible
 	github.com/eapache/go-resiliency v1.3.0
