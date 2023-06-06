@@ -17,10 +17,10 @@ require (
 	code.cloudfoundry.org/idmapper v0.0.0-20230516115813-a41052025abf
 	code.cloudfoundry.org/lager/v3 v3.0.1
 	code.cloudfoundry.org/localip v0.0.0-20230522195710-2ea90d997658
-	github.com/BurntSushi/toml v1.3.0
+	github.com/BurntSushi/toml v1.3.1
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.12
-	github.com/containerd/containerd v1.7.1
+	github.com/cloudfoundry/gosigar v1.3.13
+	github.com/containerd/containerd v1.7.2
 	github.com/containerd/typeurl/v2 v2.1.1
 	github.com/docker/docker v24.0.2+incompatible
 	github.com/eapache/go-resiliency v1.3.0
@@ -29,14 +29,14 @@ require (
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo/v2 v2.9.5
+	github.com/onsi/ginkgo/v2 v2.9.7
 	github.com/onsi/gomega v1.27.7
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0-rc3
 	github.com/opencontainers/runc v1.1.7
 	github.com/opencontainers/runtime-spec v1.1.0-rc.2
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.9.2
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
 	github.com/tedsuo/ifrit v0.0.0-20230516164442-7862c310ad26
 	github.com/urfave/cli/v2 v2.25.5
@@ -58,7 +58,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/checkpoint-restore/go-criu/v5 v5.3.0 // indirect
 	github.com/cilium/ebpf v0.9.1 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20230412182205-eaf74d09b55a // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20230601214134-20e0b3c2ed5c // indirect
 	github.com/container-orchestrated-devices/container-device-interface v0.5.4 // indirect
 	github.com/containerd/aufs v1.0.0 // indirect
 	github.com/containerd/btrfs/v2 v2.0.0 // indirect
@@ -95,7 +95,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20230510103437-eeec1cb781c3 // indirect
+	github.com/google/pprof v0.0.0-20230602150820-91b7bce49751 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
@@ -157,7 +157,7 @@ require (
 	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.9.1 // indirect
+	golang.org/x/tools v0.9.3 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230526203410-71b5a4ffd15e // indirect
