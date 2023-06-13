@@ -606,8 +606,8 @@ code.cloudfoundry.org/commandrunner v0.0.0-20230612151827-2b11a2b4e9b8 h1:RajW6z
 code.cloudfoundry.org/commandrunner v0.0.0-20230612151827-2b11a2b4e9b8/go.mod h1:B4Pih80MJdiTapEig6xvghCwosbFX4+s1Qm9KJSbxCM=
 code.cloudfoundry.org/debugserver v0.0.0-20230612151301-d597b20f28ce h1:zVyFerLQUMC+M4Na/39sb548EVldzWlVwoKFondYr04=
 code.cloudfoundry.org/debugserver v0.0.0-20230612151301-d597b20f28ce/go.mod h1:1uv/ILTJLoZSo2YxPK1qbdFDQwtiA93CeJNAAPGVQF0=
-code.cloudfoundry.org/lager/v3 v3.0.1 h1:AI7h0EgCa4bJCCq0N8JV8EBP+tbJUIovqKc4hB4wZsA=
-code.cloudfoundry.org/lager/v3 v3.0.1/go.mod h1:zA6tOIWhr5uZUez+PGpdfBHDWQOfhOrr0cgKDagZPwk=
+code.cloudfoundry.org/lager/v3 v3.0.2 h1:H0dcQY+814G1Ea0e5K/AMaMpcr+Pe5Iv+AALJEwrP9U=
+code.cloudfoundry.org/lager/v3 v3.0.2/go.mod h1:zA6tOIWhr5uZUez+PGpdfBHDWQOfhOrr0cgKDagZPwk=
 code.cloudfoundry.org/localip v0.0.0-20230612151424-f52ecafaffc4 h1:5luktZPjmWzahU0xKL/Wvv21lbYm6rZli/xWovkbPn4=
 code.cloudfoundry.org/localip v0.0.0-20230612151424-f52ecafaffc4/go.mod h1:L+Am8pWwpVpULdQUf72efqz5ZPaalJHhqaSD6cpEty8=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
