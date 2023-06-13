@@ -10,14 +10,14 @@ replace github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
 require (
 	code.cloudfoundry.org/archiver v0.0.0-20210609160716-67523bd33dbf
 	code.cloudfoundry.org/clock v1.1.0
-	code.cloudfoundry.org/commandrunner v0.0.0-20230427153105-c662e812fa6f
-	code.cloudfoundry.org/debugserver v0.0.0-20230522035716-70a733dc508f
-	code.cloudfoundry.org/garden v0.0.0-20230522165130-8444ff5a31d7
+	code.cloudfoundry.org/commandrunner v0.0.0-20230612151827-2b11a2b4e9b8
+	code.cloudfoundry.org/debugserver v0.0.0-20230612151301-d597b20f28ce
+	code.cloudfoundry.org/garden v0.0.0-20230606175514-ac53c57dca87
 	code.cloudfoundry.org/grootfs v0.0.0-00010101000000-000000000000
-	code.cloudfoundry.org/idmapper v0.0.0-20230516115813-a41052025abf
+	code.cloudfoundry.org/idmapper v0.0.0-20230612152923-39b35b84a90f
 	code.cloudfoundry.org/lager/v3 v3.0.1
-	code.cloudfoundry.org/localip v0.0.0-20230522195710-2ea90d997658
-	github.com/BurntSushi/toml v1.3.1
+	code.cloudfoundry.org/localip v0.0.0-20230612151424-f52ecafaffc4
+	github.com/BurntSushi/toml v1.3.2
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.13
 	github.com/containerd/containerd v1.7.2
@@ -29,20 +29,20 @@ require (
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo/v2 v2.9.7
-	github.com/onsi/gomega v1.27.7
+	github.com/onsi/ginkgo/v2 v2.10.0
+	github.com/onsi/gomega v1.27.8
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0-rc3
 	github.com/opencontainers/runc v1.1.7
-	github.com/opencontainers/runtime-spec v1.1.0-rc.2
+	github.com/opencontainers/runtime-spec v1.1.0-rc.3
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
 	github.com/tedsuo/ifrit v0.0.0-20230516164442-7862c310ad26
-	github.com/urfave/cli/v2 v2.25.5
+	github.com/urfave/cli/v2 v2.25.6
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vishvananda/netns v0.0.4
-	golang.org/x/sys v0.8.0
+	golang.org/x/sys v0.9.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -58,7 +58,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/checkpoint-restore/go-criu/v5 v5.3.0 // indirect
 	github.com/cilium/ebpf v0.9.1 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20230601214134-20e0b3c2ed5c // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20230606195250-c7c0fdf1ccc4 // indirect
 	github.com/container-orchestrated-devices/container-device-interface v0.5.4 // indirect
 	github.com/containerd/aufs v1.0.0 // indirect
 	github.com/containerd/btrfs/v2 v2.0.0 // indirect
@@ -104,7 +104,7 @@ require (
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/intel/goresctrl v0.3.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.16.5 // indirect
+	github.com/klauspost/compress v1.16.6 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/miekg/pkcs11 v1.1.1 // indirect
@@ -149,13 +149,13 @@ require (
 	go.opentelemetry.io/otel/sdk v1.15.1 // indirect
 	go.opentelemetry.io/otel/trace v1.16.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
-	golang.org/x/crypto v0.1.0 // indirect
+	golang.org/x/crypto v0.10.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
-	golang.org/x/net v0.10.0 // indirect
+	golang.org/x/net v0.11.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sync v0.2.0 // indirect
-	golang.org/x/term v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/term v0.9.0 // indirect
+	golang.org/x/text v0.10.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.9.3 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
