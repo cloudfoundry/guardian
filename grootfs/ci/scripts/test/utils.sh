@@ -1,21 +1,50 @@
 mount_storage() {
-  # Configure cgroup
-  mount -t tmpfs cgroup_root /sys/fs/cgroup
-  mkdir -p /sys/fs/cgroup/devices
-  mkdir -p /sys/fs/cgroup/memory
+  # Configure Cgroups
+  local devices_mount_info
+  devices_mount_info="$( cat /proc/self/cgroup | grep devices )"
 
-  mount -tcgroup -odevices cgroup:devices /sys/fs/cgroup/devices
-  devices_mount_info=$(cat /proc/self/cgroup | grep devices)
-  devices_subdir=$(echo $devices_mount_info | cut -d: -f3)
-  echo 'b 7:* rwm' > /sys/fs/cgroup/devices/devices.allow
-  echo 'b 7:* rwm' > /sys/fs/cgroup/devices${devices_subdir}/devices.allow
+  if [ -z "$devices_mount_info" ]; then
+    # cgroups not set up; must not be in a container
+    return
+  fi
 
-  mount -tcgroup -omemory cgroup:memory /sys/fs/cgroup/memory
+  local devices_subsytems
+  devices_subsytems="$( echo "$devices_mount_info" | cut -d: -f2 )"
+
+  local devices_subdir
+  devices_subdir="$( echo "$devices_mount_info" | cut -d: -f3 )"
+
+  if [ "$devices_subdir" = "/" ]; then
+    # we're in the root devices cgroup; must not be in a container
+    return
+  fi
+
+  cgroup_dir=/devices-cgroup
+
+  if [ ! -e "${cgroup_dir}" ]; then
+    # mount our container's devices subsystem somewhere
+    mkdir "$cgroup_dir"
+  fi
+
+  if ! mountpoint -q "$cgroup_dir"; then
+    mount -t cgroup -o "$devices_subsytems" none "$cgroup_dir"
+  fi
+
+  # permit our cgroup to do everything with all devices
+  echo a > "${cgroup_dir}${devices_subdir}/devices.allow"
+  umount "$cgroup_dir"
 
   # Setup loop devices
+  LOOP_CONTROL=/dev/loop-control
+  if [ ! -c ${LOOP_CONTROL} ]; then
+    mknod "${LOOP_CONTROL}" c 10 237
+    chown root:disk "${LOOP_CONTROL}"
+    chmod 660 "${LOOP_CONTROL}"
+  fi
+
   for i in {0..256}
   do
-    mknod -m777 /dev/loop$i b 7 $i
+    mknod -m 0660 "/dev/loop${i}" b 7 "${i}"
   done
 
   # Make and Mount EXT4 Volume
@@ -59,6 +88,8 @@ unmount_storage() {
   for i in {0..256}; do
     rm /dev/loop$i
   done
+
+  rm /dev/loop-control
 }
 
 sudo_mount_storage() {
