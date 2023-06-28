@@ -15,8 +15,8 @@ github.com/cloudfoundry/dropsonde v1.1.0/go.mod h1:OrkxsBrAvM8X0Ve9vaSNKLR+/Jeoh
 github.com/cloudfoundry/sonde-go v0.0.0-20230620185717-2140aa2e9669 h1:ngvKd5QsaOCCwdgpQF3hh+yg6ly78cRD88CL8M/3mZU=
 github.com/cloudfoundry/sonde-go v0.0.0-20230620185717-2140aa2e9669/go.mod h1:xv6LGvAkbma5ysLZeyQKHiHbJ99ROUfXT18sgwcwe50=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
-github.com/containers/image/v5 v5.25.0 h1:TJ0unmalbU+scd0i3Txap2wjGsAnv06MSCwgn6bsizk=
-github.com/containers/image/v5 v5.25.0/go.mod h1:EKvys0WVlRFkDw26R8y52TuhV9Tfn0yq2luLX6W52Ls=
+github.com/containers/image/v5 v5.26.0 h1:P9H4+N/7fTTClnFthIWgJU+0LBkhGlW2tCWR+UNG0Vs=
+github.com/containers/image/v5 v5.26.0/go.mod h1:QSW67adLL/B4eYsFPG6TjH5Ye4LiLazPAGWk5oQnUdQ=
 github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 h1:Qzk5C6cYglewc+UyGf6lc8Mj2UaPTHy/iF2De0/77CA=
 github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01/go.mod h1:9rfv8iPl1ZP7aqh9YA68wnZv2NUDbXdcdPHVz0pFbPY=
 github.com/containers/ocicrypt v1.1.7 h1:thhNr4fu2ltyGz8aMx8u48Ae0Pnbip3ePP9/mzkZ/3U=

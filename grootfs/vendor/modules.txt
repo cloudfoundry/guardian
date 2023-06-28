@@ -36,7 +36,7 @@ github.com/cloudfoundry/dropsonde/runtime_stats
 # github.com/cloudfoundry/sonde-go v0.0.0-20230620185717-2140aa2e9669
 ## explicit; go 1.17
 github.com/cloudfoundry/sonde-go/events
-# github.com/containers/image/v5 v5.25.0
+# github.com/containers/image/v5 v5.26.0
 ## explicit; go 1.18
 github.com/containers/image/v5/directory/explicitfilepath
 github.com/containers/image/v5/docker
