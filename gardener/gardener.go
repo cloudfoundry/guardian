@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
-	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/garden"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/lager/v3"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 )
 
 //go:generate counterfeiter . SysInfoProvider
@@ -29,6 +29,7 @@ import (
 //go:generate counterfeiter . PeaCleaner
 //go:generate counterfeiter . Sleeper
 
+const ContainerInterfaceKey = "garden.network.interface"
 const ContainerIPKey = "garden.network.container-ip"
 const BridgeIPKey = "garden.network.host-ip"
 const ExternalIPKey = "garden.network.external-ip"

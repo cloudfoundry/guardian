@@ -1,9 +1,13 @@
 package gardener
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -145,6 +149,11 @@ func (c *container) Metrics() (garden.Metrics, error) {
 		}
 	}
 
+	networkStat, err := c.containerNetworkStat()
+	if err != nil {
+		return garden.Metrics{}, fmt.Errorf("could not read container network statistics, %w", err)
+	}
+
 	return garden.Metrics{
 		CPUStat:        actualContainerMetrics.CPU,
 		MemoryStat:     actualContainerMetrics.Memory,
@@ -152,7 +161,70 @@ func (c *container) Metrics() (garden.Metrics, error) {
 		PidStat:        actualContainerMetrics.Pid,
 		Age:            actualContainerMetrics.Age,
 		CPUEntitlement: actualContainerMetrics.CPUEntitlement,
+		NetworkStat:    networkStat,
 	}, nil
+}
+
+func (c *container) containerNetworkStat() (garden.ContainerNetworkStat, error) {
+	ifName, err := c.Property(ContainerInterfaceKey)
+	if err != nil {
+		return garden.ContainerNetworkStat{}, err
+	}
+
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
+
+	process, err := c.Run(garden.ProcessSpec{
+		Path: "cat",
+		Args: []string{
+			networkStatPath(ifName, "rx_bytes"),
+			networkStatPath(ifName, "tx_bytes"),
+		},
+	}, garden.ProcessIO{
+		Stdout: stdout,
+		Stderr: stderr,
+	})
+
+	if err != nil {
+		return garden.ContainerNetworkStat{}, fmt.Errorf("running process failed, %w", err)
+	}
+
+	exitStatus, err := process.Wait()
+	if err != nil {
+		return garden.ContainerNetworkStat{}, err
+	}
+
+	if exitStatus != 0 {
+		return garden.ContainerNetworkStat{}, fmt.Errorf("running process failed with exit status %d, error %q", exitStatus, stderr.String())
+	}
+
+	stats := strings.Split(strings.TrimSpace(stdout.String()), "\n")
+	if len(stats) != 2 {
+		return garden.ContainerNetworkStat{}, fmt.Errorf("expected two values but got %q", stdout.String())
+	}
+
+	for idx, s := range stats {
+		stats[idx] = strings.TrimSpace(s)
+	}
+
+	rxBytes, err := strconv.ParseUint(stats[0], 10, 64)
+	if err != nil {
+		return garden.ContainerNetworkStat{}, fmt.Errorf("could not parse rx_bytes value %q, %w", stats[0], err)
+	}
+
+	txBytes, err := strconv.ParseUint(stats[1], 10, 64)
+	if err != nil {
+		return garden.ContainerNetworkStat{}, fmt.Errorf("could not parse tx_bytes value %q, %w", stats[1], err)
+	}
+
+	return garden.ContainerNetworkStat{
+		RxBytes: rxBytes,
+		TxBytes: txBytes,
+	}, nil
+}
+
+func networkStatPath(ifName, stat string) string {
+	return filepath.Join("/sys/class/net", ifName, "statistics", stat)
 }
 
 func (c *container) Properties() (garden.Properties, error) {
