@@ -30,7 +30,7 @@ code.cloudfoundry.org/garden/transport
 # code.cloudfoundry.org/grootfs v0.30.0 => ../grootfs
 ## explicit; go 1.20
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20230704180126-95bdf8b7f31b => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20230711180224-f8c29ef5e9bc => ../idmapper
 ## explicit; go 1.18
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.0.2
@@ -151,7 +151,7 @@ github.com/cloudfoundry/dropsonde/metric_sender/fake
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/gosigar v1.3.16
+# github.com/cloudfoundry/gosigar v1.3.17
 ## explicit; go 1.20
 github.com/cloudfoundry/gosigar
 github.com/cloudfoundry/gosigar/sys/windows
@@ -1046,13 +1046,13 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20230711160842-782d3b101e98
+# google.golang.org/genproto v0.0.0-20230717213848-3f92550aa753
 ## explicit; go 1.19
 google.golang.org/genproto/protobuf/field_mask
 # google.golang.org/genproto/googleapis/api v0.0.0-20230706204954-ccb25ca9f130
 ## explicit; go 1.19
 google.golang.org/genproto/googleapis/api/httpbody
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20230717213848-3f92550aa753
 ## explicit; go 1.19
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/errdetails
