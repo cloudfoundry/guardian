@@ -66,4 +66,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace code.cloudfoundry.org/idmapper => ../idmapper
+replace (
+	code.cloudfoundry.org/idmapper => ../idmapper
+	golang.org/x/exp => golang.org/x/exp v0.0.0-20230724220655-d98519c11495 // This was done because gihtub.com/containers/image/v5 has not updated their function signatures in order to match the latest version of golang.org/x/exp which uses an int. This should be able to be removed safely in the future.
+)
