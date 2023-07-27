@@ -7,6 +7,8 @@ replace go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.15.1
 
 replace github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
 
+replace github.com/Microsoft/hcsshim => github.com/Microsoft/hcsshim v0.10.0-rc.8
+
 require (
 	code.cloudfoundry.org/archiver v0.0.0-20230725151503-0d924a8ae786
 	code.cloudfoundry.org/clock v1.1.0
@@ -62,6 +64,7 @@ require (
 	github.com/container-orchestrated-devices/container-device-interface v0.5.4 // indirect
 	github.com/containerd/aufs v1.0.0 // indirect
 	github.com/containerd/btrfs/v2 v2.0.0 // indirect
+	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/containerd/cgroups/v3 v3.0.2 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/containerd/continuity v0.4.1 // indirect

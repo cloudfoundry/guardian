@@ -66,8 +66,9 @@ github.com/Microsoft/go-winio/pkg/etwlogrus
 github.com/Microsoft/go-winio/pkg/fs
 github.com/Microsoft/go-winio/pkg/guid
 github.com/Microsoft/go-winio/pkg/security
+github.com/Microsoft/go-winio/tools/mkwinsyscall
 github.com/Microsoft/go-winio/vhd
-# github.com/Microsoft/hcsshim v0.10.0
+# github.com/Microsoft/hcsshim v0.10.0 => github.com/Microsoft/hcsshim v0.10.0-rc.8
 ## explicit; go 1.18
 github.com/Microsoft/hcsshim
 github.com/Microsoft/hcsshim/cmd/containerd-shim-runhcs-v1/options
@@ -169,6 +170,9 @@ github.com/containerd/aufs/plugin
 # github.com/containerd/btrfs/v2 v2.0.0
 ## explicit; go 1.19
 github.com/containerd/btrfs/v2
+# github.com/containerd/cgroups v1.1.0
+## explicit; go 1.17
+github.com/containerd/cgroups/stats/v1
 # github.com/containerd/cgroups/v3 v3.0.2
 ## explicit; go 1.18
 github.com/containerd/cgroups/v3
@@ -1270,6 +1274,7 @@ sigs.k8s.io/structured-merge-diff/v4/value
 sigs.k8s.io/yaml
 # go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.15.1
 # github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
+# github.com/Microsoft/hcsshim => github.com/Microsoft/hcsshim v0.10.0-rc.8
 # code.cloudfoundry.org/garden => ../garden
 # code.cloudfoundry.org/grootfs => ../grootfs
 # code.cloudfoundry.org/idmapper => ../idmapper
