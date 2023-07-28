@@ -251,6 +251,14 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	}
 
 	gardenServer := server.New(listenNetwork, listenAddr, cmd.Containers.DefaultGraceTime, backend, logger.Session("api"))
+	// listen on the socket prior to serving, to ensure unix socket files are created and the healthcheck
+	// process can launch while the backend runs its cleanup. However, don't serve requests in gardenServer
+	// until the cleanup is complete
+	gardenListener, err := gardenServer.Listen()
+	if err != nil {
+		logger.Error("listening-on-socket", err)
+		return err
+	}
 
 	cmd.initializeDropsonde(logger)
 
@@ -292,7 +300,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	}
 
 	startServices(services)
-	if err := startServer(gardenServer, logger); err != nil {
+	if err := startServer(gardenServer, gardenListener, logger); err != nil {
 		return err
 	}
 
@@ -328,11 +336,11 @@ func (cmd *ServerCommand) calculateDefaultMappingLengths(containerRootUID, conta
 	}
 }
 
-func startServer(gardenServer *server.GardenServer, logger lager.Logger) error {
+func startServer(gardenServer *server.GardenServer, gdnListener net.Listener, logger lager.Logger) error {
 	socketFDStr := os.Getenv("SOCKET2ME_FD")
 	if socketFDStr == "" {
 		go func() {
-			if err := gardenServer.ListenAndServe(); err != nil {
+			if err := gardenServer.Serve(gdnListener); err != nil {
 				logger.Fatal("failed-to-start-server", err)
 			}
 		}()
