@@ -4,11 +4,11 @@ go 1.20
 
 require (
 	code.cloudfoundry.org/commandrunner v0.0.0-20230612151827-2b11a2b4e9b8
-	code.cloudfoundry.org/idmapper v0.0.0-20230725180318-5c52fdf81a5e
+	code.cloudfoundry.org/idmapper v0.0.0-20230808180847-fa8a44eda32f
 	code.cloudfoundry.org/lager/v3 v3.0.2
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20230710164515-a0a43d1dbbf8
-	github.com/containers/image/v5 v5.26.1
+	github.com/containers/image/v5 v5.27.0
 	github.com/containers/storage v1.48.0
 	github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/docker v24.0.5+incompatible
@@ -23,7 +23,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/urfave/cli/v2 v2.25.7
 	github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125
-	golang.org/x/sys v0.10.0
+	golang.org/x/sys v0.11.0
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -58,10 +58,10 @@ require (
 	github.com/ulikunitz/xz v0.5.11 // indirect
 	github.com/vbatts/tar-split v0.11.5 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	golang.org/x/exp v0.0.0-20230801115018-d63ba01acd4b // indirect
-	golang.org/x/net v0.12.0 // indirect
-	golang.org/x/text v0.11.0 // indirect
-	golang.org/x/tools v0.11.1 // indirect
+	golang.org/x/exp v0.0.0-20230807204917-050eac23e9de // indirect
+	golang.org/x/net v0.14.0 // indirect
+	golang.org/x/text v0.12.0 // indirect
+	golang.org/x/tools v0.12.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
