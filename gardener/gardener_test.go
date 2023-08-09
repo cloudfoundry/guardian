@@ -4,11 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"path/filepath"
 	"time"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden/gardenfakes"
 	"code.cloudfoundry.org/guardian/gardener"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	fakes "code.cloudfoundry.org/guardian/gardener/gardenerfakes"
@@ -22,16 +20,17 @@ import (
 
 var _ = Describe("Gardener", func() {
 	var (
-		networker       *fakes.FakeNetworker
-		volumizer       *fakes.FakeVolumizer
-		containerizer   *fakes.FakeContainerizer
-		uidGenerator    *fakes.FakeUidGenerator
-		bulkStarter     *fakes.FakeBulkStarter
-		peaCleaner      *fakes.FakePeaCleaner
-		sysinfoProvider *fakes.FakeSysInfoProvider
-		propertyManager *fakes.FakePropertyManager
-		restorer        *fakes.FakeRestorer
-		sleeper         *fakes.FakeSleeper
+		networker              *fakes.FakeNetworker
+		volumizer              *fakes.FakeVolumizer
+		containerizer          *fakes.FakeContainerizer
+		uidGenerator           *fakes.FakeUidGenerator
+		bulkStarter            *fakes.FakeBulkStarter
+		peaCleaner             *fakes.FakePeaCleaner
+		sysinfoProvider        *fakes.FakeSysInfoProvider
+		propertyManager        *fakes.FakePropertyManager
+		restorer               *fakes.FakeRestorer
+		sleeper                *fakes.FakeSleeper
+		networkMetricsProvider *fakes.FakeContainerNetworkMetricsProvider
 
 		logger *lagertest.TestLogger
 
@@ -50,6 +49,7 @@ var _ = Describe("Gardener", func() {
 		propertyManager = new(fakes.FakePropertyManager)
 		restorer = new(fakes.FakeRestorer)
 		sleeper = new(fakes.FakeSleeper)
+		networkMetricsProvider = new(fakes.FakeContainerNetworkMetricsProvider)
 
 		propertyManager.GetReturns("", true)
 		networker.SetupBindMountsReturns([]garden.BindMount{}, nil)
@@ -70,6 +70,7 @@ var _ = Describe("Gardener", func() {
 			logger,
 			0,
 			false,
+			networkMetricsProvider,
 		)
 		gdnr.Sleep = sleeper.Spy
 	})
@@ -1675,10 +1676,7 @@ var _ = Describe("Gardener", func() {
 			cpuStat     garden.ContainerCPUStat
 			memoryStat  garden.ContainerMemoryStat
 			diskStat    garden.ContainerDiskStat
-			networkStat garden.ContainerNetworkStat
-
-			networkStatProcess *gardenfakes.FakeProcess
-			ifName             string
+			networkStat *garden.ContainerNetworkStat
 		)
 
 		BeforeEach(func() {
@@ -1704,14 +1702,10 @@ var _ = Describe("Gardener", func() {
 				ExclusiveInodesUsed: 16,
 			}
 
-			networkStat = garden.ContainerNetworkStat{
+			networkStat = &garden.ContainerNetworkStat{
 				RxBytes: 42,
 				TxBytes: 43,
 			}
-
-			ifName = "eth42"
-
-			networkStatProcess = new(gardenfakes.FakeProcess)
 
 			containerizer.MetricsReturns(gardener.ActualContainerMetrics{
 				StatsContainerMetrics: gardener.StatsContainerMetrics{
@@ -1724,15 +1718,7 @@ var _ = Describe("Gardener", func() {
 
 			volumizer.MetricsReturns(diskStat, nil)
 
-			propertyManager.GetReturnsOnCall(0, ifName, true)
-
-			networkStatProcess.WaitReturns(0, nil)
-
-			containerizer.RunCalls(func(logger lager.Logger, s string, processSpec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
-				_, _ = io.Stdout.Write([]byte(fmt.Sprintf("%d\n%d\n", networkStat.RxBytes, networkStat.TxBytes)))
-				return networkStatProcess, nil
-			})
-
+			networkMetricsProvider.GetReturns(networkStat, nil)
 		})
 
 		It("should return the cpu and memory metrics from the containerizer", func() {
@@ -1776,16 +1762,6 @@ var _ = Describe("Gardener", func() {
 		It("should return the network statistics", func() {
 			metrics, err := container.Metrics()
 			Expect(err).NotTo(HaveOccurred())
-
-			Expect(containerizer.RunCallCount()).To(Equal(1))
-			_, _, spec, _ := containerizer.RunArgsForCall(0)
-
-			Expect(spec.Path).To(Equal("cat"))
-
-			Expect(spec.Args).To(Equal([]string{
-				filepath.Join("/sys/class/net/", ifName, "/statistics/rx_bytes"),
-				filepath.Join("/sys/class/net/", ifName, "/statistics/tx_bytes"),
-			}))
 
 			Expect(metrics.NetworkStat.TxBytes).To(Equal(networkStat.TxBytes))
 			Expect(metrics.NetworkStat.RxBytes).To(Equal(networkStat.RxBytes))
@@ -1834,9 +1810,9 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
-		Context("when the process execution to fetch the network statistics fails", func() {
+		Context("when the network metrics cannot be acquired", func() {
 			BeforeEach(func() {
-				containerizer.RunReturns(nil, errors.New("processError"))
+				networkMetricsProvider.GetReturns(nil, errors.New("processError"))
 			})
 
 			It("should propagate the error", func() {
@@ -1845,80 +1821,14 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
-		Context("when waiting for the process execution to fetch the network statistics fails", func() {
+		Context("when the network metrics are missing", func() {
 			BeforeEach(func() {
-				networkStatProcess.WaitReturns(-1, errors.New("waitError"))
+				networkMetricsProvider.GetReturns(nil, nil)
 			})
 
-			It("should propagate the error", func() {
+			It("should not return an error", func() {
 				_, err := container.Metrics()
-				Expect(err).To(MatchError(ContainSubstring("waitError")))
-			})
-		})
-
-		Context("when the process execution to fetch the network statistics returns an exit status not equal to 0", func() {
-			BeforeEach(func() {
-				containerizer.RunCalls(func(logger lager.Logger, s string, processSpec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
-					_, _ = io.Stderr.Write([]byte("randomStderr"))
-					return networkStatProcess, nil
-				})
-				networkStatProcess.WaitReturns(42, nil)
-			})
-
-			It("should return an error that contains the exit status and stderr output", func() {
-				_, err := container.Metrics()
-				Expect(err).To(MatchError(ContainSubstring("42")))
-				Expect(err).To(MatchError(ContainSubstring("randomStderr")))
-			})
-		})
-
-		Context("when network statistics are missing", func() {
-			BeforeEach(func() {
-				containerizer.RunReturns(networkStatProcess, nil)
-			})
-
-			It("should return an error", func() {
-				_, err := container.Metrics()
-				Expect(err).To(MatchError(ContainSubstring(`expected two values but got ""`)))
-			})
-		})
-
-		Context("when the rx_bytes value cannot be parsed", func() {
-			BeforeEach(func() {
-				containerizer.RunCalls(func(logger lager.Logger, s string, processSpec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
-					_, _ = io.Stdout.Write([]byte("abc\n42\n"))
-					return networkStatProcess, nil
-				})
-			})
-
-			It("should return an error", func() {
-				_, err := container.Metrics()
-				Expect(err).To(MatchError(ContainSubstring("could not parse rx_bytes value")))
-			})
-		})
-
-		Context("when the tx_bytes value cannot be parsed", func() {
-			BeforeEach(func() {
-				containerizer.RunCalls(func(logger lager.Logger, s string, processSpec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
-					_, _ = io.Stdout.Write([]byte("42\nabc\n"))
-					return networkStatProcess, nil
-				})
-			})
-
-			It("should return an error", func() {
-				_, err := container.Metrics()
-				Expect(err).To(MatchError(ContainSubstring("could not parse tx_bytes value")))
-			})
-		})
-
-		Context("when the network interface name is not stored in the property manager", func() {
-			BeforeEach(func() {
-				propertyManager.GetReturnsOnCall(0, "", false)
-			})
-
-			It("should return an error", func() {
-				_, err := container.Metrics()
-				Expect(err).To(MatchError(ContainSubstring("property does not exist: garden.network.interface")))
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 

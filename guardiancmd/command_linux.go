@@ -41,7 +41,7 @@ import (
 	"github.com/containerd/containerd/pkg/process"
 	"github.com/containerd/containerd/plugin"
 	cgrouputils "github.com/opencontainers/runc/libcontainer/cgroups"
-	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
 
@@ -184,6 +184,14 @@ func (f *LinuxFactory) WireCPUCgrouper() (rundmc.CPUCgrouper, error) {
 		return nil, err
 	}
 	return cgroups.NewCPUCgrouper(gardenCPUCgroupPath), nil
+}
+
+func (f *LinuxFactory) WireContainerNetworkMetricsProvider(containerizer gardener.Containerizer, propertyManager gardener.PropertyManager) gardener.ContainerNetworkMetricsProvider {
+	if !f.config.Network.EnableMetrics {
+		return gardener.NewNoopContainerNetworkMetricsProvider()
+	}
+
+	return gardener.NewSysFSContainerNetworkMetricsProvider(containerizer, propertyManager)
 }
 
 func initBindMountAndPath(initPathOnHost string) (specs.Mount, string) {

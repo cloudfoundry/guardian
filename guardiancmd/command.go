@@ -46,7 +46,7 @@ import (
 	"code.cloudfoundry.org/localip"
 	"github.com/eapache/go-resiliency/retrier"
 	uuid "github.com/nu7hatch/gouuid"
-	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 const containerdNamespace = "garden"
@@ -60,6 +60,7 @@ type GardenFactory interface {
 	WireExecRunner(runcRoot string, containerRootUID, containerRootGID uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot execrunner.ProcessDepot) runrunc.ExecRunner
 	WireContainerd(*processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser, lager.Logger, peas.Volumizer, runcontainerd.PeaHandlesGetter) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *containerdprivchecker.PrivilegeChecker, peas.BundleLoader, error)
 	WireCPUCgrouper() (rundmc.CPUCgrouper, error)
+	WireContainerNetworkMetricsProvider(containerizer gardener.Containerizer, propertyManager gardener.PropertyManager) gardener.ContainerNetworkMetricsProvider
 }
 
 type PidGetter interface {
@@ -166,6 +167,8 @@ type CommonCommand struct {
 
 		Plugin          FileFlag `long:"network-plugin"           description:"Path to network plugin binary."`
 		PluginExtraArgs []string `long:"network-plugin-extra-arg" description:"Extra argument to pass to the network plugin. Can be specified multiple times."`
+
+		EnableMetrics bool `long:"enable-container-network-metrics" description:"Enable container network metrics. This feature is only available on Linux."`
 	} `group:"Container Networking"`
 
 	Limits struct {
@@ -203,18 +206,19 @@ type CommonCommand struct {
 }
 
 type commandWiring struct {
-	Containerizer          *rundmc.Containerizer
-	PortPool               *ports.PortPool
-	Networker              gardener.Networker
-	Restorer               gardener.Restorer
-	Volumizer              gardener.Volumizer
-	Starter                gardener.BulkStarter
-	PeaCleaner             gardener.PeaCleaner
-	PropertiesManager      *properties.Manager
-	UidGenerator           gardener.UidGeneratorFunc
-	SysInfoProvider        gardener.SysInfoProvider
-	Logger                 lager.Logger
-	CpuEntitlementPerShare float64
+	Containerizer                   *rundmc.Containerizer
+	PortPool                        *ports.PortPool
+	Networker                       gardener.Networker
+	Restorer                        gardener.Restorer
+	Volumizer                       gardener.Volumizer
+	Starter                         gardener.BulkStarter
+	PeaCleaner                      gardener.PeaCleaner
+	PropertiesManager               *properties.Manager
+	UidGenerator                    gardener.UidGeneratorFunc
+	SysInfoProvider                 gardener.SysInfoProvider
+	Logger                          lager.Logger
+	CpuEntitlementPerShare          float64
+	ContainerNetworkMetricsProvider gardener.ContainerNetworkMetricsProvider
 }
 
 func (cmd *CommonCommand) createGardener(wiring *commandWiring) *gardener.Gardener {
@@ -230,6 +234,7 @@ func (cmd *CommonCommand) createGardener(wiring *commandWiring) *gardener.Garden
 		wiring.Logger,
 		cmd.Limits.MaxContainers,
 		!cmd.Containers.DisablePrivilgedContainers,
+		wiring.ContainerNetworkMetricsProvider,
 	)
 }
 
@@ -293,18 +298,19 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 	}
 
 	return &commandWiring{
-		Containerizer:          containerizer,
-		Networker:              networker,
-		PortPool:               portPool,
-		Restorer:               restorer,
-		Volumizer:              volumizer,
-		Starter:                bulkStarter,
-		PeaCleaner:             peaCleaner,
-		PropertiesManager:      propManager,
-		UidGenerator:           wireUIDGenerator(),
-		SysInfoProvider:        sysInfoProvider,
-		Logger:                 logger,
-		CpuEntitlementPerShare: cpuEntitlementPerShare,
+		Containerizer:                   containerizer,
+		Networker:                       networker,
+		PortPool:                        portPool,
+		Restorer:                        restorer,
+		Volumizer:                       volumizer,
+		Starter:                         bulkStarter,
+		PeaCleaner:                      peaCleaner,
+		PropertiesManager:               propManager,
+		UidGenerator:                    wireUIDGenerator(),
+		SysInfoProvider:                 sysInfoProvider,
+		Logger:                          logger,
+		CpuEntitlementPerShare:          cpuEntitlementPerShare,
+		ContainerNetworkMetricsProvider: factory.WireContainerNetworkMetricsProvider(containerizer, propManager),
 	}, nil
 }
 

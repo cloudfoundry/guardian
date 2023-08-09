@@ -23,7 +23,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/guardian/throttle"
 	"code.cloudfoundry.org/lager/v3"
-	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type WindowsFactory struct {
@@ -103,6 +103,10 @@ func (f *WindowsFactory) WireContainerd(processBuilder *processes.ProcBuilder, u
 
 func (f *WindowsFactory) WireCPUCgrouper() (rundmc.CPUCgrouper, error) {
 	return cgroups.NoopCPUCgrouper{}, nil
+}
+
+func (f *WindowsFactory) WireContainerNetworkMetricsProvider(_ gardener.Containerizer, _ gardener.PropertyManager) gardener.ContainerNetworkMetricsProvider {
+	return gardener.NewNoopContainerNetworkMetricsProvider()
 }
 
 func wireEnvFunc() processes.EnvFunc {
