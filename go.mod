@@ -2,12 +2,17 @@ module code.cloudfoundry.org/guardian
 
 go 1.20
 
-// force otel back to 1.15.1 since 1.16.0 is incompatible with containerd  1.7.1
-replace go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.15.1
+replace (
+	github.com/Microsoft/hcsshim => github.com/Microsoft/hcsshim v0.10.0-rc.8
+	github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
 
-replace github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
+	// pin opencontainers/runc to 1.1.7 because 1.1.8 introduces the use of --static-pie
+	// which causes gcc to fail on the xenial stemcell
+	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.7
 
-replace github.com/Microsoft/hcsshim => github.com/Microsoft/hcsshim v0.10.0-rc.8
+	// force otel back to 1.15.1 since 1.16.0 is incompatible with containerd  1.7.1
+	go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.15.1
+)
 
 require (
 	code.cloudfoundry.org/archiver v0.0.0-20230725151503-0d924a8ae786

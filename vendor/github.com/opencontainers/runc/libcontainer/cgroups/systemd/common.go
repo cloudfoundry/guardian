@@ -370,10 +370,7 @@ retry:
 			// In case a unit with the same name exists, this may
 			// be a leftover failed unit. Reset it, so systemd can
 			// remove it, and retry once.
-			err = resetFailedUnit(cm, unitName)
-			if err != nil {
-				logrus.Warnf("unable to reset failed unit: %v", err)
-			}
+			resetFailedUnit(cm, unitName)
 			retry = false
 			goto retry
 		}
@@ -388,11 +385,11 @@ retry:
 		close(statusChan)
 		// Please refer to https://pkg.go.dev/github.com/coreos/go-systemd/v22/dbus#Conn.StartUnit
 		if s != "done" {
-			_ = resetFailedUnit(cm, unitName)
+			resetFailedUnit(cm, unitName)
 			return fmt.Errorf("error creating systemd unit `%s`: got `%s`", unitName, s)
 		}
 	case <-timeout.C:
-		_ = resetFailedUnit(cm, unitName)
+		resetFailedUnit(cm, unitName)
 		return errors.New("Timeout waiting for systemd to create " + unitName)
 	}
 
@@ -420,17 +417,16 @@ func stopUnit(cm *dbusConnManager, unitName string) error {
 			return errors.New("Timed out while waiting for systemd to remove " + unitName)
 		}
 	}
-
-	// In case of a failed unit, let systemd remove it.
-	_ = resetFailedUnit(cm, unitName)
-
 	return nil
 }
 
-func resetFailedUnit(cm *dbusConnManager, name string) error {
-	return cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
+func resetFailedUnit(cm *dbusConnManager, name string) {
+	err := cm.retryOnDisconnect(func(c *systemdDbus.Conn) error {
 		return c.ResetFailedUnitContext(context.TODO(), name)
 	})
+	if err != nil {
+		logrus.Warnf("unable to reset failed unit: %v", err)
+	}
 }
 
 func getUnitTypeProperty(cm *dbusConnManager, unitName string, unitType string, propertyName string) (*systemdDbus.Property, error) {
