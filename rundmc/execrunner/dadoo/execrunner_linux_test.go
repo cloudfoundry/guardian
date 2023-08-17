@@ -344,6 +344,24 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(log.Buffer().Contents())).To(ContainSubstring("a-cleanup-error"))
 				})
+
+				Context("when cleanupProcessDirsOnWait is true", func() {
+					BeforeEach(func() {
+						runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root",
+							signallerFactory, fakeCommandRunner, true, 5, 6, bundleSaver, bundleLookupper, processDepot)
+					})
+
+					It("doesn't leak process directories", func() {
+						proc, err := runner.RunPea(log, processID, goci.Bndl{}, "some-handle", defaultProcessIO(), false, bytes.NewBufferString("stdin"), func() error {
+							return errors.New("a-cleanup-error")
+						})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(processPath).To(BeAnExistingFile())
+						_, err = proc.Wait()
+						Expect(err).NotTo(HaveOccurred())
+						Eventually(processPath).ShouldNot(BeAnExistingFile())
+					})
+				})
 			})
 		})
 
@@ -1017,6 +1035,23 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					_, err = proc.Wait()
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(log.Buffer().Contents())).To(ContainSubstring("a-cleanup-error"))
+				})
+				Context("when cleanupProcessDirsOnWait is true", func() {
+					BeforeEach(func() {
+						runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root",
+							signallerFactory, fakeCommandRunner, true, 5, 6, bundleSaver, bundleLookupper, processDepot)
+					})
+
+					It("doesn't leak process directories", func() {
+						proc, err := runner.RunPea(log, processID, goci.Bndl{}, "some-handle", defaultProcessIO(), false, bytes.NewBufferString("stdin"), func() error {
+							return errors.New("a-cleanup-error")
+						})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(processPath).To(BeAnExistingFile())
+						_, err = proc.Wait()
+						Expect(err).NotTo(HaveOccurred())
+						Eventually(processPath).ShouldNot(BeAnExistingFile())
+					})
 				})
 			})
 		})

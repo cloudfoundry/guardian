@@ -69,7 +69,7 @@ var _ = Describe("WindowsExecRunner", func() {
 		Expect(err).NotTo(HaveOccurred())
 		bundleLookupper.LookupReturns(bundlePath, nil)
 
-		execRunner = execrunner.NewWindowsExecRunner(runtimePath, cmdRunner, bundleSaver, bundleLookupper, processDepot)
+		execRunner = execrunner.NewWindowsExecRunner(runtimePath, cmdRunner, bundleSaver, bundleLookupper, processDepot, false)
 		processID = "process-id"
 		processPath = filepath.Join(bundlePath, "processes", processID)
 		Expect(os.MkdirAll(processPath, 0700)).To(Succeed())
@@ -196,6 +196,74 @@ var _ = Describe("WindowsExecRunner", func() {
 
 			It("fails", func() {
 				Expect(runErr).To(MatchError("create-process-dir-error"))
+			})
+		})
+
+		Describe("cleanup", func() {
+			var called bool
+			var err error
+
+			BeforeEach(func() {
+				called = false
+				cleanupFunc = func() error {
+					called = true
+					return nil
+				}
+			})
+
+			It("performs extra cleanup after Wait returns", func() {
+				process.Wait()
+				Expect(called).To(BeTrue())
+			})
+
+			Context("when the extra cleanup returns an error", func() {
+				BeforeEach(func() {
+					cleanupFunc = func() error {
+						return errors.New("a-cleanup-error")
+					}
+				})
+
+				It("logs the error", func() {
+					process.Wait()
+					Expect(string(logger.Buffer().Contents())).To(ContainSubstring("a-cleanup-error"))
+				})
+				Context("when cleanupProcessDirsOnWait is true", func() {
+					BeforeEach(func() {
+						execRunner = execrunner.NewWindowsExecRunner(runtimePath, cmdRunner, bundleSaver, bundleLookupper, processDepot, true)
+					})
+
+					It("doesn't leak process directories", func() {
+						Expect(processPath).To(BeAnExistingFile())
+						_, err = process.Wait()
+						Expect(err).NotTo(HaveOccurred())
+						Eventually(processPath).ShouldNot(BeAnExistingFile())
+					})
+				})
+			})
+
+			Context("when cleanupProcessDirsOnWait is true", func() {
+				BeforeEach(func() {
+					execRunner = execrunner.NewWindowsExecRunner(runtimePath, cmdRunner, bundleSaver, bundleLookupper, processDepot, true)
+				})
+
+				It("cleans up the processes dir after Wait returns", func() {
+					Expect(processPath).To(BeAnExistingFile())
+					_, err = process.Wait()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(processPath).NotTo(BeAnExistingFile())
+				})
+			})
+
+			Context("when cleanupProcessDirsOnWait is false", func() {
+				BeforeEach(func() {
+					execRunner = execrunner.NewWindowsExecRunner(runtimePath, cmdRunner, bundleSaver, bundleLookupper, processDepot, false)
+				})
+
+				It("does not clean up the processes dir after Wait returns", func() {
+					Expect(processPath).To(BeAnExistingFile())
+					_, err = process.Wait()
+					Expect(processPath).To(BeAnExistingFile())
+				})
 			})
 		})
 
@@ -346,6 +414,7 @@ var _ = Describe("WindowsExecRunner", func() {
 
 		Describe("cleanup", func() {
 			var called bool
+			var err error
 
 			BeforeEach(func() {
 				called = false
@@ -370,6 +439,43 @@ var _ = Describe("WindowsExecRunner", func() {
 				It("logs the error", func() {
 					process.Wait()
 					Expect(string(logger.Buffer().Contents())).To(ContainSubstring("a-cleanup-error"))
+				})
+				Context("when cleanupProcessDirsOnWait is true", func() {
+					BeforeEach(func() {
+						execRunner = execrunner.NewWindowsExecRunner(runtimePath, cmdRunner, bundleSaver, bundleLookupper, processDepot, true)
+					})
+
+					It("doesn't leak process directories", func() {
+						Expect(processPath).To(BeAnExistingFile())
+						_, err = process.Wait()
+						Expect(err).NotTo(HaveOccurred())
+						Eventually(processPath).ShouldNot(BeAnExistingFile())
+					})
+				})
+			})
+
+			Context("when cleanupProcessDirsOnWait is true", func() {
+				BeforeEach(func() {
+					execRunner = execrunner.NewWindowsExecRunner(runtimePath, cmdRunner, bundleSaver, bundleLookupper, processDepot, true)
+				})
+
+				It("cleans up the processes dir after Wait returns", func() {
+					Expect(processPath).To(BeAnExistingFile())
+					_, err = process.Wait()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(processPath).NotTo(BeAnExistingFile())
+				})
+			})
+
+			Context("when cleanupProcessDirsOnWait is false", func() {
+				BeforeEach(func() {
+					execRunner = execrunner.NewWindowsExecRunner(runtimePath, cmdRunner, bundleSaver, bundleLookupper, processDepot, false)
+				})
+
+				It("does not clean up the processes dir after Wait returns", func() {
+					Expect(processPath).To(BeAnExistingFile())
+					_, err = process.Wait()
+					Expect(processPath).To(BeAnExistingFile())
 				})
 			})
 		})

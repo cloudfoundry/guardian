@@ -304,14 +304,19 @@ func (d *ExecRunner) getProcess(log lager.Logger, id, processPath, pidFilePath s
 		delete(d.processes, processPath)
 		d.processesMutex.Unlock()
 
+		defer func() {
+			if d.cleanupProcessDirsOnWait {
+				err := os.RemoveAll(processPath)
+				if err != nil {
+					log.Error("error-cleaning-up-process-dir", err, lager.Data{"processPath": processPath})
+				}
+			}
+		}()
+
 		if extraCleanup != nil {
 			if err := extraCleanup(); err != nil {
 				return err
 			}
-		}
-
-		if d.cleanupProcessDirsOnWait {
-			return os.RemoveAll(processPath)
 		}
 		return nil
 	}

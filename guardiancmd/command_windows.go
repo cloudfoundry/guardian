@@ -74,7 +74,7 @@ func (f *WindowsFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 }
 
 func (f *WindowsFactory) WireExecRunner(runcRoot string, _, _ uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot execrunner.ProcessDepot) runrunc.ExecRunner {
-	return execrunner.NewWindowsExecRunner(f.config.Runtime.Plugin, f.commandRunner, bundleSaver, bundleLookupper, processDepot)
+	return execrunner.NewWindowsExecRunner(f.config.Runtime.Plugin, f.commandRunner, bundleSaver, bundleLookupper, processDepot, f.config.Containers.CleanupProcessDirsOnWait)
 }
 
 func (f *WindowsFactory) CommandRunner() commandrunner.CommandRunner {
