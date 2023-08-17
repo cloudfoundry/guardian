@@ -22,24 +22,26 @@ import (
 )
 
 type WindowsExecRunner struct {
-	runtimePath     string
-	commandRunner   commandrunner.CommandRunner
-	processes       map[string]*process
-	processMux      *sync.Mutex
-	bundleSaver     depot.BundleSaver
-	bundleLookupper depot.BundleLookupper
-	processDepot    ProcessDepot
+	runtimePath              string
+	commandRunner            commandrunner.CommandRunner
+	processes                map[string]*process
+	processMux               *sync.Mutex
+	bundleSaver              depot.BundleSaver
+	bundleLookupper          depot.BundleLookupper
+	processDepot             ProcessDepot
+	cleanupProcessDirsOnWait bool
 }
 
-func NewWindowsExecRunner(runtimePath string, commandRunner commandrunner.CommandRunner, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot ProcessDepot) *WindowsExecRunner {
+func NewWindowsExecRunner(runtimePath string, commandRunner commandrunner.CommandRunner, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot ProcessDepot, cleanupProcessDirsOnWait bool) *WindowsExecRunner {
 	return &WindowsExecRunner{
-		runtimePath:     runtimePath,
-		commandRunner:   commandRunner,
-		processes:       map[string]*process{},
-		processMux:      new(sync.Mutex),
-		bundleSaver:     bundleSaver,
-		bundleLookupper: bundleLookupper,
-		processDepot:    processDepot,
+		runtimePath:              runtimePath,
+		commandRunner:            commandRunner,
+		processes:                map[string]*process{},
+		processMux:               new(sync.Mutex),
+		bundleSaver:              bundleSaver,
+		bundleLookupper:          bundleLookupper,
+		processDepot:             processDepot,
+		cleanupProcessDirsOnWait: cleanupProcessDirsOnWait,
 	}
 }
 
@@ -61,7 +63,7 @@ type process struct {
 func (e *WindowsExecRunner) Run(
 	log lager.Logger, processID, sandboxHandle string,
 	pio garden.ProcessIO, _ bool, procJSON io.Reader, extraCleanup func() error,
-) (garden.Process, error) {
+) (proc garden.Process, theErr error) {
 	log = log.Session("execrunner")
 
 	log.Info("start")
@@ -76,6 +78,17 @@ func (e *WindowsExecRunner) Run(
 	if err := writeProcessJSON(procJSON, specPath); err != nil {
 		return nil, err
 	}
+
+	defer func() {
+		if theErr == nil {
+			return
+		}
+
+		if err := os.RemoveAll(processPath); err != nil {
+			log.Info("failed-to-remove-process-dir: "+err.Error(), lager.Data{"process_id": processID})
+		}
+	}()
+
 	return e.runProcess(log, "exec", []string{"-p", specPath, sandboxHandle}, processID, processPath, pio,
 		extraCleanup)
 }
@@ -96,7 +109,7 @@ func writeProcessJSON(procJSON io.Reader, specPath string) error {
 func (e *WindowsExecRunner) RunPea(
 	log lager.Logger, processID string, processBundle goci.Bndl, sandboxHandle string,
 	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
-) (garden.Process, error) {
+) (proc garden.Process, theErr error) {
 	log = log.Session("execrunner")
 
 	log.Info("start")
@@ -111,6 +124,16 @@ func (e *WindowsExecRunner) RunPea(
 	if err != nil {
 		return nil, err
 	}
+
+	defer func() {
+		if theErr == nil {
+			return
+		}
+
+		if err := os.RemoveAll(processPath); err != nil {
+			log.Info("failed-to-remove-process-dir: "+err.Error(), lager.Data{"process_id": processID})
+		}
+	}()
 
 	return e.runProcess(log, "run", []string{"--bundle", processPath, processID}, processID, processPath, pio, extraCleanup)
 }
@@ -186,8 +209,18 @@ func (e *WindowsExecRunner) runProcess(
 		delete(e.processes, processID)
 		e.processMux.Unlock()
 
+		defer func() {
+			if e.cleanupProcessDirsOnWait {
+				err := os.RemoveAll(processPath)
+				if err != nil {
+					log.Error("error-cleaning-up-process-dirs", err, lager.Data{"processPath": processPath})
+				}
+			}
+		}()
 		if extraCleanup != nil {
-			return extraCleanup()
+			if err := extraCleanup(); err != nil {
+				return err
+			}
 		}
 
 		return nil
