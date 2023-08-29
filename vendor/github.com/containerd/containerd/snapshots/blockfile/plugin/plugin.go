@@ -1,5 +1,3 @@
-//go:build linux
-
 /*
    Copyright The containerd Authors.
 
@@ -16,59 +14,60 @@
    limitations under the License.
 */
 
-package overlay
+package plugin
 
 import (
 	"errors"
 
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/plugin"
-	"github.com/containerd/containerd/snapshots/overlay"
+	"github.com/containerd/containerd/snapshots/blockfile"
 )
 
-// Config represents configuration for the overlay plugin.
+// Config represents configuration for the native plugin.
 type Config struct {
 	// Root directory for the plugin
-	RootPath      string `toml:"root_path"`
-	UpperdirLabel bool   `toml:"upperdir_label"`
-	SyncRemove    bool   `toml:"sync_remove"`
+	RootPath string `toml:"root_path"`
 
-	// MountOptions are options used for the overlay mount (not used on bind mounts)
+	// ScratchFile is the scratch block file to use as an empty block
+	ScratchFile string `toml:"scratch_file"`
+
+	// FSType is the filesystem type for the mount
+	FSType string `toml:"fs_type"`
+
+	// MountOptions are options used for the mount
 	MountOptions []string `toml:"mount_options"`
 }
 
 func init() {
 	plugin.Register(&plugin.Registration{
 		Type:   plugin.SnapshotPlugin,
-		ID:     "overlayfs",
+		ID:     "blockfile",
 		Config: &Config{},
 		InitFn: func(ic *plugin.InitContext) (interface{}, error) {
 			ic.Meta.Platforms = append(ic.Meta.Platforms, platforms.DefaultSpec())
 
 			config, ok := ic.Config.(*Config)
 			if !ok {
-				return nil, errors.New("invalid overlay configuration")
+				return nil, errors.New("invalid blockfile configuration")
 			}
 
+			var opts []blockfile.Opt
 			root := ic.Root
-			if config.RootPath != "" {
+			if len(config.RootPath) != 0 {
 				root = config.RootPath
 			}
-
-			var oOpts []overlay.Opt
-			if config.UpperdirLabel {
-				oOpts = append(oOpts, overlay.WithUpperdirLabel)
+			if config.ScratchFile != "" {
+				opts = append(opts, blockfile.WithScratchFile(config.ScratchFile))
 			}
-			if !config.SyncRemove {
-				oOpts = append(oOpts, overlay.AsynchronousRemove)
+			if config.FSType != "" {
+				opts = append(opts, blockfile.WithFSType(config.FSType))
 			}
-
 			if len(config.MountOptions) > 0 {
-				oOpts = append(oOpts, overlay.WithMountOptions(config.MountOptions))
+				opts = append(opts, blockfile.WithMountOptions(config.MountOptions))
 			}
 
-			ic.Meta.Exports["root"] = root
-			return overlay.NewSnapshotter(root, oOpts...)
+			return blockfile.NewSnapshotter(root, opts...)
 		},
 	})
 }

@@ -151,7 +151,7 @@ github.com/cloudfoundry/dropsonde/metric_sender/fake
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/gosigar v1.3.21
+# github.com/cloudfoundry/gosigar v1.3.22
 ## explicit; go 1.20
 github.com/cloudfoundry/gosigar
 github.com/cloudfoundry/gosigar/sys/windows
@@ -183,7 +183,7 @@ github.com/containerd/cgroups/v3/cgroup2/stats
 # github.com/containerd/console v1.0.3
 ## explicit; go 1.13
 github.com/containerd/console
-# github.com/containerd/containerd v1.7.3
+# github.com/containerd/containerd v1.7.5
 ## explicit; go 1.19
 github.com/containerd/containerd
 github.com/containerd/containerd/api/events
@@ -250,6 +250,7 @@ github.com/containerd/containerd/defaults
 github.com/containerd/containerd/diff
 github.com/containerd/containerd/diff/apply
 github.com/containerd/containerd/diff/lcow
+github.com/containerd/containerd/diff/proxy
 github.com/containerd/containerd/diff/walking
 github.com/containerd/containerd/diff/walking/plugin
 github.com/containerd/containerd/diff/windows
@@ -412,6 +413,8 @@ github.com/containerd/containerd/services/tasks
 github.com/containerd/containerd/services/transfer
 github.com/containerd/containerd/services/version
 github.com/containerd/containerd/snapshots
+github.com/containerd/containerd/snapshots/blockfile
+github.com/containerd/containerd/snapshots/blockfile/plugin
 github.com/containerd/containerd/snapshots/btrfs
 github.com/containerd/containerd/snapshots/btrfs/plugin
 github.com/containerd/containerd/snapshots/devmapper
@@ -433,7 +436,7 @@ github.com/containerd/containerd/third_party/k8s.io/cri-api/pkg/apis/runtime/v1a
 github.com/containerd/containerd/tracing
 github.com/containerd/containerd/tracing/plugin
 github.com/containerd/containerd/version
-# github.com/containerd/continuity v0.4.1
+# github.com/containerd/continuity v0.4.2
 ## explicit; go 1.19
 github.com/containerd/continuity
 github.com/containerd/continuity/devices
@@ -696,7 +699,7 @@ github.com/mrunalp/fileutils
 # github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 ## explicit
 github.com/nu7hatch/gouuid
-# github.com/onsi/ginkgo/v2 v2.11.0
+# github.com/onsi/ginkgo/v2 v2.12.0
 ## explicit; go 1.18
 github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config
@@ -881,7 +884,7 @@ go.opencensus.io/trace/tracestate
 ## explicit; go 1.19
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal
-# go.opentelemetry.io/otel v1.16.0 => go.opentelemetry.io/otel v1.15.1
+# go.opentelemetry.io/otel v1.17.0 => go.opentelemetry.io/otel v1.15.1
 ## explicit; go 1.19
 go.opentelemetry.io/otel
 go.opentelemetry.io/otel/attribute
@@ -926,7 +929,7 @@ go.opentelemetry.io/otel/sdk/internal
 go.opentelemetry.io/otel/sdk/internal/env
 go.opentelemetry.io/otel/sdk/resource
 go.opentelemetry.io/otel/sdk/trace
-# go.opentelemetry.io/otel/trace v1.16.0
+# go.opentelemetry.io/otel/trace v1.17.0
 ## explicit; go 1.19
 go.opentelemetry.io/otel/trace
 # go.opentelemetry.io/proto/otlp v0.19.0
