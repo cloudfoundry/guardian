@@ -1,6 +1,8 @@
 module code.cloudfoundry.org/guardian
 
-go 1.20
+go 1.21
+
+toolchain go1.21.0
 
 replace (
 	github.com/Microsoft/hcsshim => github.com/Microsoft/hcsshim v0.10.0-rc.8
@@ -19,14 +21,14 @@ require (
 	code.cloudfoundry.org/clock v1.1.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20230612151827-2b11a2b4e9b8
 	code.cloudfoundry.org/debugserver v0.0.0-20230612151301-d597b20f28ce
-	code.cloudfoundry.org/garden v0.0.0-20230823164422-cf93827eac97
+	code.cloudfoundry.org/garden v0.0.0-20230829180649-7b7a13d99011
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20230822180842-4b4533d0cc32
+	code.cloudfoundry.org/idmapper v0.0.0-20230905181311-b5726111f70f
 	code.cloudfoundry.org/lager/v3 v3.0.2
 	code.cloudfoundry.org/localip v0.0.0-20230612151424-f52ecafaffc4
 	github.com/BurntSushi/toml v1.3.2
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.22
+	github.com/cloudfoundry/gosigar v1.3.25
 	github.com/containerd/containerd v1.7.5
 	github.com/containerd/typeurl/v2 v2.1.1
 	github.com/docker/docker v24.0.5+incompatible
@@ -49,7 +51,7 @@ require (
 	github.com/urfave/cli/v2 v2.25.7
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vishvananda/netns v0.0.4
-	golang.org/x/sys v0.11.0
+	golang.org/x/sys v0.12.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -103,7 +105,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20230821062121-407c9e7a662f // indirect
+	github.com/google/pprof v0.0.0-20230901174712-0191c66da455 // indirect
 	github.com/google/uuid v1.3.1 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
@@ -157,13 +159,13 @@ require (
 	go.opentelemetry.io/otel/sdk v1.15.1 // indirect
 	go.opentelemetry.io/otel/trace v1.17.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
-	golang.org/x/crypto v0.12.0 // indirect
+	golang.org/x/crypto v0.13.0 // indirect
 	golang.org/x/mod v0.12.0 // indirect
-	golang.org/x/net v0.14.0 // indirect
+	golang.org/x/net v0.15.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
-	golang.org/x/term v0.11.0 // indirect
-	golang.org/x/text v0.12.0 // indirect
+	golang.org/x/term v0.12.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.12.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
