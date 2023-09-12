@@ -3,7 +3,7 @@
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20230829180808-09c8bfc5a125 => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20230905181311-b5726111f70f => ../idmapper
 ## explicit; go 1.18
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.0.2
@@ -33,7 +33,7 @@ github.com/cloudfoundry/dropsonde/metric_sender
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/sonde-go v0.0.0-20230822175501-8bbdd0e1d8ed
+# github.com/cloudfoundry/sonde-go v0.0.0-20230911203642-fa89d986ae20
 ## explicit; go 1.17
 github.com/cloudfoundry/sonde-go/events
 # github.com/containers/image/v5 v5.27.0
@@ -82,7 +82,7 @@ github.com/containers/libtrust
 # github.com/containers/ocicrypt v1.1.8
 ## explicit; go 1.20
 github.com/containers/ocicrypt/spec
-# github.com/containers/storage v1.49.0
+# github.com/containers/storage v1.50.1
 ## explicit; go 1.19
 github.com/containers/storage/pkg/chunked/compressor
 github.com/containers/storage/pkg/chunked/internal
@@ -106,7 +106,7 @@ github.com/docker/distribution/reference
 github.com/docker/distribution/registry/api/errcode
 github.com/docker/distribution/registry/api/v2
 github.com/docker/distribution/registry/client/auth/challenge
-# github.com/docker/docker v24.0.5+incompatible
+# github.com/docker/docker v24.0.6+incompatible
 ## explicit
 github.com/docker/docker/api/types/versions
 github.com/docker/docker/pkg/meminfo
@@ -139,7 +139,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20230901174712-0191c66da455
+# github.com/google/pprof v0.0.0-20230912144702-c363fe2c2ed8
 ## explicit; go 1.19
 github.com/google/pprof/profile
 # github.com/gorilla/mux v1.8.0
@@ -269,7 +269,7 @@ github.com/ventu-io/go-shortid
 # github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673
 ## explicit
 github.com/xrash/smetrics
-# golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63 => golang.org/x/exp v0.0.0-20230724220655-d98519c11495
+# golang.org/x/exp v0.0.0-20230905200255-921286631fa9 => golang.org/x/exp v0.0.0-20230724220655-d98519c11495
 ## explicit; go 1.20
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
@@ -304,7 +304,7 @@ golang.org/x/text/internal/utf8internal
 golang.org/x/text/language
 golang.org/x/text/runes
 golang.org/x/text/transform
-# golang.org/x/tools v0.12.0
+# golang.org/x/tools v0.13.0
 ## explicit; go 1.18
 golang.org/x/tools/go/ast/inspector
 golang.org/x/tools/internal/typeparams
