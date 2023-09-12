@@ -832,7 +832,7 @@ var _ = Describe("Driver", func() {
 
 		Context("when it fails to fetch XFS project ID", func() {
 			It("returns an error", func() {
-				_, err := driver.FetchStats(logger, "/dev")
+				_, err := driver.FetchStats(logger, "/proc")
 				Expect(err).To(MatchError(ContainSubstring("inappropriate ioctl for device")))
 			})
 		})
