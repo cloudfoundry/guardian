@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/docker/docker/pkg/system"
 	"github.com/pkg/errors"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
@@ -239,6 +240,16 @@ func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarR
 
 	if err := changeModTime(path, tarHeader.ModTime); err != nil {
 		return 0, errors.Wrapf(err, "setting the modtime for file `%s`", path)
+	}
+
+	for key, value := range tarHeader.PAXRecords {
+		if strings.HasPrefix(key, "SCHILY.xattr") {
+			xattrName := strings.TrimPrefix(key, "SCHILY.xattr.")
+			err = system.Lsetxattr(path, xattrName, []byte(value), 0)
+			if err != nil {
+				return 0, errors.Wrapf(err, "setting xattr `%s` for file `%s`", xattrName, path)
+			}
+		}
 	}
 
 	return fileSize, nil

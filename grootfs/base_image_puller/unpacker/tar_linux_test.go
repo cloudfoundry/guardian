@@ -1,6 +1,7 @@
 package unpacker_test
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
+	"github.com/containers/storage/pkg/system"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -57,7 +59,7 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		tarFilePath = filepath.Join(os.TempDir(), (fmt.Sprintf("unpack-test-%d.tar", GinkgoParallelProcess())))
-		tarCommand = exec.Command("tar", "-C", baseImagePath, "-cf", tarFilePath, ".")
+		tarCommand = exec.Command("tar", "-C", baseImagePath, "--xattrs", "--xattrs-include=*", "-cf", tarFilePath, ".")
 
 		logger = lagertest.NewTestLogger("test-store")
 	})
@@ -157,6 +159,33 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 			stat_t := stat.Sys().(*syscall.Stat_t)
 			Expect(stat_t.Uid).To(Equal(uint32(5000)))
 			Expect(stat_t.Gid).To(Equal(uint32(5000)))
+		})
+	})
+
+	Describe("security xattrs", func() {
+		var capabilities = "0100000200200000000000000000000000000000" // output from `getfattr -e hex -d -m '' /bin/ping`
+		BeforeEach(func() {
+			filepath := path.Join(baseImagePath, "myfile")
+			Expect(ioutil.WriteFile(filepath, []byte{}, 0755)).To(Succeed())
+			capBytes, err := hex.DecodeString(capabilities)
+			Expect(err).NotTo(HaveOccurred())
+			err = system.Lsetxattr(filepath, "security.capability", capBytes, 0)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("preserves them", func() {
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				Stream:     stream,
+				TargetPath: targetPath,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			xattr, err := system.Lgetxattr(filepath.Join(targetPath, "myfile"), "security.capability")
+			Expect(err).NotTo(HaveOccurred())
+
+			caps := hex.EncodeToString(xattr)
+
+			Expect(caps).To(Equal(capabilities))
 		})
 	})
 })
