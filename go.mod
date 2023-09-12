@@ -5,7 +5,6 @@ go 1.21
 toolchain go1.21.0
 
 replace (
-	github.com/Microsoft/hcsshim => github.com/Microsoft/hcsshim v0.10.0-rc.8
 	github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
 
 	// pin opencontainers/runc to 1.1.7 because 1.1.8 introduces the use of --static-pie
