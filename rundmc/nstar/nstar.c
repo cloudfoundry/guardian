@@ -229,9 +229,9 @@ int main(int argc, char **argv) {
   }
 
   if(compress != NULL) {
-    execveat(tarfd, "", (char*[7]){"tar", "--no-same-permissions", "--no-same-owner", "-cf", "-", compress, NULL}, NULL, AT_EMPTY_PATH);
+    execveat(tarfd, "", (char*[9]){"tar", "--no-same-permissions", "--no-same-owner", "--xattrs", "--xattrs-include=*", "-cf", "-", compress, NULL}, NULL, AT_EMPTY_PATH);
   } else {
-    execveat(tarfd, "", (char*[6]){"tar", "--no-same-permissions", "--no-same-owner", "-xf", "-", NULL}, NULL, AT_EMPTY_PATH);
+    execveat(tarfd, "", (char*[8]){"tar", "--no-same-permissions", "--no-same-owner", "--xattrs", "--xattrs-include=*", "-xf", "-", NULL}, NULL, AT_EMPTY_PATH);
   }
   /* execveat will not return if successful, so if we get here, we know there's been an error */
   perror("execveat");
