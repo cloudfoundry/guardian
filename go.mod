@@ -20,9 +20,9 @@ require (
 	code.cloudfoundry.org/clock v1.1.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20230612151827-2b11a2b4e9b8
 	code.cloudfoundry.org/debugserver v0.0.0-20230929175251-e53a35122640
-	code.cloudfoundry.org/garden v0.0.0-20231003181205-2b0c633b6c60
+	code.cloudfoundry.org/garden v0.0.0-20231010181202-f61f4780fa7d
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20231003181724-d34321448044
+	code.cloudfoundry.org/idmapper v0.0.0-20231010181327-52a77ac7ebed
 	code.cloudfoundry.org/lager/v3 v3.0.2
 	code.cloudfoundry.org/localip v0.0.0-20230612151424-f52ecafaffc4
 	github.com/BurntSushi/toml v1.3.2
@@ -172,7 +172,7 @@ require (
 	google.golang.org/genproto v0.0.0-20231009173412-8bfb1ae86b6c // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231002182017-d307bd883b97 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231009173412-8bfb1ae86b6c // indirect
-	google.golang.org/grpc v1.58.2 // indirect
+	google.golang.org/grpc v1.58.3 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
