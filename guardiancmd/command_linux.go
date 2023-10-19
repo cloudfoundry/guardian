@@ -191,7 +191,7 @@ func (f *LinuxFactory) WireContainerNetworkMetricsProvider(containerizer gardene
 		return gardener.NewNoopContainerNetworkMetricsProvider()
 	}
 
-	return gardener.NewSysFSContainerNetworkMetricsProvider(containerizer, propertyManager)
+	return gardener.NewLinuxContainerNetworkMetricsProvider(containerizer, propertyManager, os.Open)
 }
 
 func initBindMountAndPath(initPathOnHost string) (specs.Mount, string) {
