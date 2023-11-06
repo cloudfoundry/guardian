@@ -10,7 +10,7 @@ params:
   DOCKER_REGISTRY_PASSWORD:
   GROOTFS_TEST_UID: 0
   GROOTFS_TEST_GID: 0
-  GROOTFS_USER: whoever
+  GROOTFS_USER: nonroot
 
 run:
   dir: src/code.cloudfoundry.org/grootfs
