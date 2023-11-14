@@ -1,3 +1,4 @@
+//go:build !linux
 // +build !linux
 
 package sandbox // import "code.cloudfoundry.org/grootfs/sandbox"

@@ -2,7 +2,6 @@ package quota_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,7 +26,7 @@ var _ = Describe("Quotas", func() {
 		var err error
 		xfsMountPoint = <-XfsMountPointPool
 		Expect(xfsMountPoint).NotTo(BeEmpty())
-		directory, err = ioutil.TempDir(xfsMountPoint, "images")
+		directory, err = os.MkdirTemp(xfsMountPoint, "images")
 		Expect(err).NotTo(HaveOccurred())
 		directory = filepath.Join(directory, "my-image")
 		Expect(os.Mkdir(directory, 0755)).To(Succeed())
@@ -78,7 +77,7 @@ var _ = Describe("Quotas", func() {
 
 			BeforeEach(func() {
 				var err error
-				otherDir, err = ioutil.TempDir(xfsMountPoint, "images")
+				otherDir, err = os.MkdirTemp(xfsMountPoint, "images")
 				Expect(err).NotTo(HaveOccurred())
 				otherDir = filepath.Join(otherDir, "my-image")
 				Expect(os.Mkdir(otherDir, 0755)).To(Succeed())
@@ -129,7 +128,7 @@ var _ = Describe("Quotas", func() {
 
 			BeforeEach(func() {
 				var err error
-				otherDir, err = ioutil.TempDir(xfsMountPoint, "images")
+				otherDir, err = os.MkdirTemp(xfsMountPoint, "images")
 				Expect(err).NotTo(HaveOccurred())
 				otherDir = filepath.Join(otherDir, "my-image")
 				Expect(os.Mkdir(otherDir, 0755)).To(Succeed())

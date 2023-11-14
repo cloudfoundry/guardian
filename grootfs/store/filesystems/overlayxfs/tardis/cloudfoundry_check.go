@@ -1,3 +1,4 @@
+//go:build cloudfoundry
 // +build cloudfoundry
 
 package main
