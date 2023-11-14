@@ -179,13 +179,13 @@ var _ = Describe("Destroying a Container", func() {
 			})
 
 			It("should remove virtual ethernet cards", func() {
-				ifconfigExits := func() int {
-					session, err := gexec.Start(exec.Command("ifconfig", contIfaceName), GinkgoWriter, GinkgoWriter)
+				interfaceExits := func() int {
+					session, err := gexec.Start(exec.Command("ip", "addr", "show", contIfaceName), GinkgoWriter, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
 
 					return session.Wait().ExitCode()
 				}
-				Eventually(ifconfigExits).ShouldNot(Equal(0))
+				Eventually(interfaceExits).ShouldNot(Equal(0))
 			})
 
 			It("should remove the network bridge", func() {

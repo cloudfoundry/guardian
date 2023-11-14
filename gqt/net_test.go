@@ -203,7 +203,7 @@ var _ = Describe("Networking", func() {
 					"-c",
 					"echo NONSENSE > /etc/hosts",
 				},
-				User: "alice",
+				User: "testuser",
 			}, garden.ProcessIO{
 				Stdout: GinkgoWriter,
 				Stderr: io.MultiWriter(&stderr, GinkgoWriter),
@@ -236,7 +236,7 @@ var _ = Describe("Networking", func() {
 					"-c",
 					"echo NONSENSE > /etc/resolv.conf",
 				},
-				User: "alice",
+				User: "testuser",
 			}, garden.ProcessIO{
 				Stdout: GinkgoWriter,
 				Stderr: io.MultiWriter(&stderr, GinkgoWriter),
@@ -800,7 +800,7 @@ var _ = Describe("Networking", func() {
 
 				Describe("hosts's network interface for a container", func() {
 					It("has the correct MTU size", func() {
-						out, err := exec.Command("ifconfig", hostIfName(container)).Output()
+						out, err := exec.Command("ip", "addr", "show", hostIfName(container)).Output()
 						Expect(err).ToNot(HaveOccurred())
 						Expect(string(out)).To(ContainSubstring(" mtu 1234"))
 					})
@@ -821,7 +821,7 @@ var _ = Describe("Networking", func() {
 
 				Describe("hosts's network interface for a container", func() {
 					It("has the correct MTU size", func() {
-						out, err := exec.Command("ifconfig", hostIfName(container)).Output()
+						out, err := exec.Command("ip", "addr", "show", hostIfName(container)).Output()
 						Expect(err).ToNot(HaveOccurred())
 						Expect(out).To(ContainSubstring("mtu 1500"))
 					})
@@ -848,7 +848,7 @@ var _ = Describe("Networking", func() {
 
 			Describe("hosts's network interface for a container", func() {
 				It("has the same MTU as the host outbound interface", func() {
-					out, err := exec.Command("ifconfig", hostIfName(container)).Output()
+					out, err := exec.Command("ip", "addr", "show", hostIfName(container)).Output()
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(out).To(ContainSubstring(fmt.Sprintf(" mtu %d", outboundIfaceMtu)))
@@ -1097,7 +1097,7 @@ func checkConnectionWithRetries(container garden.Container, ip string, port int,
 
 func checkConnection(container garden.Container, ip string, port int) error {
 	process, err := container.Run(garden.ProcessSpec{
-		User: "alice",
+		User: "testuser",
 		Path: "sh",
 		Args: []string{"-c", fmt.Sprintf("echo hello | nc -w 3 %s %d", ip, port)},
 	}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
@@ -1126,7 +1126,7 @@ func ipAddress(subnet string, index int) string {
 
 func listenInContainer(container garden.Container, containerPort uint32) error {
 	_, err := container.Run(garden.ProcessSpec{
-		User: "alice",
+		User: "testuser",
 		Path: "sh",
 		Args: []string{"-c", fmt.Sprintf("echo %d | nc -l -p %d", containerPort, containerPort)},
 	}, garden.ProcessIO{
@@ -1236,7 +1236,7 @@ func containerIfconfig(container garden.Container) string {
 	stdout := gbytes.NewBuffer()
 
 	process, err := container.Run(garden.ProcessSpec{
-		User: "alice",
+		User: "testuser",
 		Path: "ifconfig",
 		Args: []string{containerIfName(container)},
 	}, garden.ProcessIO{

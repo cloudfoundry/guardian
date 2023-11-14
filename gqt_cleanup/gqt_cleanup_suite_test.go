@@ -128,30 +128,15 @@ func getGardenBinaries() runner.Binaries {
 	}
 
 	if runtime.GOOS == "linux" {
-		gardenBinaries.ExecRunner = goCompile("code.cloudfoundry.org/guardian/cmd/dadoo")
-		gardenBinaries.Socket2me = goCompile("code.cloudfoundry.org/guardian/cmd/socket2me")
-
-		cmd := exec.Command("make")
-		runCommandInDir(cmd, "../rundmc/nstar")
-		gardenBinaries.NSTar = "../rundmc/nstar/nstar"
-
-		cmd = exec.Command("gcc", "-static", "-o", "init", "init.c", "ignore_sigchild.c")
-		runCommandInDir(cmd, "../cmd/init")
-		gardenBinaries.Init = "../cmd/init/init"
-
-		gardenBinaries.Groot = findInGoPathBin("grootfs")
-		gardenBinaries.Tardis = findInGoPathBin("tardis")
+		gardenBinaries.ExecRunner = os.Getenv("DADOO_BINARY")
+		gardenBinaries.Socket2me = os.Getenv("SOCKET2ME_BINARY")
+		gardenBinaries.NSTar = os.Getenv("NSTAR_BINARY")
+		gardenBinaries.Init = os.Getenv("INIT_BINARY")
+		gardenBinaries.Groot = os.Getenv("GROOTFS_BINARY")
+		gardenBinaries.Tardis = os.Getenv("GROOTFS_TARDIS_BINARY")
 	}
 
 	return gardenBinaries
-}
-
-func findInGoPathBin(binary string) string {
-	binariesPath, ok := os.LookupEnv("BINARIES")
-	Expect(ok).To(BeTrue(), "BINARIES must be set")
-	binPath := filepath.Join(binariesPath, binary)
-	Expect(binPath).To(BeAnExistingFile(), fmt.Sprintf("%s does not exist", binPath))
-	return binPath
 }
 
 func copyFile(srcPath, dstPath string) error {

@@ -290,7 +290,7 @@ var _ = Describe("Runcontainerd", func() {
 			containerID = "container-id"
 			processSpec = garden.ProcessSpec{
 				ID:   "test-process-id",
-				User: "alice",
+				User: "testuser",
 				Dir:  "process-dir",
 			}
 			processBuilder.BuildProcessReturns(&specs.Process{
@@ -365,7 +365,7 @@ var _ = Describe("Runcontainerd", func() {
 					Uid:   1000,
 					Gid:   1001,
 					Sgids: []int{2000, 3000, 5000},
-					Home:  "/home/alice",
+					Home:  "/home/testuser",
 				}
 				userLookupper.LookupReturns(&user, nil)
 
@@ -422,7 +422,7 @@ var _ = Describe("Runcontainerd", func() {
 
 				Expect(userLookupper.LookupCallCount()).To(Equal(1))
 				passedRootfs, passedUserId := userLookupper.LookupArgsForCall(0)
-				Expect(passedUserId).To(Equal("alice"))
+				Expect(passedUserId).To(Equal("testuser"))
 				Expect(passedRootfs).To(Equal("/proc/1234/root"))
 
 				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
@@ -533,7 +533,7 @@ var _ = Describe("Runcontainerd", func() {
 				It("sets the spec dir to the user home dir if no dir specified", func() {
 					Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
 					_, actualProcessSpec, _ := processBuilder.BuildProcessArgsForCall(0)
-					Expect(actualProcessSpec.Dir).To(Equal("/home/alice"))
+					Expect(actualProcessSpec.Dir).To(Equal("/home/testuser"))
 				})
 			})
 		})

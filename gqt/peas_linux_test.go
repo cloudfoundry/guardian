@@ -77,7 +77,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 
 		It("should not leak username resolving peas", func() {
 			process, err := ctr.Run(garden.ProcessSpec{
-				User:  "alice",
+				User:  "testuser",
 				Path:  "echo",
 				Args:  []string{"hello"},
 				Image: garden.ImageRef{URI: "raw://" + peaRootfs},
@@ -99,7 +99,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 				numProcessDirsBefore := numProcessDirs(ctr.Handle())
 
 				process, err := ctr.Run(garden.ProcessSpec{
-					User:  "alice",
+					User:  "testuser",
 					Path:  "echo",
 					Args:  []string{"hello"},
 					Image: garden.ImageRef{URI: "raw://" + peaRootfs},
@@ -119,7 +119,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 			It("should delete the username resolving pea container", func() {
 				containersLsBefore := listContainers("ctr", config.ContainerdSocket)
 				process, err := ctr.Run(garden.ProcessSpec{
-					User:  "alice",
+					User:  "testuser",
 					Path:  "echo",
 					Args:  []string{"hello"},
 					Image: garden.ImageRef{URI: "raw://" + peaRootfs},
@@ -145,7 +145,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 				numImageDirsBefore := numImageDirs()
 
 				process, err := ctr.Run(garden.ProcessSpec{
-					User:  "alice",
+					User:  "testuser",
 					Path:  "echo",
 					Args:  []string{"hello"},
 					Image: garden.ImageRef{URI: rootfs},

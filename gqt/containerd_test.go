@@ -191,7 +191,7 @@ var _ = Describe("Containerd", func() {
 					Stdout: io.MultiWriter(GinkgoWriter, stdout),
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(stdout).Should(gbytes.Say("alice"))
+				Eventually(stdout).Should(gbytes.Say("testuser"))
 			})
 
 			It("can resolve the home directory of the user if none was specified", func() {
@@ -199,25 +199,25 @@ var _ = Describe("Containerd", func() {
 				_, err := container.Run(garden.ProcessSpec{
 					ID:   "ctrd-process-pwd",
 					Path: "/bin/pwd",
-					User: "alice",
+					User: "testuser",
 				}, garden.ProcessIO{
 					Stdout: io.MultiWriter(GinkgoWriter, stdout),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Eventually(stdout).Should(gbytes.Say("/home/alice"))
+				Eventually(stdout).Should(gbytes.Say("/home/testuser"))
 			})
 
 			It("can run a process without providing an ID", func() {
 				stdout := gbytes.NewBuffer()
 				_, err := container.Run(garden.ProcessSpec{
 					Path: "/bin/echo",
-					Args: []string{"hello alice"},
+					Args: []string{"hello testuser"},
 				}, garden.ProcessIO{
 					Stdout: io.MultiWriter(GinkgoWriter, stdout),
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(stdout).Should(gbytes.Say("hello alice"))
+				Eventually(stdout).Should(gbytes.Say("hello testuser"))
 			})
 
 			It("returns the correct process ID", func() {
@@ -367,7 +367,7 @@ var _ = Describe("Containerd", func() {
 						Image: garden.ImageRef{URI: rootfs},
 						Path:  "/bin/sleep",
 						Args:  []string{"10"},
-						User:  "alice",
+						User:  "testuser",
 					}, ginkgoIO)
 					Expect(err).NotTo(HaveOccurred())
 
@@ -391,7 +391,7 @@ var _ = Describe("Containerd", func() {
 						Image: garden.ImageRef{URI: rootfs},
 						Path:  "/bin/echo",
 						Args:  []string{"peeeeee"},
-						User:  "alice",
+						User:  "testuser",
 					}, garden.ProcessIO{})
 					Expect(err).NotTo(HaveOccurred())
 

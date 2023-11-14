@@ -3,7 +3,6 @@ package gqt_test
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -88,7 +87,7 @@ var _ = Describe("Creating a Container", func() {
 			_, err := client.Create(containerSpec)
 			Expect(err).To(HaveOccurred())
 
-			Expect(ioutil.ReadDir(client.DepotDir)).To(BeEmpty())
+			Expect(os.ReadDir(client.DepotDir)).To(BeEmpty())
 		})
 
 		It("cleans up the groot store", func() {
@@ -97,14 +96,14 @@ var _ = Describe("Creating a Container", func() {
 			_, err := client.Create(containerSpec)
 			Expect(err).To(HaveOccurred())
 
-			prev, err := ioutil.ReadDir(filepath.Join(client.TmpDir, "groot_store", "images"))
+			prev, err := os.ReadDir(filepath.Join(client.TmpDir, "groot_store", "images"))
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = client.Create(containerSpec)
 			Expect(err).To(HaveOccurred())
 
 			Eventually(func() int {
-				num, err := ioutil.ReadDir(filepath.Join(client.TmpDir, "groot_store", "images"))
+				num, err := os.ReadDir(filepath.Join(client.TmpDir, "groot_store", "images"))
 				Expect(err).NotTo(HaveOccurred())
 				return len(num)
 			}).Should(Equal(len(prev)))
@@ -240,7 +239,7 @@ var _ = Describe("Creating a Container", func() {
 			var err error
 
 			rootFSPath = createRootfsTar(func(unpackedRootfs string) {
-				Expect(ioutil.WriteFile(filepath.Join(unpackedRootfs, "my-file"), []byte("some-content"), 0644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(unpackedRootfs, "my-file"), []byte("some-content"), 0644)).To(Succeed())
 				Expect(os.Mkdir(path.Join(unpackedRootfs, "somedir"), 0777)).To(Succeed())
 			})
 
@@ -309,11 +308,11 @@ var _ = Describe("Creating a Container", func() {
 			Expect(err).To(HaveOccurred())
 
 			session, err := gexec.Start(
-				exec.Command("ifconfig"),
+				exec.Command("ip", "addr"),
 				GinkgoWriter, GinkgoWriter,
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Consistently(session).ShouldNot(gbytes.Say(fmt.Sprintf("172-250-%d-0", GinkgoParallelProcess())))
+			Consistently(session).ShouldNot(gbytes.Say(fmt.Sprintf("172.250.%d.0", GinkgoParallelProcess())))
 		})
 	})
 
@@ -567,11 +566,11 @@ var _ = Describe("Creating a Container", func() {
 
 	Context("create more containers than the maxkeyring limit", func() {
 		BeforeEach(func() {
-			Expect(ioutil.WriteFile("/proc/sys/kernel/keys/maxkeys", []byte("1"), 0644)).To(Succeed())
+			Expect(os.WriteFile("/proc/sys/kernel/keys/maxkeys", []byte("1"), 0644)).To(Succeed())
 		})
 
 		AfterEach(func() {
-			Expect(ioutil.WriteFile("/proc/sys/kernel/keys/maxkeys", []byte("200"), 0644)).To(Succeed())
+			Expect(os.WriteFile("/proc/sys/kernel/keys/maxkeys", []byte("200"), 0644)).To(Succeed())
 		})
 
 		It("works", func() {

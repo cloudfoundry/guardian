@@ -68,12 +68,12 @@ var _ = Describe("Bind mount", func() {
 			defer tmpFile.Close()
 			srcPath = tmpFile.Name()
 			Expect(os.Chmod(srcPath, 0777)).To(Succeed())
-			dstPath = "/home/alice/afile"
+			dstPath = "/home/testuser/afile"
 			mountMode = garden.BindMountModeRO
 		})
 
 		It("all users can read the file", func() {
-			readProcess := userReadFile(container, "/home/alice", "afile", "alice")
+			readProcess := userReadFile(container, "/home/testuser", "afile", "testuser")
 			Expect(readProcess.Wait()).To(Equal(0))
 		})
 
@@ -89,7 +89,7 @@ var _ = Describe("Bind mount", func() {
 			})
 
 			It("all users can read the file", func() {
-				readProcess := userReadFile(container, "/home/alice", "afile", "alice")
+				readProcess := userReadFile(container, "/home/testuser", "afile", "testuser")
 				Expect(readProcess.Wait()).To(Equal(0))
 			})
 		})
@@ -104,7 +104,7 @@ var _ = Describe("Bind mount", func() {
 				})
 
 				It("all users can write to the file", func() {
-					readProcess := userWriteToFile(container, dstPath, "alice")
+					readProcess := userWriteToFile(container, dstPath, "testuser")
 					Expect(readProcess.Wait()).To(Equal(0))
 				})
 			})
@@ -118,7 +118,7 @@ var _ = Describe("Bind mount", func() {
 		)
 
 		BeforeEach(func() {
-			dstPath = "/home/alice/adir"
+			dstPath = "/home/testuser/adir"
 			srcPath, tmpfsPath, testFileName, tmpDir = createSymlinkSource()
 			mountMode = garden.BindMountModeRO
 		})
@@ -130,21 +130,21 @@ var _ = Describe("Bind mount", func() {
 		})
 
 		It("all users can read files", func() {
-			readProcess := userReadFile(container, dstPath, testFileName, "alice")
+			readProcess := userReadFile(container, dstPath, testFileName, "testuser")
 			Expect(readProcess.Wait()).To(Equal(0))
 		})
 	})
 
 	Describe("when source is a dir", func() {
 		BeforeEach(func() {
-			dstPath = "/home/alice/adir"
+			dstPath = "/home/testuser/adir"
 			srcPath = createTestHostDir()
 			srcPath, testFileName = createTestFile(srcPath)
 			mountMode = garden.BindMountModeRO
 		})
 
 		It("all users can read files", func() {
-			readProcess := userReadFile(container, dstPath, testFileName, "alice")
+			readProcess := userReadFile(container, dstPath, testFileName, "testuser")
 			Expect(readProcess.Wait()).To(Equal(0))
 		})
 
@@ -160,7 +160,7 @@ var _ = Describe("Bind mount", func() {
 			})
 
 			It("all users can read files", func() {
-				readProcess := userReadFile(container, dstPath, testFileName, "alice")
+				readProcess := userReadFile(container, dstPath, testFileName, "testuser")
 				Expect(readProcess.Wait()).To(Equal(0))
 			})
 		})
@@ -169,7 +169,7 @@ var _ = Describe("Bind mount", func() {
 	Describe("when the source is a mountpoint with extra options", func() {
 		BeforeEach(func() {
 			mountOptions := []string{"-t", "tmpfs", "-o", "noexec"}
-			dstPath = "/home/alice/adir"
+			dstPath = "/home/testuser/adir"
 			srcPath = createTestHostDir()
 			mountSourceDirToSelf(mountOptions, srcPath)
 			srcPath, testFileName = createTestFile(srcPath)
@@ -188,45 +188,45 @@ var _ = Describe("Bind mount", func() {
 		})
 
 		It("all users can read files", func() {
-			readProcess := userReadFile(container, dstPath, testFileName, "alice")
+			readProcess := userReadFile(container, dstPath, testFileName, "testuser")
 			Expect(readProcess.Wait()).To(Equal(0))
 		})
 
 		It("no user can create files", func() {
-			readProcess := userWriteFile(container, dstPath, "alice")
+			readProcess := userWriteFile(container, dstPath, "testuser")
 			Expect(readProcess.Wait()).To(Equal(1))
 		})
 	})
 
 	Describe("when the mount is RO", func() {
 		BeforeEach(func() {
-			dstPath = "/home/alice/readonly"
+			dstPath = "/home/testuser/readonly"
 			mountMode = garden.BindMountModeRO
 			srcPath = createTestHostDir()
 			srcPath, testFileName = createTestFile(srcPath)
 		})
 
 		It("all users can read files", func() {
-			readProcess := userReadFile(container, dstPath, testFileName, "alice")
+			readProcess := userReadFile(container, dstPath, testFileName, "testuser")
 			Expect(readProcess.Wait()).To(Equal(0))
 		})
 
 		It("no user can create files", func() {
-			readProcess := userWriteFile(container, dstPath, "alice")
+			readProcess := userWriteFile(container, dstPath, "testuser")
 			Expect(readProcess.Wait()).To(Equal(1))
 		})
 	})
 
 	Describe("when the mount is RW", func() {
 		BeforeEach(func() {
-			dstPath = "/home/alice/readwrite"
+			dstPath = "/home/testuser/readwrite"
 			mountMode = garden.BindMountModeRW
 			srcPath = createTestHostDir()
 			srcPath, testFileName = createTestFile(srcPath)
 		})
 
 		It("all users can read files", func() {
-			readProcess := userReadFile(container, dstPath, testFileName, "alice")
+			readProcess := userReadFile(container, dstPath, testFileName, "testuser")
 			Expect(readProcess.Wait()).To(Equal(0))
 		})
 
@@ -241,7 +241,7 @@ var _ = Describe("Bind mount", func() {
 			})
 
 			It("non-root users cannot write files", func() {
-				readProcess := userWriteFile(container, dstPath, "alice")
+				readProcess := userWriteFile(container, dstPath, "testuser")
 				Expect(readProcess.Wait()).To(Equal(1))
 			})
 		})
@@ -263,7 +263,7 @@ var _ = Describe("Bind mount", func() {
 
 		BeforeEach(func() {
 			mountOptions := []string{"--bind"}
-			dstPath = "/home/alice/adir"
+			dstPath = "/home/testuser/adir"
 			mountMode = garden.BindMountModeRO
 			srcPath = createTestHostDir()
 			mountSourceDirToSelf(mountOptions, srcPath)
@@ -281,13 +281,13 @@ var _ = Describe("Bind mount", func() {
 
 		It("all users can read from RW nested bind mounts", func() {
 			nestedPath := filepath.Join(dstPath, "nested-bind")
-			readProcess := userReadFile(container, nestedPath, "nested-file", "alice")
+			readProcess := userReadFile(container, nestedPath, "nested-file", "testuser")
 			Expect(readProcess.Wait()).To(Equal(0))
 		})
 
 		It("all users can write to RW nested bind mounts", func() {
 			nestedPath := filepath.Join(dstPath, "nested-bind")
-			readProcess := userReadFile(container, nestedPath, "nested-file", "alice")
+			readProcess := userReadFile(container, nestedPath, "nested-file", "testuser")
 			Expect(readProcess.Wait()).To(Equal(0))
 		})
 	})
@@ -413,7 +413,7 @@ func parseMountsFile(container garden.Container) string {
 		mountLine := scanner.Text()
 		mountInfo := strings.Split(mountLine, " ")
 		mountDest := mountInfo[1]
-		if strings.Contains(mountDest, "alice") {
+		if strings.Contains(mountDest, "testuser") {
 			mountOpts = mountInfo[3]
 		}
 	}
