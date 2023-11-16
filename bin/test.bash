@@ -14,6 +14,12 @@ if ! grep securityfs /proc/self/mounts > /dev/null 2>&1 ; then
 fi
 apparmor_parser -r ../../jobs/garden/templates/config/garden-default
 
+export GARDEN_TEST_ROOTFS=/tmp/garden-runc-release-test-rootfs.tar
+export GARDEN_FUSE_TEST_ROOTFS=/tmp/garden-runc-release-fuse-test-rootfs.tar
+
+tar cpf $GARDEN_TEST_ROOTFS -C "$GARDEN_TEST_ROOTFS_FILES" .
+tar cpf $GARDEN_FUSE_TEST_ROOTFS_FILES -C "$GARDEN_FUSE_TEST_ROOTFS_FILES" .
+
 # shellcheck disable=SC2068
 # Double-quoting array expansion here causes ginkgo to fail
 #runc
