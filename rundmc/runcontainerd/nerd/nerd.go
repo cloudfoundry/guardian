@@ -1,3 +1,5 @@
+//go:build !windows
+
 package nerd
 
 import (
@@ -6,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strconv"
 	"strings"
 	"syscall"
@@ -278,7 +279,7 @@ func orDiscard(w io.Writer) io.Writer {
 	if w != nil {
 		return w
 	}
-	return ioutil.Discard
+	return io.Discard
 }
 
 func (n *Nerd) GetContainerPID(log lager.Logger, containerID string) (uint32, error) {
