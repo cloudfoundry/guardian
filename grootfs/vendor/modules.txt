@@ -3,7 +3,7 @@
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20231114181828-fe49efbe1fd5 => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20231204161721-7b3e0acf52eb => ../idmapper
 ## explicit; go 1.18
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.0.2
@@ -141,7 +141,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20231101202521-4ca4178f5c7a
+# github.com/google/pprof v0.0.0-20231205033806-a5a03c77bf08
 ## explicit; go 1.19
 github.com/google/pprof/profile
 # github.com/gorilla/mux v1.8.1
@@ -156,7 +156,7 @@ github.com/hashicorp/go-multierror
 # github.com/json-iterator/go v1.1.12
 ## explicit; go 1.12
 github.com/json-iterator/go
-# github.com/klauspost/compress v1.17.3
+# github.com/klauspost/compress v1.17.4
 ## explicit; go 1.19
 github.com/klauspost/compress
 github.com/klauspost/compress/flate
@@ -183,7 +183,7 @@ github.com/modern-go/reflect2
 # github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 ## explicit
 github.com/nu7hatch/gouuid
-# github.com/onsi/ginkgo/v2 v2.13.1
+# github.com/onsi/ginkgo/v2 v2.13.2
 ## explicit; go 1.18
 github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config
@@ -257,7 +257,7 @@ github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/hash
 github.com/ulikunitz/xz/internal/xlog
 github.com/ulikunitz/xz/lzma
-# github.com/urfave/cli/v2 v2.25.7
+# github.com/urfave/cli/v2 v2.26.0
 ## explicit; go 1.18
 github.com/urfave/cli/v2
 # github.com/vbatts/tar-split v0.11.5
