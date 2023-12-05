@@ -1,3 +1,4 @@
+//go:build linux && cgo
 // +build linux,cgo
 
 // This code was copied from https://github.com/docker/docker/blob/v1.13.1/daemon/graphdriver/quota/projectquota.go
