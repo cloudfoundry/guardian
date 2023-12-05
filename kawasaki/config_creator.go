@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	maxInterfacePrefixLen = 2
+	maxInterfacePrefixLen = 3 //Allow at least 2-Character for tag, since t will always starts with "w"
 	maxChainPrefixLen     = 16
 	maxAllowedMtuSize     = 1500
 )

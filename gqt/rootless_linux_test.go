@@ -64,10 +64,10 @@ var _ = Describe("rootless containers", func() {
 		runCommand(exec.Command("tar", "xf", defaultTestRootFS, "-C", imagePath))
 		Expect(exec.Command("chown", "-R", fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedGID), runcRootDir).Run()).To(Succeed())
 		Expect(exec.Command("chown", "-R", fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedGID), tmpDir).Run()).To(Succeed())
-		// The 'alice' user in the GARDEN_TEST_ROOTFS has a UID of 1000
+		// The 'testuser' user in the GARDEN_TEST_ROOTFS has a UID of 1000
 		// The tests below use a uid range of 100000 -> 165536
 		// 100000 + (1000 - 1) = 100999 (-1 because we map from 0)
-		runCommand(exec.Command("chown", "-R", "100999:100999", filepath.Join(imagePath, "home", "alice")))
+		runCommand(exec.Command("chown", "-R", "100999:100999", filepath.Join(imagePath, "home", "testuser")))
 
 		config = resetImagePluginConfig()
 		config.ImagePluginBin = binaries.ImagePlugin
@@ -116,7 +116,7 @@ var _ = Describe("rootless containers", func() {
 			var stdout bytes.Buffer
 			process, err := container.Run(garden.ProcessSpec{
 				Path: "stat",
-				Args: []string{"-c", "%U:%G", "/home/alice"},
+				Args: []string{"-c", "%U:%G", "/home/testuser"},
 			}, garden.ProcessIO{
 				Stdout: io.MultiWriter(&stdout, GinkgoWriter),
 				Stderr: GinkgoWriter,
@@ -124,7 +124,7 @@ var _ = Describe("rootless containers", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(process.Wait()).To(Equal(0))
 
-			Expect(stdout.String()).To(ContainSubstring("alice:alice"))
+			Expect(stdout.String()).To(ContainSubstring("testuser:testuser"))
 		})
 
 		// Runc validates that no mount points in rootless containers have non-zero

@@ -180,29 +180,29 @@ var _ = Describe("UnixEnvFor", func() {
 				[]string{"a=1", "APATH=foo", "PATHB=bar", "PATHINYOURPATH=yodawg", "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "USER=root"},
 			),
 			Entry(
-				"for a non-root user", "alice", 1000,
+				"for a non-root user", "testuser", 1000,
 				[]string{"a=1"},
-				[]string{"a=1", "PATH=/usr/local/bin:/usr/bin:/bin", "USER=alice"},
+				[]string{"a=1", "PATH=/usr/local/bin:/usr/bin:/bin", "USER=testuser"},
 			),
 			Entry(
-				"for a non-root user, and an env var matching the string .*PATH", "alice", 1000,
+				"for a non-root user, and an env var matching the string .*PATH", "testuser", 1000,
 				[]string{"a=1", "APATH=foo"},
-				[]string{"a=1", "APATH=foo", "PATH=/usr/local/bin:/usr/bin:/bin", "USER=alice"},
+				[]string{"a=1", "APATH=foo", "PATH=/usr/local/bin:/usr/bin:/bin", "USER=testuser"},
 			),
 			Entry(
-				"for a non-root user, and an env var matching the string PATH.*", "alice", 1000,
+				"for a non-root user, and an env var matching the string PATH.*", "testuser", 1000,
 				[]string{"a=1", "PATHA=bar"},
-				[]string{"a=1", "PATHA=bar", "PATH=/usr/local/bin:/usr/bin:/bin", "USER=alice"},
+				[]string{"a=1", "PATHA=bar", "PATH=/usr/local/bin:/usr/bin:/bin", "USER=testuser"},
 			),
 			Entry(
-				"for a non-root user, and an env var matching the string .*PATH.*", "alice", 1000,
+				"for a non-root user, and an env var matching the string .*PATH.*", "testuser", 1000,
 				[]string{"a=1", "APATHB=baz"},
-				[]string{"a=1", "APATHB=baz", "PATH=/usr/local/bin:/usr/bin:/bin", "USER=alice"},
+				[]string{"a=1", "APATHB=baz", "PATH=/usr/local/bin:/usr/bin:/bin", "USER=testuser"},
 			),
 			Entry(
-				"for a non-root user, and many env vars matching the string .*PATH.*", "alice", 1000,
+				"for a non-root user, and many env vars matching the string .*PATH.*", "testuser", 1000,
 				[]string{"a=1", "APATH=foo", "PATHB=bar", "PATHINYOURPATH=yodawg"},
-				[]string{"a=1", "APATH=foo", "PATHB=bar", "PATHINYOURPATH=yodawg", "PATH=/usr/local/bin:/usr/bin:/bin", "USER=alice"},
+				[]string{"a=1", "APATH=foo", "PATHB=bar", "PATHINYOURPATH=yodawg", "PATH=/usr/local/bin:/usr/bin:/bin", "USER=testuser"},
 			),
 		)
 	})

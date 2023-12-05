@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -164,7 +163,7 @@ var _ = Describe("Image Plugin", func() {
 				BeforeEach(func() {
 					mountedDir = tempDir("", "bind-mount")
 					Expect(os.Chmod(mountedDir, 0777)).To(Succeed())
-					Expect(ioutil.WriteFile(filepath.Join(mountedDir, fileName), []byte(fileContent), 0644)).To(Succeed())
+					Expect(os.WriteFile(filepath.Join(mountedDir, fileName), []byte(fileContent), 0644)).To(Succeed())
 
 					mounts := []specs.Mount{
 						{

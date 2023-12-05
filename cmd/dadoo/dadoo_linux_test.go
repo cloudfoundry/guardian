@@ -37,7 +37,7 @@ var _ = Describe("Dadoo", func() {
 
 	BeforeEach(func() {
 		var err error
-		bundlePath, err = ioutil.TempDir("", "dadoobundlepath")
+		bundlePath, err = os.MkdirTemp("/tmp", "dadoo-bundle-path-")
 		Expect(err).NotTo(HaveOccurred())
 
 		runcRoot = ""

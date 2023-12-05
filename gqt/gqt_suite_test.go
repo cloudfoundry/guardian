@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -155,6 +154,7 @@ func TestGqt(t *testing.T) {
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {
+	fmt.Printf("Running with containerd=%t containerd-for-process=%t cpu-throttling=%t\n", isContainerd(), isContainerdForProcesses(), cpuThrottlingEnabled())
 	binaries := runnerBinaries{
 		Garden: getGardenBinaries(),
 	}
@@ -173,6 +173,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	jsonUnmarshal(data, bins)
 	binaries = bins.Garden
 	defaultTestRootFS = os.Getenv("GARDEN_TEST_ROOTFS")
+	Expect(defaultTestRootFS).ToNot(BeEmpty())
 })
 
 var _ = SynchronizedAfterSuite(func() {}, func() {
@@ -215,7 +216,7 @@ func terminateContainerd() {
 
 func getGardenBinaries() runner.Binaries {
 	gardenBinaries := runner.Binaries{
-		Tar:           os.Getenv("GARDEN_TAR_PATH"),
+		Tar:           os.Getenv("TAR_BINARY"),
 		Gdn:           CompileGdn(),
 		NetworkPlugin: goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_network_plugin"),
 		ImagePlugin:   goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_image_plugin"),
@@ -228,31 +229,16 @@ func getGardenBinaries() runner.Binaries {
 	Expect(copyFile(gardenBinaries.ImagePlugin, gardenBinaries.PrivilegedImagePlugin)).To(Succeed())
 
 	if runtime.GOOS == "linux" {
-		gardenBinaries.ExecRunner = goCompile("code.cloudfoundry.org/guardian/cmd/dadoo")
-		gardenBinaries.Socket2me = goCompile("code.cloudfoundry.org/guardian/cmd/socket2me")
-		gardenBinaries.FakeRuncStderr = goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc_stderr")
-
-		cmd := exec.Command("make")
-		runCommandInDir(cmd, "../rundmc/nstar")
-		gardenBinaries.NSTar = "../rundmc/nstar/nstar"
-
-		cmd = exec.Command("gcc", "-static", "-o", "init", "init.c", "ignore_sigchild.c")
-		runCommandInDir(cmd, "../cmd/init")
-		gardenBinaries.Init = "../cmd/init/init"
-
-		gardenBinaries.Groot = findInGoPathBin("grootfs")
-		gardenBinaries.Tardis = findInGoPathBin("tardis")
+		gardenBinaries.ExecRunner = os.Getenv("DADOO_BINARY")
+		gardenBinaries.Socket2me = os.Getenv("SOCKET2ME_BINARY")
+		gardenBinaries.FakeRuncStderr = os.Getenv("FAKE_RUNC_STDERR_BINARY")
+		gardenBinaries.NSTar = os.Getenv("NSTAR_BINARY")
+		gardenBinaries.Init = os.Getenv("INIT_BINARY")
+		gardenBinaries.Groot = os.Getenv("GROOTFS_BINARY")
+		gardenBinaries.Tardis = os.Getenv("GROOTFS_TARDIS_BINARY")
 	}
 
 	return gardenBinaries
-}
-
-func findInGoPathBin(binary string) string {
-	binariesPath, ok := os.LookupEnv("BINARIES")
-	Expect(ok).To(BeTrue(), "BINARIES must be set")
-	binPath := filepath.Join(binariesPath, binary)
-	Expect(binPath).To(BeAnExistingFile(), fmt.Sprintf("%s does not exist", binPath))
-	return binPath
 }
 
 func CompileGdn(additionalCompileArgs ...string) string {
@@ -353,7 +339,7 @@ func idToStr(id uint32) string {
 }
 
 func readFile(path string) []byte {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	Expect(err).NotTo(HaveOccurred())
 	return content
 }
@@ -363,13 +349,13 @@ func readFileString(path string) string {
 }
 
 func tempDir(dir, prefix string) string {
-	path, err := ioutil.TempDir(dir, prefix)
+	path, err := os.MkdirTemp(dir, prefix)
 	Expect(err).NotTo(HaveOccurred())
 	return path
 }
 
 func tempFile(dir, prefix string) *os.File {
-	f, err := ioutil.TempFile(dir, prefix)
+	f, err := os.CreateTemp(dir, prefix)
 	Expect(err).NotTo(HaveOccurred())
 	return f
 }
@@ -414,7 +400,7 @@ func removeSocket() {
 func createPeaRootfs() string {
 	return createRootfs(func(root string) {
 		Expect(exec.Command("chown", "-R", "4294967294:4294967294", root).Run()).To(Succeed())
-		Expect(ioutil.WriteFile(filepath.Join(root, "ima-pea"), []byte("pea!"), 0644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(root, "ima-pea"), []byte("pea!"), 0644)).To(Succeed())
 	}, 0777)
 }
 
@@ -579,13 +565,13 @@ func runInContainerCombinedOutput(container garden.Container, path string, args 
 }
 
 func listCgroups(pid string) string {
-	cgroups, err := ioutil.ReadFile(filepath.Join("/proc", pid, "cgroup"))
+	cgroups, err := os.ReadFile(filepath.Join("/proc", pid, "cgroup"))
 	Expect(err).NotTo(HaveOccurred())
 	return string(cgroups)
 }
 
 func getRuncContainerPID(handle string) string {
-	pidBytes, err := ioutil.ReadFile(filepath.Join(config.DepotDir, handle, "pidfile"))
+	pidBytes, err := os.ReadFile(filepath.Join(config.DepotDir, handle, "pidfile"))
 	Expect(err).NotTo(HaveOccurred())
 	return string(pidBytes)
 }
@@ -616,7 +602,7 @@ func listPidsInCgroup(cgroupPath string) string {
 }
 
 func getCmdLine(pid string) string {
-	cmdBytes, err := ioutil.ReadFile(filepath.Join("/proc", pid, "cmdline"))
+	cmdBytes, err := os.ReadFile(filepath.Join("/proc", pid, "cmdline"))
 	Expect(err).NotTo(HaveOccurred())
 	return string(cmdBytes)
 }

@@ -256,11 +256,11 @@ var _ = Describe("Run", func() {
 		BeforeEach(func() {
 			containerSpec.Privileged = true
 			processSpec = makeSpec("whoami")
-			processSpec.User = "alice"
+			processSpec.User = "testuser"
 		})
 
 		It("can run a process as a particular user", func() {
-			Expect(out).To(gbytes.Say("alice"))
+			Expect(out).To(gbytes.Say("testuser"))
 		})
 	})
 
@@ -275,7 +275,7 @@ var _ = Describe("Run", func() {
 
 		Context("for a non-root user", func() {
 			BeforeEach(func() {
-				processSpec.User = "alice"
+				processSpec.User = "testuser"
 			})
 
 			It("does not include the `sbin` folders", func() {
@@ -308,18 +308,18 @@ var _ = Describe("Run", func() {
 		Context("when the USER env var is not set in the container spec", func() {
 			BeforeEach(func() {
 				containerSpec.Env = []string{}
-				processSpec.User = "alice"
+				processSpec.User = "testuser"
 			})
 
 			It("sets the value using the process spec user", func() {
-				Expect(out).To(gbytes.Say("USER=alice"))
-				Expect(out).To(gbytes.Say("HOME=/home/alice"))
+				Expect(out).To(gbytes.Say("USER=testuser"))
+				Expect(out).To(gbytes.Say("HOME=/home/testuser"))
 			})
 		})
 
 		Context("when the user is set in the process spec", func() {
 			BeforeEach(func() {
-				processSpec.User = "alice"
+				processSpec.User = "testuser"
 			})
 
 			It("maintains the value from the container spec", func() {
@@ -330,18 +330,18 @@ var _ = Describe("Run", func() {
 
 		Context("when the USER env var is set in the process spec", func() {
 			BeforeEach(func() {
-				processSpec.Env = []string{"USER=alice"}
+				processSpec.Env = []string{"USER=testuser"}
 			})
 
 			It("gets overridden", func() {
-				Expect(out).To(gbytes.Say("USER=alice"))
+				Expect(out).To(gbytes.Say("USER=testuser"))
 				Expect(out).To(gbytes.Say("HOME=/home/ppp"))
 			})
 		})
 
 		Context("when both the user and the USER env var are set in the process spec", func() {
 			BeforeEach(func() {
-				processSpec.User = "alice"
+				processSpec.User = "testuser"
 				processSpec.Env = []string{"USER=bob"}
 			})
 
@@ -353,7 +353,7 @@ var _ = Describe("Run", func() {
 
 		Context("when there is an env var containing `USER` in the name", func() {
 			BeforeEach(func() {
-				processSpec.Env = []string{"NOT_USER=alice"}
+				processSpec.Env = []string{"NOT_USER=testuser"}
 			})
 
 			It("is not affected", func() {

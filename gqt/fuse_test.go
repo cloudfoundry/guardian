@@ -20,7 +20,7 @@ var _ = Describe("Fuse", func() {
 	BeforeEach(func() {
 		fuseRootfs := os.Getenv("GARDEN_FUSE_TEST_ROOTFS")
 		if fuseRootfs == "" {
-			Skip("GARDEN_FUSE_TEST_ROOTFS not defined, skipping")
+			Fail("Missing GARDEN_FUSE_TEST_ROOTFS environment variable")
 		}
 
 		var err error

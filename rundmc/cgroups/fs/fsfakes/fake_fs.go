@@ -48,15 +48,16 @@ func (fake *FakeFS) Chown(arg1 string, arg2 int, arg3 int) error {
 		arg2 int
 		arg3 int
 	}{arg1, arg2, arg3})
+	stub := fake.ChownStub
+	fakeReturns := fake.chownReturns
 	fake.recordInvocation("Chown", []interface{}{arg1, arg2, arg3})
 	fake.chownMutex.Unlock()
-	if fake.ChownStub != nil {
-		return fake.ChownStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.chownReturns
 	return fakeReturns.result1
 }
 
@@ -112,15 +113,16 @@ func (fake *FakeFS) Mount(arg1 string, arg2 string, arg3 string, arg4 uintptr, a
 		arg4 uintptr
 		arg5 string
 	}{arg1, arg2, arg3, arg4, arg5})
+	stub := fake.MountStub
+	fakeReturns := fake.mountReturns
 	fake.recordInvocation("Mount", []interface{}{arg1, arg2, arg3, arg4, arg5})
 	fake.mountMutex.Unlock()
-	if fake.MountStub != nil {
-		return fake.MountStub(arg1, arg2, arg3, arg4, arg5)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.mountReturns
 	return fakeReturns.result1
 }
 
