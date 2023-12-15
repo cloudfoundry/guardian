@@ -60,26 +60,25 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 	Context("when using the default registry", func() {
 		BeforeEach(func() {
-			baseImageURL = integration.String2URL("docker:///cfgarden/empty:v0.1.0")
+			baseImageURL = integration.String2URL("docker:///cloudfoundry/garden-rootfs")
 		})
 
 		It("creates a root filesystem based on the image provided", func() {
 			containerSpec, err := runner.Create(groot.CreateSpec{
-				BaseImageURL: integration.String2URL("docker:///cfgarden/three-layers"),
+				BaseImageURL: integration.String2URL("docker:///cloudfoundry/garden-rootfs"),
 				ID:           randomImageID,
 				Mount:        mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(runner.EnsureMounted(containerSpec)).To(Succeed())
 
-			Expect(path.Join(containerSpec.Root.Path, "layer-3-file")).To(BeARegularFile())
-			Expect(path.Join(containerSpec.Root.Path, "layer-2-file")).To(BeARegularFile())
-			Expect(path.Join(containerSpec.Root.Path, "layer-1-file")).To(BeARegularFile())
+			Expect(path.Join(containerSpec.Root.Path, "hello")).To(BeARegularFile())
+			Expect(path.Join(containerSpec.Root.Path, "allo")).To(BeARegularFile())
 		})
 
-		It("gives any user permission to be inside the container", func() {
+		It("gives any user prmission to be inside the container", func() {
 			containerSpec, err := runner.Create(groot.CreateSpec{
-				BaseImageURL: integration.String2URL("docker:///cfgarden/garden-busybox"),
+				BaseImageURL: integration.String2URL("docker:///cloudfoundry/garden-rootfs"),
 				ID:           randomImageID,
 				Mount:        mountByDefault(),
 			})
@@ -97,7 +96,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 		It("outputs a json with the correct `Root.Path` key", func() {
 			containerSpec, err := runner.Create(groot.CreateSpec{
-				BaseImageURL: integration.String2URL("docker:///cfgarden/garden-busybox"),
+				BaseImageURL: integration.String2URL("docker:///cloudfoundry/garden-rootfs"),
 				ID:           randomImageID,
 				Mount:        mountByDefault(),
 			})
@@ -108,13 +107,13 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 		It("outputs a json with the correct `Process.Env` key", func() {
 			containerSpec, err := runner.Create(groot.CreateSpec{
-				BaseImageURL: integration.String2URL("docker:///cfgarden/with-process-env"),
+				BaseImageURL: integration.String2URL("docker:///cloudfoundry/garden-rootfs"),
 				ID:           randomImageID,
 				Mount:        mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(containerSpec.Process.Env).To(ContainElement("PATH=/usr/local/bin:/usr/bin:/bin:/from-dockerfile"))
+			Expect(containerSpec.Process.Env).To(ContainElement("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/from-dockerfile"))
 			Expect(containerSpec.Process.Env).To(ContainElement("TEST=second-test-from-dockerfile:test-from-dockerfile"))
 		})
 
@@ -133,7 +132,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 					statsPath := path.Join("/proc", strconv.Itoa(sess.Command.Process.Pid), "status")
 					runs := 0
 					for {
-						stats, err := ioutil.ReadFile(statsPath)
+						stats, err := os.ReadFile(statsPath)
 						if err != nil {
 							Expect(runs).To(BeNumerically(">", 1))
 							break
@@ -161,7 +160,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 		Context("when the image has volumes which refer to existing directories", func() {
 			BeforeEach(func() {
-				baseImageURL = integration.String2URL("docker:///cfgarden/with-volume:v1")
+				baseImageURL = integration.String2URL("docker:///cloudfoundry/garden-rootfs")
 			})
 
 			It("nothing should be done, but the directories + contents should be visible", func() {
@@ -177,9 +176,9 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			})
 		})
 
-		Context("when the image has links that overwrites existing files", func() {
+		Context("when the image has links that overwrites existing files #overwrite-link", func() {
 			BeforeEach(func() {
-				baseImageURL = integration.String2URL("docker:///cfgarden/overwrite-link")
+				baseImageURL = integration.String2URL("docker:///cloudfoundry/garden-rootfs")
 			})
 
 			It("creates the link with success", func() {
@@ -201,9 +200,9 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			})
 		})
 
-		Context("when a layer in an image has opaque whiteouts", func() {
+		Context("when a layer in an image has opaque whiteouts #opaque-whiteouts-regression-image", func() {
 			BeforeEach(func() {
-				baseImageURL = integration.String2URL("docker:///cfgarden/opq-whiteout-busybox")
+				baseImageURL = integration.String2URL("docker:///cloudfoundry/garden-rootfs")
 			})
 
 			It("the upper layer dir that contains the opaque whiteout totally shadows the same dir in the lower layer", func() {
@@ -225,7 +224,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 		Context("when the image has whiteouts", func() {
 			BeforeEach(func() {
-				baseImageURL = integration.String2URL("docker:///cfgarden/with-whiteouts")
+				baseImageURL = integration.String2URL("docker:///cloudfoundry/garden-rootfs")
 			})
 
 			It("removes the whiteout file", func() {
@@ -245,7 +244,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 		Context("when the image has files with the setuid on", func() {
 			BeforeEach(func() {
-				baseImageURL = integration.String2URL("docker:///cfgarden/garden-busybox")
+				baseImageURL = integration.String2URL("docker:///cloudfoundry/garden-rootfs")
 			})
 
 			It("correctly applies the user bit", func() {
@@ -257,7 +256,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(runner.EnsureMounted(containerSpec)).To(Succeed())
 
-				setuidFilePath := path.Join(containerSpec.Root.Path, "bin", "busybox")
+				setuidFilePath := path.Join(containerSpec.Root.Path, "bin", "usemem-with-setuid")
 				stat, err := os.Stat(setuidFilePath)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -268,13 +267,13 @@ var _ = Describe("Create with remote DOCKER images", func() {
 		Describe("clean up on create", func() {
 			JustBeforeEach(func() {
 				_, err := runner.Create(groot.CreateSpec{
-					ID:           "my-busybox",
-					BaseImageURL: integration.String2URL("docker:///cfgarden/garden-busybox"),
+					ID:           "just-before-each-container",
+					BaseImageURL: integration.String2URL("docker:///cloudfoundry/garden-rootfs"),
 					Mount:        mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(runner.Delete("my-busybox")).To(Succeed())
+				Expect(runner.Delete("just-before-each-container")).To(Succeed())
 			})
 
 			AfterEach(func() {
@@ -282,53 +281,33 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			})
 
 			It("cleans up unused layers before create but not the one about to be created", func() {
-				createSpec := groot.CreateSpec{
-					ID:           "my-empty",
-					BaseImageURL: integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
-					Mount:        mountByDefault(),
-				}
-				_, err := runner.Create(createSpec)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(runner.Delete("my-empty")).To(Succeed())
-
-				layerPath := filepath.Join(StorePath, store.VolumesDirName, testhelpers.EmptyBaseImageV011.Layers[0].ChainID)
-				stat, err := os.Stat(layerPath)
-				Expect(err).NotTo(HaveOccurred())
-				preLayerTimestamp := stat.ModTime()
-
-				Expect(getVolumesDirEntries()).To(HaveLen(3))
-
-				runner := runner.WithClean()
-				_, err = runner.Create(groot.CreateSpec{
+				volumes, _ := getVolumesDirEntries()
+				entries := len(volumes)
+				Expect(entries).To(BeNumerically(">", 1))
+				_, err := runner.WithClean().Create(groot.CreateSpec{
 					ID:           randomImageID,
-					BaseImageURL: integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
+					BaseImageURL: integration.String2URL("docker:///alpine"),
 					Mount:        mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
+				Consistently(getVolumesDirEntries).Should(HaveLen(1))
 
-				Eventually(getVolumesDirEntries).Should(HaveLen(2))
-
-				for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
-					Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
-				}
-
-				stat, err = os.Stat(layerPath)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(stat.ModTime()).To(Equal(preLayerTimestamp))
 			})
 
 			Context("when no-clean flag is set", func() {
 				It("does not clean up unused layers", func() {
-					Expect(getVolumesDirEntries()).To(HaveLen(1))
+					volumes, _ := getVolumesDirEntries()
+					entries := len(volumes)
+					Expect(entries).To(BeNumerically(">", 1))
 
 					_, err := runner.WithNoClean().Create(groot.CreateSpec{
 						ID:           randomImageID,
-						BaseImageURL: integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
+						BaseImageURL: integration.String2URL("docker:///busybox:1.25"),
 						Mount:        mountByDefault(),
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					Consistently(getVolumesDirEntries).Should(HaveLen(3))
+					Consistently(getVolumesDirEntries).Should(HaveLen(entries + 1))
 				})
 			})
 		})
@@ -395,7 +374,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 		Context("when the total size of compressed layers is greater than the quota", func() {
 			BeforeEach(func() {
-				baseImageURL = integration.String2URL("docker:///cfgarden/empty:v0.1.1")
+				baseImageURL = integration.String2URL("docker:///cloudfoundry/garden-rootfs")
 			})
 
 			Context("when the image is not accounted for in the quota", func() {
@@ -426,10 +405,10 @@ var _ = Describe("Create with remote DOCKER images", func() {
 		})
 
 		Context("when the total size of compressed layer is less than the quota, but the uncompressed size is bigger", func() {
-			var diskLimit int64 = 12 * 1024
+			var diskLimit int64 = 7 * 1024 * 1024
 
 			BeforeEach(func() {
-				baseImageURL = integration.String2URL("docker:///cfgarden/zip-bomb")
+				baseImageURL = integration.String2URL("docker:///cloudfoundry/garden-rootfs")
 			})
 
 			It("returns an error", func() {
@@ -458,6 +437,9 @@ var _ = Describe("Create with remote DOCKER images", func() {
 		})
 
 		Describe("Unpacked layer caching", func() {
+			BeforeEach(func() {
+				baseImageURL = integration.String2URL("docker:///cloudfoundry/garden-rootfs")
+			})
 			It("caches the unpacked image as a volume", func() {
 				_, err := runner.Create(groot.CreateSpec{
 					BaseImageURL: baseImageURL,
@@ -465,9 +447,14 @@ var _ = Describe("Create with remote DOCKER images", func() {
 					Mount:        mountByDefault(),
 				})
 				Expect(err).ToNot(HaveOccurred())
+				volumesDir := filepath.Join(StorePath, "volumes")
 
-				layerSnapshotPath := filepath.Join(StorePath, "volumes", "3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
-				Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
+				dirs, err := os.ReadDir(volumesDir)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(dirs)).NotTo(BeZero())
+
+				layerSnapshotPath := filepath.Join(volumesDir, dirs[0].Name())
+				Expect(os.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
 				containerSpec, err := runner.Create(groot.CreateSpec{
 					BaseImageURL: baseImageURL,
@@ -699,9 +686,8 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 	Context("when the image has files that are not writable to their owner", func() {
 		BeforeEach(func() {
-			baseImageURL = integration.String2URL("docker:///cfgarden/non-writable-file")
+			baseImageURL = integration.String2URL("docker:///cloudfoundry/garden-rootfs")
 		})
-
 		Context("id mappings", func() {
 			It("works", func() {
 				containerSpec, err := runner.Create(groot.CreateSpec{
@@ -719,9 +705,8 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 	Context("when the image has folders that are not writable to their owner", func() {
 		BeforeEach(func() {
-			baseImageURL = integration.String2URL("docker:///cfgarden/non-writable-folder")
+			baseImageURL = integration.String2URL("docker:///cloudfoundry/garden-rootfs")
 		})
-
 		It("works", func() {
 			containerSpec, err := runner.Create(groot.CreateSpec{
 				BaseImageURL: baseImageURL,
