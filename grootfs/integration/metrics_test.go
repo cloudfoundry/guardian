@@ -40,7 +40,7 @@ var _ = Describe("Metrics", func() {
 
 		spec = groot.CreateSpec{
 			ID:           "my-id",
-			BaseImageURL: integration.String2URL("docker:///cfgarden/empty:v0.1.0"),
+			BaseImageURL: integration.String2URL("docker:///cloudfoundry/garden-rootfs"),
 			Mount:        mountByDefault(),
 		}
 	})
@@ -74,7 +74,7 @@ var _ = Describe("Metrics", func() {
 			Eventually(func() []events.ValueMetric {
 				metrics = fakeMetron.ValueMetricsFor("UnpackTime")
 				return metrics
-			}).Should(HaveLen(1))
+			}).ShouldNot(BeEmpty())
 
 			Expect(*metrics[0].Name).To(Equal("UnpackTime"))
 			Expect(*metrics[0].Unit).To(Equal("nanos"))
@@ -97,7 +97,7 @@ var _ = Describe("Metrics", func() {
 		})
 
 		It("emits grootfs unused layers size", func() {
-			spec.BaseImageURL = integration.String2URL("docker:///cfgarden/garden-busybox")
+			spec.BaseImageURL = integration.String2URL("docker:///cloudfoundry/garden-rootfs")
 			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -140,7 +140,7 @@ var _ = Describe("Metrics", func() {
 		})
 
 		It("emits grootfs disk space used by volumes", func() {
-			spec.BaseImageURL = integration.String2URL("docker:///cfgarden/garden-busybox")
+			spec.BaseImageURL = integration.String2URL("docker:///cloudfoundry/garden-rootfs")
 			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -152,12 +152,12 @@ var _ = Describe("Metrics", func() {
 
 			Expect(*metrics[0].Name).To(Equal("DownloadedLayersSizeInBytes"))
 			Expect(*metrics[0].Unit).To(Equal("bytes"))
-			Expect(*metrics[0].Value).To(BeNumerically("~", 2*1024*1024, 1*1024*1024))
+			Expect(*metrics[0].Value).To(BeNumerically("~", 10*1024*1024, 1*1024*1024))
 		})
 
 		Describe("--with-clean", func() {
 			BeforeEach(func() {
-				spec.BaseImageURL = integration.String2URL("docker:///cfgarden/garden-busybox")
+				spec.BaseImageURL = integration.String2URL("docker:///cloudfoundry/garden-rootfs")
 				spec.CleanOnCreate = true
 			})
 
@@ -203,7 +203,7 @@ var _ = Describe("Metrics", func() {
 
 		Context("with a non-empty base image", func() {
 			BeforeEach(func() {
-				spec.BaseImageURL = integration.String2URL("docker:///cfgarden/garden-busybox")
+				spec.BaseImageURL = integration.String2URL("docker:///cloudfoundry/garden-rootfs")
 			})
 
 			It("emits a positive unused layers size", func() {

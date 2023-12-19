@@ -76,7 +76,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			Expect(path.Join(containerSpec.Root.Path, "allo")).To(BeARegularFile())
 		})
 
-		It("gives any user prmission to be inside the container", func() {
+		It("gives any user permission to be inside the container", func() {
 			containerSpec, err := runner.Create(groot.CreateSpec{
 				BaseImageURL: integration.String2URL("docker:///cloudfoundry/garden-rootfs"),
 				ID:           randomImageID,
