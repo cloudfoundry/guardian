@@ -190,6 +190,7 @@ var _ = Describe("Run", func() {
 				})).To(Succeed())
 
 				processSpec.Args = []string{"-c", "ulimit -a"}
+				processSpec.Image = garden.ImageRef{URI: "docker://busybox"}
 				limit := uint64(100001)
 				processSpec.Limits = garden.ResourceLimits{
 					Nofile: &limit,
