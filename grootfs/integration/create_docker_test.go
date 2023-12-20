@@ -113,7 +113,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(containerSpec.Process.Env).To(ContainElement("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/from-dockerfile"))
+			Expect(containerSpec.Process.Env).To(ContainElement("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/from-dockerfile"))
 			Expect(containerSpec.Process.Env).To(ContainElement("TEST=second-test-from-dockerfile:test-from-dockerfile"))
 		})
 
