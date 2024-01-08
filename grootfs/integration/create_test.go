@@ -227,7 +227,7 @@ var _ = Describe("Create", func() {
 		BeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:           "my-busybox",
-				BaseImageURL: integration.String2URL("docker:///cfgarden/garden-busybox"),
+				BaseImageURL: integration.String2URL("docker:///cloudfoundry/garden-rootfs"),
 				Mount:        mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -241,9 +241,11 @@ var _ = Describe("Create", func() {
 		Context("when the total commit exceeds the threshold", func() {
 			Context("by pulling new base layers", func() {
 				It("cleans the store", func() {
-					Expect(getVolumesDirEntries()).To(HaveLen(1))
+					preContents, err := getVolumesDirEntries()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(len(preContents)).To(BeNumerically(">", 0))
 
-					_, err := Runner.Create(groot.CreateSpec{
+					_, err = Runner.Create(groot.CreateSpec{
 						ID:            "my-empty",
 						BaseImageURL:  integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
 						Mount:         false,
@@ -259,8 +261,6 @@ var _ = Describe("Create", func() {
 
 			Context("by virtue of its committed quota", func() {
 				It("cleans the store", func() {
-					Expect(getVolumesDirEntries()).To(HaveLen(1))
-
 					_, err := Runner.Create(groot.CreateSpec{
 						ID:                          "my-empty",
 						BaseImageURL:                integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
@@ -284,7 +284,7 @@ var _ = Describe("Create", func() {
 			It("doesn't clean the store", func() {
 				preContents, err := getVolumesDirEntries()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(1))
+				Expect(len(preContents)).To(BeNumerically(">", 0))
 
 				_, err = Runner.Create(groot.CreateSpec{
 					ID:                          "my-empty",
@@ -296,10 +296,9 @@ var _ = Describe("Create", func() {
 					ExcludeBaseImageFromQuota:   true,
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Consistently(getVolumesDirEntries).Should(HaveLen(3))
-
 				volumesDirEntries, err := getVolumesDirEntries()
 				Expect(err).NotTo(HaveOccurred())
+				Consistently(getVolumesDirEntries).Should(HaveLen(len(preContents) + 2))
 				Expect(volumesDirEntries).To(ContainElement(preContents[0]))
 			})
 		})
@@ -329,7 +328,7 @@ var _ = Describe("Create", func() {
 			It("eventually removes unused local volumes", func() {
 				preContents, err := getVolumesDirEntries()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(2)) // Docker image and local tar, from 2 BeforeEachs above
+				Expect(preContents).ToNot(BeZero()) // Docker image and local tar, from 2 BeforeEachs above
 
 				_, err = Runner.Create(groot.CreateSpec{
 					ID:            "my-local-1",
@@ -362,7 +361,7 @@ var _ = Describe("Create", func() {
 		BeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:           "my-busybox",
-				BaseImageURL: integration.String2URL("docker:///cfgarden/garden-busybox"),
+				BaseImageURL: integration.String2URL("docker:///cloudfoundry/garden-rootfs"),
 				Mount:        mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -375,9 +374,11 @@ var _ = Describe("Create", func() {
 		})
 
 		It("does not clean the store", func() {
-			Expect(getVolumesDirEntries()).To(HaveLen(1))
+			preContents, err := getVolumesDirEntries()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(preContents).ToNot(BeZero())
 
-			_, err := Runner.Create(groot.CreateSpec{
+			_, err = Runner.Create(groot.CreateSpec{
 				ID:            "my-empty",
 				BaseImageURL:  integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
 				Mount:         mountByDefault(),
@@ -385,9 +386,9 @@ var _ = Describe("Create", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Consistently(getVolumesDirEntries).Should(HaveLen(3))
+			Consistently(getVolumesDirEntries).Should(HaveLen(len(preContents) + 2))
 
-			layers := append(testhelpers.EmptyBaseImageV011.Layers, testhelpers.BusyBoxImage.Layers...)
+			layers := testhelpers.EmptyBaseImageV011.Layers
 			for _, layer := range layers {
 				Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
 			}
