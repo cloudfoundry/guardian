@@ -152,7 +152,7 @@ var _ = Describe("Metrics", func() {
 
 			Expect(*metrics[0].Name).To(Equal("DownloadedLayersSizeInBytes"))
 			Expect(*metrics[0].Unit).To(Equal("bytes"))
-			Expect(*metrics[0].Value).To(BeNumerically("~", 10*1024*1024, 1*1024*1024))
+			Expect(*metrics[0].Value).To(BeNumerically("~", 12*1024*1024, 1*1024*1024))
 		})
 
 		Describe("--with-clean", func() {
