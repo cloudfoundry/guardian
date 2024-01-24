@@ -1,5 +1,3 @@
-//go:build freebsd || netbsd
-
 package system // import "github.com/docker/docker/pkg/system"
 
 import "syscall"
@@ -12,6 +10,6 @@ func fromStatT(s *syscall.Stat_t) (*StatT, error) {
 		uid:  s.Uid,
 		gid:  s.Gid,
 		rdev: uint64(s.Rdev),
-		mtim: s.Mtimespec,
+		mtim: s.Mtim,
 	}, nil
 }
