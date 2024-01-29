@@ -3,7 +3,7 @@
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20240117130242-0b1ea13019ef => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20240124130220-c0ec250e7b60 => ../idmapper
 ## explicit; go 1.18
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.0.3
@@ -141,7 +141,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20240117000934-35fc243c5815
+# github.com/google/pprof v0.0.0-20240125082051-42cd04596328
 ## explicit; go 1.19
 github.com/google/pprof/profile
 # github.com/gorilla/mux v1.8.1
@@ -156,7 +156,7 @@ github.com/hashicorp/go-multierror
 # github.com/json-iterator/go v1.1.12
 ## explicit; go 1.12
 github.com/json-iterator/go
-# github.com/klauspost/compress v1.17.4
+# github.com/klauspost/compress v1.17.5
 ## explicit; go 1.19
 github.com/klauspost/compress
 github.com/klauspost/compress/flate
