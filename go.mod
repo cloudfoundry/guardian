@@ -1,8 +1,6 @@
 module code.cloudfoundry.org/guardian
 
-go 1.21.0
-
-toolchain go1.21.3
+go 1.21
 
 replace (
 	github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
@@ -13,6 +11,7 @@ replace (
 
 	// force otel back to 1.19 since 1.20 is incompatible with containerd  1.7.10
 	go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.19.0
+	go.opentelemetry.io/otel/metric => go.opentelemetry.io/otel/metric v1.19.0
 	go.opentelemetry.io/otel/trace => go.opentelemetry.io/otel/trace v1.19.0
 )
 
