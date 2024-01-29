@@ -1,4 +1,4 @@
-// Copyright 2016 The Linux Foundation
+// Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,21 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package specs
-
-import "fmt"
+package semconv // import "go.opentelemetry.io/otel/semconv/v1.20.0"
 
 const (
-	// VersionMajor is for an API incompatible changes
-	VersionMajor = 1
-	// VersionMinor is for functionality in a backwards-compatible manner
-	VersionMinor = 1
-	// VersionPatch is for backwards-compatible bug fixes
-	VersionPatch = 0
-
-	// VersionDev indicates development branch. Releases will be empty string.
-	VersionDev = "-rc.6"
+	// ExceptionEventName is the name of the Span event representing an exception.
+	ExceptionEventName = "exception"
 )
-
-// Version is the specification version that the package types support.
-var Version = fmt.Sprintf("%d.%d.%d%s", VersionMajor, VersionMinor, VersionPatch, VersionDev)
