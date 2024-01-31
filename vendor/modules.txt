@@ -160,14 +160,6 @@ github.com/cloudfoundry/gosigar/sys/windows
 # github.com/cloudfoundry/sonde-go v0.0.0-20231227232801-b682ba3cb37d
 ## explicit; go 1.17
 github.com/cloudfoundry/sonde-go/events
-# github.com/container-orchestrated-devices/container-device-interface v0.6.1
-## explicit; go 1.17
-github.com/container-orchestrated-devices/container-device-interface/internal/multierror
-github.com/container-orchestrated-devices/container-device-interface/internal/validation
-github.com/container-orchestrated-devices/container-device-interface/internal/validation/k8s
-github.com/container-orchestrated-devices/container-device-interface/pkg/cdi
-github.com/container-orchestrated-devices/container-device-interface/pkg/parser
-github.com/container-orchestrated-devices/container-device-interface/specs-go
 # github.com/containerd/aufs v1.0.0
 ## explicit; go 1.13
 github.com/containerd/aufs
@@ -188,7 +180,7 @@ github.com/containerd/cgroups/v3/cgroup2/stats
 # github.com/containerd/console v1.0.3
 ## explicit; go 1.13
 github.com/containerd/console
-# github.com/containerd/containerd v1.7.12
+# github.com/containerd/containerd v1.7.13
 ## explicit; go 1.19
 github.com/containerd/containerd
 github.com/containerd/containerd/api/events
@@ -762,7 +754,7 @@ github.com/opencontainers/go-digest/digestset
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.1.11
+# github.com/opencontainers/runc v1.1.12
 ## explicit; go 1.17
 github.com/opencontainers/runc
 github.com/opencontainers/runc/libcontainer
@@ -1296,6 +1288,16 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
+# tags.cncf.io/container-device-interface v0.6.2
+## explicit; go 1.19
+tags.cncf.io/container-device-interface/internal/multierror
+tags.cncf.io/container-device-interface/internal/validation
+tags.cncf.io/container-device-interface/internal/validation/k8s
+tags.cncf.io/container-device-interface/pkg/cdi
+tags.cncf.io/container-device-interface/pkg/parser
+# tags.cncf.io/container-device-interface/specs-go v0.6.0
+## explicit; go 1.19
+tags.cncf.io/container-device-interface/specs-go
 # github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
 # go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.19.0
 # go.opentelemetry.io/otel/metric => go.opentelemetry.io/otel/metric v1.19.0
