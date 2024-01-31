@@ -3,7 +3,7 @@
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20240124130220-c0ec250e7b60 => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20240129160307-a34d52e75beb => ../idmapper
 ## explicit; go 1.18
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.0.3
@@ -38,7 +38,7 @@ github.com/cloudfoundry/dropsonde/runtime_stats
 github.com/cloudfoundry/sonde-go/events
 # github.com/containerd/log v0.1.0
 ## explicit; go 1.20
-# github.com/containers/image/v5 v5.29.1
+# github.com/containers/image/v5 v5.29.2
 ## explicit; go 1.19
 github.com/containers/image/v5/directory/explicitfilepath
 github.com/containers/image/v5/docker
@@ -141,7 +141,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20240125082051-42cd04596328
+# github.com/google/pprof v0.0.0-20240130152714-0ed6a68c8d9e
 ## explicit; go 1.19
 github.com/google/pprof/profile
 # github.com/gorilla/mux v1.8.1
