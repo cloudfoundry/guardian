@@ -2,16 +2,14 @@ module code.cloudfoundry.org/guardian
 
 go 1.21
 
+// TODO: update to containerd 2.0 when it is out, and remove these replace directives
 replace (
+	// force go-runc back to 1.0.0 since runc 1.7.x is incompatible with anything newer
 	github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
-
-	// pin opencontainers/runc to 1.1.7 because 1.1.8 introduces the use of --static-pie
-	// which causes gcc to fail on the xenial stemcell
-	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.7
-
-	// force otel back to 1.19 since 1.20 is incompatible with containerd  1.7.10
+	// force otel back to 1.19 since containerd 1.7.x is incompatible with anything newer
 	go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.19.0
 	go.opentelemetry.io/otel/metric => go.opentelemetry.io/otel/metric v1.19.0
+	go.opentelemetry.io/otel/sdk => go.opentelemetry.io/otel/sdk v1.19.0
 	go.opentelemetry.io/otel/trace => go.opentelemetry.io/otel/trace v1.19.0
 )
 
@@ -131,7 +129,7 @@ require (
 	github.com/moby/sys/user v0.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/mrunalp/fileutils v0.5.0 // indirect
+	github.com/mrunalp/fileutils v0.5.1 // indirect
 	github.com/opencontainers/runtime-tools v0.9.1-0.20221107090550-2e043c6bd626 // indirect
 	github.com/opencontainers/selinux v1.11.0 // indirect
 	github.com/openzipkin/zipkin-go v0.4.2 // indirect
