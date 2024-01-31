@@ -6,6 +6,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.1.z]
 
+## [1.1.11] - 2024-01-01
+
+> Happy New Year!
+
+### Fixed
+
+* Fix several issues with userns path handling. (#4122, #4124, #4134, #4144)
+
+### Changed
+
+ * Support memory.peak and memory.swap.peak in cgroups v2.
+   Add `swapOnlyUsage` in `MemoryStats`. This field reports swap-only usage.
+   For cgroupv1, `Usage` and `Failcnt` are set by subtracting memory usage
+   from memory+swap usage. For cgroupv2, `Usage`, `Limit`, and `MaxUsage`
+   are set. (#4000, #4010, #4131)
+ * build(deps): bump github.com/cyphar/filepath-securejoin. (#4140)
+
+## [1.1.10] - 2023-10-31
+
+> Śruba, przykręcona we śnie, nie zmieni sytuacji, jaka panuje na jawie.
+
+### Added
+
+* Support for `hugetlb.<pagesize>.rsvd` limiting and accounting. Fixes the
+  issue of postres failing when hugepage limits are set. (#3859, #4077)
+
+### Fixed
+
+* Fixed permissions of a newly created directories to not depend on the value
+  of umask in tmpcopyup feature implementation. (#3991, #4060)
+* libcontainer: cgroup v1 GetStats now ignores missing `kmem.limit_in_bytes`
+  (fixes the compatibility with Linux kernel 6.1+). (#4028)
+* Fix a semi-arbitrary cgroup write bug when given a malicious hugetlb
+  configuration. This issue is not a security issue because it requires a
+  malicious `config.json`, which is outside of our threat model. (#4103)
+* Various CI fixes. (#4081, #4055)
+
+## [1.1.9] - 2023-08-10
+
+> There is a crack in everything. That's how the light gets in.
+
+### Added
+
+* Added go 1.21 to the CI matrix; other CI updates. (#3976, #3958)
+
+### Fixed
+
+* Fixed losing sticky bit on tmpfs (a regression in 1.1.8). (#3952, #3961)
+* intelrdt: fixed ignoring ClosID on some systems. (#3550, #3978)
+
+### Changed
+
+ * Sum `anon` and `file` from `memory.stat` for cgroupv2 root usage,
+   as the root does not have `memory.current` for cgroupv2.
+   This aligns cgroupv2 root usage more closely with cgroupv1 reporting.
+   Additionally, report root swap usage as sum of swap and memory usage,
+   aligned with v1 and existing non-root v2 reporting. (#3933)
+
+## [1.1.8] - 2023-07-20
+
+> 海纳百川 有容乃大
+
+### Added
+
+* Support riscv64. (#3905)
+
+### Fixed
+
+* init: do not print environment variable value. (#3879)
+* libct: fix a race with systemd removal. (#3877)
+* tests/int: increase num retries for oom tests. (#3891)
+* man/runc: fixes. (#3892)
+* Fix tmpfs mode opts when dir already exists. (#3916)
+* docs/systemd: fix a broken link. (#3917)
+* ci/cirrus: enable some rootless tests on cs9. (#3918)
+* runc delete: call systemd's reset-failed. (#3932)
+* libct/cg/sd/v1: do not update non-frozen cgroup after frozen failed. (#3921)
+
+### Changed
+
+* CI: bump Fedora, Vagrant, bats. (#3878)
+* `.codespellrc`: update for 2.2.5. (#3909)
+
 ## [1.1.7] - 2023-04-26
 
 > Ночевала тучка золотая на груди утеса-великана.
@@ -410,7 +493,11 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.0.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.0.1
 
 <!-- 1.1.z patch releases -->
-[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.7...release-1.1
+[Unreleased 1.1.z]: https://github.com/opencontainers/runc/compare/v1.1.11...release-1.1
+[1.1.11]: https://github.com/opencontainers/runc/compare/v1.1.10...v1.1.11
+[1.1.10]: https://github.com/opencontainers/runc/compare/v1.1.9...v1.1.10
+[1.1.9]: https://github.com/opencontainers/runc/compare/v1.1.8...v1.1.9
+[1.1.8]: https://github.com/opencontainers/runc/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/opencontainers/runc/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/opencontainers/runc/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/opencontainers/runc/compare/v1.1.4...v1.1.5
