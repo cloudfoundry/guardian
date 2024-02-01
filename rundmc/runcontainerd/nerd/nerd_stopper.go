@@ -1,6 +1,6 @@
 package nerd
 
-import "github.com/containerd/containerd"
+import containerd "github.com/containerd/containerd/v2/client"
 
 type NerdStopper struct {
 	client *containerd.Client

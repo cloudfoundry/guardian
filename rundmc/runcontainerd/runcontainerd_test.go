@@ -20,7 +20,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/users/usersfakes"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
-	apievents "github.com/containerd/containerd/api/events"
+	apievents "github.com/containerd/containerd/v2/api/events"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"

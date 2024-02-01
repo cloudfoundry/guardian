@@ -15,12 +15,12 @@ import (
 
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/lager/v3"
-	"github.com/containerd/containerd"
-	apievents "github.com/containerd/containerd/api/events"
-	"github.com/containerd/containerd/cio"
-	"github.com/containerd/containerd/errdefs"
-	ctrdevents "github.com/containerd/containerd/events"
-	v2types "github.com/containerd/containerd/runtime/v2/runc/options"
+	apievents "github.com/containerd/containerd/v2/api/events"
+	containerd "github.com/containerd/containerd/v2/client"
+	v2types "github.com/containerd/containerd/v2/core/runtime/v2/runc/options"
+	"github.com/containerd/containerd/v2/pkg/cio"
+	ctrdevents "github.com/containerd/containerd/v2/pkg/events"
+	"github.com/containerd/errdefs"
 	"github.com/containerd/typeurl/v2"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
