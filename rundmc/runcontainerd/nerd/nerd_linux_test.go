@@ -26,6 +26,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
+	"code.cloudfoundry.org/guardian/metrics"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
 	"code.cloudfoundry.org/lager/v3"
@@ -45,6 +46,7 @@ var _ = Describe("Nerd", func() {
 		stdout        io.Writer
 		stderr        io.Writer
 		spec          *specs.Spec
+		mp            *metrics.MetricsProvider
 	)
 
 	const (
@@ -67,13 +69,15 @@ var _ = Describe("Nerd", func() {
 		}
 		testLogger = lagertest.NewTestLogger("nerd-test")
 
+		mp = metrics.NewMetricsProvider(testLogger, fifoDir)
+
 		var err error
 		fifoDir, err = ioutil.TempDir("", "nerd-fifo")
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	JustBeforeEach(func() {
-		cnerd = nerd.New(containerdClient, containerdContext, fifoDir)
+		cnerd = nerd.New(containerdClient, containerdContext, fifoDir, mp)
 	})
 
 	AfterEach(func() {
