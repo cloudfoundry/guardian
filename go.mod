@@ -4,6 +4,7 @@ go 1.21
 
 // TODO: update to containerd 2.0 when it is out, and remove these replace directives
 replace (
+	github.com/cloudfoundry/gosigar => github.com/cloudfoundry/gosigar v1.3.45
 	// force go-runc back to 1.0.0 since runc 1.7.x is incompatible with anything newer
 	github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
 	// force otel back to 1.19 since containerd 1.7.x is incompatible with anything newer
