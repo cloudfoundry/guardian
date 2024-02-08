@@ -19,14 +19,14 @@ require (
 	code.cloudfoundry.org/clock v1.1.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20230612151827-2b11a2b4e9b8
 	code.cloudfoundry.org/debugserver v0.0.0-20231206170715-fd2d2aa39d90
-	code.cloudfoundry.org/garden v0.0.0-20240131130925-790eb30a0e41
+	code.cloudfoundry.org/garden v0.0.0-20240208213822-ed90b805ca2b
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240131131350-d9221be6a634
+	code.cloudfoundry.org/idmapper v0.0.0-20240208213941-e7b059893a26
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	code.cloudfoundry.org/localip v0.0.0-20231206170541-8d74d8ef21ec
 	github.com/BurntSushi/toml v1.3.2
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.45
+	github.com/cloudfoundry/gosigar v1.3.46
 	github.com/containerd/containerd v1.7.13
 	github.com/containerd/typeurl/v2 v2.1.1
 	github.com/docker/docker v25.0.3+incompatible
@@ -49,7 +49,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.1
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vishvananda/netns v0.0.4
-	golang.org/x/sys v0.16.0
+	golang.org/x/sys v0.17.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -105,7 +105,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20240130152714-0ed6a68c8d9e // indirect
+	github.com/google/pprof v0.0.0-20240207164012-fb44976bdcd5 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
@@ -151,20 +151,20 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.45.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.48.0 // indirect
-	go.opentelemetry.io/otel v1.23.0 // indirect
+	go.opentelemetry.io/otel v1.23.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.19.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.19.0 // indirect
-	go.opentelemetry.io/otel/metric v1.23.0 // indirect
+	go.opentelemetry.io/otel/metric v1.23.1 // indirect
 	go.opentelemetry.io/otel/sdk v1.19.0 // indirect
-	go.opentelemetry.io/otel/trace v1.23.0 // indirect
+	go.opentelemetry.io/otel/trace v1.23.1 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
-	golang.org/x/crypto v0.18.0 // indirect
+	golang.org/x/crypto v0.19.0 // indirect
 	golang.org/x/mod v0.15.0 // indirect
-	golang.org/x/net v0.20.0 // indirect
+	golang.org/x/net v0.21.0 // indirect
 	golang.org/x/oauth2 v0.14.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/term v0.16.0 // indirect
+	golang.org/x/term v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.17.0 // indirect
