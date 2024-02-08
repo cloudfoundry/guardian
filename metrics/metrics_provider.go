@@ -3,19 +3,23 @@ package metrics
 import (
 	"io/ioutil"
 	"runtime"
+	"sync"
 
 	"code.cloudfoundry.org/lager/v3"
 )
 
 type MetricsProvider struct {
-	depotPath string
-	logger    lager.Logger
+	lock                 sync.Mutex
+	unkillableContainers map[string]struct{}
+	depotPath            string
+	logger               lager.Logger
 }
 
 func NewMetricsProvider(logger lager.Logger, depotPath string) *MetricsProvider {
 	return &MetricsProvider{
-		depotPath: depotPath,
-		logger:    logger.Session("metrics"),
+		depotPath:            depotPath,
+		logger:               logger.Session("metrics"),
+		unkillableContainers: map[string]struct{}{},
 	}
 }
 
@@ -45,4 +49,20 @@ func (m *MetricsProvider) DepotDirs() int {
 	}
 
 	return len(entries)
+}
+
+func (m *MetricsProvider) UnkillableContainers() int {
+	return len(m.unkillableContainers)
+}
+
+func (m *MetricsProvider) RegisterUnkillableContainer(containerId string) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.unkillableContainers[containerId] = struct{}{}
+}
+
+func (m *MetricsProvider) RegisterKillableContainer(containerId string) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	delete(m.unkillableContainers, containerId)
 }
