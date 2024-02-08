@@ -234,7 +234,8 @@ func restoreUnversionedAssets(assetsDir string) (string, error) {
 
 func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	logger, reconfigurableSink := cmd.Logger.Logger("guardian")
-	wiring, err := cmd.createWiring(logger)
+	metricsProvider := cmd.wireMetricsProvider(logger)
+	wiring, err := cmd.createWiring(logger, metricsProvider)
 	if err != nil {
 		return err
 	}
@@ -262,8 +263,6 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 
 	cmd.initializeDropsonde(logger)
 
-	metricsProvider := cmd.wireMetricsProvider(logger)
-
 	debugServerMetrics := map[string]func() int{
 		"numCPUS":       metricsProvider.NumCPU,
 		"numGoRoutines": metricsProvider.NumGoroutine,
@@ -273,7 +272,8 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	}
 
 	periodicMetronMetrics := map[string]func() int{
-		"DepotDirs": metricsProvider.DepotDirs,
+		"DepotDirs":            metricsProvider.DepotDirs,
+		"UnkillableContainers": metricsProvider.UnkillableContainers,
 	}
 
 	metronNotifier := cmd.wireMetronNotifier(logger, periodicMetronMetrics)

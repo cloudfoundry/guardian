@@ -58,7 +58,8 @@ type GardenFactory interface {
 	WireVolumizer(logger lager.Logger) gardener.Volumizer
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
 	WireExecRunner(runcRoot string, containerRootUID, containerRootGID uint32, bundleSaver depot.BundleSaver, bundleLookupper depot.BundleLookupper, processDepot execrunner.ProcessDepot) runrunc.ExecRunner
-	WireContainerd(*processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser, lager.Logger, peas.Volumizer, runcontainerd.PeaHandlesGetter) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *containerdprivchecker.PrivilegeChecker, peas.BundleLoader, error)
+	WireContainerd(*processes.ProcBuilder, users.UserLookupper, func(runrunc.PidGetter) *runrunc.Execer, runcontainerd.Statser, lager.Logger, peas.Volumizer, runcontainerd.PeaHandlesGetter, *metrics.MetricsProvider) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *containerdprivchecker.PrivilegeChecker, peas.BundleLoader, error)
+
 	WireCPUCgrouper() (rundmc.CPUCgrouper, error)
 	WireContainerNetworkMetricsProvider(containerizer gardener.Containerizer, propertyManager gardener.PropertyManager) gardener.ContainerNetworkMetricsProvider
 }
@@ -238,7 +239,7 @@ func (cmd *CommonCommand) createGardener(wiring *commandWiring) *gardener.Garden
 	)
 }
 
-func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, error) {
+func (cmd *CommonCommand) createWiring(logger lager.Logger, metricsProvider *metrics.MetricsProvider) (*commandWiring, error) {
 	factory := cmd.NewGardenFactory()
 
 	propManager, err := cmd.loadProperties(logger, cmd.Containers.PropertiesPath)
@@ -291,7 +292,7 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger) (*commandWiring, err
 		}
 	}
 
-	containerizer, peaCleaner, err := cmd.wireContainerizer(logger, factory, propManager, volumizer, cpuEntitlementPerShare, networkDepot)
+	containerizer, peaCleaner, err := cmd.wireContainerizer(logger, factory, propManager, volumizer, cpuEntitlementPerShare, networkDepot, metricsProvider)
 	if err != nil {
 		logger.Error("failed-to-wire-containerizer", err)
 		return nil, err
@@ -486,6 +487,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	volumizer gardener.Volumizer,
 	cpuEntitlementPerShare float64,
 	networkDepot depot.NetworkDepot,
+	metricsProvider *metrics.MetricsProvider,
 ) (*rundmc.Containerizer, gardener.PeaCleaner, error) {
 	initMount, initPath := initBindMountAndPath(cmd.Bin.Init.Path())
 
@@ -627,7 +629,7 @@ func (cmd *CommonCommand) wireContainerizer(
 
 		var nerdPidGetter PidGetter
 		var runContainerd *runcontainerd.RunContainerd
-		runContainerd, peaRunner, nerdPidGetter, privilegeChecker, peaBundleLoader, err = factory.WireContainerd(processBuilder, userLookupper, wireExecerFunc, statser, log, volumizer, peaHandlesGetter)
+		runContainerd, peaRunner, nerdPidGetter, privilegeChecker, peaBundleLoader, err = factory.WireContainerd(processBuilder, userLookupper, wireExecerFunc, statser, log, volumizer, peaHandlesGetter, metricsProvider)
 		if err != nil {
 			return nil, nil, err
 		}

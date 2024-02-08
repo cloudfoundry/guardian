@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"code.cloudfoundry.org/guardian/metrics"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/lager/v3"
 	"github.com/containerd/containerd"
@@ -29,13 +30,15 @@ type Nerd struct {
 	client    *containerd.Client
 	context   context.Context
 	ioFifoDir string
+	mp        *metrics.MetricsProvider
 }
 
-func New(client *containerd.Client, context context.Context, ioFifoDir string) *Nerd {
+func New(client *containerd.Client, context context.Context, ioFifoDir string, mp *metrics.MetricsProvider) *Nerd {
 	return &Nerd{
 		client:    client,
 		context:   context,
 		ioFifoDir: ioFifoDir,
+		mp:        mp,
 	}
 }
 
@@ -68,7 +71,7 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 	return task.CloseIO(n.context, containerd.WithStdinCloser)
 }
 
-func withProcessKillLogging(log lager.Logger) func(context.Context, containerd.Process) error {
+func withProcessKillLogging(log lager.Logger, mp *metrics.MetricsProvider) func(context.Context, containerd.Process) error {
 	return func(ctx context.Context, p containerd.Process) error {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
@@ -90,9 +93,11 @@ func withProcessKillLogging(log lager.Logger) func(context.Context, containerd.P
 		// wait for the process to fully stop before letting the rest of the deletion complete
 		select {
 		case <-s:
+			mp.RegisterKillableContainer(p.ID())
 			break
 		case <-time.After(time.Minute * 2):
-			return fmt.Errorf("timed out waiting for container kill: containerdProcess=%s, processID=%d", p.ID(), p.Pid())
+			mp.RegisterUnkillableContainer(p.ID())
+			return fmt.Errorf("Container still exists 2 minutes after kill -9. This container is unkillable and a VM reboot is required: containerdProcess=%s, processID=%d", p.ID(), p.Pid())
 		}
 
 		log.Debug("with-process-kill.wait-complete", lager.Data{"containerdProcess": p.ID(), "processID": p.Pid()})
@@ -115,7 +120,7 @@ func (n *Nerd) Delete(log lager.Logger, containerID string) error {
 	}
 
 	log.Debug("deleting-task", lager.Data{"containerID": containerID})
-	_, err = task.Delete(n.context, withProcessKillLogging(log))
+	_, err = task.Delete(n.context, withProcessKillLogging(log, n.mp))
 	return err
 }
 
