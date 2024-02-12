@@ -1,4 +1,4 @@
-# code.cloudfoundry.org/archiver v0.0.0-20231206170638-1923b319e771
+# code.cloudfoundry.org/archiver v0.0.0-20240209143848-e43eec6a484c
 ## explicit; go 1.20
 code.cloudfoundry.org/archiver/extractor/test_helper
 # code.cloudfoundry.org/clock v1.1.0
@@ -12,7 +12,7 @@ code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.0.0-20231206170715-fd2d2aa39d90
+# code.cloudfoundry.org/debugserver v0.0.0-20240209143423-2b9fa99122f1
 ## explicit; go 1.19
 code.cloudfoundry.org/debugserver
 # code.cloudfoundry.org/garden v0.0.0-20240208213822-ed90b805ca2b => ../garden
@@ -153,7 +153,7 @@ github.com/cloudfoundry/dropsonde/metric_sender/fake
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/gosigar v1.3.46 => github.com/cloudfoundry/gosigar v1.3.45
+# github.com/cloudfoundry/gosigar v1.3.47 => github.com/cloudfoundry/gosigar v1.3.45
 ## explicit; go 1.21
 github.com/cloudfoundry/gosigar
 github.com/cloudfoundry/gosigar/sys/windows
