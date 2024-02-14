@@ -785,7 +785,7 @@ github.com/opencontainers/runc/libcontainer/userns
 github.com/opencontainers/runc/libcontainer/utils
 github.com/opencontainers/runc/types
 github.com/opencontainers/runc/types/features
-# github.com/opencontainers/runtime-spec v1.1.0
+# github.com/opencontainers/runtime-spec v1.2.0
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/opencontainers/runtime-tools v0.9.1-0.20221107090550-2e043c6bd626
@@ -1022,7 +1022,7 @@ golang.org/x/text/unicode/norm
 # golang.org/x/time v0.3.0
 ## explicit
 golang.org/x/time/rate
-# golang.org/x/tools v0.17.0
+# golang.org/x/tools v0.18.0
 ## explicit; go 1.18
 golang.org/x/tools/cmd/stringer
 golang.org/x/tools/go/ast/inspector
@@ -1052,18 +1052,18 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20240205150955-31a09d347014
+# google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9
 ## explicit; go 1.19
 google.golang.org/genproto/protobuf/field_mask
-# google.golang.org/genproto/googleapis/api v0.0.0-20240125205218-1f4bbc51befe
+# google.golang.org/genproto/googleapis/api v0.0.0-20240205150955-31a09d347014
 ## explicit; go 1.19
 google.golang.org/genproto/googleapis/api/httpbody
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20240205150955-31a09d347014
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20240213162025-012b6fc9bca9
 ## explicit; go 1.19
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.61.0
+# google.golang.org/grpc v1.61.1
 ## explicit; go 1.19
 google.golang.org/grpc
 google.golang.org/grpc/attributes
