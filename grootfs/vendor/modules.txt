@@ -1,9 +1,9 @@
-# code.cloudfoundry.org/commandrunner v0.0.0-20240209144511-0a92359ce87e
+# code.cloudfoundry.org/commandrunner v0.0.0-20240216144522-c81cab399db2
 ## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20240208213941-e7b059893a26 => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20240214130718-0ca779f95f8b => ../idmapper
 ## explicit; go 1.18
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.0.3
@@ -223,7 +223,7 @@ github.com/onsi/gomega/types
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit; go 1.13
 github.com/opencontainers/go-digest
-# github.com/opencontainers/image-spec v1.1.0-rc6
+# github.com/opencontainers/image-spec v1.1.0
 ## explicit; go 1.18
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
