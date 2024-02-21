@@ -15,22 +15,22 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.0.0-20240209143848-e43eec6a484c
+	code.cloudfoundry.org/archiver v0.0.0-20240216143500-7a92f5fdc163
 	code.cloudfoundry.org/clock v1.1.0
-	code.cloudfoundry.org/commandrunner v0.0.0-20240209144511-0a92359ce87e
-	code.cloudfoundry.org/debugserver v0.0.0-20240209143423-2b9fa99122f1
-	code.cloudfoundry.org/garden v0.0.0-20240208213822-ed90b805ca2b
+	code.cloudfoundry.org/commandrunner v0.0.0-20240216144522-c81cab399db2
+	code.cloudfoundry.org/debugserver v0.0.0-20240216143506-a6177cebb9a9
+	code.cloudfoundry.org/garden v0.0.0-20240214130550-8a0cb81e0f4f
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240208213941-e7b059893a26
+	code.cloudfoundry.org/idmapper v0.0.0-20240214130718-0ca779f95f8b
 	code.cloudfoundry.org/lager/v3 v3.0.3
-	code.cloudfoundry.org/localip v0.0.0-20240209144003-33100c303cbc
+	code.cloudfoundry.org/localip v0.0.0-20240216143504-65247cb8fdb0
 	github.com/BurntSushi/toml v1.3.2
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.47
+	github.com/cloudfoundry/gosigar v1.3.48
 	github.com/containerd/containerd v1.7.13
 	github.com/containerd/typeurl/v2 v2.1.1
 	github.com/docker/docker v25.0.3+incompatible
-	github.com/eapache/go-resiliency v1.5.0
+	github.com/eapache/go-resiliency v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jessevdk/go-flags v1.5.1-0.20210607101731-3927b71304df
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
@@ -39,7 +39,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.15.0
 	github.com/onsi/gomega v1.31.1
 	github.com/opencontainers/go-digest v1.0.0
-	github.com/opencontainers/image-spec v1.1.0-rc6
+	github.com/opencontainers/image-spec v1.1.0
 	github.com/opencontainers/runc v1.1.12
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/pkg/errors v0.9.1
@@ -169,9 +169,9 @@ require (
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.18.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240205150955-31a09d347014 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240213162025-012b6fc9bca9 // indirect
+	google.golang.org/genproto v0.0.0-20240221002015-b0ce06bbee7c // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240213162025-012b6fc9bca9 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240221002015-b0ce06bbee7c // indirect
 	google.golang.org/grpc v1.61.1 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
