@@ -29,43 +29,38 @@ const mtuKey = "kawasaki.mtu"
 const dnsServerKey = "kawasaki.dns-servers"
 const hostEntriesKey = "kawasaki.host-entries"
 
-//go:generate counterfeiter . SpecParser
-
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//counterfeiter:generate . SpecParser
 type SpecParser interface {
 	Parse(log lager.Logger, spec string) (subnets.SubnetSelector, subnets.IPSelector, error)
 }
 
-//go:generate counterfeiter . ConfigCreator
-
+//counterfeiter:generate . ConfigCreator
 type ConfigCreator interface {
 	Create(log lager.Logger, handle string, subnet *net.IPNet, ip net.IP) (NetworkConfig, error)
 }
 
-//go:generate counterfeiter . Configurer
-
+//counterfeiter:generate . Configurer
 type Configurer interface {
 	Apply(log lager.Logger, cfg NetworkConfig, pid int) error
 	DestroyBridge(log lager.Logger, cfg NetworkConfig) error
 	DestroyIPTablesRules(log lager.Logger, cfg NetworkConfig) error
 }
 
-//go:generate counterfeiter . ConfigStore
-
+//counterfeiter:generate . ConfigStore
 type ConfigStore interface {
 	Set(handle string, name string, value string)
 	Get(handle string, name string) (string, bool)
 }
 
-//go:generate counterfeiter . PortPool
-
+//counterfeiter:generate . PortPool
 type PortPool interface {
 	Acquire() (uint32, error)
 	Release(uint32)
 	Remove(uint32) error
 }
 
-//go:generate counterfeiter . PortForwarder
-
+//counterfeiter:generate . PortForwarder
 type PortForwarder interface {
 	Forward(spec PortForwarderSpec) error
 }
@@ -79,13 +74,13 @@ type PortForwarderSpec struct {
 	ExternalIP  net.IP
 }
 
-//go:generate counterfeiter . FirewallOpener
+//counterfeiter:generate . FirewallOpener
 type FirewallOpener interface {
 	Open(log lager.Logger, instance, handle string, rule garden.NetOutRule) error
 	BulkOpen(log lager.Logger, instance, handle string, rule []garden.NetOutRule) error
 }
 
-//go:generate counterfeiter . NetworkDepot
+//counterfeiter:generate . NetworkDepot
 type NetworkDepot interface {
 	SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error)
 	Destroy(log lager.Logger, handle string) error

@@ -10,12 +10,12 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . HostFileCompiler
+//counterfeiter:generate . HostFileCompiler
 type HostFileCompiler interface {
 	Compile(log lager.Logger, ip net.IP, handle string, additionalHostEntries []string) ([]byte, error)
 }
 
-//go:generate counterfeiter . ResolvCompiler
+//counterfeiter:generate . ResolvCompiler
 type ResolvCompiler interface {
 	Determine(resolvContents string, hostIP net.IP, pluginNameservers, operatorNameservers, additionalNameservers []net.IP, pluginSearchDomains []string) []string
 }

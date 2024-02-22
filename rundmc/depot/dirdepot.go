@@ -14,17 +14,17 @@ import (
 
 var ErrDoesNotExist = errors.New("does not exist")
 
-//go:generate counterfeiter . BundleSaver
+//counterfeiter:generate . BundleSaver
 type BundleSaver interface {
 	Save(bundle goci.Bndl, path string) error
 }
 
-//go:generate counterfeiter . BundleLoader
+//counterfeiter:generate . BundleLoader
 type BundleLoader interface {
 	Load(path string) (goci.Bndl, error)
 }
 
-//go:generate counterfeiter . BundleLookupper
+//counterfeiter:generate . BundleLookupper
 type BundleLookupper interface {
 	Lookup(log lager.Logger, handle string) (string, error)
 	Handles() ([]string, error)

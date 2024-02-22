@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . BindMountSourceCreator
+//counterfeiter:generate . BindMountSourceCreator
 type BindMountSourceCreator interface {
 	Create(containerDir string, privileged bool) ([]garden.BindMount, error)
 }

@@ -8,8 +8,8 @@ import (
 	"github.com/containerd/containerd"
 )
 
-//go:generate counterfeiter github.com/containerd/containerd.Process
-//go:generate counterfeiter github.com/containerd/containerd/cio.IO
+//counterfeiter:generate github.com/containerd/containerd.Process
+//counterfeiter:generate github.com/containerd/containerd/cio.IO
 
 type BackingProcess struct {
 	log               lager.Logger

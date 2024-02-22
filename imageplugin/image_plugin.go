@@ -19,7 +19,8 @@ import (
 
 const PreloadedPlusLayerScheme = "preloaded+layer"
 
-//go:generate counterfeiter . CommandCreator
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//counterfeiter:generate . CommandCreator
 type CommandCreator interface {
 	CreateCommand(log lager.Logger, handle string, spec gardener.RootfsSpec) (*exec.Cmd, error)
 	DestroyCommand(log lager.Logger, handle string) *exec.Cmd
@@ -27,7 +28,7 @@ type CommandCreator interface {
 	CapacityCommand(log lager.Logger) *exec.Cmd
 }
 
-//go:generate counterfeiter . ImageSpecCreator
+//counterfeiter:generate . ImageSpecCreator
 type ImageSpecCreator interface {
 	CreateImageSpec(rootFS *url.URL, handle string) (*url.URL, error)
 }

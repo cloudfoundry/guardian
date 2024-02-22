@@ -15,7 +15,7 @@ type DepotBindMountSourceCreator struct {
 	ContainerRootHostGID int
 }
 
-//go:generate counterfeiter . Chowner
+//counterfeiter:generate . Chowner
 type Chowner interface {
 	Chown(path string, uid, gid int) error
 }

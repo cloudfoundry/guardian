@@ -5,7 +5,7 @@ const (
 	DefaultGID int = 0
 )
 
-//go:generate counterfeiter . UserLookupper
+//counterfeiter:generate . UserLookupper
 type UserLookupper interface {
 	Lookup(rootFsPath string, user string) (*ExecUser, error)
 }

@@ -13,7 +13,7 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . StatsNotifier
+//counterfeiter:generate . StatsNotifier
 type StatsNotifier interface {
 	OnStat(handle string, cpuStat garden.ContainerCPUStat, memoryStat garden.ContainerMemoryStat)
 }

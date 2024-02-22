@@ -15,18 +15,18 @@ type PeaCleaner struct {
 	PeaPidGetter PeaPidGetter
 }
 
-//go:generate counterfeiter . Runtime
+//counterfeiter:generate . Runtime
 type Runtime interface {
 	ContainerHandles() ([]string, error)
 	ContainerPeaHandles(log lager.Logger, id string) ([]string, error)
 }
 
-//go:generate counterfeiter . PeaPidGetter
+//counterfeiter:generate . PeaPidGetter
 type PeaPidGetter interface {
 	GetPeaPid(logger lager.Logger, _, peaID string) (int, error)
 }
 
-//go:generate counterfeiter . Deleter
+//counterfeiter:generate . Deleter
 type Deleter interface {
 	Delete(log lager.Logger, handle string) error
 }

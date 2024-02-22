@@ -22,7 +22,7 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-//go:generate counterfeiter . ContainerManager
+//counterfeiter:generate . ContainerManager
 type ContainerManager interface {
 	Create(log lager.Logger, containerID string, spec *specs.Spec, containerRootUID, containerRootGID uint32, processIO func() (io.Reader, io.Writer, io.Writer)) error
 	Delete(log lager.Logger, containerID string) error
@@ -35,39 +35,39 @@ type ContainerManager interface {
 	RemoveBundle(lager.Logger, string) error
 }
 
-//go:generate counterfeiter . RuntimeStopper
+//counterfeiter:generate . RuntimeStopper
 type RuntimeStopper interface {
 	Stop() error
 }
 
-//go:generate counterfeiter . ProcessManager
+//counterfeiter:generate . ProcessManager
 type ProcessManager interface {
 	GetProcess(log lager.Logger, containerID, processID string) (BackingProcess, error)
 	GetTask(log lager.Logger, id string) (BackingProcess, error)
 }
 
-//go:generate counterfeiter . ProcessBuilder
+//counterfeiter:generate . ProcessBuilder
 type ProcessBuilder interface {
 	BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, user *users.ExecUser) *specs.Process
 }
 
-//go:generate counterfeiter . Execer
+//counterfeiter:generate . Execer
 type Execer interface {
 	ExecWithBndl(log lager.Logger, id string, bndl goci.Bndl, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, id string, processId string, io garden.ProcessIO) (garden.Process, error)
 }
 
-//go:generate counterfeiter . Statser
+//counterfeiter:generate . Statser
 type Statser interface {
 	Stats(log lager.Logger, id string) (gardener.StatsContainerMetrics, error)
 }
 
-//go:generate counterfeiter . Mkdirer
+//counterfeiter:generate . Mkdirer
 type Mkdirer interface {
 	MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
 }
 
-//go:generate counterfeiter . PeaHandlesGetter
+//counterfeiter:generate . PeaHandlesGetter
 type PeaHandlesGetter interface {
 	ContainerPeaHandles(log lager.Logger, sandboxHandle string) ([]string, error)
 }

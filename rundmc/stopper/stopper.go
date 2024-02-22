@@ -2,9 +2,9 @@ package stopper
 
 import "syscall"
 
-//go:generate counterfeiter . Killer
-//go:generate counterfeiter . CgroupPathResolver
-//go:generate counterfeiter . Retrier
+//counterfeiter:generate . Killer
+//counterfeiter:generate . CgroupPathResolver
+//counterfeiter:generate . Retrier
 
 type Killer interface {
 	Kill(signal syscall.Signal, pid ...int)

@@ -7,7 +7,7 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . NetnsExecer
+//counterfeiter:generate . NetnsExecer
 type NetnsExecer interface {
 	Exec(netnsFD *os.File, cb func() error) error
 }
@@ -19,24 +19,24 @@ type configurer struct {
 	instanceChainCreator InstanceChainCreator
 }
 
-//go:generate counterfeiter . HostConfigurer
+//counterfeiter:generate . HostConfigurer
 type HostConfigurer interface {
 	Apply(logger lager.Logger, cfg NetworkConfig, pid int) error
 	Destroy(cfg NetworkConfig) error
 }
 
-//go:generate counterfeiter . InstanceChainCreator
+//counterfeiter:generate . InstanceChainCreator
 type InstanceChainCreator interface {
 	Create(logger lager.Logger, handle, instanceChain, bridgeName string, ip net.IP, network *net.IPNet) error
 	Destroy(logger lager.Logger, instanceChain string) error
 }
 
-//go:generate counterfeiter . ContainerConfigurer
+//counterfeiter:generate . ContainerConfigurer
 type ContainerConfigurer interface {
 	Apply(logger lager.Logger, cfg NetworkConfig, pid int) error
 }
 
-//go:generate counterfeiter . DnsResolvConfigurer
+//counterfeiter:generate . DnsResolvConfigurer
 type DnsResolvConfigurer interface {
 	Configure(log lager.Logger, cfg NetworkConfig, pid int) error
 }

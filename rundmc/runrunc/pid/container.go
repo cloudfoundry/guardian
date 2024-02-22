@@ -6,12 +6,12 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . Depot
+//counterfeiter:generate . Depot
 type Depot interface {
 	Lookup(lager.Logger, string) (string, error)
 }
 
-//go:generate counterfeiter . PidFileReader
+//counterfeiter:generate . PidFileReader
 type PidFileReader interface {
 	Pid(pidFilePath string) (int, error)
 }

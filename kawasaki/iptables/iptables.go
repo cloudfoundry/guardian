@@ -17,12 +17,12 @@ type Locksmith interface {
 	Lock(key string) (locksmith.Unlocker, error)
 }
 
-//go:generate counterfeiter . Rule
+//counterfeiter:generate . Rule
 type Rule interface {
 	Flags(chain string) []string
 }
 
-//go:generate counterfeiter . IPTables
+//counterfeiter:generate . IPTables
 type IPTables interface {
 	CreateChain(table, chain string) error
 	DeleteChain(table, chain string) error

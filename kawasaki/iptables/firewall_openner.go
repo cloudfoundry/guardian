@@ -5,7 +5,7 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . RuleTranslator
+//counterfeiter:generate . RuleTranslator
 type RuleTranslator interface {
 	TranslateRule(handle string, gardenRule garden.NetOutRule) ([]Rule, error)
 }

@@ -11,7 +11,7 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . ProcessDepot
+//counterfeiter:generate . ProcessDepot
 type ProcessDepot interface {
 	ListProcessDirs(log lager.Logger, sandboxHandle string) ([]string, error)
 	CreatedTime(log lager.Logger, processID string) (time.Time, error)

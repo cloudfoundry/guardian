@@ -4,7 +4,7 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . Runtime
+//counterfeiter:generate . Runtime
 type Runtime interface {
 	Delete(log lager.Logger, id string) error
 	RemoveBundle(log lager.Logger, id string) error

@@ -6,13 +6,14 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 )
 
-//go:generate counterfeiter . Enforcer
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//counterfeiter:generate . Enforcer
 type Enforcer interface {
 	Punish(logger lager.Logger, handle string) error
 	Release(logger lager.Logger, handle string) error
 }
 
-//go:generate counterfeiter . MetricsSource
+//counterfeiter:generate . MetricsSource
 type MetricsSource interface {
 	CollectMetrics(logger lager.Logger) (map[string]gardener.ActualContainerMetrics, error)
 }

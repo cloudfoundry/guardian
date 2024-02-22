@@ -5,7 +5,7 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . ContainerManager
+//counterfeiter:generate . ContainerManager
 type ContainerManager interface {
 	Handles() ([]string, error)
 	Metrics(log lager.Logger, handle string) (gardener.ActualContainerMetrics, error)

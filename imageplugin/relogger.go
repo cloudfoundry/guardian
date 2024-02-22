@@ -7,7 +7,7 @@ import (
 	"code.cloudfoundry.org/lager/v3/chug"
 )
 
-//go:generate counterfeiter -o imagepluginfakes/fake_logger.go . Logger
+//counterfeiter:generate -o imagepluginfakes/fake_logger.go . Logger
 type Logger interface {
 	Debug(action string, data ...lager.Data)
 	Info(action string, data ...lager.Data)

@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . BackingProcess
+//counterfeiter:generate . BackingProcess
 
 type BackingProcess interface {
 	ID() string

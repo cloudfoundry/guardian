@@ -8,7 +8,8 @@ import (
 
 var kernelVersionRegexp = regexp.MustCompile(`^(\d+)(?:\.(\d+))?(?:\.(\d+))?.*$`)
 
-//go:generate counterfeiter . SysctlGetter
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//counterfeiter:generate . SysctlGetter
 
 type SysctlGetter interface {
 	GetString(key string) (string, error)

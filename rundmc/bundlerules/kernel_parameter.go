@@ -7,7 +7,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
-//go:generate counterfeiter . Sysctl
+//counterfeiter:generate . Sysctl
 type Sysctl interface {
 	Get(key string) (uint32, error)
 }

@@ -5,7 +5,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
-//go:generate counterfeiter . ContainerManager
+//counterfeiter:generate . ContainerManager
 type ContainerManager interface {
 	Spec(log lager.Logger, containerID string) (*specs.Spec, error)
 }

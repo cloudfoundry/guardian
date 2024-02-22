@@ -5,13 +5,13 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . RuntimeStater
+//counterfeiter:generate . RuntimeStater
 
 type RuntimeStater interface {
 	State(log lager.Logger, handle string) (rundmc.State, error)
 }
 
-//go:generate counterfeiter . RuntimeDeleter
+//counterfeiter:generate . RuntimeDeleter
 
 type RuntimeDeleter interface {
 	Delete(log lager.Logger, handle string, force bool) error

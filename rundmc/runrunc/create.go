@@ -14,7 +14,7 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . EventsWatcher
+//counterfeiter:generate . EventsWatcher
 type EventsWatcher interface {
 	WatchEvents(log lager.Logger, handle string) error
 }

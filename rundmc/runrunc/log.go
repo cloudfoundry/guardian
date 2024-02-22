@@ -11,7 +11,7 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . RuncCmdRunner
+//counterfeiter:generate . RuncCmdRunner
 
 type LoggingCmd func(logFile string) *exec.Cmd
 

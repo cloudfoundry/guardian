@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-//go:generate counterfeiter . ProcessWaiter
+//counterfeiter:generate . ProcessWaiter
 
 type ProcessWaiter func(pid int) error
 

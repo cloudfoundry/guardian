@@ -11,7 +11,7 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter -o fake_subnet_pool/fake_pool.go . Pool
+//counterfeiter:generate -o fake_subnet_pool/fake_pool.go . Pool
 type Pool interface {
 	// Allocates an IP address and associates it with a subnet. The subnet is selected by the given SubnetSelector.
 	// The IP address is selected by the given IPSelector.
@@ -39,7 +39,7 @@ type pool struct {
 	mu           sync.Mutex
 }
 
-//go:generate counterfeiter . SubnetSelector
+//counterfeiter:generate . SubnetSelector
 
 // SubnetSelector is a strategy for selecting a subnet.
 type SubnetSelector interface {
@@ -48,7 +48,7 @@ type SubnetSelector interface {
 	SelectSubnet(dynamic *net.IPNet, existing []*net.IPNet) (*net.IPNet, error)
 }
 
-//go:generate counterfeiter . IPSelector
+//counterfeiter:generate . IPSelector
 
 // IPSelector is a strategy for selecting an IP address in a subnet.
 type IPSelector interface {

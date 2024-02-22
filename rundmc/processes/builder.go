@@ -7,7 +7,7 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-//go:generate counterfeiter . EnvDeterminer
+//counterfeiter:generate . EnvDeterminer
 
 type EnvDeterminer interface {
 	EnvFor(bndl goci.Bndl, spec garden.ProcessSpec, containerUID int) []string

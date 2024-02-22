@@ -6,7 +6,7 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . Runnable
+//counterfeiter:generate . Runnable
 type Runnable interface {
 	Run(logger lager.Logger) error
 }

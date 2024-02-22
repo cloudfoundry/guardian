@@ -8,14 +8,14 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . PeaManager
+//counterfeiter:generate . PeaManager
 type PeaManager interface {
 	Create(log lager.Logger, id string, bundle goci.Bndl, io garden.ProcessIO) error
 	Delete(log lager.Logger, containerID string) error
 	RemoveBundle(log lager.Logger, containerID string) error
 }
 
-//go:generate counterfeiter . Volumizer
+//counterfeiter:generate . Volumizer
 type Volumizer interface {
 	Destroy(log lager.Logger, handle string) error
 }

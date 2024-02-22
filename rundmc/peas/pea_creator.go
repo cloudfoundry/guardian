@@ -24,29 +24,29 @@ import (
 
 var RootfsPath = filepath.Join(os.TempDir(), "pea-empty-rootfs")
 
-//go:generate counterfeiter . Volumizer
+//counterfeiter:generate . Volumizer
 type Volumizer interface {
 	Create(log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error)
 	Destroy(log lager.Logger, handle string) error
 }
 
-//go:generate counterfeiter . PidGetter
+//counterfeiter:generate . PidGetter
 type PidGetter interface {
 	GetPid(log lager.Logger, handle string) (int, error)
 }
 
-//go:generate counterfeiter . PrivilegedGetter
+//counterfeiter:generate . PrivilegedGetter
 type PrivilegedGetter interface {
 	Privileged(handle string) (bool, error)
 }
 
-//go:generate counterfeiter . NetworkDepot
+//counterfeiter:generate . NetworkDepot
 type NetworkDepot interface {
 	SetupBindMounts(log lager.Logger, handle string, privileged bool, rootfsPath string) ([]garden.BindMount, error)
 	Destroy(log lager.Logger, handle string) error
 }
 
-//go:generate counterfeiter . BundleGenerator
+//counterfeiter:generate . BundleGenerator
 type BundleGenerator interface {
 	Generate(desiredContainerSpec spec.DesiredContainerSpec) (goci.Bndl, error)
 }

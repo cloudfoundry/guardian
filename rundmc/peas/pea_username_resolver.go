@@ -13,13 +13,13 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-//go:generate counterfeiter . ProcessPidGetter
+//counterfeiter:generate . ProcessPidGetter
 type ProcessPidGetter interface {
 	GetPid(log lager.Logger, handle string) (int, error)
 	GetPeaPid(log lager.Logger, handle, peaID string) (int, error)
 }
 
-//go:generate counterfeiter . BundleLoader
+//counterfeiter:generate . BundleLoader
 type BundleLoader interface {
 	Load(log lager.Logger, handle string) (goci.Bndl, error)
 }

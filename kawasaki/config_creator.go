@@ -15,7 +15,7 @@ const (
 	maxAllowedMtuSize     = 1500
 )
 
-//go:generate counterfeiter . IDGenerator
+//counterfeiter:generate . IDGenerator
 
 type IDGenerator interface {
 	Generate() string

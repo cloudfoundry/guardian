@@ -20,7 +20,7 @@ type RunRunc struct {
 	*BundleManager
 }
 
-//go:generate counterfeiter . RuncBinary
+//counterfeiter:generate . RuncBinary
 type RuncBinary interface {
 	RunCommand(bundlePath, pidfilePath, logfilePath, id string, extraGlobalArgs []string) *exec.Cmd
 	ExecCommand(id, processJSONPath, pidFilePath string) *exec.Cmd
@@ -30,7 +30,7 @@ type RuncBinary interface {
 	DeleteCommand(id string, force bool, logFile string) *exec.Cmd
 }
 
-//go:generate counterfeiter . Depot
+//counterfeiter:generate . Depot
 type Depot interface {
 	Create(log lager.Logger, handle string, bundle goci.Bndl) (string, error)
 	CreatedTime(log lager.Logger, handle string) (time.Time, error)

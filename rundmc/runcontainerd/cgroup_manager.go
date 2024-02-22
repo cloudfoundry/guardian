@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-//go:generate counterfeiter . CgroupManager
+//counterfeiter:generate . CgroupManager
 type CgroupManager interface {
 	SetUseMemoryHierarchy(handle string) error
 }

@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/garden"
 )
 
-//go:generate counterfeiter . Signaller
+//counterfeiter:generate . Signaller
 type Signaller interface {
 	Signal(signal garden.Signal) error
 }
@@ -18,7 +18,7 @@ type signaller struct {
 	pidGetter   PidGetter
 }
 
-//go:generate counterfeiter . PidGetter
+//counterfeiter:generate . PidGetter
 type PidGetter interface {
 	Pid(pidFilePath string) (int, error)
 }

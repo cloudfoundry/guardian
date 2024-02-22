@@ -11,22 +11,22 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-//go:generate counterfeiter . UidGenerator
+//counterfeiter:generate . UidGenerator
 type UidGenerator interface {
 	Generate() string
 }
 
-//go:generate counterfeiter . Mkdirer
+//counterfeiter:generate . Mkdirer
 type Mkdirer interface {
 	MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
 }
 
-//go:generate counterfeiter . BundleLoader
+//counterfeiter:generate . BundleLoader
 type BundleLoader interface {
 	Load(log lager.Logger, handle string) (goci.Bndl, error)
 }
 
-//go:generate counterfeiter . ExecRunner
+//counterfeiter:generate . ExecRunner
 type ExecRunner interface {
 	Run(
 		log lager.Logger, processID, sandboxHandle string,
@@ -39,27 +39,27 @@ type ExecRunner interface {
 	Attach(log lager.Logger, sandboxHandle, processID string, io garden.ProcessIO) (garden.Process, error)
 }
 
-//go:generate counterfeiter . ProcessBuilder
+//counterfeiter:generate . ProcessBuilder
 type ProcessBuilder interface {
 	BuildProcess(bndl goci.Bndl, processSpec garden.ProcessSpec, user *users.ExecUser) *specs.Process
 }
 
-//go:generate counterfeiter . Waiter
+//counterfeiter:generate . Waiter
 type Waiter interface {
 	Wait() (int, error)
 }
 
-//go:generate counterfeiter . Runner
+//counterfeiter:generate . Runner
 type Runner interface {
 	Run(log lager.Logger)
 }
 
-//go:generate counterfeiter . PidGetter
+//counterfeiter:generate . PidGetter
 type PidGetter interface {
 	GetPid(log lager.Logger, containerHandle string) (int, error)
 }
 
-//go:generate counterfeiter . WaitWatcher
+//counterfeiter:generate . WaitWatcher
 type WaitWatcher interface { // get it??
 	OnExit(log lager.Logger, process Waiter, onExit Runner)
 }

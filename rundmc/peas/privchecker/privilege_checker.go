@@ -7,7 +7,7 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 )
 
-//go:generate counterfeiter . BundleLoader
+//counterfeiter:generate . BundleLoader
 type BundleLoader interface {
 	Load(log lager.Logger, handle string) (bundle goci.Bndl, err error)
 }
