@@ -32,15 +32,16 @@ func (fake *FakeNetnsExecer) Exec(arg1 *os.File, arg2 func() error) error {
 		arg1 *os.File
 		arg2 func() error
 	}{arg1, arg2})
+	stub := fake.ExecStub
+	fakeReturns := fake.execReturns
 	fake.recordInvocation("Exec", []interface{}{arg1, arg2})
 	fake.execMutex.Unlock()
-	if fake.ExecStub != nil {
-		return fake.ExecStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.execReturns
 	return fakeReturns.result1
 }
 

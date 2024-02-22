@@ -7,7 +7,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/imageplugin"
-	"code.cloudfoundry.org/lager/v3"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeCommandCreator struct {
@@ -71,15 +71,16 @@ func (fake *FakeCommandCreator) CapacityCommand(arg1 lager.Logger) *exec.Cmd {
 	fake.capacityCommandArgsForCall = append(fake.capacityCommandArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.CapacityCommandStub
+	fakeReturns := fake.capacityCommandReturns
 	fake.recordInvocation("CapacityCommand", []interface{}{arg1})
 	fake.capacityCommandMutex.Unlock()
-	if fake.CapacityCommandStub != nil {
-		return fake.CapacityCommandStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.capacityCommandReturns
 	return fakeReturns.result1
 }
 
@@ -133,15 +134,16 @@ func (fake *FakeCommandCreator) CreateCommand(arg1 lager.Logger, arg2 string, ar
 		arg2 string
 		arg3 gardener.RootfsSpec
 	}{arg1, arg2, arg3})
+	stub := fake.CreateCommandStub
+	fakeReturns := fake.createCommandReturns
 	fake.recordInvocation("CreateCommand", []interface{}{arg1, arg2, arg3})
 	fake.createCommandMutex.Unlock()
-	if fake.CreateCommandStub != nil {
-		return fake.CreateCommandStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createCommandReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -197,15 +199,16 @@ func (fake *FakeCommandCreator) DestroyCommand(arg1 lager.Logger, arg2 string) *
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DestroyCommandStub
+	fakeReturns := fake.destroyCommandReturns
 	fake.recordInvocation("DestroyCommand", []interface{}{arg1, arg2})
 	fake.destroyCommandMutex.Unlock()
-	if fake.DestroyCommandStub != nil {
-		return fake.DestroyCommandStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.destroyCommandReturns
 	return fakeReturns.result1
 }
 
@@ -258,15 +261,16 @@ func (fake *FakeCommandCreator) MetricsCommand(arg1 lager.Logger, arg2 string) *
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.MetricsCommandStub
+	fakeReturns := fake.metricsCommandReturns
 	fake.recordInvocation("MetricsCommand", []interface{}{arg1, arg2})
 	fake.metricsCommandMutex.Unlock()
-	if fake.MetricsCommandStub != nil {
-		return fake.MetricsCommandStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.metricsCommandReturns
 	return fakeReturns.result1
 }
 

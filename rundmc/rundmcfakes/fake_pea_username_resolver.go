@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc"
-	"code.cloudfoundry.org/lager/v3"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakePeaUsernameResolver struct {
@@ -41,15 +41,16 @@ func (fake *FakePeaUsernameResolver) ResolveUser(arg1 lager.Logger, arg2 string,
 		arg3 garden.ImageRef
 		arg4 string
 	}{arg1, arg2, arg3, arg4})
+	stub := fake.ResolveUserStub
+	fakeReturns := fake.resolveUserReturns
 	fake.recordInvocation("ResolveUser", []interface{}{arg1, arg2, arg3, arg4})
 	fake.resolveUserMutex.Unlock()
-	if fake.ResolveUserStub != nil {
-		return fake.ResolveUserStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
 	}
-	fakeReturns := fake.resolveUserReturns
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 

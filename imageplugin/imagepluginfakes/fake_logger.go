@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/imageplugin"
-	"code.cloudfoundry.org/lager/v3"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeLogger struct {
@@ -38,9 +38,10 @@ func (fake *FakeLogger) Debug(arg1 string, arg2 ...lager.Data) {
 		arg1 string
 		arg2 []lager.Data
 	}{arg1, arg2})
+	stub := fake.DebugStub
 	fake.recordInvocation("Debug", []interface{}{arg1, arg2})
 	fake.debugMutex.Unlock()
-	if fake.DebugStub != nil {
+	if stub != nil {
 		fake.DebugStub(arg1, arg2...)
 	}
 }
@@ -71,9 +72,10 @@ func (fake *FakeLogger) Error(arg1 string, arg2 error, arg3 ...lager.Data) {
 		arg2 error
 		arg3 []lager.Data
 	}{arg1, arg2, arg3})
+	stub := fake.ErrorStub
 	fake.recordInvocation("Error", []interface{}{arg1, arg2, arg3})
 	fake.errorMutex.Unlock()
-	if fake.ErrorStub != nil {
+	if stub != nil {
 		fake.ErrorStub(arg1, arg2, arg3...)
 	}
 }
@@ -103,9 +105,10 @@ func (fake *FakeLogger) Info(arg1 string, arg2 ...lager.Data) {
 		arg1 string
 		arg2 []lager.Data
 	}{arg1, arg2})
+	stub := fake.InfoStub
 	fake.recordInvocation("Info", []interface{}{arg1, arg2})
 	fake.infoMutex.Unlock()
-	if fake.InfoStub != nil {
+	if stub != nil {
 		fake.InfoStub(arg1, arg2...)
 	}
 }

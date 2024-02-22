@@ -45,15 +45,16 @@ func (fake *FakePortPool) Acquire() (uint32, error) {
 	ret, specificReturn := fake.acquireReturnsOnCall[len(fake.acquireArgsForCall)]
 	fake.acquireArgsForCall = append(fake.acquireArgsForCall, struct {
 	}{})
+	stub := fake.AcquireStub
+	fakeReturns := fake.acquireReturns
 	fake.recordInvocation("Acquire", []interface{}{})
 	fake.acquireMutex.Unlock()
-	if fake.AcquireStub != nil {
-		return fake.AcquireStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.acquireReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -100,9 +101,10 @@ func (fake *FakePortPool) Release(arg1 uint32) {
 	fake.releaseArgsForCall = append(fake.releaseArgsForCall, struct {
 		arg1 uint32
 	}{arg1})
+	stub := fake.ReleaseStub
 	fake.recordInvocation("Release", []interface{}{arg1})
 	fake.releaseMutex.Unlock()
-	if fake.ReleaseStub != nil {
+	if stub != nil {
 		fake.ReleaseStub(arg1)
 	}
 }
@@ -132,15 +134,16 @@ func (fake *FakePortPool) Remove(arg1 uint32) error {
 	fake.removeArgsForCall = append(fake.removeArgsForCall, struct {
 		arg1 uint32
 	}{arg1})
+	stub := fake.RemoveStub
+	fakeReturns := fake.removeReturns
 	fake.recordInvocation("Remove", []interface{}{arg1})
 	fake.removeMutex.Unlock()
-	if fake.RemoveStub != nil {
-		return fake.RemoveStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.removeReturns
 	return fakeReturns.result1
 }
 

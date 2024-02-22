@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/kawasaki"
-	"code.cloudfoundry.org/lager/v3"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeDnsResolvConfigurer struct {
@@ -34,15 +34,16 @@ func (fake *FakeDnsResolvConfigurer) Configure(arg1 lager.Logger, arg2 kawasaki.
 		arg2 kawasaki.NetworkConfig
 		arg3 int
 	}{arg1, arg2, arg3})
+	stub := fake.ConfigureStub
+	fakeReturns := fake.configureReturns
 	fake.recordInvocation("Configure", []interface{}{arg1, arg2, arg3})
 	fake.configureMutex.Unlock()
-	if fake.ConfigureStub != nil {
-		return fake.ConfigureStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.configureReturns
 	return fakeReturns.result1
 }
 

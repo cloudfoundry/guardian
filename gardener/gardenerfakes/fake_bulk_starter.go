@@ -27,15 +27,16 @@ func (fake *FakeBulkStarter) StartAll() error {
 	ret, specificReturn := fake.startAllReturnsOnCall[len(fake.startAllArgsForCall)]
 	fake.startAllArgsForCall = append(fake.startAllArgsForCall, struct {
 	}{})
+	stub := fake.StartAllStub
+	fakeReturns := fake.startAllReturns
 	fake.recordInvocation("StartAll", []interface{}{})
 	fake.startAllMutex.Unlock()
-	if fake.StartAllStub != nil {
-		return fake.StartAllStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.startAllReturns
 	return fakeReturns.result1
 }
 

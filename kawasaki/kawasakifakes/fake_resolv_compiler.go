@@ -60,15 +60,16 @@ func (fake *FakeResolvCompiler) Determine(arg1 string, arg2 net.IP, arg3 []net.I
 		arg5 []net.IP
 		arg6 []string
 	}{arg1, arg2, arg3Copy, arg4Copy, arg5Copy, arg6Copy})
+	stub := fake.DetermineStub
+	fakeReturns := fake.determineReturns
 	fake.recordInvocation("Determine", []interface{}{arg1, arg2, arg3Copy, arg4Copy, arg5Copy, arg6Copy})
 	fake.determineMutex.Unlock()
-	if fake.DetermineStub != nil {
-		return fake.DetermineStub(arg1, arg2, arg3, arg4, arg5, arg6)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4, arg5, arg6)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.determineReturns
 	return fakeReturns.result1
 }
 

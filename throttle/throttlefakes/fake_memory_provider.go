@@ -29,15 +29,16 @@ func (fake *FakeMemoryProvider) TotalMemory() (uint64, error) {
 	ret, specificReturn := fake.totalMemoryReturnsOnCall[len(fake.totalMemoryArgsForCall)]
 	fake.totalMemoryArgsForCall = append(fake.totalMemoryArgsForCall, struct {
 	}{})
+	stub := fake.TotalMemoryStub
+	fakeReturns := fake.totalMemoryReturns
 	fake.recordInvocation("TotalMemory", []interface{}{})
 	fake.totalMemoryMutex.Unlock()
-	if fake.TotalMemoryStub != nil {
-		return fake.TotalMemoryStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.totalMemoryReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

@@ -27,15 +27,16 @@ func (fake *FakeIDGenerator) Generate() string {
 	ret, specificReturn := fake.generateReturnsOnCall[len(fake.generateArgsForCall)]
 	fake.generateArgsForCall = append(fake.generateArgsForCall, struct {
 	}{})
+	stub := fake.GenerateStub
+	fakeReturns := fake.generateReturns
 	fake.recordInvocation("Generate", []interface{}{})
 	fake.generateMutex.Unlock()
-	if fake.GenerateStub != nil {
-		return fake.GenerateStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.generateReturns
 	return fakeReturns.result1
 }
 

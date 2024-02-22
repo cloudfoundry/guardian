@@ -35,15 +35,16 @@ func (fake *FakeBundlerRule) Apply(arg1 goci.Bndl, arg2 spec.DesiredContainerSpe
 		arg1 goci.Bndl
 		arg2 spec.DesiredContainerSpec
 	}{arg1, arg2})
+	stub := fake.ApplyStub
+	fakeReturns := fake.applyReturns
 	fake.recordInvocation("Apply", []interface{}{arg1, arg2})
 	fake.applyMutex.Unlock()
-	if fake.ApplyStub != nil {
-		return fake.ApplyStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.applyReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
-	"code.cloudfoundry.org/lager/v3"
+	lager "code.cloudfoundry.org/lager/v3"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -86,15 +86,16 @@ func (fake *FakeVolumizer) Capacity(arg1 lager.Logger) (uint64, error) {
 	fake.capacityArgsForCall = append(fake.capacityArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.CapacityStub
+	fakeReturns := fake.capacityReturns
 	fake.recordInvocation("Capacity", []interface{}{arg1})
 	fake.capacityMutex.Unlock()
-	if fake.CapacityStub != nil {
-		return fake.CapacityStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.capacityReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -150,15 +151,16 @@ func (fake *FakeVolumizer) Create(arg1 lager.Logger, arg2 garden.ContainerSpec) 
 		arg1 lager.Logger
 		arg2 garden.ContainerSpec
 	}{arg1, arg2})
+	stub := fake.CreateStub
+	fakeReturns := fake.createReturns
 	fake.recordInvocation("Create", []interface{}{arg1, arg2})
 	fake.createMutex.Unlock()
-	if fake.CreateStub != nil {
-		return fake.CreateStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -214,15 +216,16 @@ func (fake *FakeVolumizer) Destroy(arg1 lager.Logger, arg2 string) error {
 		arg1 lager.Logger
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DestroyStub
+	fakeReturns := fake.destroyReturns
 	fake.recordInvocation("Destroy", []interface{}{arg1, arg2})
 	fake.destroyMutex.Unlock()
-	if fake.DestroyStub != nil {
-		return fake.DestroyStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.destroyReturns
 	return fakeReturns.result1
 }
 
@@ -274,15 +277,16 @@ func (fake *FakeVolumizer) GC(arg1 lager.Logger) error {
 	fake.gCArgsForCall = append(fake.gCArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
+	stub := fake.GCStub
+	fakeReturns := fake.gCReturns
 	fake.recordInvocation("GC", []interface{}{arg1})
 	fake.gCMutex.Unlock()
-	if fake.GCStub != nil {
-		return fake.GCStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.gCReturns
 	return fakeReturns.result1
 }
 
@@ -336,15 +340,16 @@ func (fake *FakeVolumizer) Metrics(arg1 lager.Logger, arg2 string, arg3 bool) (g
 		arg2 string
 		arg3 bool
 	}{arg1, arg2, arg3})
+	stub := fake.MetricsStub
+	fakeReturns := fake.metricsReturns
 	fake.recordInvocation("Metrics", []interface{}{arg1, arg2, arg3})
 	fake.metricsMutex.Unlock()
-	if fake.MetricsStub != nil {
-		return fake.MetricsStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.metricsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

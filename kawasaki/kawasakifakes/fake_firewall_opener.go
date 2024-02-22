@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/kawasaki"
-	"code.cloudfoundry.org/lager/v3"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeFirewallOpener struct {
@@ -56,15 +56,16 @@ func (fake *FakeFirewallOpener) BulkOpen(arg1 lager.Logger, arg2 string, arg3 st
 		arg3 string
 		arg4 []garden.NetOutRule
 	}{arg1, arg2, arg3, arg4Copy})
+	stub := fake.BulkOpenStub
+	fakeReturns := fake.bulkOpenReturns
 	fake.recordInvocation("BulkOpen", []interface{}{arg1, arg2, arg3, arg4Copy})
 	fake.bulkOpenMutex.Unlock()
-	if fake.BulkOpenStub != nil {
-		return fake.BulkOpenStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.bulkOpenReturns
 	return fakeReturns.result1
 }
 
@@ -119,15 +120,16 @@ func (fake *FakeFirewallOpener) Open(arg1 lager.Logger, arg2 string, arg3 string
 		arg3 string
 		arg4 garden.NetOutRule
 	}{arg1, arg2, arg3, arg4})
+	stub := fake.OpenStub
+	fakeReturns := fake.openReturns
 	fake.recordInvocation("Open", []interface{}{arg1, arg2, arg3, arg4})
 	fake.openMutex.Unlock()
-	if fake.OpenStub != nil {
-		return fake.OpenStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.openReturns
 	return fakeReturns.result1
 }
 

@@ -34,15 +34,16 @@ func (fake *FakeImageSpecCreator) CreateImageSpec(arg1 *url.URL, arg2 string) (*
 		arg1 *url.URL
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.CreateImageSpecStub
+	fakeReturns := fake.createImageSpecReturns
 	fake.recordInvocation("CreateImageSpec", []interface{}{arg1, arg2})
 	fake.createImageSpecMutex.Unlock()
-	if fake.CreateImageSpecStub != nil {
-		return fake.CreateImageSpecStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createImageSpecReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc"
-	"code.cloudfoundry.org/lager/v3"
+	lager "code.cloudfoundry.org/lager/v3"
 )
 
 type FakeProcessesStopper struct {
@@ -41,15 +41,16 @@ func (fake *FakeProcessesStopper) StopAll(arg1 lager.Logger, arg2 string, arg3 [
 		arg3 []int
 		arg4 bool
 	}{arg1, arg2, arg3Copy, arg4})
+	stub := fake.StopAllStub
+	fakeReturns := fake.stopAllReturns
 	fake.recordInvocation("StopAll", []interface{}{arg1, arg2, arg3Copy, arg4})
 	fake.stopAllMutex.Unlock()
-	if fake.StopAllStub != nil {
-		return fake.StopAllStub(arg1, arg2, arg3, arg4)
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.stopAllReturns
 	return fakeReturns.result1
 }
 

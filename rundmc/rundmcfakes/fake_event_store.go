@@ -41,15 +41,16 @@ func (fake *FakeEventStore) Events(arg1 string) []string {
 	fake.eventsArgsForCall = append(fake.eventsArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.EventsStub
+	fakeReturns := fake.eventsReturns
 	fake.recordInvocation("Events", []interface{}{arg1})
 	fake.eventsMutex.Unlock()
-	if fake.EventsStub != nil {
-		return fake.EventsStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.eventsReturns
 	return fakeReturns.result1
 }
 
@@ -102,15 +103,16 @@ func (fake *FakeEventStore) OnEvent(arg1 string, arg2 string) error {
 		arg1 string
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.OnEventStub
+	fakeReturns := fake.onEventReturns
 	fake.recordInvocation("OnEvent", []interface{}{arg1, arg2})
 	fake.onEventMutex.Unlock()
-	if fake.OnEventStub != nil {
-		return fake.OnEventStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.onEventReturns
 	return fakeReturns.result1
 }
 
