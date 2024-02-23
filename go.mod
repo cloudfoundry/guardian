@@ -1,6 +1,8 @@
 module code.cloudfoundry.org/guardian
 
-go 1.22.0
+go 1.21.0
+
+toolchain go1.22.0
 
 require (
 	code.cloudfoundry.org/archiver v0.0.0-20240216143500-7a92f5fdc163
