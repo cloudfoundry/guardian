@@ -17,11 +17,12 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager/v3"
-	apievents "github.com/containerd/containerd/api/events"
+	apievents "github.com/containerd/containerd/v2/api/events"
 	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 //counterfeiter:generate . ContainerManager
 type ContainerManager interface {
 	Create(log lager.Logger, containerID string, spec *specs.Spec, containerRootUID, containerRootGID uint32, processIO func() (io.Reader, io.Writer, io.Writer)) error

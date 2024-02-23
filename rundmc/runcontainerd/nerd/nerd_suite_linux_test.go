@@ -19,10 +19,10 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	"github.com/BurntSushi/toml"
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/leases"
-	"github.com/containerd/containerd/namespaces"
-	"github.com/containerd/containerd/plugin"
+	containerd "github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/core/leases"
+	"github.com/containerd/containerd/v2/pkg/namespaces"
+	"github.com/containerd/containerd/v2/plugins"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -78,7 +78,7 @@ var _ = BeforeEach(func() {
 	containerdConfig := containerdrunner.ContainerdConfig(runDir)
 	containerdProcess = containerdrunner.NewContainerdProcess(runDir, containerdConfig)
 
-	containerdClient, err = containerd.New(containerdConfig.GRPC.Address, containerd.WithDefaultRuntime(plugin.RuntimeRuncV2))
+	containerdClient, err = containerd.New(containerdConfig.GRPC.Address, containerd.WithDefaultRuntime(plugins.RuntimeRuncV2))
 	Expect(err).NotTo(HaveOccurred())
 
 	containerdContext = namespaces.WithNamespace(context.Background(), fmt.Sprintf("nerdspace%d", GinkgoParallelProcess()))

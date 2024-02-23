@@ -12,7 +12,6 @@ import (
 )
 
 //counterfeiter:generate . RuncCmdRunner
-
 type LoggingCmd func(logFile string) *exec.Cmd
 
 type generateLogFileFunc func() (*os.File, error)

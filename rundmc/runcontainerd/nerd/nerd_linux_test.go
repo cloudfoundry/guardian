@@ -16,10 +16,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/containerd/containerd"
-	apievents "github.com/containerd/containerd/api/events"
-	"github.com/containerd/containerd/containers"
-	"github.com/containerd/containerd/oci"
+	apievents "github.com/containerd/containerd/v2/api/events"
+	containerd "github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/core/containers"
+	"github.com/containerd/containerd/v2/pkg/oci"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"

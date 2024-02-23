@@ -5,13 +5,13 @@ import (
 	"errors"
 	"time"
 
-	"github.com/containerd/containerd"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
+	containerd "github.com/containerd/containerd/v2/client"
+
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd/nerdfakes"
 	"code.cloudfoundry.org/lager/v3/lagertest"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("BackingProcess", func() {

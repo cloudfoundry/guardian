@@ -5,11 +5,9 @@ import (
 	"syscall"
 
 	"code.cloudfoundry.org/lager/v3"
-	"github.com/containerd/containerd"
+	containerd "github.com/containerd/containerd/v2/client"
 )
 
-//counterfeiter:generate github.com/containerd/containerd.Process
-//counterfeiter:generate github.com/containerd/containerd/cio.IO
 
 type BackingProcess struct {
 	log               lager.Logger

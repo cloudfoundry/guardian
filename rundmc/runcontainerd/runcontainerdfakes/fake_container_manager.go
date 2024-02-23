@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
-	"code.cloudfoundry.org/lager/v3"
-	"github.com/containerd/containerd/api/events"
+	lager "code.cloudfoundry.org/lager/v3"
+	"github.com/containerd/containerd/v2/api/events"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
