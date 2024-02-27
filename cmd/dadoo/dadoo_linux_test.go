@@ -726,7 +726,7 @@ var _ = Describe("Dadoo", func() {
 							openIOPipes()
 
 							Expect(dadooSession.Wait().ExitCode()).To(Equal(2))
-							Expect(string(stdout.Contents())).To(ContainSubstring(fmt.Sprintf("value for --socket-dir-path cannot exceed 80 characters in length")))
+							Expect(string(stdout.Contents())).To(ContainSubstring("value for --socket-dir-path cannot exceed 80 characters in length"))
 						})
 					})
 
