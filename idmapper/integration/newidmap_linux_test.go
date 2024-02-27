@@ -126,7 +126,7 @@ func testIDMapperBins(bin func() string, statFmt string) {
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).ShouldNot(gexec.Exit(0))
 			Eventually(sess.Err).Should(
-				gbytes.Say(fmt.Sprintf("no such file or directory")),
+				gbytes.Say("no such file or directory"),
 			)
 		})
 	})
@@ -145,7 +145,7 @@ func testIDMapperBins(bin func() string, statFmt string) {
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).ShouldNot(gexec.Exit(0))
 			Eventually(sess.Err).Should(
-				gbytes.Say(fmt.Sprintf("invalid syntax")),
+				gbytes.Say("invalid syntax"),
 			)
 		})
 	})
