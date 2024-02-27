@@ -709,7 +709,7 @@ var _ = Describe("Dadoo", func() {
 							// MaxSocketDirPathLength is defined in main_linux.go as 80
 							longerThanAllowedSocketPath = make([]byte, 81)
 
-							for i, _ := range longerThanAllowedSocketPath {
+							for i := range longerThanAllowedSocketPath {
 								longerThanAllowedSocketPath[i] = 'a'
 							}
 						})
@@ -835,7 +835,7 @@ var _ = Describe("Dadoo", func() {
 							// MaxSocketDirPathLength is defined in main_linux.go as 80
 							longerThanAllowedSocketPath = make([]byte, 81)
 
-							for i, _ := range longerThanAllowedSocketPath {
+							for i := range longerThanAllowedSocketPath {
 								longerThanAllowedSocketPath[i] = 'a'
 							}
 						})
