@@ -17,7 +17,6 @@ import (
 	"code.cloudfoundry.org/guardian/metrics"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
-	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
@@ -130,16 +129,16 @@ func (cmd *SetupCommand) WireCgroupsStarter(logger lager.Logger) gardener.Starte
 	return starter
 }
 
-func createCgroupsStarter(logger lager.Logger, tag string, mountPointChecker rundmc.MountPointChecker, cpuThrottlingEnabled bool) *cgroups.CgroupStarter {
-	cgroupsMountpoint := cgroups.Root
-	gardenCgroup := cgroups.Garden
+func createCgroupsStarter(logger lager.Logger, tag string, mountPointChecker rundmc.MountPointChecker, cpuThrottlingEnabled bool) *gardencgroups.CgroupStarter {
+	cgroupsMountpoint := gardencgroups.Root
+	gardenCgroup := gardencgroups.Garden
 
 	if tag != "" {
 		cgroupsMountpoint = filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", tag))
 		gardenCgroup = fmt.Sprintf("%s-%s", gardenCgroup, tag)
 	}
 
-	return cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"),
+	return gardencgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"),
 		cgroupsMountpoint, gardenCgroup, allowedDevices, mountPointChecker, cpuThrottlingEnabled)
 }
 
@@ -177,14 +176,14 @@ func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, use
 
 func (f *LinuxFactory) WireCPUCgrouper() (rundmc.CPUCgrouper, error) {
 	if !f.config.CPUThrottling.Enabled {
-		return cgroups.NoopCPUCgrouper{}, nil
+		return gardencgroups.NoopCPUCgrouper{}, nil
 	}
 
 	gardenCPUCgroupPath, err := f.config.getGardenCPUCgroup()
 	if err != nil {
 		return nil, err
 	}
-	return cgroups.NewCPUCgrouper(gardenCPUCgroupPath), nil
+	return gardencgroups.NewCPUCgrouper(gardenCPUCgroupPath), nil
 }
 
 func (f *LinuxFactory) WireContainerNetworkMetricsProvider(containerizer gardener.Containerizer, propertyManager gardener.PropertyManager) gardener.ContainerNetworkMetricsProvider {
