@@ -1,7 +1,6 @@
 package execrunner
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -34,7 +33,7 @@ func (d ProcessDirDepot) CreateProcessDir(log lager.Logger, sandboxHandle, proce
 
 	processPath := filepath.Join(bundlePath, "processes", processID)
 	if _, err := os.Stat(processPath); err == nil {
-		return "", errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
+		return "", fmt.Errorf("process ID '%s' already in use", processID)
 	}
 
 	if err := os.MkdirAll(processPath, 0700); err != nil {
