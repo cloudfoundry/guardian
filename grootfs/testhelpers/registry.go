@@ -175,7 +175,7 @@ func (r *FakeRegistry) RequestedBlobs() []string {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	blobDigests := []string{}
-	for digest, _ := range r.blobRequestsCounter {
+	for digest := range r.blobRequestsCounter {
 		blobDigests = append(blobDigests, digest)
 	}
 
