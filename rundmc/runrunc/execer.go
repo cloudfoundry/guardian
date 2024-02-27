@@ -3,7 +3,6 @@ package runrunc
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"path/filepath"
 	"strconv"
 
@@ -91,7 +90,7 @@ func (e *Execer) ExecWithBndl(log lager.Logger, sandboxHandle string, bundle goc
 		if err != nil {
 			return nil, err
 		}
-		processID = fmt.Sprintf("%s", randomID)
+		processID = randomID.String()
 	}
 
 	encodedSpec, err := json.Marshal(preparedSpec)
