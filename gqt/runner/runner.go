@@ -595,5 +595,5 @@ func (r *RunningGarden) runCtr(args []string) string {
 	err := cmd.Run()
 	Expect(err).NotTo(HaveOccurred())
 
-	return string(stdout.Bytes())
+	return stdout.String()
 }
