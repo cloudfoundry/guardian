@@ -186,8 +186,7 @@ func (p *ImagePlugin) Capacity(log lager.Logger) (uint64, error) {
 	log.Debug("start")
 	defer log.Debug("end")
 
-	var capacityCmd *exec.Cmd
-	capacityCmd = p.UnprivilegedCommandCreator.CapacityCommand(log)
+	capacityCmd := p.UnprivilegedCommandCreator.CapacityCommand(log)
 
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	capacityCmd.Stdout = stdoutBuffer

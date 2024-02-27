@@ -79,8 +79,7 @@ var _ = Describe("Bind mount", func() {
 
 		Context("and the file is a bind mount", func() {
 			BeforeEach(func() {
-				var cmd *exec.Cmd
-				cmd = exec.Command("mount", "--bind", srcPath, srcPath)
+				cmd := exec.Command("mount", "--bind", srcPath, srcPath)
 				Expect(cmd.Run()).To(Succeed())
 			})
 
@@ -150,8 +149,7 @@ var _ = Describe("Bind mount", func() {
 
 		Context("and the dir is a bind mount", func() {
 			BeforeEach(func() {
-				var cmd *exec.Cmd
-				cmd = exec.Command("mount", "--bind", srcPath, srcPath)
+				cmd := exec.Command("mount", "--bind", srcPath, srcPath)
 				Expect(cmd.Run()).To(Succeed())
 			})
 
