@@ -79,7 +79,7 @@ func (b *Builder) Build() (Config, error) {
 }
 
 func (b *Builder) WithInsecureRegistries(insecureRegistries []string) *Builder {
-	if insecureRegistries == nil || len(insecureRegistries) == 0 {
+	if len(insecureRegistries) == 0 {
 		return b
 	}
 
