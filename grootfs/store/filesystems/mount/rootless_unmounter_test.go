@@ -31,10 +31,10 @@ var _ = Describe("Rootless Unmounter", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		mountSrcPath = filepath.Join(tmpDir, "mntsrc")
-		Expect(os.MkdirAll(mountSrcPath, 755)).To(Succeed())
+		Expect(os.MkdirAll(mountSrcPath, 0755)).To(Succeed())
 
 		mountDestPath = filepath.Join(tmpDir, "mntdest")
-		Expect(os.MkdirAll(mountDestPath, 755)).To(Succeed())
+		Expect(os.MkdirAll(mountDestPath, 0755)).To(Succeed())
 
 		unmounter = mount.RootlessUnmounter{}
 		logger = lagertest.NewTestLogger("rootless-unmounter")
