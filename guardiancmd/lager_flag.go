@@ -1,7 +1,5 @@
 package guardiancmd
 
-//nolint:staticcheck // SA5008 github.com/jesse-vdk/go-flag requires duplicate struct tags for 'choice'
-
 import (
 	"fmt"
 	"os"
@@ -20,7 +18,9 @@ const (
 )
 
 type LagerFlag struct {
-	LogLevel   string `long:"log-level" default:"info" choice:"debug" choice:"info" choice:"error" choice:"fatal" description:"Minimum level of logs to see."`
+	//lint:ignore SA5008 github.com/jesse-vdk/go-flag requires duplicate struct tags for 'choice'
+	LogLevel string `long:"log-level" default:"info" choice:"debug" choice:"info" choice:"error" choice:"fatal" description:"Minimum level of logs to see."`
+	//lint:ignore SA5008 github.com/jesse-vdk/go-flag requires duplicate struct tags for 'choice'
 	TimeFormat string `long:"time-format" default:"unix-epoch" choice:"unix-epoch" choice:"rfc3339" description:"format of log timestamps."`
 }
 
