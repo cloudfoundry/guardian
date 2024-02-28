@@ -74,7 +74,7 @@ func ensureBaseDirectoryExists(logger lager.Logger, baseDir, childPath, parentPa
 		return errorspkg.Wrap(err, "failed to stat base directory")
 	}
 
-	stat, err = os.Stat(filepath.Join(parentPath, baseDir))
+	stat, err := os.Stat(filepath.Join(parentPath, baseDir))
 	if err != nil {
 		return errorspkg.Wrap(err, "base directory not found in parent layer")
 	}
