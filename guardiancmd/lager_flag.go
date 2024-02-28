@@ -1,5 +1,7 @@
 package guardiancmd
 
+//nolint:staticcheck // SA5008 github.com/jesse-vdk/go-flag requires duplicate struct tags for 'choice'
+
 import (
 	"fmt"
 	"os"
