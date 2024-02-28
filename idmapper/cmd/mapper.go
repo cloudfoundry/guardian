@@ -69,7 +69,7 @@ func HandleCmd(idKind string) {
 
 	procGIDMap := fmt.Sprintf("/proc/%d/%sid_map", pid, idKind)
 	if err := mapIds(procGIDMap); err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprint(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 }
