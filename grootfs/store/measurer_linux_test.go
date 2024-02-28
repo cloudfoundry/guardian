@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/store"
@@ -13,7 +12,6 @@ import (
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("Measurer", func() {
@@ -215,23 +213,3 @@ var _ = Describe("Measurer", func() {
 		})
 	})
 })
-
-func writeFile(path string, size int64) error {
-	cmd := exec.Command(
-		"dd", "if=/dev/zero", fmt.Sprintf("of=%s", path),
-		"bs=1024", fmt.Sprintf("count=%d", size/1024),
-	)
-	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-	if err != nil {
-		return err
-	}
-	sess.Wait()
-
-	out := sess.Buffer().Contents()
-	exitCode := sess.ExitCode()
-	if exitCode != 0 {
-		return fmt.Errorf("du failed with exit code %d: %s", exitCode, string(out))
-	}
-
-	return nil
-}
