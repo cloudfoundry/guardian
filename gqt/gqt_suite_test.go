@@ -39,15 +39,12 @@ var (
 	unprivilegedUID = uint32(5000)
 	unprivilegedGID = uint32(5000)
 
-	containerdConfig  containerdrunner.Config
 	containerdProcess *os.Process
 	containerdRunDir  string
 
 	config            runner.GdnRunnerConfig
 	binaries          runner.Binaries
 	defaultTestRootFS string
-
-	buildNoGExecDir string
 )
 
 func goCompile(mainPackagePath string, buildArgs ...string) string {
@@ -305,15 +302,6 @@ func runIPTables(ipTablesArgs ...string) ([]byte, error) {
 	return outBuffer.Bytes(), err
 }
 
-// returns the n'th ASCII character starting from 'a' through 'z'
-// E.g. nodeToString(1) = a, nodeToString(2) = b, etc ...
-func nodeToString(ginkgoNode int) string {
-	r := 'a' + ginkgoNode - 1
-	Expect(r).To(BeNumerically(">=", 'a'))
-	Expect(r).To(BeNumerically("<=", 'z'))
-	return fmt.Sprintf("%c", r)
-}
-
 func intptr(i int) *int {
 	return &i
 }
@@ -328,10 +316,6 @@ func uint32ptr(i uint32) *uint32 {
 
 func boolptr(b bool) *bool {
 	return &b
-}
-
-func stringptr(s string) *string {
-	return &s
 }
 
 func idToStr(id uint32) string {
@@ -439,13 +423,6 @@ func resetImagePluginConfig() runner.GdnRunnerConfig {
 	config.ImagePluginExtraArgs = []string{}
 	config.PrivilegedImagePluginExtraArgs = []string{}
 	return config
-}
-
-func mustGetEnv(env string) string {
-	if value := os.Getenv(env); value != "" {
-		return value
-	}
-	panic(fmt.Sprintf("%s env must be non-empty", env))
 }
 
 func jsonMarshal(v interface{}) []byte {
@@ -562,12 +539,6 @@ func runInContainerCombinedOutput(container garden.Container, path string, args 
 	}
 	runInContainerWithIO(container, pio, path, args)
 	return string(output.Contents())
-}
-
-func listCgroups(pid string) string {
-	cgroups, err := os.ReadFile(filepath.Join("/proc", pid, "cgroup"))
-	Expect(err).NotTo(HaveOccurred())
-	return string(cgroups)
 }
 
 func getRuncContainerPID(handle string) string {

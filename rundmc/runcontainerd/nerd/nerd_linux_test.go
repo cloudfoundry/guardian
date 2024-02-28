@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -658,17 +657,6 @@ func randomString(len int) string {
 		bytes[i] = byte(randomInt(65, 90))
 	}
 	return string(bytes)
-}
-
-func findFilesContaining(substring string) bool {
-	filenames, _ := exec.Command("/usr/bin/find", "/", "-name", fmt.Sprintf("*%s*", substring)).Output()
-	if strings.Contains(string(filenames), substring) {
-		info := fmt.Sprintf("\nOutput of 'find': \n%s\nLooking for %s\n\n", filenames, substring)
-		GinkgoWriter.Write([]byte(info))
-		return true
-	}
-
-	return false
 }
 
 func int64ptr(i int64) *int64 {

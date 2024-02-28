@@ -2,8 +2,6 @@ package peas_test
 
 import (
 	"errors"
-	"io/ioutil"
-	"os"
 
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
@@ -206,18 +204,3 @@ var _ = Describe("PeaCleaner", func() {
 		})
 	})
 })
-
-func tempDir() string {
-	dir, err := ioutil.TempDir("", "")
-	Expect(err).NotTo(HaveOccurred())
-	return dir
-}
-
-func writeFile(path, content string) {
-	err := ioutil.WriteFile(path, []byte(content), os.ModePerm)
-	Expect(err).NotTo(HaveOccurred())
-}
-
-func mkdirAll(path string) {
-	Expect(os.MkdirAll(path, os.ModePerm)).To(Succeed())
-}

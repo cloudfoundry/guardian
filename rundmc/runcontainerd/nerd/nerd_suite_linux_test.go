@@ -18,7 +18,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/lager/v3/lagertest"
-	"github.com/BurntSushi/toml"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/leases"
 	"github.com/containerd/containerd/namespaces"
@@ -150,34 +149,12 @@ func teardownCgroups(cgroupsRoot string) {
 	Expect(os.Remove(cgroupsRoot)).To(Succeed())
 }
 
-func mustGetEnv(env string) string {
-	if value := os.Getenv(env); value != "" {
-		return value
-	}
-	panic(fmt.Sprintf("%s env must be non-empty", env))
-}
-
-func runCommandInDir(cmd *exec.Cmd, workingDir string) string {
-	cmd.Dir = workingDir
-	return runCommand(cmd)
-}
-
 func runCommand(cmd *exec.Cmd) string {
 	var stdout bytes.Buffer
 	cmd.Stdout = io.MultiWriter(&stdout, GinkgoWriter)
 	cmd.Stderr = GinkgoWriter
 	Expect(cmd.Run()).To(Succeed())
 	return stdout.String()
-}
-
-func jsonMarshal(v interface{}) []byte {
-	buf := bytes.NewBuffer([]byte{})
-	Expect(toml.NewEncoder(buf).Encode(v)).To(Succeed())
-	return buf.Bytes()
-}
-
-func jsonUnmarshal(data []byte, v interface{}) {
-	Expect(toml.Unmarshal(data, v)).To(Succeed())
 }
 
 func isContainerd() bool {

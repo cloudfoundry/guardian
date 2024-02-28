@@ -326,16 +326,6 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	return nil
 }
 
-func (cmd *ServerCommand) calculateDefaultMappingLengths(containerRootUID, containerRootGID int) {
-	if cmd.Containers.UIDMapLength == 0 {
-		cmd.Containers.UIDMapLength = uint32(containerRootUID) - cmd.Containers.UIDMapStart
-	}
-
-	if cmd.Containers.GIDMapLength == 0 {
-		cmd.Containers.GIDMapLength = uint32(containerRootGID) - cmd.Containers.GIDMapStart
-	}
-}
-
 func startServer(gardenServer *server.GardenServer, gdnListener net.Listener, logger lager.Logger) error {
 	socketFDStr := os.Getenv("SOCKET2ME_FD")
 	if socketFDStr == "" {

@@ -1762,23 +1762,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 	})
 })
 
-type (
-	fakeExitError  int
-	fakeWaitStatus fakeExitError
-)
-
-func (e fakeExitError) Error() string {
-	return fmt.Sprintf("Fake Exit Error: %d", e)
-}
-
-func (e fakeExitError) Sys() interface{} {
-	return fakeWaitStatus(e)
-}
-
-func (w fakeWaitStatus) ExitStatus() int {
-	return int(w)
-}
-
 func dup(f *os.File) *os.File {
 	dupped, err := syscall.Dup(int(f.Fd()))
 	Expect(err).NotTo(HaveOccurred())
