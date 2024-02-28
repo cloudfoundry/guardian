@@ -140,6 +140,7 @@ var _ = Describe("Sandbox Rexecer", func() {
 		BeforeEach(func() {
 			var err error
 			file, err = ioutil.TempFile("", "")
+			Expect(err).NotTo(HaveOccurred())
 			_, err = file.WriteString("some-stuff")
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -194,6 +195,7 @@ var _ = Describe("Sandbox Rexecer", func() {
 			BeforeEach(func() {
 				var err error
 				file, err = ioutil.TempFile("", "")
+				Expect(err).NotTo(HaveOccurred())
 				_, err = file.WriteString("some-stuff")
 				Expect(err).NotTo(HaveOccurred())
 			})
