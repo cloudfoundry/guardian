@@ -14,9 +14,9 @@ var _ = Describe("LookupUser", func() {
 	Context("when we try to get the UID, GID and HOME of a username", func() {
 		var (
 			rootFsPath     string
-			uidOfTheBeast  int    = 666
-			gidOfTheBeast  int    = 777
-			homeOfTheBeast string = "/home/fieryunderworld"
+			uidOfTheBeast  = 666
+			gidOfTheBeast  = 777
+			homeOfTheBeast = "/home/fieryunderworld"
 		)
 
 		createPasswdFile := func() error {

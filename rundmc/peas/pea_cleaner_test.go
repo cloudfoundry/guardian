@@ -23,7 +23,7 @@ var _ = Describe("PeaCleaner", func() {
 		fakePeaPidGetter *peasfakes.FakePeaPidGetter
 		cleaner          gardener.PeaCleaner
 		logger           *lagertest.TestLogger
-		processID        string = "proccess-id"
+		processID        = "proccess-id"
 		cleanErr         error
 	)
 

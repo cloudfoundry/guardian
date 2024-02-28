@@ -601,7 +601,7 @@ func (cmd *CommonCommand) wireContainerizer(
 
 	processDepot := execrunner.NewProcessDirDepot(depot)
 
-	var execRunner runrunc.ExecRunner = factory.WireExecRunner(runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)), bundleSaver, depot, processDepot)
+	execRunner := factory.WireExecRunner(runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)), bundleSaver, depot, processDepot)
 	wireExecerFunc := func(pidGetter runrunc.PidGetter) *runrunc.Execer {
 		return runrunc.NewExecer(depot, processBuilder, factory.WireMkdirer(), userLookupper, execRunner, pidGetter)
 	}
