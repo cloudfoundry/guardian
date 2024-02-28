@@ -63,7 +63,7 @@ func writeMapFile(procFilePath string, desiredMappings []mapping) error {
 func HandleCmd(idKind string) {
 	pid, err := strconv.Atoi(os.Args[1])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprint(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 
