@@ -1,8 +1,9 @@
 package commands
 
 import (
-	"code.cloudfoundry.org/lager/v3"
 	"io"
+
+	"code.cloudfoundry.org/lager/v3"
 )
 
 func createLoggingSink(writer io.Writer, logLevel lager.LogLevel, logFormat string) lager.Sink {

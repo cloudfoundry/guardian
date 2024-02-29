@@ -1,7 +1,6 @@
 package idfinder_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -23,12 +22,12 @@ var _ = Describe("Idfinder", func() {
 
 	BeforeEach(func() {
 		imageId = "1234-my-id"
-		storePath, err = ioutil.TempDir("", "")
+		storePath, err = os.MkdirTemp("", "")
 		imageDir = filepath.Join(storePath, store.ImageDirName)
 		Expect(os.MkdirAll(imageDir, 0777)).To(Succeed())
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(ioutil.WriteFile(path.Join(imageDir, imageId), []byte("hello-world"), 0644)).To(Succeed())
+		Expect(os.WriteFile(path.Join(imageDir, imageId), []byte("hello-world"), 0644)).To(Succeed())
 	})
 
 	AfterEach(func() {

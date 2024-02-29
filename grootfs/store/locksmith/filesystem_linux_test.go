@@ -2,7 +2,6 @@ package locksmith_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -22,7 +21,7 @@ var _ = Describe("Filesystem", func() {
 
 	BeforeEach(func() {
 		var err error
-		path, err = ioutil.TempDir("", "store")
+		path, err = os.MkdirTemp("", "store")
 		Expect(err).ToNot(HaveOccurred())
 		metricsEmitter = new(grootfakes.FakeMetricsEmitter)
 	})

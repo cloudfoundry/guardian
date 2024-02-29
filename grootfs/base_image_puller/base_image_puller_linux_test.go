@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -66,11 +65,11 @@ var _ = Describe("Base Image Puller", func() {
 			buffer := bytes.NewBuffer([]byte{})
 			stream := gzip.NewWriter(buffer)
 			defer stream.Close()
-			return ioutil.NopCloser(buffer), 0, nil
+			return io.NopCloser(buffer), 0, nil
 		}
 
 		var err error
-		tmpVolumesDir, err = ioutil.TempDir("", "volumes")
+		tmpVolumesDir, err = os.MkdirTemp("", "volumes")
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeVolumeDriver = new(base_image_pullerfakes.FakeVolumeDriver)
@@ -192,7 +191,7 @@ var _ = Describe("Base Image Puller", func() {
 		})
 
 		It("asks the volume driver to handle opaque whiteouts for each layer", func() {
-			volumesDir, err := ioutil.TempDir("", "volumes")
+			volumesDir, err := os.MkdirTemp("", "volumes")
 			Expect(err).NotTo(HaveOccurred())
 
 			fakeVolumeDriver.CreateVolumeStub = func(_ lager.Logger, _, id string) (string, error) {
@@ -223,7 +222,7 @@ var _ = Describe("Base Image Puller", func() {
 				defer stream.Close()
 				_, err := stream.Write([]byte(fmt.Sprintf("layer-%s-contents", layerInfo.BlobID)))
 				Expect(err).NotTo(HaveOccurred())
-				return ioutil.NopCloser(buffer), 1200, nil
+				return io.NopCloser(buffer), 1200, nil
 			}
 
 			err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
@@ -235,7 +234,7 @@ var _ = Describe("Base Image Puller", func() {
 				_, unpackSpec := fakeUnpacker.UnpackArgsForCall(idx)
 				gzipReader, err := gzip.NewReader(unpackSpec.Stream)
 				Expect(err).NotTo(HaveOccurred())
-				contents, err := ioutil.ReadAll(gzipReader)
+				contents, err := io.ReadAll(gzipReader)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(contents)).To(Equal(expected))
 			}

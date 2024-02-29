@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -92,7 +91,7 @@ func readSubIDMapping(name string, id int, subidPath string) ([]groot.IDMappingS
 		HostID: id, NamespaceID: 0, Size: 1,
 	}}
 
-	contents, err := ioutil.ReadFile(subidPath)
+	contents, err := os.ReadFile(subidPath)
 	if err != nil {
 		return nil, err
 	}

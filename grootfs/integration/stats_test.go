@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,7 +31,7 @@ var _ = Describe("Stats", func() {
 
 	BeforeEach(func() {
 		var err error
-		sourceImagePath, err = ioutil.TempDir("", "")
+		sourceImagePath, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 		imageID = testhelpers.NewRandomID()
 	})

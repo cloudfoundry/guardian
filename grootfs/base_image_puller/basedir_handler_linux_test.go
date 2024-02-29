@@ -1,7 +1,6 @@
 package base_image_puller_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -36,7 +35,7 @@ var _ = Describe("BasedirHandler", func() {
 		reexecer = sandbox.NewReexecer(logger, idMapper, groot.IDMappings{})
 
 		var err error
-		volumeDir, err = ioutil.TempDir("", "volume-")
+		volumeDir, err = os.MkdirTemp("", "volume-")
 		Expect(err).NotTo(HaveOccurred())
 
 		parentLayerPath = filepath.Join(volumeDir, "layer-1")
@@ -119,7 +118,7 @@ var _ = Describe("BasedirHandler", func() {
 	Context("when the base directory already exists in the child layer", func() {
 		BeforeEach(func() {
 			Expect(os.MkdirAll(filepath.Join(childLayerPath, "foo"), 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(filepath.Join(childLayerPath, "foo", "a_file"), []byte{}, 0755))
+			Expect(os.WriteFile(filepath.Join(childLayerPath, "foo", "a_file"), []byte{}, 0755))
 			Expect(os.Chmod(filepath.Join(childLayerPath, "foo"), 0222)).To(Succeed())
 			Expect(os.Chown(filepath.Join(childLayerPath, "foo"), 1000, 1000)).To(Succeed())
 		})

@@ -2,7 +2,6 @@ package loopback_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -23,7 +22,7 @@ var _ = Describe("LoSetupWrapper", func() {
 	)
 
 	BeforeEach(func() {
-		f, err := ioutil.TempFile("", "backing-file*")
+		f, err := os.CreateTemp("", "backing-file*")
 		Expect(err).NotTo(HaveOccurred())
 		defer f.Close()
 
@@ -78,7 +77,7 @@ var _ = Describe("LoSetupWrapper", func() {
 
 		When("there is no associated loopback device", func() {
 			BeforeEach(func() {
-				f, err := ioutil.TempFile("", "another-file*")
+				f, err := os.CreateTemp("", "another-file*")
 				Expect(err).NotTo(HaveOccurred())
 				defer f.Close()
 
@@ -144,7 +143,7 @@ var _ = Describe("LoSetupWrapper", func() {
 
 		When("there is no associated loopback device", func() {
 			BeforeEach(func() {
-				f, err := ioutil.TempFile("", "another-file*")
+				f, err := os.CreateTemp("", "another-file*")
 				Expect(err).NotTo(HaveOccurred())
 				defer f.Close()
 
@@ -211,7 +210,7 @@ var _ = Describe("LoSetupWrapper", func() {
 
 		When("there is no associated loopback device", func() {
 			BeforeEach(func() {
-				f, err := ioutil.TempFile("", "another-file*")
+				f, err := os.CreateTemp("", "another-file*")
 				Expect(err).NotTo(HaveOccurred())
 				defer f.Close()
 

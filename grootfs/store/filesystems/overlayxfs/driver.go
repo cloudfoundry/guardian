@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -188,7 +187,7 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (
 		logger.Error("creating-volume-symlink-failed", err)
 		return "", errorspkg.Wrap(err, "creating volume symlink")
 	}
-	if err := ioutil.WriteFile(filepath.Join(d.storePath, LinksDirName, id), []byte(shortID), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(d.storePath, LinksDirName, id), []byte(shortID), 0644); err != nil {
 		logger.Error("creating-link-file-failed", err)
 		return "", errorspkg.Wrap(err, "creating link file")
 	}
@@ -224,7 +223,7 @@ func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 }
 
 func (d *Driver) removeVolumeLink(linkInfoPath string) error {
-	shortID, err := ioutil.ReadFile(linkInfoPath)
+	shortID, err := os.ReadFile(linkInfoPath)
 	if os.IsNotExist(err) {
 		return nil
 	} else if err != nil {
@@ -249,7 +248,7 @@ func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
 	defer logger.Debug("ending")
 
 	volumes := []string{}
-	existingVolumes, err := ioutil.ReadDir(path.Join(d.storePath, store.VolumesDirName))
+	existingVolumes, err := os.ReadDir(path.Join(d.storePath, store.VolumesDirName))
 	if err != nil {
 		return nil, errorspkg.Wrap(err, "failed to list volumes")
 	}
@@ -307,7 +306,7 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_manager.ImageDriver
 	}
 
 	imageInfoFileName := filepath.Join(spec.ImagePath, imageInfoName)
-	if err := ioutil.WriteFile(imageInfoFileName, []byte(strconv.FormatInt(baseVolumeSize, 10)), 0600); err != nil {
+	if err := os.WriteFile(imageInfoFileName, []byte(strconv.FormatInt(baseVolumeSize, 10)), 0600); err != nil {
 		return groot.MountInfo{}, errorspkg.Wrapf(err, "writing image info %s", imageInfoFileName)
 	}
 
@@ -329,7 +328,7 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 	}
 
 	oldLinkFile := filepath.Join(d.storePath, LinksDirName, filepath.Base(from))
-	shortID, err := ioutil.ReadFile(oldLinkFile)
+	shortID, err := os.ReadFile(oldLinkFile)
 	if err != nil {
 		return errorspkg.Wrapf(err, "reading link id for volume %s", to)
 	}
@@ -518,7 +517,7 @@ func (d *Driver) getLowerDirs(logger lager.Logger, volumeIDs []string) ([]string
 		}
 		totalVolumeSize += volumeSize
 
-		shortID, err := ioutil.ReadFile(filepath.Join(d.storePath, LinksDirName, volumeIDs[i]))
+		shortID, err := os.ReadFile(filepath.Join(d.storePath, LinksDirName, volumeIDs[i]))
 		if err != nil {
 			return nil, 0, errorspkg.Wrapf(err, "reading link id for %s", volumePath)
 		}
@@ -783,7 +782,7 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_manager.ImageDri
 		return errorspkg.Wrapf(err, "apply disk limit: %s", output.String())
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(spec.ImagePath, imageQuotaName), []byte(diskLimitString), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(spec.ImagePath, imageQuotaName), []byte(diskLimitString), 0600); err != nil {
 		logger.Error("writing-image-quota-failed", err)
 		return errorspkg.Wrap(err, "writing image quota")
 	}

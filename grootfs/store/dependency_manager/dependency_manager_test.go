@@ -1,7 +1,6 @@
 package dependency_manager_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -20,7 +19,7 @@ var _ = Describe("DependencyManager", func() {
 
 	BeforeEach(func() {
 		var err error
-		depsPath, err = ioutil.TempDir("", "dependencies")
+		depsPath, err = os.MkdirTemp("", "dependencies")
 		Expect(err).NotTo(HaveOccurred())
 
 		manager = dependency_manager.NewDependencyManager(depsPath)

@@ -1,7 +1,6 @@
 package integration_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -20,7 +19,7 @@ var _ = Describe("Delete Store", func() {
 	)
 	BeforeEach(func() {
 		integration.SkipIfNonRoot(GrootfsTestUid)
-		tmpDir, err := ioutil.TempDir("", "")
+		tmpDir, err := os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		storePath = filepath.Join(tmpDir, "store")
@@ -35,7 +34,7 @@ var _ = Describe("Delete Store", func() {
 
 		Expect(testhelpers.XFSMountPoints()).To(ContainElement(storePath))
 
-		storeContents, err := ioutil.ReadDir(storePath)
+		storeContents, err := os.ReadDir(storePath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(storeContents).ToNot(BeEmpty())
 
@@ -49,7 +48,7 @@ var _ = Describe("Delete Store", func() {
 	Context("when given a path which does not look like a store", func() {
 		JustBeforeEach(func() {
 			Expect(os.MkdirAll(storePath, 0600)).To(Succeed())
-			storeContents, err := ioutil.ReadDir(storePath)
+			storeContents, err := os.ReadDir(storePath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(storeContents).To(BeEmpty())
 		})

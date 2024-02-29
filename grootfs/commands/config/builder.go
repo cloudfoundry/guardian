@@ -1,7 +1,7 @@
 package config
 
 import (
-	"io/ioutil"
+	"os"
 
 	errorspkg "github.com/pkg/errors"
 
@@ -216,7 +216,7 @@ func (b *Builder) WithDirectIO() *Builder {
 }
 
 func load(configPath string) (Config, error) {
-	configContent, err := ioutil.ReadFile(configPath)
+	configContent, err := os.ReadFile(configPath)
 	if err != nil {
 		return Config{}, errorspkg.Wrap(err, "invalid config path")
 	}

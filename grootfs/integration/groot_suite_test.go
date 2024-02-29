@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -99,7 +98,7 @@ func TestGroot(t *testing.T) {
 		testhelpers.ReseedRandomNumberGenerator()
 
 		var err error
-		StorePath, err = ioutil.TempDir("", fmt.Sprintf("store-%d", GinkgoParallelProcess()))
+		StorePath, err = os.MkdirTemp("", fmt.Sprintf("store-%d", GinkgoParallelProcess()))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Chmod(StorePath, 0777)).To(Succeed())
 
@@ -144,7 +143,7 @@ func runCommand(command *exec.Cmd) (string, string, error) {
 }
 
 func getVolumesDirEntries() ([]os.FileInfo, error) {
-	return ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+	return os.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 }
 
 func deleteAllImages(runner runner.Runner) error {

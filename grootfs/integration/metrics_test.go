@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -291,7 +290,7 @@ var _ = Describe("Metrics", func() {
 
 		BeforeEach(func() {
 			var err error
-			configDir, err = ioutil.TempDir("", "")
+			configDir, err = os.MkdirTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			cfg := config.Config{

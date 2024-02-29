@@ -1,7 +1,6 @@
 package groot_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -20,7 +19,7 @@ var _ = Describe("Lister", func() {
 
 	BeforeEach(func() {
 		var err error
-		storePath, err = ioutil.TempDir("", "")
+		storePath, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(os.MkdirAll(filepath.Join(storePath, "images", "image-0", "too-far"), 0755)).To(Succeed())

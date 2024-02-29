@@ -2,7 +2,6 @@ package groot_test
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -22,7 +21,7 @@ var _ = Describe("StoreNamespacer", func() {
 
 	BeforeEach(func() {
 		var err error
-		storePath, err = ioutil.TempDir("", "")
+		storePath, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.MkdirAll(filepath.Join(storePath, store.MetaDirName), 0700)).To(Succeed())
 	})
@@ -39,7 +38,7 @@ var _ = Describe("StoreNamespacer", func() {
 		BeforeEach(func() {
 			namespaceFile = filepath.Join(storePath, store.MetaDirName, "namespace.json")
 			mappings := []byte(`{"uid-mappings":["0:1000:1","1:100000:10"],"gid-mappings":["0:2000:1","1:200000:10"]}`)
-			Expect(ioutil.WriteFile(namespaceFile, mappings, 0700)).To(Succeed())
+			Expect(os.WriteFile(namespaceFile, mappings, 0700)).To(Succeed())
 
 			expectedMappings = groot.IDMappings{
 				UIDMappings: []groot.IDMappingSpec{
@@ -89,7 +88,7 @@ var _ = Describe("StoreNamespacer", func() {
 
 		Context("when the mappings file contains invalid json", func() {
 			BeforeEach(func() {
-				Expect(ioutil.WriteFile(namespaceFile, []byte("junk"), 0600)).To(Succeed())
+				Expect(os.WriteFile(namespaceFile, []byte("junk"), 0600)).To(Succeed())
 			})
 
 			It("returns an error", func() {
@@ -102,7 +101,7 @@ var _ = Describe("StoreNamespacer", func() {
 			Context("invalid uid mappings", func() {
 				BeforeEach(func() {
 					badUidMappings := []byte(`{"uid-mappings":["1000:1","10"],"gid-mappings":["0:2000:1","1:200000:10"]}`)
-					Expect(ioutil.WriteFile(namespaceFile, badUidMappings, 0600)).To(Succeed())
+					Expect(os.WriteFile(namespaceFile, badUidMappings, 0600)).To(Succeed())
 				})
 
 				It("returns an error", func() {
@@ -114,7 +113,7 @@ var _ = Describe("StoreNamespacer", func() {
 			Context("invalid gid mappings", func() {
 				BeforeEach(func() {
 					badGidMappings := []byte(`{"gid-mappings":["1000:1","10"],"uid-mappings":["0:2000:1","1:200000:10"]}`)
-					Expect(ioutil.WriteFile(namespaceFile, badGidMappings, 0600)).To(Succeed())
+					Expect(os.WriteFile(namespaceFile, badGidMappings, 0600)).To(Succeed())
 				})
 
 				It("returns an error", func() {
@@ -146,7 +145,7 @@ var _ = Describe("StoreNamespacer", func() {
 				namespaceFile := filepath.Join(storePath, store.MetaDirName, "namespace.json")
 				Expect(namespaceFile).To(BeAnExistingFile())
 
-				contents, err := ioutil.ReadFile(namespaceFile)
+				contents, err := os.ReadFile(namespaceFile)
 				Expect(err).NotTo(HaveOccurred())
 
 				var namespaces map[string][]string
@@ -171,7 +170,7 @@ var _ = Describe("StoreNamespacer", func() {
 		Context("when there's a namespace file", func() {
 			BeforeEach(func() {
 				mappings := []byte(`{"uid-mappings":["0:1000:1","1:100000:10"],"gid-mappings":["0:2000:1","1:200000:10"]}`)
-				Expect(ioutil.WriteFile(filepath.Join(storePath, store.MetaDirName, "namespace.json"), mappings, 0700)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(storePath, store.MetaDirName, "namespace.json"), mappings, 0700)).To(Succeed())
 			})
 
 			It("succeeds when the namespaces are the same", func() {

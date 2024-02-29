@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -66,7 +65,7 @@ var _ = Describe("Driver", func() {
 		randomID = randVolumeID()
 		logger = lagertest.NewTestLogger("overlay+xfs")
 		var err error
-		storePath, err = ioutil.TempDir(StorePath, "")
+		storePath, err = os.MkdirTemp(StorePath, "")
 		Expect(err).ToNot(HaveOccurred())
 		driver = overlayxfs.NewDriver(storePath, tardisBinPath, unmounter, directIO)
 
@@ -97,12 +96,12 @@ var _ = Describe("Driver", func() {
 		var fsFile string
 
 		BeforeEach(func() {
-			tempFile, err := ioutil.TempFile("", "xfs-filesystem")
+			tempFile, err := os.CreateTemp("", "xfs-filesystem")
 			Expect(err).NotTo(HaveOccurred())
 			fsFile = tempFile.Name()
 			Expect(os.Truncate(fsFile, gb)).To(Succeed())
 
-			storePath, err = ioutil.TempDir("", "store")
+			storePath, err = os.MkdirTemp("", "store")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -119,7 +118,7 @@ var _ = Describe("Driver", func() {
 
 		It("successfully mounts the filesystem with the correct mount options", func() {
 			mustSucceed(driver.InitFilesystem(logger, fsFile, storePath))
-			mountinfo, err := ioutil.ReadFile("/proc/self/mountinfo")
+			mountinfo, err := os.ReadFile("/proc/self/mountinfo")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(string(mountinfo)).To(MatchRegexp(fmt.Sprintf("%s[^\n]*noatime[^\n]*prjquota", storePath)))
@@ -171,14 +170,14 @@ var _ = Describe("Driver", func() {
 		var fsFile string
 
 		BeforeEach(func() {
-			tempFile, err := ioutil.TempFile("", "xfs-filesystem")
+			tempFile, err := os.CreateTemp("", "xfs-filesystem")
 			Expect(err).NotTo(HaveOccurred())
 			fsFile = tempFile.Name()
 			Expect(os.Truncate(fsFile, gb)).To(Succeed())
 			cmd := exec.Command("mkfs.xfs", "-f", fsFile)
 			Expect(cmd.Run()).To(Succeed())
 
-			storePath, err = ioutil.TempDir("", "store")
+			storePath, err = os.MkdirTemp("", "store")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -195,7 +194,7 @@ var _ = Describe("Driver", func() {
 
 		It("successfully mounts the filesystem with the correct mount options", func() {
 			Expect(driver.MountFilesystem(logger, fsFile, storePath)).To(Succeed())
-			mountinfo, err := ioutil.ReadFile("/proc/self/mountinfo")
+			mountinfo, err := os.ReadFile("/proc/self/mountinfo")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(string(mountinfo)).To(MatchRegexp(fmt.Sprintf("%s[^\n]*noatime[^\n]*prjquota", storePath)))
@@ -227,12 +226,12 @@ var _ = Describe("Driver", func() {
 		var fsFile, deinitStorePath string
 
 		BeforeEach(func() {
-			tempFile, err := ioutil.TempFile("", "xfs-filesystem")
+			tempFile, err := os.CreateTemp("", "xfs-filesystem")
 			Expect(err).NotTo(HaveOccurred())
 			fsFile = tempFile.Name()
 			Expect(os.Truncate(fsFile, gb)).To(Succeed())
 
-			deinitStorePath, err = ioutil.TempDir("", "store")
+			deinitStorePath, err = os.MkdirTemp("", "store")
 			Expect(err).NotTo(HaveOccurred())
 			mustSucceed(driver.InitFilesystem(logger, fsFile, deinitStorePath))
 			Expect(testhelpers.XFSMountPoints()).To(ContainElement(deinitStorePath))
@@ -267,16 +266,16 @@ var _ = Describe("Driver", func() {
 		BeforeEach(func() {
 			layer1ID = randVolumeID()
 			layer1Path = createVolume(storePath, driver, "parent-id", layer1ID, 5000)
-			Expect(ioutil.WriteFile(filepath.Join(layer1Path, "file-hello"), []byte("hello-1"), 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(filepath.Join(layer1Path, "file-bye"), []byte("bye-1"), 0700)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(layer1Path, "file-hello"), []byte("hello-1"), 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(layer1Path, "file-bye"), []byte("bye-1"), 0700)).To(Succeed())
 			Expect(os.Mkdir(filepath.Join(layer1Path, "a-folder"), 0700)).To(Succeed())
-			Expect(ioutil.WriteFile(filepath.Join(layer1Path, "a-folder", "folder-file"), []byte("in-a-folder-1"), 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(layer1Path, "a-folder", "folder-file"), []byte("in-a-folder-1"), 0755)).To(Succeed())
 
 			layer2ID = randVolumeID()
 			layer2Path = createVolume(storePath, driver, "parent-id", layer2ID, 10000)
-			Expect(ioutil.WriteFile(filepath.Join(layer2Path, "file-bye"), []byte("bye-2"), 0700)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(layer2Path, "file-bye"), []byte("bye-2"), 0700)).To(Succeed())
 			Expect(os.Mkdir(filepath.Join(layer2Path, "a-folder"), 0700)).To(Succeed())
-			Expect(ioutil.WriteFile(filepath.Join(layer2Path, "a-folder", "folder-file"), []byte("in-a-folder-2"), 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(layer2Path, "a-folder", "folder-file"), []byte("in-a-folder-2"), 0755)).To(Succeed())
 
 			spec.BaseVolumeIDs = []string{layer1ID}
 		})
@@ -302,17 +301,17 @@ var _ = Describe("Driver", func() {
 
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).To(BeADirectory())
 
-			contents, err := ioutil.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "file-hello"))
+			contents, err := os.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "file-hello"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(contents).To(BeEquivalentTo("hello-1"))
 
-			contents, err = ioutil.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "file-bye"))
+			contents, err = os.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "file-bye"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(contents).To(BeEquivalentTo("bye-1"))
 
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "a-folder")).To(BeADirectory())
 
-			contents, err = ioutil.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "a-folder", "folder-file"))
+			contents, err = os.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "a-folder", "folder-file"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(contents).To(BeEquivalentTo("in-a-folder-1"))
 		})
@@ -358,17 +357,17 @@ var _ = Describe("Driver", func() {
 
 				Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).To(BeADirectory())
 
-				contents, err := ioutil.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "file-hello"))
+				contents, err := os.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "file-hello"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(contents).To(BeEquivalentTo("hello-1"))
 
-				contents, err = ioutil.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "file-bye"))
+				contents, err = os.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "file-bye"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(contents).To(BeEquivalentTo("bye-2"))
 
 				Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "a-folder")).To(BeADirectory())
 
-				contents, err = ioutil.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "a-folder", "folder-file"))
+				contents, err = os.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "a-folder", "folder-file"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(contents).To(BeEquivalentTo("in-a-folder-2"))
 			})
@@ -409,7 +408,7 @@ var _ = Describe("Driver", func() {
 				_, err := driver.CreateImage(logger, spec)
 				Expect(err).ToNot(HaveOccurred())
 				rootfsPath := filepath.Join(spec.ImagePath, "rootfs")
-				contents, err := ioutil.ReadDir(rootfsPath)
+				contents, err := os.ReadDir(rootfsPath)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(contents).To(BeEmpty())
 			})
@@ -468,7 +467,7 @@ var _ = Describe("Driver", func() {
 		Context("when disk limit is > 0", func() {
 			BeforeEach(func() {
 				spec.DiskLimit = 10 * mb
-				Expect(ioutil.WriteFile(filepath.Join(storePath, store.MetaDirName, fmt.Sprintf("volume-%s", layer1ID)), []byte(`{"Size": 3145728}`), 0644)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(storePath, store.MetaDirName, fmt.Sprintf("volume-%s", layer1ID)), []byte(`{"Size": 3145728}`), 0644)).To(Succeed())
 			})
 
 			It("creates the storeDevice block device in the `images` parent folder", func() {
@@ -502,7 +501,7 @@ var _ = Describe("Driver", func() {
 				Eventually(sess).Should(gexec.Exit(0))
 
 				anotherSpec := spec
-				anotherImagePath, err := ioutil.TempDir(filepath.Join(storePath, store.ImageDirName), "another-image")
+				anotherImagePath, err := os.MkdirTemp(filepath.Join(storePath, store.ImageDirName), "another-image")
 				Expect(err).NotTo(HaveOccurred())
 				anotherSpec.ImagePath = anotherImagePath
 				_, err = driver.CreateImage(logger, anotherSpec)
@@ -719,13 +718,13 @@ var _ = Describe("Driver", func() {
 
 			It("removes the projectid directory for that image", func() {
 				projectidsDir := filepath.Join(storePath, overlayxfs.IDDir)
-				ids, err := ioutil.ReadDir(projectidsDir)
+				ids, err := os.ReadDir(projectidsDir)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(ids).To(HaveLen(1))
 
 				Expect(driver.DestroyImage(logger, spec.ImagePath)).To(Succeed())
 
-				ids, err = ioutil.ReadDir(projectidsDir)
+				ids, err = os.ReadDir(projectidsDir)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(ids).To(BeEmpty())
 			})
@@ -748,7 +747,7 @@ var _ = Describe("Driver", func() {
 				Expect(filepath.Join(spec.ImagePath, overlayxfs.UpperDir)).To(BeADirectory())
 
 				rootfsPath := filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)
-				rootfsContent, err := ioutil.ReadDir(rootfsPath)
+				rootfsContent, err := os.ReadDir(rootfsPath)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rootfsContent).NotTo(BeEmpty())
 
@@ -803,7 +802,7 @@ var _ = Describe("Driver", func() {
 
 		Context("when the path doesn't have a quota", func() {
 			BeforeEach(func() {
-				tmpDir, err := ioutil.TempDir(filepath.Join(storePath, store.ImageDirName), "")
+				tmpDir, err := os.MkdirTemp(filepath.Join(storePath, store.ImageDirName), "")
 				Expect(err).NotTo(HaveOccurred())
 				spec.DiskLimit = 0
 				spec.ImagePath = tmpDir
@@ -869,10 +868,10 @@ var _ = Describe("Driver", func() {
 
 		BeforeEach(func() {
 			var err error
-			storePath, err = ioutil.TempDir(storePath, "configure-store-test")
+			storePath, err = os.MkdirTemp(storePath, "configure-store-test")
 			Expect(err).ToNot(HaveOccurred())
 
-			backingStoreFile, err := ioutil.TempFile(storePath, "backing-store-test")
+			backingStoreFile, err := os.CreateTemp(storePath, "backing-store-test")
 			Expect(err).ToNot(HaveOccurred())
 
 			backingStorePath = backingStoreFile.Name()
@@ -917,7 +916,7 @@ var _ = Describe("Driver", func() {
 		Context("when the whiteout 'device' is not a device", func() {
 			BeforeEach(func() {
 				Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
-				Expect(ioutil.WriteFile(filepath.Join(storePath, overlayxfs.WhiteoutDevice), []byte{}, 0755)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(storePath, overlayxfs.WhiteoutDevice), []byte{}, 0755)).To(Succeed())
 			})
 
 			It("returns an error", func() {
@@ -968,7 +967,7 @@ var _ = Describe("Driver", func() {
 			_, err = os.Stat(linkFile)
 			Expect(err).ToNot(HaveOccurred(), "volume link file has not been created")
 
-			linkName, err := ioutil.ReadFile(linkFile)
+			linkName, err := os.ReadFile(linkFile)
 			Expect(err).ToNot(HaveOccurred(), "failed to read volume link file")
 
 			link := filepath.Join(storePath, overlayxfs.LinksDirName, string(linkName))
@@ -1125,7 +1124,7 @@ var _ = Describe("Driver", func() {
 			Expect(volumePath).To(BeADirectory())
 			linkFilePath := filepath.Join(storePath, overlayxfs.LinksDirName, volumeID)
 			Expect(linkFilePath).To(BeAnExistingFile())
-			linkfileinfo, err := ioutil.ReadFile(linkFilePath)
+			linkfileinfo, err := os.ReadFile(linkFilePath)
 			Expect(err).ToNot(HaveOccurred())
 			symlinkPath := filepath.Join(storePath, overlayxfs.LinksDirName, string(linkfileinfo))
 			Expect(symlinkPath).To(BeAnExistingFile())
@@ -1138,7 +1137,7 @@ var _ = Describe("Driver", func() {
 
 		It("deletes the metadata file", func() {
 			metaFilePath := filepath.Join(storePath, store.MetaDirName, fmt.Sprintf("volume-%s", volumeID))
-			Expect(ioutil.WriteFile(metaFilePath, []byte{}, 0644)).To(Succeed())
+			Expect(os.WriteFile(metaFilePath, []byte{}, 0644)).To(Succeed())
 			Expect(driver.DestroyVolume(logger, volumeID)).To(Succeed())
 			Expect(metaFilePath).ToNot(BeAnExistingFile())
 		})
@@ -1148,7 +1147,7 @@ var _ = Describe("Driver", func() {
 
 			JustBeforeEach(func() {
 				metaFilePath = filepath.Join(storePath, store.MetaDirName, fmt.Sprintf("volume-%s", volumeID))
-				Expect(ioutil.WriteFile(metaFilePath, []byte{}, 0644)).To(Succeed())
+				Expect(os.WriteFile(metaFilePath, []byte{}, 0644)).To(Succeed())
 				Expect(driver.MarkVolumeArtifacts(logger, volumeID)).To(Succeed())
 
 				volumeID = "gc." + volumeID
@@ -1182,7 +1181,7 @@ var _ = Describe("Driver", func() {
 			It("does not fail", func() {
 				linkFilePath := filepath.Join(storePath, overlayxfs.LinksDirName, volumeID)
 				Expect(linkFilePath).To(BeAnExistingFile())
-				linkfileinfo, err := ioutil.ReadFile(linkFilePath)
+				linkfileinfo, err := os.ReadFile(linkFilePath)
 				Expect(err).ToNot(HaveOccurred())
 				symlinkPath := filepath.Join(storePath, overlayxfs.LinksDirName, string(linkfileinfo))
 				Expect(symlinkPath).To(BeAnExistingFile())
@@ -1246,7 +1245,7 @@ var _ = Describe("Driver", func() {
 			err = driver.MoveVolume(logger, volumePath, newVolumePath)
 			Expect(err).ToNot(HaveOccurred())
 
-			linkName, err := ioutil.ReadFile(filepath.Join(storePath, overlayxfs.LinksDirName, filepath.Base(newVolumePath)))
+			linkName, err := os.ReadFile(filepath.Join(storePath, overlayxfs.LinksDirName, filepath.Base(newVolumePath)))
 			Expect(err).NotTo(HaveOccurred())
 			linkPath := filepath.Join(storePath, overlayxfs.LinksDirName, string(linkName))
 			_, err = os.Lstat(linkPath)
@@ -1290,12 +1289,12 @@ var _ = Describe("Driver", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(os.MkdirAll(filepath.Join(volumePath, "a/b"), 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(filepath.Join(volumePath, "a/b/file_1"), []byte{}, 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(filepath.Join(volumePath, "a/b/file_2"), []byte{}, 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(volumePath, "a/b/file_1"), []byte{}, 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(volumePath, "a/b/file_2"), []byte{}, 0755)).To(Succeed())
 			Expect(os.MkdirAll(filepath.Join(volumePath, "c/d/e"), 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(filepath.Join(volumePath, "c/d/file_1"), []byte{}, 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(filepath.Join(volumePath, "c/d/file_2"), []byte{}, 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(filepath.Join(volumePath, "c/d/e/file_3"), []byte{}, 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(volumePath, "c/d/file_1"), []byte{}, 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(volumePath, "c/d/file_2"), []byte{}, 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(volumePath, "c/d/e/file_3"), []byte{}, 0755)).To(Succeed())
 
 			opaqueWhiteouts = []string{
 				"/a/b/.wh..wh..opq",
@@ -1307,7 +1306,7 @@ var _ = Describe("Driver", func() {
 			Expect(driver.HandleOpaqueWhiteouts(logger, volumeID, opaqueWhiteouts)).To(Succeed())
 
 			abFolderPath := filepath.Join(volumePath, "a/b")
-			files, err := ioutil.ReadDir(abFolderPath)
+			files, err := os.ReadDir(abFolderPath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(files).To(HaveLen(2))
 			xattr, err := system.Lgetxattr(abFolderPath, "trusted.overlay.opaque")
@@ -1316,7 +1315,7 @@ var _ = Describe("Driver", func() {
 
 			cdFolderPath := filepath.Join(volumePath, "c/d")
 			Expect(cdFolderPath).To(BeADirectory())
-			files, err = ioutil.ReadDir(cdFolderPath)
+			files, err = os.ReadDir(cdFolderPath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(files).To(HaveLen(3))
 			xattr, err = system.Lgetxattr(cdFolderPath, "trusted.overlay.opaque")
@@ -1418,7 +1417,7 @@ var _ = Describe("Driver", func() {
 
 			Context("when the meta file exists", func() {
 				BeforeEach(func() {
-					Expect(ioutil.WriteFile(volumeMetaPath(storePath, volumeID), []byte("some random stuff"), 0755)).To(Succeed())
+					Expect(os.WriteFile(volumeMetaPath(storePath, volumeID), []byte("some random stuff"), 0755)).To(Succeed())
 				})
 
 				It("regenerates the meta file", func() {
@@ -1447,12 +1446,12 @@ func createVolume(storePath string, driver *overlayxfs.Driver, parentID, id stri
 	Expect(err).NotTo(HaveOccurred())
 
 	volumeContentsPath := filepath.Join(storePath, store.VolumesDirName, id, "contents")
-	Expect(ioutil.WriteFile(volumeContentsPath, []byte{}, 0755)).To(Succeed())
+	Expect(os.WriteFile(volumeContentsPath, []byte{}, 0755)).To(Succeed())
 	Expect(os.Truncate(volumeContentsPath, size)).To(Succeed())
 
 	metaFilePath := volumeMetaPath(storePath, id)
 	metaContents := fmt.Sprintf(`{"Size": %d}`, size)
-	Expect(ioutil.WriteFile(metaFilePath, []byte(metaContents), 0644)).To(Succeed())
+	Expect(os.WriteFile(metaFilePath, []byte(metaContents), 0644)).To(Succeed())
 
 	return path
 }
@@ -1460,7 +1459,7 @@ func createVolume(storePath string, driver *overlayxfs.Driver, parentID, id stri
 func ensureQuotaMatches(fileName string, expectedQuota int64) {
 	Expect(fileName).To(BeAnExistingFile())
 
-	contents, err := ioutil.ReadFile(fileName)
+	contents, err := os.ReadFile(fileName)
 	Expect(err).NotTo(HaveOccurred())
 
 	quota, err := strconv.ParseInt(string(contents), 10, 64)

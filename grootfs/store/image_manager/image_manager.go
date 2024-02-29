@@ -2,7 +2,6 @@ package image_manager // import "code.cloudfoundry.org/grootfs/store/image_manag
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -46,7 +45,7 @@ func NewImageManager(imageDriver ImageDriver, storePath string) *ImageManager {
 func (b *ImageManager) ImageIDs(logger lager.Logger) ([]string, error) {
 	images := []string{}
 
-	existingImages, err := ioutil.ReadDir(path.Join(b.storePath, store.ImageDirName))
+	existingImages, err := os.ReadDir(path.Join(b.storePath, store.ImageDirName))
 	if err != nil {
 		return nil, errorspkg.Wrap(err, "failed to read images dir")
 	}

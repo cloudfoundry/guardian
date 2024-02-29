@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -114,7 +113,7 @@ func ensureCleanUp(mountPoint string) error {
 }
 
 func CleanUpImages(storePath string) {
-	files, err := ioutil.ReadDir(filepath.Join(storePath, store.ImageDirName))
+	files, err := os.ReadDir(filepath.Join(storePath, store.ImageDirName))
 	if err != nil {
 		return
 	}

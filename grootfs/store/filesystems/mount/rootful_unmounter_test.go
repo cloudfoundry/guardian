@@ -1,7 +1,6 @@
 package mount_test
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,7 +28,7 @@ var _ = Describe("Rootful Unmounter", func() {
 
 	BeforeEach(func() {
 		var err error
-		tmpDir, err = ioutil.TempDir("", "")
+		tmpDir, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		mountSrcPath = filepath.Join(tmpDir, "mntsrc")
@@ -66,7 +65,7 @@ var _ = Describe("Rootful Unmounter", func() {
 
 		It("unmounts it", func() {
 			Expect(unmountErr).NotTo(HaveOccurred())
-			mountTable, err := ioutil.ReadFile("/proc/self/mountinfo")
+			mountTable, err := os.ReadFile("/proc/self/mountinfo")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(mountTable)).NotTo(ContainSubstring(mountDestPath))
 		})

@@ -7,7 +7,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"io"
-	"io/ioutil"
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
@@ -26,7 +25,7 @@ var _ = Describe("QuotaedReader", func() {
 
 	JustBeforeEach(func() {
 		qr = &layer_fetcher.QuotaedReader{
-			DelegateReader: ioutil.NopCloser(delegate),
+			DelegateReader: io.NopCloser(delegate),
 			QuotaLeft:      quota,
 			QuotaExceededErrorHandler: func() error {
 				return fmt.Errorf("err-quota-exceeded")
@@ -41,7 +40,7 @@ var _ = Describe("QuotaedReader", func() {
 			})
 
 			It("reads all the data", func() {
-				Expect(ioutil.ReadAll(qr)).To(Equal([]byte("hello")))
+				Expect(io.ReadAll(qr)).To(Equal([]byte("hello")))
 			})
 		})
 
@@ -51,11 +50,11 @@ var _ = Describe("QuotaedReader", func() {
 			})
 
 			It("reads all the data", func() {
-				Expect(ioutil.ReadAll(qr)).To(Equal([]byte("12345678901234567890")))
+				Expect(io.ReadAll(qr)).To(Equal([]byte("12345678901234567890")))
 			})
 
 			It("bytes remaining to quota are zero", func() {
-				ioutil.ReadAll(qr)
+				io.ReadAll(qr)
 				Expect(qr.QuotaLeft).To(BeZero())
 			})
 		})
@@ -66,12 +65,12 @@ var _ = Describe("QuotaedReader", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := ioutil.ReadAll(qr)
+				_, err := io.ReadAll(qr)
 				Expect(err).To(MatchError("err-quota-exceeded"))
 			})
 
 			It("reads only as many bytes as allowed by the quota plus one", func() {
-				b, _ := ioutil.ReadAll(qr)
+				b, _ := io.ReadAll(qr)
 				Expect(b).To(HaveLen(int(quota + 1)))
 			})
 		})
@@ -83,7 +82,7 @@ var _ = Describe("QuotaedReader", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := ioutil.ReadAll(qr)
+				_, err := io.ReadAll(qr)
 				Expect(err).To(MatchError("err-quota-exceeded"))
 			})
 		})
@@ -95,7 +94,7 @@ var _ = Describe("QuotaedReader", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := ioutil.ReadAll(qr)
+				_, err := io.ReadAll(qr)
 				Expect(err).To(MatchError("err-quota-exceeded"))
 			})
 		})

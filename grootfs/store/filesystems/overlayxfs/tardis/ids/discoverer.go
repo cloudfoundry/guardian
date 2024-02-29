@@ -1,7 +1,6 @@
 package ids
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -28,7 +27,7 @@ func (i *Discoverer) Alloc(logger lager.Logger) (projId uint32, err error) {
 		logger.Debug("ending", lager.Data{"projectID": projId})
 	}()
 
-	contents, err := ioutil.ReadDir(i.idsPath)
+	contents, err := os.ReadDir(i.idsPath)
 	if err != nil {
 		return 0, errors.Wrap(err, "reading directory")
 	}

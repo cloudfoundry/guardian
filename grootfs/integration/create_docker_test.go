@@ -4,7 +4,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -215,7 +214,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				Expect(runner.EnsureMounted(containerSpec)).To(Succeed())
 
 				whiteoutedDir := filepath.Join(containerSpec.Root.Path, "var")
-				contents, err := ioutil.ReadDir(whiteoutedDir)
+				contents, err := os.ReadDir(whiteoutedDir)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(contents).To(HaveLen(1))
 				Expect(filepath.Join(containerSpec.Root.Path, "var", "istillexist")).To(BeAnExistingFile())
@@ -510,7 +509,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 						Expect(err).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
 
-						volumes, _ := ioutil.ReadDir(volumesDir)
+						volumes, _ := os.ReadDir(volumesDir)
 						Expect(len(volumes)).To(Equal(len(testhelpers.EmptyBaseImageV011.Layers) - 1))
 
 						Expect(filepath.Join(volumesDir, testhelpers.EmptyBaseImageV011.Layers[0].ChainID)).To(BeADirectory())
@@ -539,7 +538,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 						Expect(err).To(MatchError(ContainSubstring("converting V1 schema failed")))
 
-						volumes, err := ioutil.ReadDir(volumesDir)
+						volumes, err := os.ReadDir(volumesDir)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(len(volumes)).To(Equal(0))
 					})
@@ -621,7 +620,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 				BeforeEach(func() {
 					var err error
-					configDir, err = ioutil.TempDir("", "")
+					configDir, err = os.MkdirTemp("", "")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(os.Chmod(configDir, 0755)).To(Succeed())
 
@@ -635,7 +634,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 					Expect(err).NotTo(HaveOccurred())
 					configFilePath = path.Join(configDir, "config.yaml")
 
-					Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
+					Expect(os.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
 					Expect(os.Chmod(configFilePath, 0755)).To(Succeed())
 				})
 

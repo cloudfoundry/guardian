@@ -3,7 +3,7 @@ package unpacker_test
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -38,7 +38,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 
 		logger = lagertest.NewTestLogger("test-store")
 
-		storePath, err = ioutil.TempDir("", "")
+		storePath, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 		targetPath = filepath.Join(storePath, "rootfs")
 	})
@@ -123,7 +123,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 	It("sends stdin to reeexec", func() {
 		stdinContent := "some stuff in stdin"
 		_, err := unpacker.Unpack(logger, base_image_puller.UnpackSpec{
-			Stream:     ioutil.NopCloser(bytes.NewBufferString(stdinContent)),
+			Stream:     io.NopCloser(bytes.NewBufferString(stdinContent)),
 			TargetPath: targetPath,
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -131,7 +131,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		Expect(reexecer.ReexecCallCount()).To(Equal(1))
 		_, reexecSpec := reexecer.ReexecArgsForCall(0)
 
-		streamContent, err := ioutil.ReadAll(reexecSpec.Stdin)
+		streamContent, err := io.ReadAll(reexecSpec.Stdin)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(streamContent)).To(Equal(stdinContent))
 	})

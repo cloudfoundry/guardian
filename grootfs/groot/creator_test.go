@@ -2,7 +2,6 @@ package groot_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"net/url"
 	"os"
 
@@ -46,7 +45,7 @@ var _ = Describe("Creator", func() {
 		fakeCleaner = new(grootfakes.FakeCleaner)
 
 		var err error
-		lockFile, err = ioutil.TempFile("", "")
+		lockFile, err = os.CreateTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeLocksmith.LockReturns(lockFile, nil)

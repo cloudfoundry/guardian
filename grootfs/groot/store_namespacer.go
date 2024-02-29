@@ -3,7 +3,6 @@ package groot
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -45,7 +44,7 @@ func (n *StoreNamespacer) ApplyMappings(uidMappings, gidMappings []IDMappingSpec
 
 func (n *StoreNamespacer) Read() (IDMappings, error) {
 	mappingsFromFile := mappings{}
-	jsonBytes, err := ioutil.ReadFile(n.namespaceFilePath())
+	jsonBytes, err := os.ReadFile(n.namespaceFilePath())
 	if err != nil {
 		return IDMappings{}, errorspkg.Wrap(err, "reading namespace file")
 	}
