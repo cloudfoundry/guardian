@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/integration/runner"
@@ -67,7 +66,6 @@ func TestGroot(t *testing.T) {
 		TardisBin = string(binaries[1])
 		tmpNamespacerBin := string(binaries[2])
 
-		rand.Seed(time.Now().UnixNano())
 		NamespacerBin = fmt.Sprintf("/tmp/namespacer-%d", rand.Int())
 		_, _, err = runCommand(exec.Command("cp", tmpNamespacerBin, NamespacerBin))
 		Expect(err).NotTo(HaveOccurred())

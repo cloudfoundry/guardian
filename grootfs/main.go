@@ -2,11 +2,9 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"code.cloudfoundry.org/grootfs/commands"
 	"code.cloudfoundry.org/grootfs/commands/config"
@@ -25,7 +23,6 @@ const (
 )
 
 func init() {
-	rand.Seed(time.Now().UnixNano())
 	if reexec.Init() {
 		os.Exit(0)
 	}
