@@ -2,7 +2,6 @@ package kawasaki_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"net"
 	"os"
 
@@ -37,7 +36,7 @@ var _ = Describe("Configurer", func() {
 		fakeInstanceChainCreator = new(fakes.FakeInstanceChainCreator)
 
 		var err error
-		netnsFD, err = ioutil.TempFile("", "")
+		netnsFD, err = os.CreateTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		configurer = kawasaki.NewConfigurer(fakeDnsResolvConfigurer, fakeHostConfigurer, fakeContainerConfigurer, fakeInstanceChainCreator)

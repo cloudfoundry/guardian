@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -56,7 +55,7 @@ var _ = Describe("Containerd", func() {
 			JustBeforeEach(func() {
 				var err error
 				cgroupsPath := filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", config.Tag), "freezer")
-				freezerCgroupPath, err = ioutil.TempDir(cgroupsPath, "shim")
+				freezerCgroupPath, err = os.MkdirTemp(cgroupsPath, "shim")
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -75,16 +74,16 @@ var _ = Describe("Containerd", func() {
 				parentPid := getParentPid(allPids[0])
 
 				freezerProcs := filepath.Join(freezerCgroupPath, "cgroup.procs")
-				Expect(ioutil.WriteFile(freezerProcs, []byte(parentPid), 0755)).To(Succeed())
+				Expect(os.WriteFile(freezerProcs, []byte(parentPid), 0755)).To(Succeed())
 				freezerState := filepath.Join(freezerCgroupPath, "freezer.state")
-				Expect(ioutil.WriteFile(freezerState, []byte("FROZEN"), 0755)).To(Succeed())
+				Expect(os.WriteFile(freezerState, []byte("FROZEN"), 0755)).To(Succeed())
 
 				defer func() {
-					Expect(ioutil.WriteFile(freezerState, []byte("THAWED"), 0755)).To(Succeed())
+					Expect(os.WriteFile(freezerState, []byte("THAWED"), 0755)).To(Succeed())
 				}()
 
 				Eventually(func() string {
-					state, err := ioutil.ReadFile(freezerState)
+					state, err := os.ReadFile(freezerState)
 					Expect(err).NotTo(HaveOccurred())
 					return string(state)
 				}).Should(ContainSubstring("FROZEN"))

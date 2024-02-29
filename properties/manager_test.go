@@ -2,7 +2,6 @@ package properties_test
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 
 	"code.cloudfoundry.org/garden"
@@ -156,7 +155,7 @@ var _ = Describe("Properties", func() {
 			mgr.Set("foo", "bar", "baz")
 			mgr.Set("bar", "baz", "foo")
 
-			tmp, err := ioutil.TempFile("", "jsonprops")
+			tmp, err := os.CreateTemp("", "jsonprops")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(json.NewEncoder(tmp).Encode(mgr)).To(Succeed())

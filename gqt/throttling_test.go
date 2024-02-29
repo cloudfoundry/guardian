@@ -2,8 +2,9 @@ package gqt_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -163,7 +164,7 @@ func httpGet(url string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
 	}
@@ -177,7 +178,7 @@ func getAbsoluteCPUCgroupPath(tag, cgroupSubPath string) string {
 }
 
 func readCgroupFile(cgroupPath, file string) int64 {
-	usageContent, err := ioutil.ReadFile(filepath.Join(cgroupPath, file))
+	usageContent, err := os.ReadFile(filepath.Join(cgroupPath, file))
 	Expect(err).NotTo(HaveOccurred())
 
 	usage, err := strconv.ParseInt(strings.TrimSpace(string(usageContent)), 10, 64)

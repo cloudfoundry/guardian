@@ -1,7 +1,10 @@
 package sysinfo
 
-import "github.com/cloudfoundry/gosigar"
-import "runtime"
+import (
+	"runtime"
+
+	sigar "github.com/cloudfoundry/gosigar"
+)
 
 type ResourcesProvider struct {
 	depotPath string

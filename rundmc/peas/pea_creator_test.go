@@ -3,7 +3,6 @@ package peas_test
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -95,7 +94,7 @@ var _ = Describe("PeaCreator", func() {
 
 		var err error
 		ctrHandle = "pea-creator-tests"
-		ctrBundleDir, err = ioutil.TempDir("", "pea-creator-tests")
+		ctrBundleDir, err = os.MkdirTemp("", "pea-creator-tests")
 		Expect(err).NotTo(HaveOccurred())
 		log = lagertest.NewTestLogger("peas-unit-tests")
 		processSpec = garden.ProcessSpec{

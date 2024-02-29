@@ -1,7 +1,6 @@
 package properties_test
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -15,11 +14,11 @@ func TestProperties(t *testing.T) {
 }
 
 func tempDir(dir, prefix string) string {
-	path, err := ioutil.TempDir(dir, prefix)
+	path, err := os.MkdirTemp(dir, prefix)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	return path
 }
 
 func writeFileString(filename, data string, perm os.FileMode) {
-	ExpectWithOffset(1, ioutil.WriteFile(filename, []byte(data), perm)).To(Succeed())
+	ExpectWithOffset(1, os.WriteFile(filename, []byte(data), perm)).To(Succeed())
 }

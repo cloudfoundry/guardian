@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -150,7 +149,7 @@ func waitForContainerToExit(processStateDir string, containerPid int, signals ch
 
 				ioWg.Wait() // wait for full output to be collected
 
-				check(ioutil.WriteFile(filepath.Join(processStateDir, "exitcode"), []byte(strconv.Itoa(exitCode)), 0600))
+				check(os.WriteFile(filepath.Join(processStateDir, "exitcode"), []byte(strconv.Itoa(exitCode)), 0600))
 				return exitCode
 			}
 		}
@@ -184,7 +183,7 @@ func openFile(path string, flags int) (*os.File, error) {
 }
 
 func setupTTYSocket(stdin io.Reader, stdout io.Writer, winszFifo io.Reader, pidFilePath, sockDirBase string, ioWg *sync.WaitGroup) string {
-	sockDir, err := ioutil.TempDir(sockDirBase, "")
+	sockDir, err := os.MkdirTemp(sockDirBase, "")
 	check(err)
 
 	ttySockPath := filepath.Join(sockDir, "tty.sock")
@@ -287,7 +286,7 @@ func readPid(pidFilePath string) (int, error) {
 }
 
 func parsePid(pidFile string) (int, error) {
-	b, err := ioutil.ReadFile(pidFile)
+	b, err := os.ReadFile(pidFile)
 	if err != nil {
 		return -1, err
 	}

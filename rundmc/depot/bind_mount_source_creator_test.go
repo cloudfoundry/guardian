@@ -2,7 +2,6 @@ package depot_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -29,7 +28,7 @@ var _ = Describe("DepotBindMountSourceCreator", func() {
 	BeforeEach(func() {
 		mountpoints = []string{"/etc/foo", "/etc/bar"}
 		var err error
-		containerDir, err = ioutil.TempDir("", "bundlerules-tests")
+		containerDir, err = os.MkdirTemp("", "bundlerules-tests")
 		Expect(err).NotTo(HaveOccurred())
 		chown = true
 		chowner = new(depotfakes.FakeChowner)

@@ -2,7 +2,6 @@ package gqt_cleanup_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -24,7 +23,7 @@ var _ = Describe("gdn cleanup", func() {
 
 	BeforeEach(func() {
 		var err error
-		tmpDir, err = ioutil.TempDir("", "")
+		tmpDir, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 		config.PropertiesPath = path.Join(tmpDir, "props.json")
 		client := runner.Start(config)

@@ -2,7 +2,6 @@ package configure_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"net"
 	"os"
 
@@ -57,7 +56,7 @@ var _ = Describe("Host", func() {
 
 		BeforeEach(func() {
 			var err error
-			netnsFD, err = ioutil.TempFile("", "")
+			netnsFD, err = os.CreateTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			nsOpener = func(path string) (*os.File, error) {

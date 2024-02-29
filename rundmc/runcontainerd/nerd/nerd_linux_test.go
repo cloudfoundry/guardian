@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -71,7 +70,7 @@ var _ = Describe("Nerd", func() {
 		mp = metrics.NewMetricsProvider(testLogger, fifoDir)
 
 		var err error
-		fifoDir, err = ioutil.TempDir("", "nerd-fifo")
+		fifoDir, err = os.MkdirTemp("", "nerd-fifo")
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -587,7 +586,7 @@ var _ = Describe("Nerd", func() {
 
 func createRootfs(modifyRootfs func(string), perm os.FileMode) string {
 	var err error
-	tmpDir, err := ioutil.TempDir("", "test-rootfs")
+	tmpDir, err := os.MkdirTemp("", "test-rootfs")
 	Expect(err).NotTo(HaveOccurred())
 	unpackedRootfs := filepath.Join(tmpDir, "unpacked")
 	Expect(os.Mkdir(unpackedRootfs, perm)).To(Succeed())

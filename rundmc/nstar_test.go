@@ -3,7 +3,6 @@ package rundmc_test
 import (
 	"errors"
 	"io"
-	"io/ioutil"
 	"os/exec"
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
@@ -85,7 +84,7 @@ var _ = Describe("Nstar", func() {
 				fakeCommandRunner.WhenRunning(
 					fake_command_runner.CommandSpec{},
 					func(cmd *exec.Cmd) error {
-						bytes, err := ioutil.ReadAll(cmd.Stdin)
+						bytes, err := io.ReadAll(cmd.Stdin)
 						Expect(err).ToNot(HaveOccurred())
 
 						Expect(string(bytes)).To(Equal("the-tar-content"))
@@ -123,7 +122,7 @@ var _ = Describe("Nstar", func() {
 			reader, err := nstar.StreamOut(lagertest.NewTestLogger("test"), 12, "some-dir/some-file", "some-user")
 			Expect(err).ToNot(HaveOccurred())
 
-			bytes, err := ioutil.ReadAll(reader)
+			bytes, err := io.ReadAll(reader)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(bytes)).To(Equal("the-compressed-content"))
 
@@ -205,7 +204,7 @@ var _ = Describe("Nstar", func() {
 				},
 				))
 
-				bytes, err := ioutil.ReadAll(reader)
+				bytes, err := io.ReadAll(reader)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(bytes)).To(Equal("the-compressed-content"))
 

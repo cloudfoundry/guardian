@@ -1,7 +1,6 @@
 package bundlerules_test
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,7 +25,7 @@ var _ = Describe("Mount options", func() {
 
 	BeforeEach(func() {
 		var err error
-		tmpDir, err = ioutil.TempDir("", "mountpoint-options")
+		tmpDir, err = os.MkdirTemp("", "mountpoint-options")
 		Expect(err).NotTo(HaveOccurred())
 		mountPoint = filepath.Join(tmpDir, "mount-point")
 		Expect(os.Mkdir(mountPoint, os.ModeDir)).To(Succeed())

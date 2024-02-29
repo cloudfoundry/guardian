@@ -1,7 +1,6 @@
 package rundmc_test
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,7 +27,7 @@ var _ = Describe("Mountpoint checker", func() {
 	Context("when the path exists", func() {
 		BeforeEach(func() {
 			var err error
-			tmpDir, err = ioutil.TempDir("", "mountpoint-checker")
+			tmpDir, err = os.MkdirTemp("", "mountpoint-checker")
 			Expect(err).NotTo(HaveOccurred())
 
 			pathToCheck = filepath.Join(tmpDir, "mount-point")
@@ -85,7 +84,7 @@ var _ = Describe("Mountpoint checker", func() {
 
 	Context("when the path is a file", func() {
 		BeforeEach(func() {
-			file, err := ioutil.TempFile("", "not-a-dir")
+			file, err := os.CreateTemp("", "not-a-dir")
 			Expect(err).NotTo(HaveOccurred())
 			defer file.Close()
 			pathToCheck = file.Name()

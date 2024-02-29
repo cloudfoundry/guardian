@@ -3,7 +3,6 @@ package gqt_setup_test
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -85,7 +84,7 @@ func idToStr(id uint32) string {
 }
 
 func readFile(path string) string {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	Expect(err).NotTo(HaveOccurred())
 	return string(content)
 }

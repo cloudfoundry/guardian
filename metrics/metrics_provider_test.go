@@ -1,7 +1,6 @@
 package metrics_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -25,7 +24,7 @@ var _ = Describe("MetricsProvider", func() {
 	BeforeEach(func() {
 		var err error
 
-		depotPath, err = ioutil.TempDir("", "depotDirs")
+		depotPath, err = os.MkdirTemp("", "depotDirs")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Mkdir(filepath.Join(depotPath, "depot-1"), 0660)).To(Succeed())
 		Expect(os.Mkdir(filepath.Join(depotPath, "depot-2"), 0660)).To(Succeed())

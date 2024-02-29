@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -75,7 +74,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		fakePidGetter.PidReturns(0, nil)
 
 		var err error
-		bundlePath, err = ioutil.TempDir("", "dadooexecrunnerbundle")
+		bundlePath, err = os.MkdirTemp("", "dadooexecrunnerbundle")
 		Expect(err).NotTo(HaveOccurred())
 		bundleLookupper.LookupReturns(bundlePath, nil)
 
@@ -119,7 +118,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		}, func(cmd *exec.Cmd) error {
 			if cmd.Stdin != nil {
 				var err error
-				receivedStdinContents, err = ioutil.ReadAll(cmd.Stdin)
+				receivedStdinContents, err = io.ReadAll(cmd.Stdin)
 				Expect(err).NotTo(HaveOccurred())
 			}
 
@@ -194,7 +193,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				// write exit code of actual process to $processdir/exitcode file
 				if exitCode != nil {
 					Eventually(processDir).Should(BeADirectory())
-					Expect(ioutil.WriteFile(filepath.Join(processDir, "exitcode"), []byte(exitCode), 0600)).To(Succeed())
+					Expect(os.WriteFile(filepath.Join(processDir, "exitcode"), []byte(exitCode), 0600)).To(Succeed())
 				}
 				<-closeExitPipeCh
 				Expect(exit.Close()).To(Succeed())

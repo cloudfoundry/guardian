@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -144,7 +143,7 @@ var CreateCommand = cli.Command{
 
 		argsFile := ctx.String("args-path")
 		if argsFile != "" {
-			err := ioutil.WriteFile(argsFile, []byte(strings.Join(os.Args, " ")), 0777)
+			err := os.WriteFile(argsFile, []byte(strings.Join(os.Args, " ")), 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -152,7 +151,7 @@ var CreateCommand = cli.Command{
 
 		whoamiFile := ctx.String("create-whoami-path")
 		if whoamiFile != "" {
-			err := ioutil.WriteFile(whoamiFile, []byte(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())), 0777)
+			err := os.WriteFile(whoamiFile, []byte(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())), 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -165,7 +164,7 @@ var CreateCommand = cli.Command{
 				panic(err)
 			}
 
-			err = ioutil.WriteFile(binLocationFile, []byte(executable), 0777)
+			err = os.WriteFile(binLocationFile, []byte(executable), 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -238,7 +237,7 @@ var DeleteCommand = cli.Command{
 
 		argsFile := ctx.String("args-path")
 		if argsFile != "" {
-			err := ioutil.WriteFile(argsFile, []byte(strings.Join(os.Args, " ")), 0777)
+			err := os.WriteFile(argsFile, []byte(strings.Join(os.Args, " ")), 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -246,7 +245,7 @@ var DeleteCommand = cli.Command{
 
 		whoamiFile := ctx.String("destroy-whoami-path")
 		if whoamiFile != "" {
-			err := ioutil.WriteFile(whoamiFile, []byte(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())), 0777)
+			err := os.WriteFile(whoamiFile, []byte(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())), 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -299,7 +298,7 @@ var StatsCommand = cli.Command{
 		}
 		argsFile := ctx.String("args-path")
 		if argsFile != "" {
-			err := ioutil.WriteFile(argsFile, []byte(strings.Join(os.Args, " ")), 0777)
+			err := os.WriteFile(argsFile, []byte(strings.Join(os.Args, " ")), 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -307,7 +306,7 @@ var StatsCommand = cli.Command{
 
 		whoamiFile := ctx.String("metrics-whoami-path")
 		if whoamiFile != "" {
-			err := ioutil.WriteFile(whoamiFile, []byte(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())), 0777)
+			err := os.WriteFile(whoamiFile, []byte(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())), 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -320,7 +319,7 @@ var StatsCommand = cli.Command{
 				panic(err)
 			}
 
-			err = ioutil.WriteFile(binLocationFile, []byte(executable), 0777)
+			err = os.WriteFile(binLocationFile, []byte(executable), 0777)
 			if err != nil {
 				panic(err)
 			}

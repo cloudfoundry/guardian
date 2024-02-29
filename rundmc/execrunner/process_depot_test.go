@@ -2,7 +2,6 @@ package execrunner_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -28,7 +27,7 @@ var _ = Describe("ProcessDirDepot", func() {
 		bundleLookupper = new(depotfakes.FakeBundleLookupper)
 
 		var err error
-		bundlePath, err = ioutil.TempDir("", "")
+		bundlePath, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		bundleLookupper.LookupReturns(bundlePath, nil)
@@ -118,7 +117,7 @@ var _ = Describe("ProcessDirDepot", func() {
 			Expect(os.MkdirAll(filepath.Join(bundlePath, "processes", "one"), 0755)).To(Succeed())
 			Expect(os.MkdirAll(filepath.Join(bundlePath, "processes", "two"), 0755)).To(Succeed())
 			Expect(os.MkdirAll(filepath.Join(bundlePath, "processes", "three"), 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(filepath.Join(bundlePath, "processes", "not-a-dir"), []byte{}, 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(bundlePath, "processes", "not-a-dir"), []byte{}, 0755)).To(Succeed())
 		})
 
 		JustBeforeEach(func() {
@@ -173,11 +172,11 @@ var _ = Describe("ProcessDirDepot", func() {
 			pidModTime = time.Date(2019, 8, 15, 14, 27, 32, 0, time.UTC)
 
 			var err error
-			firstBundlePath, err = ioutil.TempDir("", "")
+			firstBundlePath, err = os.MkdirTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
-			secondBundlePath, err = ioutil.TempDir("", "")
+			secondBundlePath, err = os.MkdirTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
-			thirdBundlePath, err = ioutil.TempDir("", "")
+			thirdBundlePath, err = os.MkdirTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			bundleLookupper.LookupStub = func(_ lager.Logger, sandboxHandle string) (string, error) {

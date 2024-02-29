@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -48,7 +47,7 @@ var _ = Describe("Create", func() {
 		logger = lagertest.NewTestLogger("test")
 
 		var err error
-		bundlePath, err = ioutil.TempDir("", "bundle-path")
+		bundlePath, err = os.MkdirTemp("", "bundle-path")
 		Expect(err).NotTo(HaveOccurred())
 		fakeDepot.CreateReturns(bundlePath, nil)
 		logFilePath = filepath.Join(bundlePath, "create.log")
@@ -71,7 +70,7 @@ var _ = Describe("Create", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			if cmd.Stdin != nil {
-				stdinBytes, err := ioutil.ReadAll(cmd.Stdin)
+				stdinBytes, err := io.ReadAll(cmd.Stdin)
 				Expect(err).NotTo(HaveOccurred())
 				recievedStdin = string(stdinBytes)
 			}

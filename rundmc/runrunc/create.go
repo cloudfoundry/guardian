@@ -3,7 +3,6 @@ package runrunc
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -113,7 +112,7 @@ func processLogs(log lager.Logger, logFilePath string, upstreamErr error) error 
 	}
 	defer logReader.Close()
 
-	buff, readErr := ioutil.ReadAll(logReader)
+	buff, readErr := io.ReadAll(logReader)
 	if readErr != nil {
 		return fmt.Errorf("runc create: read log file: %s", readErr)
 	}

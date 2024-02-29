@@ -1,7 +1,7 @@
 package throttle
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -62,7 +62,7 @@ func (b SharesBalancer) Run(logger lager.Logger) error {
 }
 
 func countShares(cgroupPath string) (uint64, error) {
-	children, err := ioutil.ReadDir(cgroupPath)
+	children, err := os.ReadDir(cgroupPath)
 	if err != nil {
 		return 0, err
 	}
@@ -91,7 +91,7 @@ func countShares(cgroupPath string) (uint64, error) {
 }
 
 func getShares(cgroupPath string) (uint64, error) {
-	bytes, err := ioutil.ReadFile(filepath.Join(cgroupPath, "cpu.shares"))
+	bytes, err := os.ReadFile(filepath.Join(cgroupPath, "cpu.shares"))
 	if err != nil {
 		return 0, err
 	}
@@ -101,7 +101,7 @@ func getShares(cgroupPath string) (uint64, error) {
 
 func setShares(logger lager.Logger, cgroupPath string, shares uint64) error {
 	logger.Info("set-shares", lager.Data{"cgroupPath": cgroupPath, "shares": shares})
-	return ioutil.WriteFile(filepath.Join(cgroupPath, "cpu.shares"), []byte(strconv.FormatUint(shares, 10)), 0644)
+	return os.WriteFile(filepath.Join(cgroupPath, "cpu.shares"), []byte(strconv.FormatUint(shares, 10)), 0644)
 }
 
 func hasProcs(cgroupPath string) bool {

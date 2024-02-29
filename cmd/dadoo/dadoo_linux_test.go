@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -151,7 +150,7 @@ var _ = Describe("Dadoo", func() {
 
 		AfterEach(func() {
 			Expect(runcLogFile.Close()).To(Succeed())
-			content, err := ioutil.ReadFile(runcLogFilePath)
+			content, err := os.ReadFile(runcLogFilePath)
 			Expect(err).NotTo(HaveOccurred())
 			fmt.Print(string(content))
 		})
@@ -207,7 +206,7 @@ var _ = Describe("Dadoo", func() {
 					openIOPipes()
 					Expect(sess.Wait().ExitCode()).To(Equal(24))
 
-					Expect(ioutil.ReadFile(filepath.Join(processDir, "exitcode"))).To(Equal([]byte("24")))
+					Expect(os.ReadFile(filepath.Join(processDir, "exitcode"))).To(Equal([]byte("24")))
 				})
 
 				It("if the process is signalled the exitcode should be 128 + the signal number", func() {
@@ -223,7 +222,7 @@ var _ = Describe("Dadoo", func() {
 					openIOPipes()
 					Expect(sess.Wait().ExitCode()).To(Equal(128 + 9))
 
-					Expect(ioutil.ReadFile(filepath.Join(processDir, "exitcode"))).To(Equal([]byte("137")))
+					Expect(os.ReadFile(filepath.Join(processDir, "exitcode"))).To(Equal([]byte("137")))
 				})
 
 				It("should open the exit pipe and close it when it exits", func() {
@@ -353,7 +352,7 @@ var _ = Describe("Dadoo", func() {
 
 					Expect(sess.Wait().ExitCode()).To(Equal(0))
 
-					data, err := ioutil.ReadAll(stdout)
+					data, err := io.ReadAll(stdout)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(data)).To(ContainSubstring("x=banana"))
 				})
@@ -414,7 +413,7 @@ var _ = Describe("Dadoo", func() {
 						_, err := os.OpenFile(winszPipe, os.O_WRONLY, 0600)
 						Expect(err).NotTo(HaveOccurred())
 
-						data, err := ioutil.ReadAll(stdout)
+						data, err := io.ReadAll(stdout)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(string(data)).To(ContainSubstring("rows 17; columns 13;"))
 						Eventually(sess).Should(gexec.Exit())
@@ -455,7 +454,7 @@ var _ = Describe("Dadoo", func() {
 							Columns: 60,
 						})
 
-						data, err := ioutil.ReadAll(stdout)
+						data, err := io.ReadAll(stdout)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(string(data)).To(ContainSubstring("rows 53; columns 60;"))
 						Eventually(sess).Should(gexec.Exit())
@@ -563,7 +562,7 @@ var _ = Describe("Dadoo", func() {
 			Context("when the -runc-root flag is passed", func() {
 				BeforeEach(func() {
 					var err error
-					runcRoot, err = ioutil.TempDir("", "")
+					runcRoot, err = os.MkdirTemp("", "")
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -748,7 +747,7 @@ var _ = Describe("Dadoo", func() {
 								return err
 							}).ShouldNot(HaveOccurred())
 
-							pidBytes, err := ioutil.ReadFile(pidFilePath)
+							pidBytes, err := os.ReadFile(pidFilePath)
 							Expect(err).NotTo(HaveOccurred())
 
 							Eventually(func() error {
@@ -872,7 +871,7 @@ var _ = Describe("Dadoo", func() {
 								return err
 							}).ShouldNot(HaveOccurred())
 
-							pidBytes, err := ioutil.ReadFile(pidFilePath)
+							pidBytes, err := os.ReadFile(pidFilePath)
 							Expect(err).NotTo(HaveOccurred())
 
 							Eventually(func() error {
@@ -902,7 +901,7 @@ func listDir(dir string) string {
 }
 
 func listMounts() string {
-	mounts, err := ioutil.ReadFile("/proc/self/mountinfo")
+	mounts, err := os.ReadFile("/proc/self/mountinfo")
 	Expect(err).NotTo(HaveOccurred())
 	return string(mounts)
 }

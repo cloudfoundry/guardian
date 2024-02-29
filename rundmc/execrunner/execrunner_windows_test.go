@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -65,7 +64,7 @@ var _ = Describe("WindowsExecRunner", func() {
 		processDepot = new(execrunnerfakes.FakeProcessDepot)
 
 		var err error
-		bundlePath, err = ioutil.TempDir("", "dadooexecrunnerbundle")
+		bundlePath, err = os.MkdirTemp("", "dadooexecrunnerbundle")
 		Expect(err).NotTo(HaveOccurred())
 		bundleLookupper.LookupReturns(bundlePath, nil)
 
@@ -184,7 +183,7 @@ var _ = Describe("WindowsExecRunner", func() {
 		})
 
 		It("writes the process spec", func() {
-			actualContents, err := ioutil.ReadFile(filepath.Join(processPath, "spec.json"))
+			actualContents, err := os.ReadFile(filepath.Join(processPath, "spec.json"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(actualContents)).To(Equal("some-process"))
 		})

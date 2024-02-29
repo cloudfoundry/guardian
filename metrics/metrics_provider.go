@@ -1,7 +1,7 @@
 package metrics
 
 import (
-	"io/ioutil"
+	"os"
 	"runtime"
 	"sync"
 
@@ -42,7 +42,7 @@ func (m *MetricsProvider) BackingStores() int {
 }
 
 func (m *MetricsProvider) DepotDirs() int {
-	entries, err := ioutil.ReadDir(m.depotPath)
+	entries, err := os.ReadDir(m.depotPath)
 	if err != nil {
 		m.logger.Error("cannot-get-depot-dirs", err)
 		return -1

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -102,7 +101,7 @@ var _ = Describe("Runtime Plugin", func() {
 				Expect(pluginArgs[11]).To(Equal("--bundle"))
 
 				bundlePath := filepath.Join(pluginArgs[12], "config.json")
-				bundleBytes, err := ioutil.ReadFile(bundlePath)
+				bundleBytes, err := os.ReadFile(bundlePath)
 				Expect(err).NotTo(HaveOccurred())
 
 				bundle = specs.Spec{}
@@ -262,7 +261,7 @@ var _ = Describe("Runtime Plugin", func() {
 		})
 
 		JustBeforeEach(func() {
-			Expect(ioutil.WriteFile(
+			Expect(os.WriteFile(
 				filepath.Join(client.TmpDir, "runtime-state-output"),
 				[]byte(`{"pid": 0, "status": "created"}`),
 				0600,

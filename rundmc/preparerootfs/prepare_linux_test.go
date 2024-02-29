@@ -1,7 +1,6 @@
 package preparerootfs_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -29,7 +28,7 @@ var _ = Describe("Preparerootfs", func() {
 
 	BeforeEach(func() {
 		var err error
-		rootfsPath, err = ioutil.TempDir("", "testdir")
+		rootfsPath, err = os.MkdirTemp("", "testdir")
 		Expect(err).NotTo(HaveOccurred())
 
 		dir1 = "potayto"
@@ -87,7 +86,7 @@ var _ = Describe("Preparerootfs", func() {
 
 	Context("when the rootfs contains a symlink", func() {
 		It("is resolved relative to the rootfs, and not the host", func() {
-			target, err := ioutil.TempDir("", "target")
+			target, err := os.MkdirTemp("", "target")
 			Expect(err).NotTo(HaveOccurred())
 
 			defer func() {
@@ -106,7 +105,7 @@ var _ = Describe("Preparerootfs", func() {
 	Context("when the directory already exists", func() {
 		BeforeEach(func() {
 			Expect(os.MkdirAll(filepath.Join(rootfsPath, dir1), 0700)).To(Succeed())
-			Expect(ioutil.WriteFile(path.Join(rootfsPath, dir1, "foo.txt"), []byte("brrr"), 0700)).To(Succeed())
+			Expect(os.WriteFile(path.Join(rootfsPath, dir1, "foo.txt"), []byte("brrr"), 0700)).To(Succeed())
 		})
 
 		It("does not fail", func() {

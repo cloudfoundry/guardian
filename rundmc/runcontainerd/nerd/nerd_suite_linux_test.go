@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -71,7 +70,7 @@ var _ = BeforeEach(func() {
 		Skip("containerd not enabled")
 	}
 
-	runDir, err := ioutil.TempDir("", "")
+	runDir, err := os.MkdirTemp("", "")
 	Expect(err).NotTo(HaveOccurred())
 
 	containerdConfig := containerdrunner.ContainerdConfig(runDir)
@@ -130,7 +129,7 @@ func mustOpen(path string) *os.File {
 }
 
 func teardownCgroups(cgroupsRoot string) {
-	mountsFileContent, err := ioutil.ReadFile("/proc/self/mounts")
+	mountsFileContent, err := os.ReadFile("/proc/self/mounts")
 	Expect(err).NotTo(HaveOccurred())
 
 	lines := strings.Split(string(mountsFileContent), "\n")

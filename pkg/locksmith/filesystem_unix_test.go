@@ -5,7 +5,6 @@ package locksmith_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -25,7 +24,7 @@ var _ = Describe("Filesystem", func() {
 
 	BeforeEach(func() {
 		var err error
-		lockDirPath, err = ioutil.TempDir("", "")
+		lockDirPath, err = os.MkdirTemp("", "")
 		Expect(err).ToNot(HaveOccurred())
 
 		fileSystemLock = locksmith.NewFileSystem()

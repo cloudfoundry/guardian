@@ -2,7 +2,7 @@ package pid
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 	"time"
 
@@ -23,7 +23,7 @@ func (p *FileReader) Pid(pidFilePath string) (int, error) {
 	)
 
 	for timeRemaining = p.Timeout; timeRemaining > 0; timeRemaining -= time.Millisecond * 20 {
-		pidContents, err = ioutil.ReadFile(pidFilePath)
+		pidContents, err = os.ReadFile(pidFilePath)
 		if err == nil && len(pidContents) > 0 {
 			break
 		}

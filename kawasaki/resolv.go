@@ -2,7 +2,6 @@ package kawasaki
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -41,7 +40,7 @@ func (d *ResolvConfigurer) Configure(log lager.Logger, cfg NetworkConfig, pid in
 		return err
 	}
 
-	hostResolvContents, err := ioutil.ReadFile(d.ResolvFilePath)
+	hostResolvContents, err := os.ReadFile(d.ResolvFilePath)
 	if err != nil {
 		log.Error("reading-host-resolv-file", err)
 		return err

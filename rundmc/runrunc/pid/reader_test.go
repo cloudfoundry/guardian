@@ -1,7 +1,6 @@
 package pid_test
 
 import (
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -36,7 +35,7 @@ var _ = Describe("FileReader", func() {
 			SleepInterval: 20 * time.Millisecond,
 		}
 
-		pidFile, err := ioutil.TempFile("", "")
+		pidFile, err := os.CreateTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 		_, err = pidFile.Write([]byte(pidFileContents))
 		Expect(err).NotTo(HaveOccurred())
@@ -82,7 +81,7 @@ var _ = Describe("FileReader", func() {
 					// read the file. Hence, after we write the file the clock is
 					// incremented by a further 10ms.
 					clk.WaitForWatcherAndIncrement(time.Millisecond * 10)
-					Expect(ioutil.WriteFile(pidFilePath, []byte("5621"), 0766)).To(Succeed())
+					Expect(os.WriteFile(pidFilePath, []byte("5621"), 0766)).To(Succeed())
 					clk.Increment(time.Millisecond * 10)
 
 					Eventually(pidReturns).Should(BeClosed())
@@ -145,7 +144,7 @@ var _ = Describe("FileReader", func() {
 					// read the file. Hence, after we write the file the clock is
 					// incremented by a further 10ms.
 					clk.WaitForWatcherAndIncrement(time.Millisecond * 10)
-					Expect(ioutil.WriteFile(pidFilePath, []byte("5621"), 0766)).To(Succeed())
+					Expect(os.WriteFile(pidFilePath, []byte("5621"), 0766)).To(Succeed())
 					clk.Increment(time.Millisecond * 10)
 
 					Eventually(pidReturns).Should(BeClosed())

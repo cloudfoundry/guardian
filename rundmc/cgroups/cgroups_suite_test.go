@@ -1,7 +1,6 @@
 package cgroups_test
 
 import (
-	"io/ioutil"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -16,7 +15,7 @@ func TestCgroups(t *testing.T) {
 }
 
 func readFile(path string) []byte {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	Expect(err).NotTo(HaveOccurred())
 	return content
 }
@@ -28,7 +27,7 @@ func stat(path string) os.FileInfo {
 }
 
 func tempDir(dir, prefix string) string {
-	name, err := ioutil.TempDir(dir, prefix)
+	name, err := os.MkdirTemp(dir, prefix)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	return name
 }

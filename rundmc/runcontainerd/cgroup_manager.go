@@ -2,7 +2,6 @@ package runcontainerd
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -46,5 +45,5 @@ func (m cgroupManager) SetUseMemoryHierarchy(handle string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(filepath.Join(state.CgroupPaths.Memory, "memory.use_hierarchy"), []byte("1"), os.ModePerm)
+	return os.WriteFile(filepath.Join(state.CgroupPaths.Memory, "memory.use_hierarchy"), []byte("1"), os.ModePerm)
 }

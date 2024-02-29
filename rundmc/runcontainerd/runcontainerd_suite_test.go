@@ -2,7 +2,6 @@ package runcontainerd_test
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -17,7 +16,7 @@ func TestRuncontainerd(t *testing.T) {
 }
 
 func tempDir(dir, prefix string) string {
-	path, err := ioutil.TempDir(dir, prefix)
+	path, err := os.MkdirTemp(dir, prefix)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	return path
 }
@@ -29,5 +28,5 @@ func marshal(v interface{}) []byte {
 }
 
 func writeFile(filename string, data []byte, perm os.FileMode) {
-	ExpectWithOffset(1, ioutil.WriteFile(filename, data, perm)).To(Succeed())
+	ExpectWithOffset(1, os.WriteFile(filename, data, perm)).To(Succeed())
 }

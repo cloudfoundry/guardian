@@ -2,7 +2,6 @@ package execrunner
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -66,7 +65,7 @@ func (d ProcessDirDepot) ListProcessDirs(log lager.Logger, sandboxHandle string)
 		return []string{}, err
 	}
 
-	processesDirContents, err := ioutil.ReadDir(filepath.Join(bundlePath, "processes"))
+	processesDirContents, err := os.ReadDir(filepath.Join(bundlePath, "processes"))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []string{}, nil

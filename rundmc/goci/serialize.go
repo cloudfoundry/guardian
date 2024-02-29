@@ -3,7 +3,6 @@ package goci
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -38,7 +37,7 @@ func save(value interface{}, path string) error {
 }
 
 func readJSONInto(path string, object interface{}) error {
-	runtimeContents, err := ioutil.ReadFile(path)
+	runtimeContents, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}

@@ -3,7 +3,6 @@ package gqt_cleanup_test
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -157,7 +156,7 @@ func startContainerd(runDir string) *os.Process {
 }
 
 func tempDir(dir, prefix string) string {
-	path, err := ioutil.TempDir(dir, prefix)
+	path, err := os.MkdirTemp(dir, prefix)
 	Expect(err).NotTo(HaveOccurred())
 	return path
 }

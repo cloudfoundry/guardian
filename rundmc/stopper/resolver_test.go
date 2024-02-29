@@ -2,7 +2,6 @@ package stopper_test
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -25,7 +24,7 @@ var _ = Describe("Resolver", func() {
 			"windows": "The system cannot find the file specified.",
 		}
 
-		fakeStateDir, err = ioutil.TempDir("", "fakestate")
+		fakeStateDir, err = os.MkdirTemp("", "fakestate")
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(os.MkdirAll(filepath.Join(fakeStateDir, "some-handle"), 0700)).To(Succeed())

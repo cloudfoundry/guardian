@@ -1,7 +1,6 @@
 package users_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -20,7 +19,7 @@ var _ = Describe("LookupUser", func() {
 		)
 
 		createPasswdFile := func() error {
-			return ioutil.WriteFile(filepath.Join(rootFsPath, "etc", "passwd"), []byte(
+			return os.WriteFile(filepath.Join(rootFsPath, "etc", "passwd"), []byte(
 				`_lda:*:211:211:Local Delivery Agent:/var/empty:/usr/bin/false
 _cvmsroot:*:212:212:CVMS Root:/var/empty:/usr/bin/false
 _usbmuxd:*:213:213:iPhone OS Device Helper:/var/db/lockdown:/usr/bin/false
@@ -31,7 +30,7 @@ vcap:*:1000:1000:VCAP:/home/vcap/:/bin/sh`,
 		}
 
 		createGroupFile := func() error {
-			return ioutil.WriteFile(filepath.Join(rootFsPath, "etc", "group"), []byte(
+			return os.WriteFile(filepath.Join(rootFsPath, "etc", "group"), []byte(
 				`root:x:0:
 daemon:x:1:
 bin:x:2:
@@ -42,7 +41,7 @@ another:x:4:vcap`,
 
 		BeforeEach(func() {
 			var err error
-			rootFsPath, err = ioutil.TempDir("", "passwdtestdir")
+			rootFsPath, err = os.MkdirTemp("", "passwdtestdir")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(os.MkdirAll(filepath.Join(rootFsPath, "etc"), 0777)).To(Succeed())
 			Expect(createGroupFile()).To(Succeed())
@@ -87,7 +86,7 @@ another:x:4:vcap`,
 					let us forget...`,
 				)
 				passwdPath := filepath.Join(rootFsPath, "etc", "passwd")
-				Expect(ioutil.WriteFile(passwdPath, senselessContents, 0777)).To(Succeed())
+				Expect(os.WriteFile(passwdPath, senselessContents, 0777)).To(Succeed())
 			})
 
 			It("returns an error", func() {

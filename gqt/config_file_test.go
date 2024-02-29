@@ -2,7 +2,6 @@ package gqt_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 
@@ -70,7 +69,7 @@ debug-bind-port = %d
 		Context("when the provided config file is not a valid ini file", func() {
 			BeforeEach(func() {
 				config.StartupExpectedToFail = true
-				Expect(ioutil.WriteFile(configFilePath, []byte("invalid-ini-file"), 0)).To(Succeed())
+				Expect(os.WriteFile(configFilePath, []byte("invalid-ini-file"), 0)).To(Succeed())
 			})
 
 			It("fails to start", func() {

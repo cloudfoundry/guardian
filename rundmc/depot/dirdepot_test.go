@@ -2,7 +2,6 @@ package depot_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -29,7 +28,7 @@ var _ = Describe("Depot", func() {
 	BeforeEach(func() {
 		var err error
 
-		depotDir, err = ioutil.TempDir("", "depot-test")
+		depotDir, err = os.MkdirTemp("", "depot-test")
 		Expect(err).NotTo(HaveOccurred())
 
 		bundle = goci.Bndl{Spec: specs.Spec{Version: "some-idiosyncratic-version", Linux: &specs.Linux{}}}

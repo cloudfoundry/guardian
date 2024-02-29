@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	flag "github.com/spf13/pflag"
@@ -30,12 +30,12 @@ func main() {
 	}
 
 	if *stdinFilePath != "" {
-		input, err := ioutil.ReadAll(os.Stdin)
+		input, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			panic(err)
 		}
 
-		if err := ioutil.WriteFile(*stdinFilePath, input, 0600); err != nil {
+		if err := os.WriteFile(*stdinFilePath, input, 0600); err != nil {
 			panic(err)
 		}
 	}

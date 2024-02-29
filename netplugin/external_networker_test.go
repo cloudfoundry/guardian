@@ -3,7 +3,7 @@ package netplugin_test
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net"
 	"os/exec"
 
@@ -94,7 +94,7 @@ var _ = Describe("ExternalNetworker", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			cmd := fakeCommandRunner.ExecutedCommands()[0]
-			input, err := ioutil.ReadAll(cmd.Stdin)
+			input, err := io.ReadAll(cmd.Stdin)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(string(input)).To(ContainSubstring("42"))
@@ -116,7 +116,7 @@ var _ = Describe("ExternalNetworker", func() {
 				"--handle", "some-handle",
 			}))
 
-			pluginInput, err := ioutil.ReadAll(cmd.Stdin)
+			pluginInput, err := io.ReadAll(cmd.Stdin)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(pluginInput).To(MatchJSON(`{
 				"Pid": 42,
@@ -132,7 +132,7 @@ var _ = Describe("ExternalNetworker", func() {
 			err := plugin.Network(logger, containerSpec, 42)
 			Expect(err).NotTo(HaveOccurred())
 			cmd := fakeCommandRunner.ExecutedCommands()[0]
-			pluginInput, err := ioutil.ReadAll(cmd.Stdin)
+			pluginInput, err := io.ReadAll(cmd.Stdin)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(pluginInput).To(MatchJSON(`{
 				"Pid": 42,
@@ -164,7 +164,7 @@ var _ = Describe("ExternalNetworker", func() {
 				Expect(plugin.Network(logger, containerSpec, 42)).To(Succeed())
 
 				cmd := fakeCommandRunner.ExecutedCommands()[0]
-				pluginInput, err := ioutil.ReadAll(cmd.Stdin)
+				pluginInput, err := io.ReadAll(cmd.Stdin)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(pluginInput).To(MatchJSON(`{
 				"Pid": 42,
@@ -206,7 +206,7 @@ var _ = Describe("ExternalNetworker", func() {
 				Expect(plugin.Network(logger, containerSpec, 42)).To(Succeed())
 
 				cmd := fakeCommandRunner.ExecutedCommands()[0]
-				pluginInput, err := ioutil.ReadAll(cmd.Stdin)
+				pluginInput, err := io.ReadAll(cmd.Stdin)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(pluginInput).To(MatchJSON(`{
@@ -548,7 +548,7 @@ var _ = Describe("ExternalNetworker", func() {
 				"--handle", "some-handle",
 			}))
 
-			pluginInput, err := ioutil.ReadAll(cmd.Stdin)
+			pluginInput, err := io.ReadAll(cmd.Stdin)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(pluginInput).To(MatchJSON(`{
 				"HostIP": "1.2.3.4",
@@ -743,7 +743,7 @@ func createRule(netStart, netEnd string, portStart, portEnd int) garden.NetOutRu
 }
 
 func checkPluginArgs(cmd *exec.Cmd, rule garden.NetOutRule) {
-	pluginInput, err := ioutil.ReadAll(cmd.Stdin)
+	pluginInput, err := io.ReadAll(cmd.Stdin)
 	Expect(err).NotTo(HaveOccurred())
 	r := new(netplugin.NetOutInputs)
 	json.Unmarshal(pluginInput, r)
@@ -751,7 +751,7 @@ func checkPluginArgs(cmd *exec.Cmd, rule garden.NetOutRule) {
 }
 
 func checkBulkPluginArgs(cmd *exec.Cmd, rules []garden.NetOutRule) {
-	pluginInput, err := ioutil.ReadAll(cmd.Stdin)
+	pluginInput, err := io.ReadAll(cmd.Stdin)
 	Expect(err).NotTo(HaveOccurred())
 	r := new(netplugin.BulkNetOutInputs)
 	json.Unmarshal(pluginInput, r)

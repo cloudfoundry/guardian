@@ -3,7 +3,6 @@ package gqt_test
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -133,7 +132,7 @@ var _ = Describe("Surviving Restarts", func() {
 			})
 
 			It("destroys the remaining containers in the depotDir", func() {
-				Expect(ioutil.ReadDir(client.DepotDir)).To(BeEmpty())
+				Expect(os.ReadDir(client.DepotDir)).To(BeEmpty())
 			})
 
 			It("destroys the remaining containers' iptables", func() {
@@ -237,7 +236,7 @@ var _ = Describe("Surviving Restarts", func() {
 				BeforeEach(func() {
 					processDir := filepath.Join(config.DepotDir, "container-handle", "processes", "1234")
 					Expect(os.MkdirAll(processDir, os.ModePerm)).To(Succeed())
-					Expect(ioutil.WriteFile(filepath.Join(processDir, "config.json"), []byte{}, os.ModePerm)).To(Succeed())
+					Expect(os.WriteFile(filepath.Join(processDir, "config.json"), []byte{}, os.ModePerm)).To(Succeed())
 				})
 
 				It("starts up successfully", func() {

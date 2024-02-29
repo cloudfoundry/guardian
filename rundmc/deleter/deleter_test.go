@@ -1,8 +1,9 @@
 package deleter_test
 
 import (
-	"code.cloudfoundry.org/guardian/rundmc"
 	"errors"
+
+	"code.cloudfoundry.org/guardian/rundmc"
 
 	"code.cloudfoundry.org/guardian/rundmc/deleter/deleterfakes"
 	"code.cloudfoundry.org/lager/v3/lagertest"

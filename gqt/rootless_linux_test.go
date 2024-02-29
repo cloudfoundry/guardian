@@ -10,7 +10,6 @@ import (
 
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -273,7 +272,7 @@ var _ = Describe("rootless containers", func() {
 			pid := strings.TrimSpace(readFileString(path))
 
 			fdDir := filepath.Join("/proc", pid, "fd")
-			ctrInitFDs, err := ioutil.ReadDir(fdDir)
+			ctrInitFDs, err := os.ReadDir(fdDir)
 			Expect(err).NotTo(HaveOccurred())
 			for _, ctrInitFD := range ctrInitFDs {
 				Expect(os.Readlink(filepath.Join(fdDir, ctrInitFD.Name()))).NotTo(ContainSubstring("socket"))

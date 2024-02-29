@@ -1,7 +1,7 @@
 package sysctl
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -30,7 +30,7 @@ func (s *Sysctl) Get(key string) (uint32, error) {
 func (s *Sysctl) GetString(key string) (string, error) {
 	path := filepath.Join("/proc/sys", strings.ReplaceAll(key, ".", "/"))
 
-	stringValue, err := ioutil.ReadFile(path)
+	stringValue, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
