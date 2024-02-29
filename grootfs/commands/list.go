@@ -26,20 +26,20 @@ var ListCommand = cli.Command{
 		logger.Debug("list-config", lager.Data{"currentConfig": cfg})
 		if err != nil {
 			logger.Error("config-builder-failed", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		if _, err := os.Stat(cfg.StorePath); os.IsNotExist(err) {
 			err := errorspkg.Errorf("no store found at %s", cfg.StorePath)
 			logger.Error("store-path-failed", err, nil)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		lister := groot.IamLister()
 		images, err := lister.List(logger, cfg.StorePath)
 		if err != nil {
 			logger.Error("listing-images", err, lager.Data{"storePath": cfg.StorePath})
-			return cli.NewExitError(fmt.Sprintf("Failed to retrieve list of images: %s", err.Error()), 1)
+			return cli.Exit(fmt.Sprintf("Failed to retrieve list of images: %s", err.Error()), 1)
 		}
 
 		if len(images) == 0 {

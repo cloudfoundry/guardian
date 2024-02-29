@@ -32,18 +32,18 @@ var StatsCommand = cli.Command{
 
 		if err != nil {
 			logger.Error("fetching-volume-stats", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		jsonStats, err := json.Marshal(volumeStats)
 		if err != nil {
 			logger.Error("marshaling-volume-stats", err)
-			return cli.NewExitError(err.Error(), 2)
+			return cli.Exit(err.Error(), 2)
 		}
 
 		if _, err := os.Stdout.Write(jsonStats); err != nil {
 			logger.Error("printing-stats", err)
-			return cli.NewExitError(err.Error(), 3)
+			return cli.Exit(err.Error(), 3)
 		}
 
 		return nil

@@ -27,7 +27,7 @@ var StatsCommand = cli.Command{
 
 		if ctx.NArg() != 1 {
 			logger.Error("parsing-command", errorspkg.New("invalid arguments"), lager.Data{"args": ctx.Args()})
-			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
+			return cli.Exit(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
@@ -35,7 +35,7 @@ var StatsCommand = cli.Command{
 		logger.Debug("stats-config", lager.Data{"currentConfig": cfg})
 		if err != nil {
 			logger.Error("config-builder-failed", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		storePath := cfg.StorePath
@@ -43,7 +43,7 @@ var StatsCommand = cli.Command{
 		id, err := idfinder.FindID(storePath, idOrPath)
 		if err != nil {
 			logger.Error("find-id-failed", err, lager.Data{"id": idOrPath, "storePath": storePath})
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, nil, loopback.NewNoopDirectIO())
@@ -53,7 +53,7 @@ var StatsCommand = cli.Command{
 		stats, err := statser.Stats(logger, id)
 		if err != nil {
 			logger.Error("fetching-stats", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		_ = json.NewEncoder(os.Stdout).Encode(stats)

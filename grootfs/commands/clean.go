@@ -46,13 +46,13 @@ var CleanCommand = cli.Command{
 		cfg, err := configBuilder.Build()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "config-builder-failed: %v", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		if _, err = os.Stat(cfg.StorePath); os.IsNotExist(err) {
 			err = errorspkg.Errorf("no store found at %s", cfg.StorePath)
 			fmt.Fprintf(os.Stderr, "no store found at %s", cfg.StorePath)
-			return cli.NewExitError(err.Error(), 0)
+			return cli.Exit(err.Error(), 0)
 		}
 
 		metricsEmitter := metrics.NewEmitter(logger, cfg.MetronEndpoint)
@@ -61,12 +61,12 @@ var CleanCommand = cli.Command{
 		lockFile, err := locksmith.Lock(groot.GCLockKey)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to acquire lock %s: %v", groot.GCLockKey, err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 		defer func() {
 			if err := locksmith.Unlock(lockFile); err != nil {
 				logger.Error("release-lock-failed", err, nil)
-				exitError = cli.NewExitError(err.Error(), 1)
+				exitError = cli.Exit(err.Error(), 1)
 			}
 		}()
 
@@ -87,7 +87,7 @@ var CleanCommand = cli.Command{
 		nsFsDriver, err := createImageDriver(logger, cfg, fsDriver)
 		if err != nil {
 			logger.Error("failed-to-create-image-driver", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 		gc := garbage_collector.NewGC(nsFsDriver, imageManager, dependencyManager)
 		sm := storepkg.NewStoreMeasurer(cfg.StorePath, fsDriver, gc)
@@ -111,7 +111,7 @@ var CleanCommand = cli.Command{
 		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes)
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		if noop {

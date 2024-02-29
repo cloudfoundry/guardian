@@ -124,7 +124,7 @@ func main() {
 	grootfs.Before = func(ctx *cli.Context) error {
 		cfgBuilder, err := config.NewBuilder(ctx.String("config"))
 		if err != nil {
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 		ctx.App.Metadata["configBuilder"] = cfgBuilder
 
@@ -138,13 +138,13 @@ func main() {
 			WithNewgidmapBin(ctx.String("newgidmap-bin"), ctx.IsSet("newgidmap-bin")).
 			Build()
 		if err != nil {
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		lagerLogLevel := translateLogLevel(cfg.LogLevel)
 		logger, err := configureLogger(lagerLogLevel, cfg.LogFile, cfg.LogTimestampFormat)
 		if err != nil {
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 		ctx.App.Metadata["logger"] = logger
 
@@ -154,7 +154,7 @@ func main() {
 
 		if err := os.Setenv("TMPDIR", filepath.Join(cfg.StorePath, store.TempDirName)); err != nil {
 			logger.Error("setting TMPDIR env var", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		return nil
