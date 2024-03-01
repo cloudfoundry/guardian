@@ -268,7 +268,7 @@ func hasSubdirectories(dir string) (bool, error) {
 		return false, err
 	}
 	for _, fileInfo := range dirs {
-		if fileInfo.Mode().IsDir() {
+		if fileInfo.Type().IsDir() {
 			return true, nil
 		}
 	}

@@ -31,6 +31,7 @@ import (
 	"code.cloudfoundry.org/lager/v3/lagertest"
 )
 
+var randomGenerator *rand.Rand
 var _ = Describe("Nerd", func() {
 	var (
 		testLogger    lager.Logger
@@ -53,7 +54,7 @@ var _ = Describe("Nerd", func() {
 	)
 
 	BeforeEach(func() {
-		rand.Seed(time.Now().UnixNano())
+		randomGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))
 		containerID = fmt.Sprintf("test-container-%s", randomString(10))
 		processID = fmt.Sprintf("test-process-%s", randomString(10))
 		stdout = gbytes.NewBuffer()
@@ -647,7 +648,7 @@ func runCtr(ctr, socket string, args []string) string {
 }
 
 func randomInt(min, max int) int {
-	return min + rand.Intn(max-min)
+	return min + randomGenerator.Intn(max-min)
 }
 
 func randomString(len int) string {
