@@ -140,7 +140,7 @@ func runCommand(command *exec.Cmd) (string, string, error) {
 	return string(stdout.Contents()), string(stderr.Contents()), err
 }
 
-func getVolumesDirEntries() ([]os.FileInfo, error) {
+func getVolumesDirEntries() ([]os.DirEntry, error) {
 	return os.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 }
 
