@@ -522,7 +522,6 @@ func startFakeBlobstore(workDir string) (*http.Server, chan struct{}) {
 		ClientCAs: clientCertPool,
 	}
 
-	tlsConfig.BuildNameToCertificate()
 	fs := http.FileServer(http.Dir(fmt.Sprintf("/%s/assets/remote-layers/garden-busybox-remote", workDir)))
 	http.Handle("/", fs)
 
