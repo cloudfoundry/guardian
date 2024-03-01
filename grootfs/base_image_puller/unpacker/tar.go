@@ -111,7 +111,7 @@ func (u *TarUnpacker) handleEntry(entryPath string, tarReader *tar.Reader, tarHe
 			return 0, err
 		}
 
-	case tar.TypeReg, tar.TypeRegA:
+	case tar.TypeReg:
 		if entrySize, err = u.createRegularFile(entryPath, tarHeader, tarReader, spec); err != nil {
 			return 0, err
 		}
