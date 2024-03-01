@@ -87,20 +87,6 @@ var _ = Describe("Bundle", func() {
 		})
 	})
 
-	Describe("WithPrestartHooks", func() {
-		It("adds the hook to the runtime spec", func() {
-			returnedBundle := initialBundle.WithPrestartHooks(specs.Hook{
-				Path: "foo",
-				Args: []string{"bar", "baz"},
-			})
-
-			Expect(returnedBundle.PrestartHooks()).To(Equal([]specs.Hook{{
-				Path: "foo",
-				Args: []string{"bar", "baz"},
-			}}))
-		})
-	})
-
 	Describe("WithPoststopHooks", func() {
 		It("adds the hook to the runtime spec", func() {
 			returnedBundle := initialBundle.WithPoststopHooks(specs.Hook{
