@@ -8,6 +8,7 @@ import (
 	"github.com/containerd/containerd"
 )
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 //counterfeiter:generate github.com/containerd/containerd.Process
 //counterfeiter:generate github.com/containerd/containerd/cio.IO
 
