@@ -4,14 +4,14 @@ go 1.20
 
 require (
 	code.cloudfoundry.org/commandrunner v0.0.0-20240301144845-6dda09145d14
-	code.cloudfoundry.org/idmapper v0.0.0-20240228131034-fac0b52fc266
+	code.cloudfoundry.org/idmapper v0.0.0-20240307003907-65baa99d378e
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20240222182100-131c0f5c3247
 	github.com/containers/image/v5 v5.30.0
 	github.com/containers/storage v1.53.0
 	github.com/docker/distribution v2.8.3+incompatible
-	github.com/docker/docker v25.0.3+incompatible
+	github.com/docker/docker v25.0.4+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/onsi/ginkgo/v2 v2.16.0
 	github.com/onsi/gomega v1.31.1
