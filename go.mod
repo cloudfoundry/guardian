@@ -19,9 +19,9 @@ require (
 	code.cloudfoundry.org/clock v1.1.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20240301144845-6dda09145d14
 	code.cloudfoundry.org/debugserver v0.0.0-20240301143847-7967b4b03e2b
-	code.cloudfoundry.org/garden v0.0.0-20240306131114-33d949f4395f
+	code.cloudfoundry.org/garden v0.0.0-20240307003505-d50f0989a829
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240228131034-fac0b52fc266
+	code.cloudfoundry.org/idmapper v0.0.0-20240307003907-65baa99d378e
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	code.cloudfoundry.org/localip v0.0.0-20240301143843-ee3a7a4acfc6
 	github.com/BurntSushi/toml v1.3.2
@@ -29,7 +29,7 @@ require (
 	github.com/cloudfoundry/gosigar v1.3.49
 	github.com/containerd/containerd v1.7.13
 	github.com/containerd/typeurl/v2 v2.1.1
-	github.com/docker/docker v25.0.3+incompatible
+	github.com/docker/docker v25.0.4+incompatible
 	github.com/eapache/go-resiliency v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jessevdk/go-flags v1.5.1-0.20210607101731-3927b71304df
