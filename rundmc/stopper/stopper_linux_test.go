@@ -2,7 +2,6 @@ package stopper_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -32,12 +31,12 @@ var _ = Describe("CgroupStopper", func() {
 		fakeRetrier = new(fakes.FakeRetrier)
 
 		var err error
-		fakeCgroupDir, err = ioutil.TempDir("", "fakecgroupdir")
+		fakeCgroupDir, err = os.MkdirTemp("", "fakecgroupdir")
 		Expect(err).NotTo(HaveOccurred())
 
 		devicesCgroupPath = filepath.Join(fakeCgroupDir, "foo", "devices")
 		Expect(os.MkdirAll(devicesCgroupPath, 0700)).To(Succeed())
-		Expect(ioutil.WriteFile(filepath.Join(devicesCgroupPath, "cgroup.procs"), []byte(`1
+		Expect(os.WriteFile(filepath.Join(devicesCgroupPath, "cgroup.procs"), []byte(`1
 3
 5
 9`), 0700)).To(Succeed())
@@ -90,7 +89,7 @@ var _ = Describe("CgroupStopper", func() {
 
 		It("repeatedly sends TERM and KILL to the remaining processes until the retrier gives up", func() {
 			fakeRetrier.RunStub = func(fn func() error) error {
-				Expect(ioutil.WriteFile(filepath.Join(devicesCgroupPath, "cgroup.procs"), []byte(`3
+				Expect(os.WriteFile(filepath.Join(devicesCgroupPath, "cgroup.procs"), []byte(`3
 9`), 0700)).To(Succeed())
 				err := fn()
 				return err
@@ -106,7 +105,7 @@ var _ = Describe("CgroupStopper", func() {
 		Describe("telling the retrier whether it should continue", func() {
 			It("tells the retrier that it is done when there are no processes left", func() {
 				fakeRetrier.RunStub = func(fn func() error) error {
-					Expect(ioutil.WriteFile(filepath.Join(devicesCgroupPath, "cgroup.procs"), []byte(`9
+					Expect(os.WriteFile(filepath.Join(devicesCgroupPath, "cgroup.procs"), []byte(`9
 `), 0700)).To(Succeed())
 					Expect(fn()).To(Succeed()) // should stop retrying when everything's gone
 					return nil

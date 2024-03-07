@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -452,7 +451,7 @@ func (p process) Wait() (int, error) {
 		return 1, fmt.Errorf("could not find the exitcode file for the process: %s", err.Error())
 	}
 
-	exitcode, err := ioutil.ReadFile(p.exitcode)
+	exitcode, err := os.ReadFile(p.exitcode)
 	if err != nil {
 		return 1, err
 	}
@@ -501,7 +500,7 @@ func copyDadooLogsToGuardianLogger(dadooLogFilePath string, logger lager.Logger)
 		return nil
 	}
 
-	dadooLogs, err := ioutil.ReadFile(dadooLogFilePath)
+	dadooLogs, err := os.ReadFile(dadooLogFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to read dadoo log file: %s", err)
 	}

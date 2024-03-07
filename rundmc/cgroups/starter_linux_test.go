@@ -2,7 +2,7 @@ package cgroups_test
 
 import (
 	"errors"
-	"io/ioutil"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -69,8 +69,8 @@ var _ = Describe("CgroupStarter", func() {
 
 		starter = cgroups.NewStarter(
 			logger,
-			ioutil.NopCloser(strings.NewReader(procCgroupsContents)),
-			ioutil.NopCloser(strings.NewReader(procSelfCgroupsContents)),
+			io.NopCloser(strings.NewReader(procCgroupsContents)),
+			io.NopCloser(strings.NewReader(procSelfCgroupsContents)),
 			path.Join(tmpDir, "cgroup"),
 			"garden",
 			[]specs.LinuxDeviceCgroup{{

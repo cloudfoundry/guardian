@@ -2,7 +2,6 @@ package kawasaki_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -33,10 +32,10 @@ var _ = Describe("ResolvConfigurer", func() {
 		fakeResolvCompiler = new(fakes.FakeResolvCompiler)
 
 		var err error
-		tmpDir, err = ioutil.TempDir("", "resolv-test")
+		tmpDir, err = os.MkdirTemp("", "resolv-test")
 		Expect(err).NotTo(HaveOccurred())
 		resolvFilePath := filepath.Join(tmpDir, "host-resolv.conf")
-		Expect(ioutil.WriteFile(resolvFilePath, []byte("nameserver 1.2.3.4\n"), 0755)).To(Succeed())
+		Expect(os.WriteFile(resolvFilePath, []byte("nameserver 1.2.3.4\n"), 0755)).To(Succeed())
 		depotDir = filepath.Join(tmpDir, "depot")
 		containerDir := filepath.Join(depotDir, handle)
 		Expect(os.MkdirAll(containerDir, 0700)).To(Succeed())
@@ -89,7 +88,7 @@ var _ = Describe("ResolvConfigurer", func() {
 		Expect(dnsResolv.Configure(log, kawasaki.NetworkConfig{ContainerHandle: handle}, 42)).To(Succeed())
 
 		Expect(fakeHostsFileCompiler.CompileCallCount()).To(Equal(1))
-		hostsFileContents, err := ioutil.ReadFile(filepath.Join(depotDir, handle, "hosts"))
+		hostsFileContents, err := os.ReadFile(filepath.Join(depotDir, handle, "hosts"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(hostsFileContents)).To(Equal(compiledHostsFile))
 	})
@@ -124,7 +123,7 @@ var _ = Describe("ResolvConfigurer", func() {
 		Expect(actualAdditionalNameservers).To(Equal([]net.IP{net.ParseIP("11.11.11.11")}))
 		Expect(actualPluginSearchDomains).To(ConsistOf("one", "two"))
 
-		resolvFileContents, err := ioutil.ReadFile(filepath.Join(depotDir, handle, "resolv.conf"))
+		resolvFileContents, err := os.ReadFile(filepath.Join(depotDir, handle, "resolv.conf"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(resolvFileContents)).To(Equal("arbitrary\nlines of text\n"))
 	})

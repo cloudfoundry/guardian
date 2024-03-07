@@ -3,7 +3,6 @@ package gqt_test
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -453,7 +452,7 @@ func collectRuncPeaPids(handle string) []string {
 }
 
 func numProcessDirs(handle string) int {
-	processDirs, err := ioutil.ReadDir(filepath.Join(config.DepotDir, handle, "processes"))
+	processDirs, err := os.ReadDir(filepath.Join(config.DepotDir, handle, "processes"))
 	if os.IsNotExist(err) {
 		return 0
 	}
@@ -462,7 +461,7 @@ func numProcessDirs(handle string) int {
 }
 
 func numImageDirs() int {
-	imagesDirs, err := ioutil.ReadDir(filepath.Join(config.StorePath, "images"))
+	imagesDirs, err := os.ReadDir(filepath.Join(config.StorePath, "images"))
 	Expect(err).ToNot(HaveOccurred())
 	return len(imagesDirs)
 }

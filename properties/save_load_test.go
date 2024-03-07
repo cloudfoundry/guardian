@@ -1,7 +1,6 @@
 package properties_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -33,7 +32,7 @@ var _ = Describe("SaveLoad", func() {
 	})
 
 	It("returns a new manager when the file is empty", func() {
-		Expect(ioutil.WriteFile(propPath, []byte{}, 0755)).To(Succeed())
+		Expect(os.WriteFile(propPath, []byte{}, 0755)).To(Succeed())
 		mgr, err := properties.Load(propPath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(mgr).NotTo(BeNil())

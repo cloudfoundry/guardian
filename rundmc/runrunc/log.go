@@ -2,7 +2,7 @@ package runrunc
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 
@@ -45,7 +45,7 @@ func forwardLogs(log lager.Logger, logFile *os.File, err error) error {
 	defer os.Remove(logFile.Name())
 	defer logFile.Close()
 
-	buff, readErr := ioutil.ReadAll(logFile)
+	buff, readErr := io.ReadAll(logFile)
 	if readErr != nil {
 		return fmt.Errorf("read log file: %s", readErr)
 	}
@@ -62,5 +62,5 @@ func forwardLogs(log lager.Logger, logFile *os.File, err error) error {
 type LogDir string
 
 func (dir LogDir) GenerateLogFile() (*os.File, error) {
-	return ioutil.TempFile(string(dir), "")
+	return os.CreateTemp(string(dir), "")
 }

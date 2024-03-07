@@ -3,10 +3,7 @@ package gqt_cleanup_test
 import (
 	"bytes"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"syscall"
@@ -26,7 +23,6 @@ var (
 	config            runner.GdnRunnerConfig
 	defaultTestRootFS string
 
-	containerdConfig  containerdrunner.Config
 	containerdProcess *os.Process
 	containerdRunDir  string
 )
@@ -139,34 +135,6 @@ func getGardenBinaries() runner.Binaries {
 	return gardenBinaries
 }
 
-func copyFile(srcPath, dstPath string) error {
-	dirPath := filepath.Dir(dstPath)
-	if err := os.MkdirAll(dirPath, 0777); err != nil {
-		return err
-	}
-
-	reader, err := os.Open(srcPath)
-	if err != nil {
-		return err
-	}
-	writer, err := os.Create(dstPath)
-	if err != nil {
-		reader.Close()
-		return err
-	}
-
-	if _, err := io.Copy(writer, reader); err != nil {
-		writer.Close()
-		reader.Close()
-		return err
-	}
-
-	writer.Close()
-	reader.Close()
-
-	return os.Chmod(writer.Name(), 0777)
-}
-
 func jsonMarshal(v interface{}) []byte {
 	buf := bytes.NewBuffer([]byte{})
 	Expect(toml.NewEncoder(buf).Encode(v)).To(Succeed())
@@ -177,21 +145,8 @@ func jsonUnmarshal(data []byte, v interface{}) {
 	Expect(toml.Unmarshal(data, v)).To(Succeed())
 }
 
-func runCommandInDir(cmd *exec.Cmd, workingDir string) string {
-	cmd.Dir = workingDir
-	cmdOutput, err := cmd.CombinedOutput()
-	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Running command %#v failed: %v: %s", cmd, err, string(cmdOutput)))
-	return string(cmdOutput)
-}
-
 func isContainerd() bool {
 	return os.Getenv("CONTAINERD_ENABLED") == "true"
-}
-
-func skipIfContainerd() {
-	if isContainerd() {
-		Skip("irrelevant test for containerd mode")
-	}
 }
 
 func startContainerd(runDir string) *os.Process {
@@ -201,7 +156,7 @@ func startContainerd(runDir string) *os.Process {
 }
 
 func tempDir(dir, prefix string) string {
-	path, err := ioutil.TempDir(dir, prefix)
+	path, err := os.MkdirTemp(dir, prefix)
 	Expect(err).NotTo(HaveOccurred())
 	return path
 }

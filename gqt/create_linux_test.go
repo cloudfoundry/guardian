@@ -292,7 +292,7 @@ var _ = Describe("Creating a Container", func() {
 
 			Expect(client.Destroy(container.Handle())).To(Succeed())
 
-			container, err = client.Create(garden.ContainerSpec{
+			_, err = client.Create(garden.ContainerSpec{
 				Handle: "another-banana",
 			})
 			Expect(err).NotTo(HaveOccurred())

@@ -1,7 +1,6 @@
 package cgroups_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -22,7 +21,7 @@ var _ = Describe("Rundmc/Cgroups/Cpucgrouper", func() {
 		runccgroups.TestMode = true
 
 		var err error
-		rootPath, err = ioutil.TempDir("", "garden")
+		rootPath, err = os.MkdirTemp("", "garden")
 		Expect(err).NotTo(HaveOccurred())
 
 		cpuCgrouper = cgroups.NewCPUCgrouper(rootPath)
@@ -61,9 +60,9 @@ var _ = Describe("Rundmc/Cgroups/Cpucgrouper", func() {
 			badCgroupPath = filepath.Join(rootPath, cgroups.BadCgroupName, "pancakes!")
 			Expect(os.MkdirAll(badCgroupPath, 0755)).To(Succeed())
 
-			Expect(ioutil.WriteFile(filepath.Join(badCgroupPath, "cpuacct.usage"), []byte("123"), 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(filepath.Join(badCgroupPath, "cpuacct.stat"), []byte("user 456\nsystem 789"), 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(filepath.Join(badCgroupPath, "cpuacct.usage_percpu"), []byte("0 0"), 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(badCgroupPath, "cpuacct.usage"), []byte("123"), 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(badCgroupPath, "cpuacct.stat"), []byte("user 456\nsystem 789"), 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(badCgroupPath, "cpuacct.usage_percpu"), []byte("0 0"), 0755)).To(Succeed())
 		})
 
 		It("returns the CPU usages", func() {
@@ -80,7 +79,7 @@ var _ = Describe("Rundmc/Cgroups/Cpucgrouper", func() {
 
 		When("reading the CPU stats fail", func() {
 			BeforeEach(func() {
-				Expect(ioutil.WriteFile(filepath.Join(badCgroupPath, "cpuacct.stat"), []byte("user foo\nsystem bar"), 0755)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(badCgroupPath, "cpuacct.stat"), []byte("user foo\nsystem bar"), 0755)).To(Succeed())
 			})
 
 			It("propagates the error", func() {

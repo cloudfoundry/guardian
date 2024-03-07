@@ -2,7 +2,6 @@ package runcontainerd_test
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -65,7 +64,7 @@ var _ = Describe("CgroupManager", func() {
 
 		It("sets memory.use_hierarchy to 1 for the specified container", func() {
 			Expect(setErr).NotTo(HaveOccurred())
-			Expect(ioutil.ReadFile(useHierarchyPath)).To(Equal([]byte("1")))
+			Expect(os.ReadFile(useHierarchyPath)).To(Equal([]byte("1")))
 		})
 
 		Context("when the state dir for the container doesn't exist", func() {

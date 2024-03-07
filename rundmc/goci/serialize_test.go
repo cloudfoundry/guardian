@@ -2,7 +2,6 @@ package goci_test
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -28,7 +27,7 @@ var _ = Describe("Bundle Serialization", func() {
 
 	BeforeEach(func() {
 		var err error
-		tmp, err = ioutil.TempDir("", "gocitest")
+		tmp, err = os.MkdirTemp("", "gocitest")
 		Expect(err).NotTo(HaveOccurred())
 
 		bundleSaver = &goci.BundleSaver{}
@@ -79,7 +78,7 @@ var _ = Describe("Bundle Serialization", func() {
 		Context("when the file already contains a bunch of stuff", func() {
 			BeforeEach(func() {
 				stuff := make([]byte, 1024*1024)
-				err := ioutil.WriteFile(filepath.Join(tmp, "config.json"), stuff, 0600)
+				err := os.WriteFile(filepath.Join(tmp, "config.json"), stuff, 0600)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -116,7 +115,7 @@ var _ = Describe("Bundle Serialization", func() {
 
 		Context("when config.json is not valid bundle", func() {
 			JustBeforeEach(func() {
-				ioutil.WriteFile(path.Join(tmp, "config.json"), []byte("appended-nonsense"), 0755)
+				os.WriteFile(path.Join(tmp, "config.json"), []byte("appended-nonsense"), 0755)
 			})
 
 			It("returns an error", func() {

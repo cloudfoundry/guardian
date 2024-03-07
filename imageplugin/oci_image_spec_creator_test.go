@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -44,7 +43,7 @@ var _ = Describe("OciImageSpecCreator", func() {
 
 	BeforeEach(func() {
 		var err error
-		tmpDir, err = ioutil.TempDir("", "imageplugin-tests")
+		tmpDir, err = os.MkdirTemp("", "imageplugin-tests")
 		Expect(err).NotTo(HaveOccurred())
 
 		rootFSBaseDir = filepath.Join(tmpDir, "rootfs-base")
@@ -191,7 +190,7 @@ func shaOf(obj interface{}) string {
 }
 
 func unmarshalJSONFromFile(path string, into interface{}) {
-	contents, err := ioutil.ReadFile(path)
+	contents, err := os.ReadFile(path)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(json.Unmarshal(contents, into)).To(Succeed())
 }

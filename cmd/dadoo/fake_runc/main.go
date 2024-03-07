@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -10,7 +9,7 @@ import (
 )
 
 func main() {
-	ioutil.WriteFile("/tmp/something", []byte(fmt.Sprintf("%#v", os.Args)), 0755)
+	os.WriteFile("/tmp/something", []byte(fmt.Sprintf("%#v", os.Args)), 0755)
 	socketPath, pidPath := "", ""
 	for idx, s := range os.Args {
 		if s == "-console-socket" || s == "--console-socket" {
@@ -31,7 +30,7 @@ func main() {
 	go cmd.Wait()
 	pid := cmd.Process.Pid
 	fmt.Println("PID", pid)
-	err := ioutil.WriteFile(pidPath, []byte(fmt.Sprintf("%d", pid)), 0755)
+	err := os.WriteFile(pidPath, []byte(fmt.Sprintf("%d", pid)), 0755)
 	if err != nil {
 		panic(err)
 	}

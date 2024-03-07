@@ -1175,7 +1175,7 @@ var _ = Describe("Gardener", func() {
 
 			Expect(containerizer.DestroyCallCount()).To(Equal(len(handles)))
 			actualHandles := []string{}
-			for i, _ := range handles {
+			for i := range handles {
 				_, actualHandle := containerizer.DestroyArgsForCall(i)
 				actualHandles = append(actualHandles, actualHandle)
 			}
@@ -1183,7 +1183,7 @@ var _ = Describe("Gardener", func() {
 
 			actualHandles = []string{}
 			Expect(networker.DestroyCallCount()).To(Equal(len(handles)))
-			for i, _ := range handles {
+			for i := range handles {
 				_, actualHandle := networker.DestroyArgsForCall(i)
 				actualHandles = append(actualHandles, actualHandle)
 			}
@@ -1191,7 +1191,7 @@ var _ = Describe("Gardener", func() {
 
 			actualHandles = []string{}
 			Expect(volumizer.DestroyCallCount()).To(Equal(len(handles)))
-			for i, _ := range handles {
+			for i := range handles {
 				_, actualHandle := volumizer.DestroyArgsForCall(i)
 				actualHandles = append(actualHandles, actualHandle)
 			}
@@ -1199,7 +1199,7 @@ var _ = Describe("Gardener", func() {
 
 			actualHandles = []string{}
 			Expect(propertyManager.DestroyKeySpaceCallCount()).To(Equal(len(handles)))
-			for i, _ := range handles {
+			for i := range handles {
 				actualHandle := propertyManager.DestroyKeySpaceArgsForCall(i)
 				actualHandles = append(actualHandles, actualHandle)
 			}
@@ -1207,7 +1207,7 @@ var _ = Describe("Gardener", func() {
 
 			actualHandles = []string{}
 			Expect(containerizer.RemoveBundleCallCount()).To(Equal(len(handles)))
-			for i, _ := range handles {
+			for i := range handles {
 				_, actualHandle := containerizer.RemoveBundleArgsForCall(i)
 				actualHandles = append(actualHandles, actualHandle)
 			}

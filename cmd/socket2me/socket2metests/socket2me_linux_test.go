@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,7 +22,7 @@ var _ = Describe("Socket2Me", func() {
 
 	BeforeEach(func() {
 		var err error
-		tempDir, err = ioutil.TempDir("", "socket2me-tests")
+		tempDir, err = os.MkdirTemp("", "socket2me-tests")
 		Expect(err).NotTo(HaveOccurred())
 		socketPath = filepath.Join(tempDir, "somefile.sock")
 	})

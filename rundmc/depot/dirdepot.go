@@ -3,7 +3,6 @@ package depot
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -125,7 +124,7 @@ func (d *DirectoryDepot) GetDir() string {
 
 func (d *DirectoryDepot) Handles() ([]string, error) {
 	handles := []string{}
-	fileInfos, err := ioutil.ReadDir(d.dir)
+	fileInfos, err := os.ReadDir(d.dir)
 	if err != nil {
 		return handles, fmt.Errorf("invalid depot directory %s: %s", d.dir, err)
 	}

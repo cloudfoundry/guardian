@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -55,14 +54,14 @@ func main() {
 }
 
 func writeArgs(action string) {
-	err := ioutil.WriteFile(filepath.Join(os.TempDir(), fmt.Sprintf("%s-args", action)), []byte(strings.Join(os.Args, " ")), 0777)
+	err := os.WriteFile(filepath.Join(os.TempDir(), fmt.Sprintf("%s-args", action)), []byte(strings.Join(os.Args, " ")), 0777)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func readOutput(action string) (string, bool) {
-	content, err := ioutil.ReadFile(filepath.Join(os.TempDir(), fmt.Sprintf("runtime-%s-output", action)))
+	content, err := os.ReadFile(filepath.Join(os.TempDir(), fmt.Sprintf("runtime-%s-output", action)))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", false
@@ -89,7 +88,7 @@ var CreateCommand = cli.Command{
 	Action: func(ctx *cli.Context) error {
 		writeArgs("create")
 
-		if err := ioutil.WriteFile(ctx.String("pid-file"), []byte(strconv.Itoa(os.Getppid())), 0777); err != nil {
+		if err := os.WriteFile(ctx.String("pid-file"), []byte(strconv.Itoa(os.Getppid())), 0777); err != nil {
 			panic(err)
 		}
 
@@ -117,7 +116,7 @@ var RunCommand = cli.Command{
 	Action: func(ctx *cli.Context) error {
 		writeArgs("run")
 
-		if err := ioutil.WriteFile(ctx.String("pid-file"), []byte(strconv.Itoa(os.Getppid())), 0777); err != nil {
+		if err := os.WriteFile(ctx.String("pid-file"), []byte(strconv.Itoa(os.Getppid())), 0777); err != nil {
 			panic(err)
 		}
 
@@ -233,7 +232,7 @@ var ExecCommand = cli.Command{
 		childCmd := exec.Command(os.Args[0], "child", "--exitcode", exitCodeStr)
 		must(childCmd.Start())
 		childPid := childCmd.Process.Pid
-		must(ioutil.WriteFile(ctx.String("pid-file"), []byte(fmt.Sprintf("%d", childPid)), 0777))
+		must(os.WriteFile(ctx.String("pid-file"), []byte(fmt.Sprintf("%d", childPid)), 0777))
 
 		os.Exit(exitCode)
 

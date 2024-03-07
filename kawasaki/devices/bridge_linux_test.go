@@ -2,8 +2,8 @@ package devices_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 
 	"code.cloudfoundry.org/guardian/kawasaki/devices"
 	. "github.com/onsi/ginkgo/v2"
@@ -53,7 +53,7 @@ var _ = Describe("Bridge Management", func() {
 				// 1 means the kernel auto-assigns a mac address based on the lowest-attached
 				// device. This is bad because it can change (!) when devices are added/removed
 				// and mess stuff up. 3 means we assigned an explicit address so this shouldnt happen.
-				Expect(ioutil.ReadFile(fmt.Sprintf("/sys/class/net/%s/addr_assign_type", name))).To(Equal([]byte("3\n")))
+				Expect(os.ReadFile(fmt.Sprintf("/sys/class/net/%s/addr_assign_type", name))).To(Equal([]byte("3\n")))
 			})
 
 			It("sets the bridge address", func() {
@@ -71,7 +71,7 @@ var _ = Describe("Bridge Management", func() {
 				bridge, err := b.Create(name, ip, subnet)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(ioutil.ReadFile(fmt.Sprintf("/sys/devices/virtual/net/%s/bridge/multicast_snooping", bridge.Name))).To(Equal([]byte("0\n")))
+				Expect(os.ReadFile(fmt.Sprintf("/sys/devices/virtual/net/%s/bridge/multicast_snooping", bridge.Name))).To(Equal([]byte("0\n")))
 			})
 		})
 

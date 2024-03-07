@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -61,7 +61,7 @@ var _ = Describe("Execer", func() {
 
 	BeforeEach(func() {
 		var err error
-		bundlePath, err = ioutil.TempDir("", "execer-test")
+		bundlePath, err = os.MkdirTemp("", "execer-test")
 		Expect(err).NotTo(HaveOccurred())
 
 		logger = lagertest.NewTestLogger("test")
@@ -159,7 +159,7 @@ var _ = Describe("Execer", func() {
 			Expect(actualPIO).To(Equal(pio))
 			Expect(actualTTY).To(BeFalse())
 
-			actualProcJSONBytes, err := ioutil.ReadAll(actualProcJSON)
+			actualProcJSONBytes, err := io.ReadAll(actualProcJSON)
 			Expect(err).NotTo(HaveOccurred())
 			procJSONBytes, err := json.Marshal(preparedProc)
 			Expect(err).NotTo(HaveOccurred())

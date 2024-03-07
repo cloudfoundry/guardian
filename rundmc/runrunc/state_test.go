@@ -1,9 +1,10 @@
 package runrunc_test
 
 import (
-	"code.cloudfoundry.org/guardian/rundmc"
 	"errors"
 	"os/exec"
+
+	"code.cloudfoundry.org/guardian/rundmc"
 
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	fakes "code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"

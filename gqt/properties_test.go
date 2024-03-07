@@ -1,7 +1,6 @@
 package gqt_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -133,7 +132,7 @@ var _ = Describe("Properties", func() {
 
 	Context("when the properties file is an empty file", func() {
 		BeforeEach(func() {
-			Expect(ioutil.WriteFile(config.PropertiesPath, []byte{}, 0755)).To(Succeed())
+			Expect(os.WriteFile(config.PropertiesPath, []byte{}, 0755)).To(Succeed())
 		})
 
 		It("it does not fail", func() {

@@ -2,7 +2,6 @@ package gqt_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -137,7 +136,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 					)
 					Expect(err).To(HaveOccurred())
 
-					entries, err := ioutil.ReadDir(client.DepotDir)
+					entries, err := os.ReadDir(client.DepotDir)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(entries).To(HaveLen(0))
 				})
@@ -360,7 +359,7 @@ func writeGrootConfig(insecureRegistry string) string {
 	confPath := tempFile(config.TmpDir, "groot_config")
 	defer confPath.Close()
 
-	Expect(ioutil.WriteFile(confPath.Name(), confYml, 0600)).To(Succeed())
+	Expect(os.WriteFile(confPath.Name(), confYml, 0600)).To(Succeed())
 
 	return confPath.Name()
 }

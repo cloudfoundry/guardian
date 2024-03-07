@@ -80,7 +80,7 @@ func init() {
 
 			return nil
 		}); err != nil {
-			fmt.Fprintf(os.Stderr, err.Error())
+			fmt.Fprint(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 	})

@@ -2,7 +2,6 @@ package runrunc_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"os/exec"
 
@@ -33,7 +32,7 @@ var _ = Describe("RunAndLog", func() {
 		logger = lagertest.NewTestLogger("test")
 
 		var err error
-		logFile, err = ioutil.TempFile("", "runandlog")
+		logFile, err = os.CreateTemp("", "runandlog")
 		Expect(err).NotTo(HaveOccurred())
 
 		logRunner = runrunc.NewLogRunner(commandRunner, func() (*os.File, error) {
@@ -62,7 +61,7 @@ var _ = Describe("RunAndLog", func() {
 		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: "something.exe",
 		}, func(cmd *exec.Cmd) error {
-			ioutil.WriteFile(cmd.Args[1], []byte(logs), 0777)
+			os.WriteFile(cmd.Args[1], []byte(logs), 0777)
 			return nil
 		})
 
@@ -85,7 +84,7 @@ var _ = Describe("RunAndLog", func() {
 		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: "something.exe",
 		}, func(cmd *exec.Cmd) error {
-			ioutil.WriteFile(cmd.Args[1], []byte(logs), 0777)
+			os.WriteFile(cmd.Args[1], []byte(logs), 0777)
 			return errors.New("potato")
 		})
 
@@ -123,7 +122,7 @@ var _ = Describe("RunAndLog", func() {
 		})
 
 		It("generates files within a given directory", func() {
-			dir, err := ioutil.TempDir("", "")
+			dir, err := os.MkdirTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			b, err := runrunc.LogDir(dir).GenerateLogFile()

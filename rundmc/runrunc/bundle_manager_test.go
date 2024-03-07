@@ -2,7 +2,6 @@ package runrunc_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -135,13 +134,13 @@ var _ = Describe("BundleManager", func() {
 
 		BeforeEach(func() {
 			var err error
-			processesDir, err = ioutil.TempDir("", "processesDir")
+			processesDir, err = os.MkdirTemp("", "processesDir")
 			Expect(err).NotTo(HaveOccurred())
 
 			peaDir := filepath.Join(processesDir, "pea-handle")
 			Expect(os.MkdirAll(peaDir, 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(filepath.Join(peaDir, "config.json"), []byte("don't care"), 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(filepath.Join(peaDir, "pidfile"), []byte("9988"), 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(peaDir, "config.json"), []byte("don't care"), 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(peaDir, "pidfile"), []byte("9988"), 0755)).To(Succeed())
 
 			nonPeaDir := filepath.Join(processesDir, "non-pea-handle")
 			Expect(os.MkdirAll(nonPeaDir, 0755)).To(Succeed())

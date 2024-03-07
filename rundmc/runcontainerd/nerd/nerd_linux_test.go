@@ -6,13 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -33,6 +31,7 @@ import (
 	"code.cloudfoundry.org/lager/v3/lagertest"
 )
 
+var randomGenerator *rand.Rand
 var _ = Describe("Nerd", func() {
 	var (
 		testLogger    lager.Logger
@@ -55,7 +54,7 @@ var _ = Describe("Nerd", func() {
 	)
 
 	BeforeEach(func() {
-		rand.Seed(time.Now().UnixNano())
+		randomGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))
 		containerID = fmt.Sprintf("test-container-%s", randomString(10))
 		processID = fmt.Sprintf("test-process-%s", randomString(10))
 		stdout = gbytes.NewBuffer()
@@ -72,7 +71,7 @@ var _ = Describe("Nerd", func() {
 		mp = metrics.NewMetricsProvider(testLogger, fifoDir)
 
 		var err error
-		fifoDir, err = ioutil.TempDir("", "nerd-fifo")
+		fifoDir, err = os.MkdirTemp("", "nerd-fifo")
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -588,7 +587,7 @@ var _ = Describe("Nerd", func() {
 
 func createRootfs(modifyRootfs func(string), perm os.FileMode) string {
 	var err error
-	tmpDir, err := ioutil.TempDir("", "test-rootfs")
+	tmpDir, err := os.MkdirTemp("", "test-rootfs")
 	Expect(err).NotTo(HaveOccurred())
 	unpackedRootfs := filepath.Join(tmpDir, "unpacked")
 	Expect(os.Mkdir(unpackedRootfs, perm)).To(Succeed())
@@ -649,7 +648,7 @@ func runCtr(ctr, socket string, args []string) string {
 }
 
 func randomInt(min, max int) int {
-	return min + rand.Intn(max-min)
+	return min + randomGenerator.Intn(max-min)
 }
 
 func randomString(len int) string {
@@ -658,17 +657,6 @@ func randomString(len int) string {
 		bytes[i] = byte(randomInt(65, 90))
 	}
 	return string(bytes)
-}
-
-func findFilesContaining(substring string) bool {
-	filenames, _ := exec.Command("/usr/bin/find", "/", "-name", fmt.Sprintf("*%s*", substring)).Output()
-	if strings.Contains(string(filenames), substring) {
-		info := fmt.Sprintf("\nOutput of 'find': \n%s\nLooking for %s\n\n", filenames, substring)
-		GinkgoWriter.Write([]byte(info))
-		return true
-	}
-
-	return false
 }
 
 func int64ptr(i int64) *int64 {

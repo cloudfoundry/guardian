@@ -1,7 +1,6 @@
 package throttle_test
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -33,7 +32,7 @@ var _ = Describe("Enforcer", func() {
 		Expect(err).NotTo(HaveOccurred())
 		handle = uuid.String()
 
-		cgroupRoot, err = ioutil.TempDir("", "cgroups")
+		cgroupRoot, err = os.MkdirTemp("", "cgroups")
 		Expect(err).NotTo(HaveOccurred())
 
 		mountCPUcgroup(cgroupRoot)
@@ -69,7 +68,7 @@ var _ = Describe("Enforcer", func() {
 				goodCgroup = filepath.Join(cpuCgroupPath, gardencgroups.GoodCgroupName)
 				goodContainerCgroup = filepath.Join(goodCgroup, handle)
 				Expect(os.MkdirAll(goodContainerCgroup, 0755)).To(Succeed())
-				Expect(ioutil.WriteFile(filepath.Join(goodContainerCgroup, "cpu.shares"), []byte("3456"), 0755)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(goodContainerCgroup, "cpu.shares"), []byte("3456"), 0755)).To(Succeed())
 
 				badCgroup = filepath.Join(cpuCgroupPath, gardencgroups.BadCgroupName)
 				badContainerCgroup = filepath.Join(badCgroup, handle)
@@ -145,12 +144,12 @@ var _ = Describe("Enforcer", func() {
 				goodCgroup = filepath.Join(cpuCgroupPath, gardencgroups.GoodCgroupName)
 				goodContainerCgroup = filepath.Join(goodCgroup, handle)
 				Expect(os.MkdirAll(goodContainerCgroup, 0755)).To(Succeed())
-				Expect(ioutil.WriteFile(filepath.Join(goodContainerCgroup, "cpu.shares"), []byte("6543"), 0755)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(goodContainerCgroup, "cpu.shares"), []byte("6543"), 0755)).To(Succeed())
 
 				badCgroup = filepath.Join(cpuCgroupPath, gardencgroups.BadCgroupName)
 				badContainerCgroup = filepath.Join(badCgroup, handle)
 				Expect(os.MkdirAll(badContainerCgroup, 0755)).To(Succeed())
-				Expect(ioutil.WriteFile(filepath.Join(badContainerCgroup, "cpu.shares"), []byte("3456"), 0755)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(badContainerCgroup, "cpu.shares"), []byte("3456"), 0755)).To(Succeed())
 
 				command = exec.Command("sleep", "360")
 				Expect(command.Start()).To(Succeed())
@@ -207,7 +206,7 @@ var _ = Describe("Enforcer", func() {
 })
 
 func readCPUShares(cgroupPath string) int {
-	shareBytes, err := ioutil.ReadFile(filepath.Join(cgroupPath, "cpu.shares"))
+	shareBytes, err := os.ReadFile(filepath.Join(cgroupPath, "cpu.shares"))
 	Expect(err).NotTo(HaveOccurred())
 	shares, err := strconv.Atoi(strings.TrimSpace(string(shareBytes)))
 	Expect(err).NotTo(HaveOccurred())

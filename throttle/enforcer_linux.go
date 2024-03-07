@@ -1,7 +1,6 @@
 package throttle
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -79,7 +78,7 @@ func movePids(fromCgroup, toCgroup string) error {
 }
 
 func copyShares(fromCgroup, toCgroup string) error {
-	containerShares, err := ioutil.ReadFile(filepath.Join(fromCgroup, "cpu.shares"))
+	containerShares, err := os.ReadFile(filepath.Join(fromCgroup, "cpu.shares"))
 	if err != nil {
 		return err
 	}
@@ -88,7 +87,7 @@ func copyShares(fromCgroup, toCgroup string) error {
 }
 
 func writeCPUShares(cgroupPath string, shares []byte) error {
-	return ioutil.WriteFile(filepath.Join(cgroupPath, "cpu.shares"), shares, 0644)
+	return os.WriteFile(filepath.Join(cgroupPath, "cpu.shares"), shares, 0644)
 }
 
 func exists(logger lager.Logger, cgroupPath string) bool {

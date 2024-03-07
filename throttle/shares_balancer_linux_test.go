@@ -2,7 +2,6 @@ package throttle_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -34,7 +33,7 @@ var _ = Describe("SharesBalancer", func() {
 		logger = lagertest.NewTestLogger("container-metrics-test")
 
 		var err error
-		cgroupRoot, err = ioutil.TempDir("", "cgroups")
+		cgroupRoot, err = os.MkdirTemp("", "cgroups")
 		Expect(err).NotTo(HaveOccurred())
 
 		mountCPUcgroup(cgroupRoot)
@@ -136,5 +135,5 @@ func createCgroup(parentPath, name string, shares int) error {
 		return err
 	}
 
-	return ioutil.WriteFile(filepath.Join(cgroupPath, "cpu.shares"), []byte(strconv.Itoa(shares)), 0644)
+	return os.WriteFile(filepath.Join(cgroupPath, "cpu.shares"), []byte(strconv.Itoa(shares)), 0644)
 }

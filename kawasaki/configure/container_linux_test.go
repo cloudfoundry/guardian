@@ -2,7 +2,6 @@ package configure_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"regexp"
@@ -176,7 +175,7 @@ func linkDefaultGW(netNsName, linkName string) string {
 }
 
 func tempFile(dir, prefix string) *os.File {
-	f, err := ioutil.TempFile(dir, prefix)
+	f, err := os.CreateTemp(dir, prefix)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	return f
 }

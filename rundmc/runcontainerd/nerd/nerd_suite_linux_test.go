@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,7 +17,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/lager/v3/lagertest"
-	"github.com/BurntSushi/toml"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/leases"
 	"github.com/containerd/containerd/namespaces"
@@ -72,7 +70,7 @@ var _ = BeforeEach(func() {
 		Skip("containerd not enabled")
 	}
 
-	runDir, err := ioutil.TempDir("", "")
+	runDir, err := os.MkdirTemp("", "")
 	Expect(err).NotTo(HaveOccurred())
 
 	containerdConfig := containerdrunner.ContainerdConfig(runDir)
@@ -131,7 +129,7 @@ func mustOpen(path string) *os.File {
 }
 
 func teardownCgroups(cgroupsRoot string) {
-	mountsFileContent, err := ioutil.ReadFile("/proc/self/mounts")
+	mountsFileContent, err := os.ReadFile("/proc/self/mounts")
 	Expect(err).NotTo(HaveOccurred())
 
 	lines := strings.Split(string(mountsFileContent), "\n")
@@ -150,34 +148,12 @@ func teardownCgroups(cgroupsRoot string) {
 	Expect(os.Remove(cgroupsRoot)).To(Succeed())
 }
 
-func mustGetEnv(env string) string {
-	if value := os.Getenv(env); value != "" {
-		return value
-	}
-	panic(fmt.Sprintf("%s env must be non-empty", env))
-}
-
-func runCommandInDir(cmd *exec.Cmd, workingDir string) string {
-	cmd.Dir = workingDir
-	return runCommand(cmd)
-}
-
 func runCommand(cmd *exec.Cmd) string {
 	var stdout bytes.Buffer
 	cmd.Stdout = io.MultiWriter(&stdout, GinkgoWriter)
 	cmd.Stderr = GinkgoWriter
 	Expect(cmd.Run()).To(Succeed())
 	return stdout.String()
-}
-
-func jsonMarshal(v interface{}) []byte {
-	buf := bytes.NewBuffer([]byte{})
-	Expect(toml.NewEncoder(buf).Encode(v)).To(Succeed())
-	return buf.Bytes()
-}
-
-func jsonUnmarshal(data []byte, v interface{}) {
-	Expect(toml.Unmarshal(data, v)).To(Succeed())
 }
 
 func isContainerd() bool {

@@ -2,7 +2,7 @@ package gqt_setup_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -102,7 +102,7 @@ var _ = Describe("gdn setup", func() {
 			})
 
 			It("chowns the garden cgroup dir to the rootless user for each subsystem", func() {
-				subsystems, err := ioutil.ReadDir(cgroupsRoot)
+				subsystems, err := os.ReadDir(cgroupsRoot)
 				Expect(err).NotTo(HaveOccurred())
 
 				for _, subsystem := range subsystems {
@@ -143,7 +143,7 @@ var _ = Describe("gdn setup", func() {
 })
 
 func assertNotMounted(cgroupsRoot string) {
-	mountsFileContent, err := ioutil.ReadFile("/proc/self/mountinfo")
+	mountsFileContent, err := os.ReadFile("/proc/self/mountinfo")
 	Expect(err).NotTo(HaveOccurred())
 	Expect(string(mountsFileContent)).NotTo(ContainSubstring(cgroupsRoot))
 }

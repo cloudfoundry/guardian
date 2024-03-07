@@ -1,7 +1,6 @@
 package ports_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -19,7 +18,7 @@ var _ = Describe("State", func() {
 	BeforeEach(func() {
 		var err error
 
-		tmpDir, err = ioutil.TempDir("", "")
+		tmpDir, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 		filePath = path.Join(tmpDir, "ports.json")
 	})
@@ -30,7 +29,7 @@ var _ = Describe("State", func() {
 
 	Describe("NewState", func() {
 		It("should parse the provided file", func() {
-			Expect(ioutil.WriteFile(filePath, []byte(`{
+			Expect(os.WriteFile(filePath, []byte(`{
 				"offset": 10
 			}`), 0660)).To(Succeed())
 
@@ -49,7 +48,7 @@ var _ = Describe("State", func() {
 
 		Context("when the file is invalid", func() {
 			It("should return a wrapped error", func() {
-				Expect(ioutil.WriteFile(filePath, []byte(`{
+				Expect(os.WriteFile(filePath, []byte(`{
 				"offset": `), 0660)).To(Succeed())
 
 				_, err := ports.LoadState(filePath)
@@ -60,14 +59,14 @@ var _ = Describe("State", func() {
 
 	Describe("Save", func() {
 		It("should write the file", func() {
-			Expect(ioutil.WriteFile(filePath, []byte("{}"), 0660)).To(Succeed())
+			Expect(os.WriteFile(filePath, []byte("{}"), 0660)).To(Succeed())
 			state := ports.State{
 				Offset: 10,
 			}
 
 			Expect(ports.SaveState(filePath, state)).To(Succeed())
 
-			contents, err := ioutil.ReadFile(filePath)
+			contents, err := os.ReadFile(filePath)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(string(contents)).To(ContainSubstring("\"offset\":10"))

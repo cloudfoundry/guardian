@@ -4,7 +4,6 @@ package main_test
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,7 +61,7 @@ func TestDadoo(t *testing.T) {
 
 	SynchronizedAfterSuite(func() {}, func() {
 		gexec.CleanupBuildArtifacts()
-		mountsFileContent, err := ioutil.ReadFile("/proc/self/mounts")
+		mountsFileContent, err := os.ReadFile("/proc/self/mounts")
 		Expect(err).NotTo(HaveOccurred())
 
 		lines := strings.Split(string(mountsFileContent), "\n")

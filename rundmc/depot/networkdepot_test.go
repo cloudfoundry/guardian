@@ -2,7 +2,6 @@ package depot_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -25,7 +24,7 @@ var _ = Describe("NetworkDepot", func() {
 
 	BeforeEach(func() {
 		var err error
-		dir, err = ioutil.TempDir("", "")
+		dir, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 		logger = lagertest.NewTestLogger("test")
 		bindMountSourceCreator = new(fakes.FakeBindMountSourceCreator)
@@ -70,8 +69,8 @@ var _ = Describe("NetworkDepot", func() {
 		Context("when creating the network bind mounts fails", func() {
 			BeforeEach(func() {
 				bindMountSourceCreator.CreateStub = func(containerDir string, _ bool) ([]garden.BindMount, error) {
-					Expect(ioutil.WriteFile(filepath.Join(containerDir, "hosts"), nil, 0755)).To(Succeed())
-					Expect(ioutil.WriteFile(filepath.Join(containerDir, "resolv.conf"), nil, 0755)).To(Succeed())
+					Expect(os.WriteFile(filepath.Join(containerDir, "hosts"), nil, 0755)).To(Succeed())
+					Expect(os.WriteFile(filepath.Join(containerDir, "resolv.conf"), nil, 0755)).To(Succeed())
 					return nil, errors.New("failed")
 				}
 			})
@@ -92,8 +91,8 @@ var _ = Describe("NetworkDepot", func() {
 	Describe("Destroy", func() {
 		BeforeEach(func() {
 			bindMountSourceCreator.CreateStub = func(containerDir string, _ bool) ([]garden.BindMount, error) {
-				Expect(ioutil.WriteFile(filepath.Join(containerDir, "hosts"), nil, 0755)).To(Succeed())
-				Expect(ioutil.WriteFile(filepath.Join(containerDir, "resolv.conf"), nil, 0755)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(containerDir, "hosts"), nil, 0755)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(containerDir, "resolv.conf"), nil, 0755)).To(Succeed())
 				return nil, nil
 			}
 			_, err := networkDepot.SetupBindMounts(logger, "my-container", true, "/path/to/rootfs")

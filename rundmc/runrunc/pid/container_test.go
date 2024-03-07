@@ -2,7 +2,6 @@ package pid_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -30,7 +29,7 @@ var _ = Describe("ContainerPidGetter", func() {
 		logger = lagertest.NewTestLogger("test")
 
 		var err error
-		bundlePath, err = ioutil.TempDir("", "")
+		bundlePath, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		depot = new(pidfakes.FakeDepot)
