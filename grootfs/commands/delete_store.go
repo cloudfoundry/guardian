@@ -26,7 +26,7 @@ var DeleteStoreCommand = cli.Command{
 		logger.Debug("delete-store", lager.Data{"currentConfig": cfg})
 		if err != nil {
 			logger.Error("config-builder-failed", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		rootless := os.Getuid() != 0
@@ -41,7 +41,7 @@ var DeleteStoreCommand = cli.Command{
 
 		if err := manager.DeleteStore(logger); err != nil {
 			logger.Error("cleaning-up-store-failed", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		return nil

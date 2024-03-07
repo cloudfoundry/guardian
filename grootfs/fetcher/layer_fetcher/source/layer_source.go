@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"strings"
@@ -122,7 +121,7 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 		return "", 0, errorspkg.Wrap(err, "validating reported blob size")
 	}
 
-	blobTempFile, err := ioutil.TempFile("", fmt.Sprintf("blob-%s", strings.Replace(layerInfo.BlobID, ":", "-", -1)))
+	blobTempFile, err := os.CreateTemp("", fmt.Sprintf("blob-%s", strings.Replace(layerInfo.BlobID, ":", "-", -1)))
 	if err != nil {
 		return "", 0, err
 	}
@@ -136,7 +135,7 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 	}()
 
 	blobIDHash := sha256.New()
-	digestReader := ioutil.NopCloser(io.TeeReader(countingBlobReader, blobIDHash))
+	digestReader := io.NopCloser(io.TeeReader(countingBlobReader, blobIDHash))
 	if layerInfo.MediaType == "" || strings.Contains(layerInfo.MediaType, "gzip") {
 		logger.Debug("uncompressing-blob")
 
@@ -153,7 +152,7 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 	}
 
 	diffIDHash := sha256.New()
-	digestReader = ioutil.NopCloser(io.TeeReader(digestReader, diffIDHash))
+	digestReader = io.NopCloser(io.TeeReader(digestReader, diffIDHash))
 
 	uncompressedSize, err := io.Copy(blobTempFile, digestReader)
 	if err != nil {
@@ -319,7 +318,7 @@ func (s *LayerSource) v1DiffID(logger lager.Logger, layer types.BlobInfo, imgSrc
 		return "", errorspkg.Wrap(err, "creating reader for V1 layer blob")
 	}
 
-	data, err := ioutil.ReadAll(gzipReader)
+	data, err := io.ReadAll(gzipReader)
 	if err != nil {
 		return "", errorspkg.Wrap(err, "reading V1 layer blob")
 	}

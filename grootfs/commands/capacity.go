@@ -23,7 +23,7 @@ var CapacityCommand = cli.Command{
 		logger.Debug("capacity-config", lager.Data{"currentConfig": cfg})
 		if err != nil {
 			logger.Error("config-builder-failed", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		_ = json.NewEncoder(os.Stdout).Encode(map[string]uint64{

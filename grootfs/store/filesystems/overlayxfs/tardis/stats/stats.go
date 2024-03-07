@@ -1,7 +1,6 @@
 package stats
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -61,7 +60,7 @@ func listQuota(logger lager.Logger, imagePath string) (int64, int64, error) {
 }
 
 func readImageInfo(logger lager.Logger, imagePath string) (int64, error) {
-	contents, err := ioutil.ReadFile(filepath.Join(imagePath, "image_info"))
+	contents, err := os.ReadFile(filepath.Join(imagePath, "image_info"))
 	if err != nil {
 		return 0, err
 	}

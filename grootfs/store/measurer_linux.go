@@ -1,7 +1,6 @@
 package store
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -88,7 +87,7 @@ func (s *StoreMeasurer) CommittedQuota(logger lager.Logger) (int64, error) {
 	var totalCommittedSpace int64
 
 	imageDir := filepath.Join(s.storePath, "images")
-	files, err := ioutil.ReadDir(imageDir)
+	files, err := os.ReadDir(imageDir)
 	if err != nil {
 		return 0, errorspkg.Wrapf(err, "Cannot list images in %s", imageDir)
 	}
@@ -111,7 +110,7 @@ func (s *StoreMeasurer) CommittedQuota(logger lager.Logger) (int64, error) {
 
 func readImageQuota(imageDir string) (int64, error) {
 	quotaFilePath := filepath.Join(imageDir, "image_quota")
-	imageQuotaBytes, err := ioutil.ReadFile(quotaFilePath)
+	imageQuotaBytes, err := os.ReadFile(quotaFilePath)
 	if err != nil {
 		return 0, err
 	}

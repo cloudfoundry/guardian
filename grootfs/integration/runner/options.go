@@ -2,7 +2,6 @@ package runner
 
 import (
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"syscall"
@@ -135,7 +134,7 @@ func (r *Runner) SetConfig(cfg config.Config) error {
 		return err
 	}
 
-	configFile, err := ioutil.TempFile("", "")
+	configFile, err := os.CreateTemp("", "")
 	if err != nil {
 		return err
 	}

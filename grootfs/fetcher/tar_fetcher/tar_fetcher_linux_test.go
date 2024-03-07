@@ -3,7 +3,6 @@ package tar_fetcher_test
 import (
 	"archive/tar"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
@@ -34,9 +33,9 @@ var _ = Describe("Tar Fetcher", func() {
 	BeforeEach(func() {
 
 		var err error
-		sourceImagePath, err = ioutil.TempDir("", "image")
+		sourceImagePath, err = os.MkdirTemp("", "image")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
+		Expect(os.WriteFile(path.Join(sourceImagePath, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
 		logger = lagertest.NewTestLogger("tar-fetcher")
 		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
 		baseImagePath = baseImageFile.Name()
@@ -75,7 +74,7 @@ var _ = Describe("Tar Fetcher", func() {
 
 		Context("when the source is a directory", func() {
 			BeforeEach(func() {
-				tempDir, err := ioutil.TempDir("", "")
+				tempDir, err := os.MkdirTemp("", "")
 				Expect(err).NotTo(HaveOccurred())
 
 				baseImageURL, _ = url.Parse(tempDir)
@@ -123,7 +122,7 @@ var _ = Describe("Tar Fetcher", func() {
 		Context("when image content gets updated", func() {
 			JustBeforeEach(func() {
 				time.Sleep(time.Millisecond * 10)
-				Expect(ioutil.WriteFile(filepath.Join(sourceImagePath, "foobar"), []byte("hello-world"), 0700)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(sourceImagePath, "foobar"), []byte("hello-world"), 0700)).To(Succeed())
 				integration.UpdateBaseImageTar(baseImagePath, sourceImagePath)
 			})
 

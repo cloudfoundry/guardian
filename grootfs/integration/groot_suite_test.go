@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -13,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/integration/runner"
@@ -68,7 +66,6 @@ func TestGroot(t *testing.T) {
 		TardisBin = string(binaries[1])
 		tmpNamespacerBin := string(binaries[2])
 
-		rand.Seed(time.Now().UnixNano())
 		NamespacerBin = fmt.Sprintf("/tmp/namespacer-%d", rand.Int())
 		_, _, err = runCommand(exec.Command("cp", tmpNamespacerBin, NamespacerBin))
 		Expect(err).NotTo(HaveOccurred())
@@ -99,7 +96,7 @@ func TestGroot(t *testing.T) {
 		testhelpers.ReseedRandomNumberGenerator()
 
 		var err error
-		StorePath, err = ioutil.TempDir("", fmt.Sprintf("store-%d", GinkgoParallelProcess()))
+		StorePath, err = os.MkdirTemp("", fmt.Sprintf("store-%d", GinkgoParallelProcess()))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Chmod(StorePath, 0777)).To(Succeed())
 
@@ -143,8 +140,8 @@ func runCommand(command *exec.Cmd) (string, string, error) {
 	return string(stdout.Contents()), string(stderr.Contents()), err
 }
 
-func getVolumesDirEntries() ([]os.FileInfo, error) {
-	return ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+func getVolumesDirEntries() ([]os.DirEntry, error) {
+	return os.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 }
 
 func deleteAllImages(runner runner.Runner) error {

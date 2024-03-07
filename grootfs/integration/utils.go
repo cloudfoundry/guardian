@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -24,26 +23,26 @@ import (
 )
 
 func CreateBaseImage(rootUID, rootGID, grootUID, grootGID int) string {
-	sourceImagePath, err := ioutil.TempDir("", "")
+	sourceImagePath, err := os.MkdirTemp("", "")
 	Expect(err).NotTo(HaveOccurred())
 	Expect(os.Chown(sourceImagePath, rootUID, rootGID)).To(Succeed())
 	Expect(os.Chmod(sourceImagePath, 0755)).To(Succeed())
 
 	grootFilePath := path.Join(sourceImagePath, "foo")
-	Expect(ioutil.WriteFile(grootFilePath, []byte("hello-world"), 0644)).To(Succeed())
+	Expect(os.WriteFile(grootFilePath, []byte("hello-world"), 0644)).To(Succeed())
 	Expect(os.Chown(grootFilePath, grootUID, grootGID)).To(Succeed())
 
 	grootFolder := path.Join(sourceImagePath, "groot-folder")
 	Expect(os.Mkdir(grootFolder, 0777)).To(Succeed())
 	Expect(os.Chown(grootFolder, grootUID, grootGID)).To(Succeed())
-	Expect(ioutil.WriteFile(path.Join(grootFolder, "hello"), []byte("hello-world"), 0644)).To(Succeed())
+	Expect(os.WriteFile(path.Join(grootFolder, "hello"), []byte("hello-world"), 0644)).To(Succeed())
 
 	rootFilePath := path.Join(sourceImagePath, "bar")
-	Expect(ioutil.WriteFile(rootFilePath, []byte("hello-world"), 0644)).To(Succeed())
+	Expect(os.WriteFile(rootFilePath, []byte("hello-world"), 0644)).To(Succeed())
 
 	rootFolder := path.Join(sourceImagePath, "root-folder")
 	Expect(os.Mkdir(rootFolder, 0777)).To(Succeed())
-	Expect(ioutil.WriteFile(path.Join(rootFolder, "hello"), []byte("hello-world"), 0644)).To(Succeed())
+	Expect(os.WriteFile(path.Join(rootFolder, "hello"), []byte("hello-world"), 0644)).To(Succeed())
 
 	grootLinkToRootFile := path.Join(sourceImagePath, "groot-link")
 	Expect(os.Symlink(rootFilePath, grootLinkToRootFile)).To(Succeed())
@@ -53,7 +52,7 @@ func CreateBaseImage(rootUID, rootGID, grootUID, grootGID int) string {
 }
 
 func CreateBaseImageTar(sourcePath string) *os.File {
-	baseImageFile, err := ioutil.TempFile("", "image.tar")
+	baseImageFile, err := os.CreateTemp("", "image.tar")
 	Expect(err).NotTo(HaveOccurred())
 	UpdateBaseImageTar(baseImageFile.Name(), sourcePath)
 	return baseImageFile
@@ -106,12 +105,12 @@ func CreateFakeTardis() (string, *os.File, *os.File) {
 }
 
 func CreateFakeBin(binaryName string) (string, *os.File, *os.File) {
-	binCalledFile, err := ioutil.TempFile("", "bin-called")
+	binCalledFile, err := os.CreateTemp("", "bin-called")
 	Expect(err).NotTo(HaveOccurred())
 	Expect(binCalledFile.Close()).To(Succeed())
 	Expect(os.Chmod(binCalledFile.Name(), 0666)).To(Succeed())
 
-	tempFolder, err := ioutil.TempDir("", "")
+	tempFolder, err := os.MkdirTemp("", "")
 	Expect(err).NotTo(HaveOccurred())
 	Expect(os.Chmod(tempFolder, 0755)).To(Succeed())
 

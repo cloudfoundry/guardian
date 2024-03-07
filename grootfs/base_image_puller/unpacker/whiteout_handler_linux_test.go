@@ -1,7 +1,6 @@
 package unpacker_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -25,7 +24,7 @@ var _ = Describe("WhiteoutHandler", func() {
 
 	BeforeEach(func() {
 		var err error
-		storePath, err = ioutil.TempDir("", "store-")
+		storePath, err = os.MkdirTemp("", "store-")
 		Expect(err).NotTo(HaveOccurred())
 
 		whiteoutDevicePath := filepath.Join(storePath, overlayxfs.WhiteoutDevice)
@@ -37,9 +36,9 @@ var _ = Describe("WhiteoutHandler", func() {
 
 		Expect(os.MkdirAll(filepath.Join(storePath, "layer-1"), 0o755)).To(Succeed())
 		filePath = filepath.Join(storePath, "layer-1", "thefile")
-		Expect(ioutil.WriteFile(filePath, []byte{}, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filePath, []byte{}, 0o755)).To(Succeed())
 		whiteoutPath = filepath.Join(storePath, "layer-1", ".wh.thefile")
-		Expect(ioutil.WriteFile(whiteoutPath, []byte{}, 0o755)).To(Succeed())
+		Expect(os.WriteFile(whiteoutPath, []byte{}, 0o755)).To(Succeed())
 
 		whiteoutHandler = unpacker.NewOverlayWhiteoutHandler(storeFile)
 	})

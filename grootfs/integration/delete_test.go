@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -29,9 +28,9 @@ var _ = Describe("Delete", func() {
 
 	BeforeEach(func() {
 		var err error
-		sourceImagePath, err = ioutil.TempDir("", "")
+		sourceImagePath, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		Expect(os.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 
 		randomImageID = testhelpers.NewRandomID()
 		containerSpec = specs.Spec{}

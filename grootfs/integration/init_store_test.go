@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -82,9 +81,9 @@ var _ = Describe("Init Store", func() {
 				storeSizeBytes := 600 * 1024 * 1024
 
 				var err error
-				configFile, err = ioutil.TempFile("", "")
+				configFile, err = os.CreateTemp("", "")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(ioutil.WriteFile(configFile.Name(), []byte(fmt.Sprintf(`
+				Expect(os.WriteFile(configFile.Name(), []byte(fmt.Sprintf(`
 init:
   store_size_bytes: %d
 `, storeSizeBytes)), 0644)).To(Succeed())
@@ -144,7 +143,7 @@ init:
 			Context("but the backing store file is not mounted", func() {
 				BeforeEach(func() {
 					Expect(runner.InitStore(spec)).To(Succeed())
-					Expect(ioutil.WriteFile(filepath.Join(StorePath, "test"), []byte{}, 0777)).To(Succeed())
+					Expect(os.WriteFile(filepath.Join(StorePath, "test"), []byte{}, 0777)).To(Succeed())
 					Expect(syscall.Unmount(StorePath, 0)).To(Succeed())
 					Eventually(queryStoreMountInfo(StorePath)).Should(BeEmpty())
 				})
@@ -162,9 +161,9 @@ init:
 			BeforeEach(func() {
 				spec.WithoutDirectIO = true
 				var err error
-				configFile, err = ioutil.TempFile("", "")
+				configFile, err = os.CreateTemp("", "")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(ioutil.WriteFile(configFile.Name(), []byte(`
+				Expect(os.WriteFile(configFile.Name(), []byte(`
 init:
   with_direct_io: true`), 0644)).To(Succeed())
 

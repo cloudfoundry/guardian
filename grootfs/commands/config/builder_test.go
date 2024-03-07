@@ -1,7 +1,6 @@
 package config_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -51,14 +50,14 @@ var _ = Describe("Builder", func() {
 
 	JustBeforeEach(func() {
 		var err error
-		configDir, err = ioutil.TempDir("", "")
+		configDir, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		configYaml, err := yaml.Marshal(cfg)
 		Expect(err).NotTo(HaveOccurred())
 		configFilePath = path.Join(configDir, "config.yaml")
 
-		Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
+		Expect(os.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
 		builder, err = config.NewBuilder(configFilePath)
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -100,7 +99,7 @@ var _ = Describe("Builder", func() {
 		Context("when config is invalid", func() {
 			JustBeforeEach(func() {
 				configFilePath = path.Join(configDir, "invalid_config.yaml")
-				Expect(ioutil.WriteFile(configFilePath, []byte("foo-bar"), 0755)).To(Succeed())
+				Expect(os.WriteFile(configFilePath, []byte("foo-bar"), 0755)).To(Succeed())
 
 			})
 

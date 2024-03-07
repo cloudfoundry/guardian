@@ -3,7 +3,6 @@ package unpacker_test
 import (
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -38,7 +37,7 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 
 	BeforeEach(func() {
 		var err error
-		storeDir, err = ioutil.TempDir("", "store-")
+		storeDir, err = os.MkdirTemp("", "store-")
 		Expect(err).NotTo(HaveOccurred())
 
 		targetPath = "."
@@ -55,7 +54,7 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 			unpacker.NewIDTranslator(mappings, mappings),
 		)
 
-		baseImagePath, err = ioutil.TempDir("", "base-image-")
+		baseImagePath, err = os.MkdirTemp("", "base-image-")
 		Expect(err).NotTo(HaveOccurred())
 
 		tarFilePath = filepath.Join(os.TempDir(), (fmt.Sprintf("unpack-test-%d.tar", GinkgoParallelProcess())))
@@ -115,7 +114,7 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 			location := time.FixedZone("foo", 0)
 
 			symlinkTargetFilePath := path.Join(baseImagePath, "symlink-target")
-			Expect(ioutil.WriteFile(symlinkTargetFilePath, []byte("hello-world"), 0600)).To(Succeed())
+			Expect(os.WriteFile(symlinkTargetFilePath, []byte("hello-world"), 0600)).To(Succeed())
 			symlinkFilePath := path.Join(baseImagePath, "old-symlink")
 			Expect(os.Symlink("./symlink-target", symlinkFilePath)).To(Succeed())
 
@@ -144,7 +143,7 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 	Describe("file ownership", func() {
 		BeforeEach(func() {
 			filepath := path.Join(baseImagePath, "myfile")
-			Expect(ioutil.WriteFile(filepath, []byte{}, 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath, []byte{}, 0755)).To(Succeed())
 		})
 
 		It("maps ownership", func() {
@@ -166,7 +165,7 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 		var capabilities = "0100000200200000000000000000000000000000" // output from `getfattr -e hex -d -m '' /bin/ping`
 		BeforeEach(func() {
 			filepath := path.Join(baseImagePath, "myfile")
-			Expect(ioutil.WriteFile(filepath, []byte{}, 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath, []byte{}, 0755)).To(Succeed())
 			capBytes, err := hex.DecodeString(capabilities)
 			Expect(err).NotTo(HaveOccurred())
 			err = system.Lsetxattr(filepath, "security.capability", capBytes, 0)

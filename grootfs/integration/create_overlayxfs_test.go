@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -24,10 +23,10 @@ var _ = Describe("Create (overlay-xfs only)", func() {
 
 	BeforeEach(func() {
 		var err error
-		sourceImagePath, err = ioutil.TempDir("", "")
+		sourceImagePath, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		Expect(os.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 
 		randomImageID = testhelpers.NewRandomID()
 	})
@@ -65,7 +64,7 @@ var _ = Describe("Create (overlay-xfs only)", func() {
 				_, err := Runner.WithTardisBin(tardisBin.Name()).Create(spec)
 				Expect(err).NotTo(HaveOccurred())
 
-				contents, err := ioutil.ReadFile(tardisCalledFile.Name())
+				contents, err := os.ReadFile(tardisCalledFile.Name())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(contents)).To(Equal("I'm groot - tardis"))
 			})
@@ -113,7 +112,7 @@ var _ = Describe("Create (overlay-xfs only)", func() {
 				_, err := Runner.WithoutTardisBin().WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(spec)
 				Expect(err).ToNot(HaveOccurred())
 
-				contents, err := ioutil.ReadFile(tardisCalledFile.Name())
+				contents, err := os.ReadFile(tardisCalledFile.Name())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(contents)).To(Equal("I'm groot - tardis"))
 			})

@@ -2,7 +2,6 @@ package image_manager_test
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -45,7 +44,7 @@ var _ = Describe("Image", func() {
 			}, os.Mkdir(filepath.Join(spec.ImagePath, "rootfs"), 0777)
 		}
 
-		storePath, err = ioutil.TempDir("", "")
+		storePath, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		imagesPath = filepath.Join(storePath, "images")
@@ -89,7 +88,7 @@ var _ = Describe("Image", func() {
 			Expect(someImage.Path).NotTo(BeEmpty())
 			Expect(anotherImage.Path).NotTo(BeEmpty())
 
-			images, err := ioutil.ReadDir(path.Join(storePath, store.ImageDirName))
+			images, err := os.ReadDir(path.Join(storePath, store.ImageDirName))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(images)).To(Equal(2))
 		})
@@ -298,7 +297,7 @@ var _ = Describe("Image", func() {
 			imageRootFSPath = path.Join(imagePath, "rootfs")
 			Expect(os.MkdirAll(imagePath, 0755)).To(Succeed())
 			Expect(os.MkdirAll(imageRootFSPath, 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(path.Join(imagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+			Expect(os.WriteFile(path.Join(imagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 		})
 
 		Context("when image does not exist", func() {

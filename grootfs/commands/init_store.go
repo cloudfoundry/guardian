@@ -52,7 +52,7 @@ var InitStoreCommand = cli.Command{
 
 		if ctx.NArg() != 0 {
 			logger.Error("parsing-command", errorspkg.New("invalid arguments"), lager.Data{"args": ctx.Args()})
-			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
+			return cli.Exit(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
@@ -67,11 +67,11 @@ var InitStoreCommand = cli.Command{
 		logger.Debug("init-store", lager.Data{"currentConfig": cfg})
 		if err != nil {
 			logger.Error("config-builder-failed", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		if (ctx.IsSet("uid-mapping") || ctx.IsSet("gid-mapping")) && ctx.IsSet("rootless") {
-			return cli.NewExitError("cannot specify --rootless and --uid-mapping/--gid-mapping", 1)
+			return cli.Exit("cannot specify --rootless and --uid-mapping/--gid-mapping", 1)
 		}
 
 		storePath := cfg.StorePath
@@ -80,7 +80,7 @@ var InitStoreCommand = cli.Command{
 		if os.Getuid() != 0 {
 			err := errorspkg.Errorf("store %s can only be initialized by Root user", storePath)
 			logger.Error("init-store-failed", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		var directIO overlayxfs.DirectIO = loopback.NewDirectIODisabler()
@@ -93,19 +93,19 @@ var InitStoreCommand = cli.Command{
 		if err != nil {
 			err = errorspkg.Errorf("parsing uid-mapping: %s", err)
 			logger.Error("parsing-command", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 		gidMappings, err := parseIDMappings(ctx.StringSlice("gid-mapping"))
 		if err != nil {
 			err = errorspkg.Errorf("parsing gid-mapping: %s", err)
 			logger.Error("parsing-command", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		if ctx.IsSet("rootless") {
 			uidMappings, gidMappings, err = lookupMappings(ctx)
 			if err != nil {
-				return cli.NewExitError(err.Error(), 1)
+				return cli.Exit(err.Error(), 1)
 			}
 		}
 
@@ -122,7 +122,7 @@ var InitStoreCommand = cli.Command{
 		manager := manager.New(storePath, namespacer, fsDriver, fsDriver, fsDriver, initStoreLocksmith)
 		if err := manager.InitStore(logger, spec); err != nil {
 			logger.Error("init-store-failed", err)
-			return cli.NewExitError(errorspkg.Cause(err).Error(), 1)
+			return cli.Exit(errorspkg.Cause(err).Error(), 1)
 		}
 
 		return nil

@@ -3,7 +3,6 @@ package manager_test
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -416,7 +415,7 @@ var _ = Describe("Manager", func() {
 			Context("when the backingstore file already exists", func() {
 				BeforeEach(func() {
 					Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
-					Expect(ioutil.WriteFile(backingStoreFile, []byte{}, 0700)).To(Succeed())
+					Expect(os.WriteFile(backingStoreFile, []byte{}, 0700)).To(Succeed())
 				})
 
 				It("succeeds", func() {
@@ -479,7 +478,7 @@ var _ = Describe("Manager", func() {
 			BeforeEach(func() {
 				spec.StoreSizeBytes = 10000000000000
 				Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
-				Expect(ioutil.WriteFile(fmt.Sprintf("%s.backing-store", storePath), []byte{}, 0777)).To(Succeed())
+				Expect(os.WriteFile(fmt.Sprintf("%s.backing-store", storePath), []byte{}, 0777)).To(Succeed())
 			})
 
 			It("mounts it", func() {
@@ -527,11 +526,11 @@ var _ = Describe("Manager", func() {
 	Describe("IsStoreInitialized", func() {
 		BeforeEach(func() {
 			var err error
-			storePath, err = ioutil.TempDir("", "init-store")
+			storePath, err = os.MkdirTemp("", "init-store")
 			Expect(err).NotTo(HaveOccurred())
 
 			namespacer.ApplyMappingsStub = func(_, _ []groot.IDMappingSpec) error {
-				return ioutil.WriteFile(filepath.Join(storePath, store.MetaDirName, groot.NamespaceFilename), []byte{}, 0666)
+				return os.WriteFile(filepath.Join(storePath, store.MetaDirName, groot.NamespaceFilename), []byte{}, 0666)
 			}
 		})
 
@@ -631,7 +630,7 @@ var _ = Describe("Manager", func() {
 
 		BeforeEach(func() {
 			var err error
-			storePath, err = ioutil.TempDir("", "store-path")
+			storePath, err = os.MkdirTemp("", "store-path")
 			Expect(err).NotTo(HaveOccurred())
 
 			imagesPath = filepath.Join(storePath, store.ImageDirName)

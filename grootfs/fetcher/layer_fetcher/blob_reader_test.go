@@ -2,7 +2,6 @@ package layer_fetcher_test
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -59,7 +58,7 @@ var _ = Describe("BlobReader", func() {
 })
 
 func readAll(reader io.Reader) string {
-	contents, err := ioutil.ReadAll(reader)
+	contents, err := io.ReadAll(reader)
 	Expect(err).NotTo(HaveOccurred())
 	return string(contents)
 }
@@ -71,7 +70,7 @@ func writeString(writer io.Writer, contents string) {
 }
 
 func tempFile() *os.File {
-	file, err := ioutil.TempFile("", "")
+	file, err := os.CreateTemp("", "")
 	Expect(err).NotTo(HaveOccurred())
 	return file
 }

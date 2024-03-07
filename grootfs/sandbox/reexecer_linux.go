@@ -72,11 +72,11 @@ func Register(commandName string, action func(logger lager.Logger, extraFiles []
 		extraFiles := []*os.File{}
 		for _, extraFileName := range extraFileNames {
 			f, err := os.Open(filepath.Clean(extraFileName))
-			defer f.Close()
-
 			if err != nil {
 				fail(logger, "opening extra file: "+extraFileName, err)
 			}
+			defer f.Close()
+
 			extraFiles = append(extraFiles, f)
 		}
 

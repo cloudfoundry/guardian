@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -32,9 +31,9 @@ var _ = Describe("Create with local TAR images", func() {
 
 	BeforeEach(func() {
 		var err error
-		sourceImagePath, err = ioutil.TempDir("", "local-image-dir")
+		sourceImagePath, err = os.MkdirTemp("", "local-image-dir")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		Expect(os.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 		Expect(os.MkdirAll(path.Join(sourceImagePath, "permissive-folder"), 0777)).To(Succeed())
 
 		// we need to explicitly apply perms because mkdir is subject to umask
@@ -45,7 +44,7 @@ var _ = Describe("Create with local TAR images", func() {
 		Expect(os.MkdirAll(path.Join(sourceImagePath, "prohibited-folder"), 0777)).To(Succeed())
 		Expect(os.Chown(path.Join(sourceImagePath, "prohibited-folder"), 4000, 4000)).To(Succeed())
 		Expect(os.Chmod(path.Join(sourceImagePath, "prohibited-folder"), 0700)).To(Succeed())
-		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "prohibited-folder", "file"), []byte{}, 0700)).To(Succeed())
+		Expect(os.WriteFile(path.Join(sourceImagePath, "prohibited-folder", "file"), []byte{}, 0700)).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -73,7 +72,7 @@ var _ = Describe("Create with local TAR images", func() {
 		imageContentPath := path.Join(containerSpec.Root.Path, "foo")
 		Expect(imageContentPath).To(BeARegularFile())
 
-		fooContents, err := ioutil.ReadFile(imageContentPath)
+		fooContents, err := os.ReadFile(imageContentPath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(fooContents)).To(Equal("hello-world"))
 	})
@@ -101,7 +100,7 @@ var _ = Describe("Create with local TAR images", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(ioutil.WriteFile(filepath.Join(image1.Root.Path, "new-file"), []byte("hello-world"), 0644)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(image1.Root.Path, "new-file"), []byte("hello-world"), 0644)).To(Succeed())
 			Expect(filepath.Join(image2.Root.Path, "new-file")).NotTo(BeARegularFile())
 		})
 	})
@@ -114,7 +113,7 @@ var _ = Describe("Create with local TAR images", func() {
 			modTime = time.Date(2014, 10, 14, 22, 8, 32, 0, location)
 
 			oldFilePath := path.Join(sourceImagePath, "old-file")
-			Expect(ioutil.WriteFile(oldFilePath, []byte("hello-world"), 0644)).To(Succeed())
+			Expect(os.WriteFile(oldFilePath, []byte("hello-world"), 0644)).To(Succeed())
 			Expect(os.Chtimes(oldFilePath, time.Now(), modTime)).To(Succeed())
 		})
 
@@ -201,7 +200,7 @@ var _ = Describe("Create with local TAR images", func() {
 
 	Context("when the provided base image is a directory", func() {
 		It("returns a sensible error", func() {
-			tempDir, err := ioutil.TempDir("", "")
+			tempDir, err := os.MkdirTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 			_, err = Runner.Create(groot.CreateSpec{
 				ID:           randomImageID,
@@ -226,7 +225,7 @@ var _ = Describe("Create with local TAR images", func() {
 		})
 
 		It("uses the new content for the new image", func() {
-			Expect(ioutil.WriteFile(path.Join(sourceImagePath, "bar"), []byte("this-is-a-bar-content"), 0644)).To(Succeed())
+			Expect(os.WriteFile(path.Join(sourceImagePath, "bar"), []byte("this-is-a-bar-content"), 0644)).To(Succeed())
 			integration.UpdateBaseImageTar(baseImagePath, sourceImagePath)
 
 			containerSpec, err := Runner.Create(groot.CreateSpec{
@@ -267,7 +266,7 @@ var _ = Describe("Create with local TAR images", func() {
 
 			volumeID := integration.BaseImagePathToVolumeID(baseImagePath)
 			layerSnapshotPath := filepath.Join(StorePath, "volumes", volumeID)
-			Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
+			Expect(os.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
 			containerSpec, err := Runner.Create(groot.CreateSpec{
 				ID:           testhelpers.NewRandomID(),
@@ -352,7 +351,7 @@ var _ = Describe("Create with local TAR images", func() {
 
 	Context("when the image has links", func() {
 		BeforeEach(func() {
-			Expect(ioutil.WriteFile(
+			Expect(os.WriteFile(
 				path.Join(sourceImagePath, "symlink-target"), []byte("hello-world"), 0644),
 			).To(Succeed())
 			Expect(os.Symlink(
@@ -366,7 +365,7 @@ var _ = Describe("Create with local TAR images", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
 
-			content, err := ioutil.ReadFile(filepath.Join(containerSpec.Root.Path, "symlink"))
+			content, err := os.ReadFile(filepath.Join(containerSpec.Root.Path, "symlink"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(content)).To(Equal("hello-world"))
 		})

@@ -2,7 +2,6 @@ package manager
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -286,7 +285,7 @@ func (m *Manager) createAndMountFilesystem(logger lager.Logger, storeSizeBytes i
 
 	backingStoreFile := m.getBackingStoreFilePath()
 	if _, err := os.Stat(backingStoreFile); os.IsNotExist(err) {
-		if err := ioutil.WriteFile(backingStoreFile, []byte{}, 0600); err != nil {
+		if err := os.WriteFile(backingStoreFile, []byte{}, 0600); err != nil {
 			logger.Error("writing-backing-store-file", err, lager.Data{"backingstoreFile": backingStoreFile})
 			return errorspkg.Wrap(err, "creating backing store file")
 		}
@@ -316,7 +315,7 @@ func (m *Manager) backingStoreFileExists() bool {
 
 func (m *Manager) images() ([]string, error) {
 	imagesPath := filepath.Join(m.storePath, store.ImageDirName)
-	images, err := ioutil.ReadDir(imagesPath)
+	images, err := os.ReadDir(imagesPath)
 	if err != nil {
 		return nil, errorspkg.Wrap(err, "listing images")
 	}
@@ -331,7 +330,7 @@ func (m *Manager) images() ([]string, error) {
 
 func (m *Manager) volumes() ([]string, error) {
 	volumesPath := filepath.Join(m.storePath, store.VolumesDirName)
-	volumes, err := ioutil.ReadDir(volumesPath)
+	volumes, err := os.ReadDir(volumesPath)
 	if err != nil {
 		return nil, errorspkg.Wrap(err, "listing volumes")
 	}

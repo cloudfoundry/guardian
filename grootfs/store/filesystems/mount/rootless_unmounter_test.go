@@ -1,7 +1,6 @@
 package mount_test
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,14 +26,14 @@ var _ = Describe("Rootless Unmounter", func() {
 
 	BeforeEach(func() {
 		var err error
-		tmpDir, err = ioutil.TempDir("", "")
+		tmpDir, err = os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		mountSrcPath = filepath.Join(tmpDir, "mntsrc")
-		Expect(os.MkdirAll(mountSrcPath, 755)).To(Succeed())
+		Expect(os.MkdirAll(mountSrcPath, 0755)).To(Succeed())
 
 		mountDestPath = filepath.Join(tmpDir, "mntdest")
-		Expect(os.MkdirAll(mountDestPath, 755)).To(Succeed())
+		Expect(os.MkdirAll(mountDestPath, 0755)).To(Succeed())
 
 		unmounter = mount.RootlessUnmounter{}
 		logger = lagertest.NewTestLogger("rootless-unmounter")

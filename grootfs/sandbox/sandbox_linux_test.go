@@ -3,7 +3,7 @@ package sandbox_test
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"code.cloudfoundry.org/commandrunner"
@@ -38,13 +38,13 @@ func init() {
 			}
 			fmt.Print(ns)
 		case "echo-stdin":
-			content, err := ioutil.ReadAll(os.Stdin)
+			content, err := io.ReadAll(os.Stdin)
 			if err != nil {
 				return err
 			}
 			fmt.Print(string(content))
 		case "cat-extra-file":
-			content, err := ioutil.ReadAll(extraFiles[0])
+			content, err := io.ReadAll(extraFiles[0])
 			if err != nil {
 				return err
 			}
@@ -139,7 +139,8 @@ var _ = Describe("Sandbox Rexecer", func() {
 
 		BeforeEach(func() {
 			var err error
-			file, err = ioutil.TempFile("", "")
+			file, err = os.CreateTemp("", "")
+			Expect(err).NotTo(HaveOccurred())
 			_, err = file.WriteString("some-stuff")
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -171,7 +172,7 @@ var _ = Describe("Sandbox Rexecer", func() {
 
 		BeforeEach(func() {
 			var err error
-			chrootDir, err = ioutil.TempDir("", "")
+			chrootDir, err = os.MkdirTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -193,7 +194,8 @@ var _ = Describe("Sandbox Rexecer", func() {
 
 			BeforeEach(func() {
 				var err error
-				file, err = ioutil.TempFile("", "")
+				file, err = os.CreateTemp("", "")
+				Expect(err).NotTo(HaveOccurred())
 				_, err = file.WriteString("some-stuff")
 				Expect(err).NotTo(HaveOccurred())
 			})

@@ -109,7 +109,7 @@ func (r *FakeRegistry) serveManifest(rw http.ResponseWriter, req *http.Request) 
 	if r.failNextManifestRequests > 0 {
 		r.failNextManifestRequests--
 		rw.WriteHeader(http.StatusTeapot)
-		_, _ = rw.Write([]byte("null"))
+		rw.Write([]byte("null"))
 		return
 	}
 
@@ -120,7 +120,7 @@ func (r *FakeRegistry) serveBlob(rw http.ResponseWriter, req *http.Request) {
 	if r.failNextBlobRequests > 0 {
 		r.failNextBlobRequests--
 		rw.WriteHeader(http.StatusTeapot)
-		_, _ = rw.Write([]byte("null"))
+		rw.Write([]byte("null"))
 		return
 	}
 
@@ -175,7 +175,7 @@ func (r *FakeRegistry) RequestedBlobs() []string {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	blobDigests := []string{}
-	for digest, _ := range r.blobRequestsCounter {
+	for digest := range r.blobRequestsCounter {
 		blobDigests = append(blobDigests, digest)
 	}
 

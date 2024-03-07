@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"errors"
-	"io/ioutil"
+	"io"
+	"os"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
@@ -35,7 +36,7 @@ var _ = Describe("LayerFetcher", func() {
 		_, err := gzipWriter.Write([]byte("hello-world"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(gzipWriter.Close()).To(Succeed())
-		gzipedBlobContent, err = ioutil.ReadAll(gzipBuffer)
+		gzipedBlobContent, err = io.ReadAll(gzipBuffer)
 		Expect(err).NotTo(HaveOccurred())
 
 		fetcher = layer_fetcher.NewLayerFetcher(fakeSource)
@@ -154,7 +155,7 @@ var _ = Describe("LayerFetcher", func() {
 			BlobID: "sha256:layer-digest",
 		}
 		BeforeEach(func() {
-			tmpFile, err := ioutil.TempFile("", "")
+			tmpFile, err := os.CreateTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 			_, err = tmpFile.Write(gzipedBlobContent)
 			Expect(err).NotTo(HaveOccurred())
@@ -180,7 +181,7 @@ var _ = Describe("LayerFetcher", func() {
 
 				gzipReader, err := gzip.NewReader(stream)
 				Expect(err).NotTo(HaveOccurred())
-				contents, err := ioutil.ReadAll(gzipReader)
+				contents, err := io.ReadAll(gzipReader)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(contents)).To(Equal("hello-world"))
 
@@ -190,7 +191,7 @@ var _ = Describe("LayerFetcher", func() {
 		})
 
 		It("returns the size of the stream", func() {
-			tmpFile, err := ioutil.TempFile("", "")
+			tmpFile, err := os.CreateTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 			defer func() { _ = tmpFile.Close() }()
 

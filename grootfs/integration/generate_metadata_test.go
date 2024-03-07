@@ -17,11 +17,6 @@ import (
 )
 
 var _ = Describe("GenerateVolumeSizeMetadata", func() {
-	const (
-		rootUID = 0
-		rootGID = 0
-	)
-
 	var (
 		baseImageURL *url.URL
 	)

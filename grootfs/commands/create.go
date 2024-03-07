@@ -102,7 +102,7 @@ var CreateCommand = cli.Command{
 
 		if ctx.NArg() != 2 {
 			logger.Error("parsing-command", errorspkg.New("invalid arguments"), lager.Data{"args": ctx.Args()})
-			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
+			return cli.Exit(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
@@ -122,11 +122,11 @@ var CreateCommand = cli.Command{
 		logger.Debug("create-config", lager.Data{"currentConfig": cfg})
 		if err != nil {
 			logger.Error("config-builder-failed", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		if err = validateOptions(ctx, cfg); err != nil {
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		storePath := cfg.StorePath
@@ -135,7 +135,7 @@ var CreateCommand = cli.Command{
 		baseImageURL, err := url.Parse(baseImage)
 		if err != nil {
 			logger.Error("base-image-url-parsing-failed", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		rootless := os.Getuid() != 0
@@ -158,13 +158,13 @@ var CreateCommand = cli.Command{
 		manager := manager.New(storePath, storeNamespacer, fsDriver, fsDriver, fsDriver, initStoreLocksmith)
 		if !manager.IsStoreInitialized(logger) {
 			logger.Error("store-verification-failed", errors.New("store is not initialized"))
-			return cli.NewExitError("Store path is not initialized. Please run init-store.", 1)
+			return cli.Exit("Store path is not initialized. Please run init-store.", 1)
 		}
 
 		idMappings, err := storeNamespacer.Read()
 		if err != nil {
 			logger.Error("reading-namespace-file", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 
 		shouldCloneUserNs := hasIDMappings(idMappings) && os.Getuid() != 0
@@ -225,7 +225,7 @@ var CreateCommand = cli.Command{
 		if err != nil {
 			logger.Error("creating", err)
 			humanizedError := tryHumanize(err, createSpec)
-			return cli.NewExitError(humanizedError, 1)
+			return cli.Exit(humanizedError, 1)
 		}
 
 		containerSpec := specs.Spec{
@@ -250,7 +250,7 @@ var CreateCommand = cli.Command{
 		jsonBytes, err := json.Marshal(containerSpec)
 		if err != nil {
 			logger.Error("formatting output", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.Exit(err.Error(), 1)
 		}
 		fmt.Println(string(jsonBytes))
 

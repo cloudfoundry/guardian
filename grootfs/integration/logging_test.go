@@ -1,7 +1,6 @@
 package integration_test
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 
@@ -107,7 +106,7 @@ var _ = Describe("GrootFS logging", func() {
 			)
 
 			getAllTheLogs := func() (string, error) {
-				allTheLogs, err := ioutil.ReadFile(logFilePath)
+				allTheLogs, err := os.ReadFile(logFilePath)
 				if err != nil {
 					return "", err
 				}
@@ -116,7 +115,7 @@ var _ = Describe("GrootFS logging", func() {
 			}
 
 			BeforeEach(func() {
-				logFile, err := ioutil.TempFile("", "log")
+				logFile, err := os.CreateTemp("", "log")
 				Expect(err).NotTo(HaveOccurred())
 				logFilePath = logFile.Name()
 				Expect(os.Chmod(logFilePath, 0777)).To(Succeed())
@@ -172,7 +171,7 @@ var _ = Describe("GrootFS logging", func() {
 		)
 
 		BeforeEach(func() {
-			f, err := ioutil.TempFile("", "cleanlog")
+			f, err := os.CreateTemp("", "cleanlog")
 			Expect(err).NotTo(HaveOccurred())
 			defer f.Close()
 			Expect(os.Chown(f.Name(), GrootfsTestUid, GrootfsTestGid)).To(Succeed())
@@ -200,7 +199,7 @@ var _ = Describe("GrootFS logging", func() {
 		})
 
 		readCleanLog := func() (string, error) {
-			contents, err := ioutil.ReadFile(cleanLogFile)
+			contents, err := os.ReadFile(cleanLogFile)
 			return string(contents), err
 		}
 

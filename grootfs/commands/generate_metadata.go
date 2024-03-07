@@ -22,7 +22,7 @@ var GenerateVolumeSizeMetadata = cli.Command{
 
 		if ctx.NArg() != 0 {
 			logger.Error("parsing-command", errorspkg.New("invalid arguments"), lager.Data{"args": ctx.Args()})
-			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
+			return cli.Exit(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)

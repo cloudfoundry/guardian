@@ -1,7 +1,6 @@
 package integration_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -22,10 +21,10 @@ var _ = Describe("List", func() {
 	var containerSpec specs.Spec
 
 	BeforeEach(func() {
-		sourceImagePath, err := ioutil.TempDir("", "")
+		sourceImagePath, err := os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		Expect(os.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
 		containerSpec, err = Runner.Create(groot.CreateSpec{
 			BaseImageURL: integration.String2URL(baseImageFile.Name()),
@@ -50,7 +49,7 @@ var _ = Describe("List", func() {
 
 		BeforeEach(func() {
 			var err error
-			configDir, err = ioutil.TempDir("", "")
+			configDir, err = os.MkdirTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(os.Chmod(configDir, 0755)).To(Succeed())
 			configFilePath = path.Join(configDir, "config.yaml")
@@ -62,7 +61,7 @@ var _ = Describe("List", func() {
 			configYaml, err := yaml.Marshal(cfg)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
+			Expect(os.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
 			Expect(os.Chmod(configFilePath, 0755)).To(Succeed())
 		})
 

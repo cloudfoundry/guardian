@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -306,7 +305,7 @@ var _ = Describe("Create", func() {
 		Context("with local tar image", func() {
 			var yetAnotherBaseImagePath string
 			BeforeEach(func() {
-				yetAnotherSourceImagePath, err := ioutil.TempDir("", "")
+				yetAnotherSourceImagePath, err := os.MkdirTemp("", "")
 				Expect(err).NotTo(HaveOccurred())
 				yetAnotherBaseImageFile := integration.CreateBaseImageTar(yetAnotherSourceImagePath)
 				yetAnotherBaseImagePath = yetAnotherBaseImageFile.Name()
@@ -507,7 +506,7 @@ var _ = Describe("Create", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				contents, err := ioutil.ReadFile(tardisCalledFile.Name())
+				contents, err := os.ReadFile(tardisCalledFile.Name())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(contents)).To(Equal("I'm groot - tardis"))
 			})
@@ -549,7 +548,7 @@ var _ = Describe("Create", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				contents, err := ioutil.ReadDir(containerSpec.Root.Path)
+				contents, err := os.ReadDir(containerSpec.Root.Path)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(contents).To(BeEmpty())
 			})

@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -156,7 +155,7 @@ var _ = Describe("Create with OCI images", func() {
 
 			whiteoutedDir := path.Join(containerSpec.Root.Path, "var")
 			Expect(whiteoutedDir).To(BeADirectory())
-			contents, err := ioutil.ReadDir(whiteoutedDir)
+			contents, err := os.ReadDir(whiteoutedDir)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(contents).To(HaveLen(1))
 			Expect(filepath.Join(containerSpec.Root.Path, "var", "istillexist")).To(BeAnExistingFile())
@@ -323,7 +322,7 @@ var _ = Describe("Create with OCI images", func() {
 			Expect(len(dirs)).NotTo(BeZero())
 
 			layerSnapshotPath := filepath.Join(volumesDir, dirs[0].Name())
-			Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
+			Expect(os.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
 			containerSpec, err := runner.Create(groot.CreateSpec{
 				BaseImageURL: baseImageURL,
@@ -510,7 +509,7 @@ var _ = Describe("Create with OCI images", func() {
 })
 
 func startFakeBlobstore(workDir string) (*http.Server, chan struct{}) {
-	certBytes, err := ioutil.ReadFile("assets/certs/cert.cert")
+	certBytes, err := os.ReadFile("assets/certs/cert.cert")
 	Expect(err).NotTo(HaveOccurred())
 
 	clientCertPool := x509.NewCertPool()
@@ -523,7 +522,6 @@ func startFakeBlobstore(workDir string) (*http.Server, chan struct{}) {
 		ClientCAs: clientCertPool,
 	}
 
-	tlsConfig.BuildNameToCertificate()
 	fs := http.FileServer(http.Dir(fmt.Sprintf("/%s/assets/remote-layers/garden-busybox-remote", workDir)))
 	http.Handle("/", fs)
 
@@ -542,7 +540,7 @@ func startFakeBlobstore(workDir string) (*http.Server, chan struct{}) {
 }
 
 func readFile(name string) string {
-	content, err := ioutil.ReadFile(name)
+	content, err := os.ReadFile(name)
 	Expect(err).NotTo(HaveOccurred())
 	return string(content)
 }

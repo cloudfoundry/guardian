@@ -2,7 +2,6 @@ package dependency_manager
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,7 +25,7 @@ func (d *DependencyManager) Register(id string, chainIDs []string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(d.filePath(id), data, 0666)
+	return os.WriteFile(d.filePath(id), data, 0666)
 }
 
 func (d *DependencyManager) Deregister(id string) error {
