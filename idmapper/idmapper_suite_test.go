@@ -1,7 +1,6 @@
 package idmapper_test
 
 import (
-	"io/ioutil"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -16,11 +15,11 @@ func TestIdmapper(t *testing.T) {
 }
 
 func tempDir(dir, prefix string) string {
-	workDir, err := ioutil.TempDir("", "")
+	workDir, err := os.MkdirTemp("", "")
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	return workDir
 }
 
 func writeFile(path string, data []byte, perm os.FileMode) {
-	ExpectWithOffset(1, ioutil.WriteFile(path, data, perm)).To(Succeed())
+	ExpectWithOffset(1, os.WriteFile(path, data, perm)).To(Succeed())
 }

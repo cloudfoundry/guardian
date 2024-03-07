@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -28,7 +27,7 @@ func testIDMapperBins(bin func() string, statFmt string) {
 
 		BeforeEach(func() {
 			var err error
-			sourcePath, err = ioutil.TempDir("", "")
+			sourcePath, err = os.MkdirTemp("", "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -70,7 +69,7 @@ func testIDMapperBins(bin func() string, statFmt string) {
 
 		itCorrectlyMapsID := func(id, expectedId uint32) {
 			filePath := path.Join(sourcePath, "foo")
-			Expect(ioutil.WriteFile(filePath, []byte("hello-world"), 0644)).To(Succeed())
+			Expect(os.WriteFile(filePath, []byte("hello-world"), 0644)).To(Succeed())
 			Expect(os.Chown(filePath, int(id), int(id))).To(Succeed())
 
 			shouldMapFileGroupToID(filePath, fmt.Sprintf("%d", expectedId))
@@ -126,7 +125,7 @@ func testIDMapperBins(bin func() string, statFmt string) {
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).ShouldNot(gexec.Exit(0))
 			Eventually(sess.Err).Should(
-				gbytes.Say(fmt.Sprintf("no such file or directory")),
+				gbytes.Say("no such file or directory"),
 			)
 		})
 	})
@@ -145,7 +144,7 @@ func testIDMapperBins(bin func() string, statFmt string) {
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).ShouldNot(gexec.Exit(0))
 			Eventually(sess.Err).Should(
-				gbytes.Say(fmt.Sprintf("invalid syntax")),
+				gbytes.Say("invalid syntax"),
 			)
 		})
 	})
