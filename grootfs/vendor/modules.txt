@@ -1,4 +1,4 @@
-# code.cloudfoundry.org/commandrunner v0.0.0-20240301144845-6dda09145d14
+# code.cloudfoundry.org/commandrunner v0.0.0-20240308145019-f0c16f7f4dd2
 ## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
