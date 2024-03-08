@@ -37,7 +37,6 @@ type SupportedFeatures struct {
 	TierAcl                  bool        `json:"TierAcl"`
 	NetworkACL               bool        `json:"NetworkACL"`
 	NestedIpSet              bool        `json:"NestedIpSet"`
-	DisableHostPort          bool        `json:"DisableHostPort"`
 }
 
 // AclFeatures are the supported ACL possibilities.
@@ -115,7 +114,6 @@ func getSupportedFeatures() (SupportedFeatures, error) {
 	features.TierAcl = isFeatureSupported(globals.Version, TierAclPolicyVersion)
 	features.NetworkACL = isFeatureSupported(globals.Version, NetworkACLPolicyVersion)
 	features.NestedIpSet = isFeatureSupported(globals.Version, NestedIpSetVersion)
-	features.DisableHostPort = isFeatureSupported(globals.Version, DisableHostPortVersion)
 
 	log.L.WithFields(logrus.Fields{
 		"version":           globals.Version,
