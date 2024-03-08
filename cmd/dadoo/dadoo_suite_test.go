@@ -5,7 +5,6 @@ package main_test
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -34,8 +33,8 @@ func TestDadoo(t *testing.T) {
 			return nil
 		}
 
-		cgroupsRoot = filepath.Join(os.TempDir(), "dadoo-cgroups")
-		Expect(setupCgroups(cgroupsRoot)).To(Succeed())
+		// cgroupsRoot = filepath.Join(os.TempDir(), "dadoo-cgroups")
+		//Expect(setupCgroups(cgroupsRoot)).To(Succeed())
 
 		bins["dadoo_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo", "-mod=vendor")
 		Expect(err).NotTo(HaveOccurred())
@@ -76,8 +75,8 @@ func TestDadoo(t *testing.T) {
 			}
 		}
 
-		Expect(syscall.Unmount(cgroupsRoot, 0)).To(Succeed())
-		Expect(os.Remove(cgroupsRoot)).To(Succeed())
+		// Expect(syscall.Unmount(cgroupsRoot, 0)).To(Succeed())
+		// Expect(os.Remove(cgroupsRoot)).To(Succeed())
 	})
 
 	BeforeEach(func() {

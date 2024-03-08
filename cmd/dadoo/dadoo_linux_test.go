@@ -13,10 +13,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/guardian/rundmc"
-	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
-	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -913,10 +910,10 @@ func mustOpen(path string) *os.File {
 	return r
 }
 
-func setupCgroups(cgroupsRoot string) error {
-	logger := lagertest.NewTestLogger("test")
+// func setupCgroups(cgroupsRoot string) error {
+// 	logger := lagertest.NewTestLogger("test")
 
-	starter := cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsRoot, "garden", []specs.LinuxDeviceCgroup{}, rundmc.IsMountPoint, false)
+// 	starter := cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsRoot, "garden", []specs.LinuxDeviceCgroup{}, rundmc.IsMountPoint, false)
 
-	return starter.Start()
-}
+// 	return starter.Start()
+// }
