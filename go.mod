@@ -4,6 +4,8 @@ go 1.21
 
 // TODO: update to containerd 2.0 when it is out, and remove these replace directives
 replace (
+	// pin hcsshim for containerd v1.7.13
+	github.com/Microsoft/hcsshim => github.com/Microsoft/hcsshim v0.11.4
 	github.com/cloudfoundry/gosigar => github.com/cloudfoundry/gosigar v1.3.45
 	// force go-runc back to 1.0.0 since runc 1.7.x is incompatible with anything newer
 	github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
@@ -70,10 +72,10 @@ require (
 	github.com/cloudfoundry/sonde-go v0.0.0-20240222182100-131c0f5c3247 // indirect
 	github.com/containerd/aufs v1.0.0 // indirect
 	github.com/containerd/btrfs/v2 v2.0.0 // indirect
+	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/containerd/cgroups/v3 v3.0.3 // indirect
 	github.com/containerd/console v1.0.4 // indirect
 	github.com/containerd/continuity v0.4.3 // indirect
-	github.com/containerd/errdefs v0.1.0 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/go-cni v1.1.9 // indirect
 	github.com/containerd/go-runc v1.1.0 // indirect
