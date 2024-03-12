@@ -1,4 +1,4 @@
-//go:build !linux && !darwin
+//go:build linux
 
 /*
    Copyright The containerd Authors.
@@ -16,20 +16,12 @@
    limitations under the License.
 */
 
-package apply
+package net
 
 import (
-	"context"
-	"io"
-
-	"github.com/containerd/containerd/archive"
-	"github.com/containerd/containerd/mount"
+	"golang.org/x/sys/unix"
 )
 
-func apply(ctx context.Context, mounts []mount.Mount, r io.Reader, _sync bool) error {
-	// TODO: for windows, how to sync?
-	return mount.WithTempMount(ctx, mounts, func(root string) error {
-		_, err := archive.Apply(ctx, root, r)
-		return err
-	})
+func newSocketPairCLOEXEC() ([2]int, error) {
+	return unix.Socketpair(unix.AF_UNIX, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
 }

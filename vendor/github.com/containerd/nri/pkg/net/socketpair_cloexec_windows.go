@@ -1,4 +1,4 @@
-//go:build !linux && !darwin
+//go:build windows
 
 /*
    Copyright The containerd Authors.
@@ -16,20 +16,15 @@
    limitations under the License.
 */
 
-package apply
+package net
 
 import (
-	"context"
-	"io"
+	"errors"
 
-	"github.com/containerd/containerd/archive"
-	"github.com/containerd/containerd/mount"
+	sys "golang.org/x/sys/windows"
 )
 
-func apply(ctx context.Context, mounts []mount.Mount, r io.Reader, _sync bool) error {
-	// TODO: for windows, how to sync?
-	return mount.WithTempMount(ctx, mounts, func(root string) error {
-		_, err := archive.Apply(ctx, root, r)
-		return err
-	})
+func newSocketPairCLOEXEC() ([2]sys.Handle, error) {
+	// when implementing do use WSA_FLAG_NO_HANDLE_INHERIT to avoid leaking FDs
+	return [2]sys.Handle{sys.InvalidHandle, sys.InvalidHandle}, errors.New("newSocketPairCLOEXEC unimplemented for windows")
 }
