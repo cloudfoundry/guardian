@@ -27,6 +27,7 @@ func (l Limits) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec) (goci.Bndl
 
 	bndl = bndl.WithMemoryLimit(specs.LinuxMemory{Limit: &limit, Swap: swapLimit})
 
+	//lint:ignore SA1019 - we still specify this to make the deprecated logic work until we get rid of the code in garden
 	shares := uint64(spec.Limits.CPU.LimitInShares)
 	if spec.Limits.CPU.Weight > 0 {
 		shares = uint64(spec.Limits.CPU.Weight)
