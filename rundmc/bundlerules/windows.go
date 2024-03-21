@@ -18,6 +18,7 @@ func (w Windows) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec) (goci.Bnd
 	limit := uint64(spec.Limits.Memory.LimitInBytes)
 	bndl = bndl.WithWindowsMemoryLimit(specs.WindowsMemoryResources{Limit: &limit})
 
+	//lint:ignore SA1019 - we still specify this to make the deprecated logic work until we get rid of the code in garden
 	shares := uint16(spec.Limits.CPU.LimitInShares)
 	if spec.Limits.CPU.Weight > 0 {
 		shares = uint16(spec.Limits.CPU.Weight)

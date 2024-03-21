@@ -1884,6 +1884,7 @@ var _ = Describe("Gardener", func() {
 
 			currentCPULimits, err := container.CurrentCPULimits()
 			Expect(err).ToNot(HaveOccurred())
+			//lint:ignore SA1019 - we still specify this to make the deprecated logic work until we get rid of the code in garden
 			Expect(currentCPULimits.LimitInShares).To(BeEquivalentTo(10))
 		})
 

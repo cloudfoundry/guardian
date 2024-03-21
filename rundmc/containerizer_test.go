@@ -506,6 +506,7 @@ var _ = Describe("Rundmc", func() {
 		It("should return the ActualContainerSpec with the correct CPU limits", func() {
 			actualSpec, err := containerizer.Info(logger, "some-handle")
 			Expect(err).NotTo(HaveOccurred())
+			//lint:ignore SA1019 - we still specify this to make the deprecated logic work until we get rid of the code in garden
 			Expect(actualSpec.Limits.CPU.LimitInShares).To(BeEquivalentTo(20))
 		})
 
@@ -538,6 +539,7 @@ var _ = Describe("Rundmc", func() {
 				actualSpec, err := containerizer.Info(logger, "some-handle")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actualSpec.Limits.Memory.LimitInBytes).To(BeEquivalentTo(0))
+				//lint:ignore SA1019 - we still specify this to make the deprecated logic work until we get rid of the code in garden
 				Expect(actualSpec.Limits.CPU.LimitInShares).To(BeEquivalentTo(0))
 			})
 		})
