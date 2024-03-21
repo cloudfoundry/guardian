@@ -35,7 +35,7 @@ func (m *HaveSignalledMatcher) Match(actual interface{}) (bool, error) {
 	}
 
 	m.actuallySignalled = []*exec.Cmd{}
-	for cmd, _ := range signalled {
+	for cmd := range signalled {
 		m.actuallySignalled = append(m.actuallySignalled, cmd)
 	}
 
