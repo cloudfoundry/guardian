@@ -45,6 +45,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+const containerdNamespace = "garden"
+
 type LinuxFactory struct {
 	config           *CommonCommand
 	commandRunner    commandrunner.CommandRunner

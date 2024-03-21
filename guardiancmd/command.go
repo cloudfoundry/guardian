@@ -49,8 +49,6 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
-const containerdNamespace = "garden"
-
 type GardenFactory interface {
 	WireResolvConfigurer() kawasaki.DnsResolvConfigurer
 	WireMkdirer() runrunc.Mkdirer
@@ -407,11 +405,6 @@ func (cmd *CommonCommand) wireNetworker(log lager.Logger, factory GardenFactory,
 		return externalNetworker, externalNetworker, nil
 	}
 
-	var denyNetworksList []string
-	for _, network := range cmd.Network.DenyNetworks {
-		denyNetworksList = append(denyNetworksList, network.String())
-	}
-
 	interfacePrefix := fmt.Sprintf("w%s", cmd.Server.Tag)
 	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
 	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
@@ -419,9 +412,6 @@ func (cmd *CommonCommand) wireNetworker(log lager.Logger, factory GardenFactory,
 
 	iptRunner := &logging.Runner{CommandRunner: factory.CommandRunner(), Logger: log.Session("iptables-runner")}
 	ipTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), iptRunner, locksmith, chainPrefix)
-	nonLoggingIPTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), factory.CommandRunner(), locksmith, chainPrefix)
-	ipTablesStarter := iptables.NewStarter(nonLoggingIPTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup, log)
-	ruleTranslator := iptables.NewRuleTranslator()
 
 	containerMtu := cmd.Network.Mtu
 	if containerMtu == 0 {
@@ -439,10 +429,16 @@ func (cmd *CommonCommand) wireNetworker(log lager.Logger, factory GardenFactory,
 		kawasakifactory.NewDefaultConfigurer(ipTables, cmd.Containers.Dir),
 		portPool,
 		iptables.NewPortForwarder(ipTables),
-		iptables.NewFirewallOpener(ruleTranslator, ipTables),
+		iptables.NewFirewallOpener(iptables.NewRuleTranslator(), ipTables),
 		networkDepot,
 	)
 
+	var denyNetworksList []string
+	for _, network := range cmd.Network.DenyNetworks {
+		denyNetworksList = append(denyNetworksList, network.String())
+	}
+	nonLoggingIPTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), factory.CommandRunner(), locksmith, chainPrefix)
+	ipTablesStarter := iptables.NewStarter(nonLoggingIPTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup, log)
 	return networker, ipTablesStarter, nil
 }
 

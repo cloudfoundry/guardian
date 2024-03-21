@@ -160,10 +160,6 @@ func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
 	panic("this should be unreachable: no sockets on Windows")
 }
 
-func containerdRuncRoot() string {
-	return ""
-}
-
 func (cmd *CommonCommand) wireKernelParams() []rundmc.BundlerRule {
 	return []rundmc.BundlerRule{}
 }

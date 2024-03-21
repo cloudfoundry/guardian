@@ -2,7 +2,6 @@ package guardiancmd
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -402,14 +401,6 @@ func mustStringify(s interface{}, e error) string {
 	}
 
 	return fmt.Sprintf("%s", s)
-}
-
-func mustOpen(path string) io.ReadCloser {
-	if r, err := os.Open(path); err != nil {
-		panic(err)
-	} else {
-		return r
-	}
 }
 
 func deviceWildcard() *int64 {

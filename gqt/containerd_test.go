@@ -630,11 +630,6 @@ func getContainerPids(ctr, socket, containerID string) []string {
 	return pids
 }
 
-func getContainerdProcessPid(ctr, socket, containerID, processID string) string {
-	processesOutput := runCtr(ctr, socket, []string{"tasks", "ps", containerID})
-	return pidFromProcessesOutput(processesOutput, processID)
-}
-
 func runCtr(ctr, socket string, args []string) string {
 	defaultArgs := []string{"--address", socket, "--namespace", "garden"}
 	cmd := exec.Command(ctr, append(defaultArgs, args...)...)
