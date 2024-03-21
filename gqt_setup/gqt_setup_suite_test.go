@@ -2,10 +2,8 @@ package gqt_setup_test
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"testing"
 	"time"
 
@@ -17,10 +15,6 @@ import (
 )
 
 var (
-	// the unprivileged user is baked into the cloudfoundry/garden-runc-release image
-	unprivilegedUID = uint32(5000)
-	unprivilegedGID = uint32(5000)
-
 	binaries runner.Binaries
 )
 
@@ -71,24 +65,6 @@ func goCompile(mainPackagePath string, buildArgs ...string) string {
 	return bin
 }
 
-// E.g. nodeToString(1) = a, nodeToString(2) = b, etc ...
-func nodeToString(ginkgoNode int) string {
-	r := 'a' + ginkgoNode - 1
-	Expect(r).To(BeNumerically(">=", 'a'))
-	Expect(r).To(BeNumerically("<=", 'z'))
-	return fmt.Sprintf("%c", r)
-}
-
-func idToStr(id uint32) string {
-	return strconv.FormatUint(uint64(id), 10)
-}
-
-func readFile(path string) string {
-	content, err := os.ReadFile(path)
-	Expect(err).NotTo(HaveOccurred())
-	return string(content)
-}
-
 func jsonMarshal(v interface{}) []byte {
 	buf := bytes.NewBuffer([]byte{})
 	Expect(toml.NewEncoder(buf).Encode(v)).To(Succeed())
@@ -97,8 +73,4 @@ func jsonMarshal(v interface{}) []byte {
 
 func jsonUnmarshal(data []byte, v interface{}) {
 	Expect(toml.Unmarshal(data, v)).To(Succeed())
-}
-
-func cpuThrottlingEnabled() bool {
-	return os.Getenv("CPU_THROTTLING_ENABLED") == "true"
 }

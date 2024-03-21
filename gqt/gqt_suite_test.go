@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -35,9 +34,6 @@ const (
 
 var (
 	ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
-	// the unprivileged user is baked into the cloudfoundry/garden-runc-release image
-	unprivilegedUID = uint32(5000)
-	unprivilegedGID = uint32(5000)
 
 	containerdProcess *os.Process
 	containerdRunDir  string
@@ -277,12 +273,6 @@ func defaultConfig() runner.GdnRunnerConfig {
 	return cfg
 }
 
-func restartGarden(client *runner.RunningGarden, config runner.GdnRunnerConfig) *runner.RunningGarden {
-	Expect(client.Ping()).To(Succeed(), "tried to restart garden while it was not running")
-	Expect(client.Stop()).To(Succeed())
-	return runner.Start(config)
-}
-
 func runIPTables(ipTablesArgs ...string) ([]byte, error) {
 	lock, err := locksmith.NewFileSystem().Lock(iptables.LockKey)
 	if err != nil {
@@ -310,16 +300,8 @@ func uint64ptr(i uint64) *uint64 {
 	return &i
 }
 
-func uint32ptr(i uint32) *uint32 {
-	return &i
-}
-
 func boolptr(b bool) *bool {
 	return &b
-}
-
-func idToStr(id uint32) string {
-	return strconv.FormatUint(uint64(id), 10)
 }
 
 func readFile(path string) []byte {
@@ -372,15 +354,6 @@ func copyFile(srcPath, dstPath string) error {
 	return os.Chmod(writer.Name(), 0777)
 }
 
-func removeSocket() {
-	_, err := os.Stat(config.BindSocket)
-	if err == nil {
-		Expect(os.Remove(config.BindSocket)).To(Succeed())
-	} else if !os.IsNotExist(err) {
-		Expect(err).NotTo(HaveOccurred())
-	}
-}
-
 func createPeaRootfs() string {
 	return createRootfs(func(root string) {
 		Expect(exec.Command("chown", "-R", "4294967294:4294967294", root).Run()).To(Succeed())
@@ -390,10 +363,6 @@ func createPeaRootfs() string {
 
 func createPeaRootfsTar() string {
 	return tarUpDir(createPeaRootfs())
-}
-
-func createRootfsTar(modifyRootfs func(string)) string {
-	return tarUpDir(createRootfs(modifyRootfs, 0755))
 }
 
 func createRootfs(modifyRootfs func(string), perm os.FileMode) string {
@@ -525,10 +494,6 @@ func runInContainerWithIO(container garden.Container, processIO garden.ProcessIO
 	exitCode, err := proc.Wait()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(exitCode).To(Equal(0))
-}
-
-func runInContainer(container garden.Container, path string, args []string) {
-	runInContainerWithIO(container, ginkgoIO, path, args)
 }
 
 func runInContainerCombinedOutput(container garden.Container, path string, args []string) string {
