@@ -17,13 +17,13 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.0.0-20240308143919-052b78e49a62
+	code.cloudfoundry.org/archiver v0.0.0-20240320161425-44d089c09e86
 	code.cloudfoundry.org/clock v1.1.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20240308145019-f0c16f7f4dd2
 	code.cloudfoundry.org/debugserver v0.0.0-20240308143924-cdf7d6ade8bb
-	code.cloudfoundry.org/garden v0.0.0-20240311180031-f6ad2f4e4f5a
+	code.cloudfoundry.org/garden v0.0.0-20240321140256-3cb1fc657e4d
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240307003907-65baa99d378e
+	code.cloudfoundry.org/idmapper v0.0.0-20240320161103-9b92bb87f436
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	code.cloudfoundry.org/localip v0.0.0-20240318195634-528fdfd46485
 	github.com/BurntSushi/toml v1.3.2
@@ -31,7 +31,7 @@ require (
 	github.com/cloudfoundry/gosigar v1.3.50
 	github.com/containerd/containerd v1.7.14
 	github.com/containerd/typeurl/v2 v2.1.1
-	github.com/docker/docker v25.0.5+incompatible
+	github.com/docker/docker v26.0.0+incompatible
 	github.com/eapache/go-resiliency v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jessevdk/go-flags v1.5.1-0.20210607101731-3927b71304df
@@ -108,7 +108,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20240319011627-a57c5dfe54fd // indirect
+	github.com/google/pprof v0.0.0-20240320155624-b11c3daa6f07 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
