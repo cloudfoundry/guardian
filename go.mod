@@ -23,7 +23,7 @@ require (
 	code.cloudfoundry.org/debugserver v0.0.0-20240327135753-7c09a8661dd3
 	code.cloudfoundry.org/garden v0.0.0-20240328123039-9e27b1d0e951
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240321140428-c1a3e64b193a
+	code.cloudfoundry.org/idmapper v0.0.0-20240328123147-4c2924087849
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	code.cloudfoundry.org/localip v0.0.0-20240327135844-618edde82d72
 	github.com/BurntSushi/toml v1.3.2
