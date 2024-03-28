@@ -270,7 +270,7 @@ func (p *externalBinaryNetworker) exec(log lager.Logger, action, handle string,
 	logData := lager.Data{"action": action, "stdin": string(stdinBytes), "stderr": stderr.String(), "stdout": stdout.String()}
 	if err != nil {
 		log.Error("external-networker-result", err, logData)
-		return fmt.Errorf("external networker %s: %s", action, err)
+		return fmt.Errorf("external networker encountered an error running '%s' action: %s", action, err)
 	}
 
 	if outputData != nil && stdout.Len() > 0 {
