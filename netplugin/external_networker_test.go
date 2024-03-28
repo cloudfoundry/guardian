@@ -442,7 +442,7 @@ var _ = Describe("ExternalNetworker", func() {
 			})
 
 			It("returns the error", func() {
-				Expect(plugin.Network(logger, containerSpec, 42)).To(MatchError("external networker up: external-plugin-error"))
+				Expect(plugin.Network(logger, containerSpec, 42)).To(MatchError("external networker encountered an error running 'up' action: external-plugin-error"))
 			})
 
 			It("collects and logs the stderr from the plugin", func() {
@@ -509,7 +509,7 @@ var _ = Describe("ExternalNetworker", func() {
 				pluginErr = errors.New("boom")
 			})
 			It("returns the error", func() {
-				Expect(plugin.Destroy(logger, "my-handle")).To(MatchError("external networker down: boom"))
+				Expect(plugin.Destroy(logger, "my-handle")).To(MatchError("external networker encountered an error running 'down' action: boom"))
 			})
 		})
 
@@ -587,7 +587,7 @@ var _ = Describe("ExternalNetworker", func() {
 			})
 			It("returns the error", func() {
 				_, _, err := plugin.NetIn(logger, handle, 22, 33)
-				Expect(err).To(MatchError("external networker net-in: potato"))
+				Expect(err).To(MatchError("external networker encountered an error running 'net-in' action: potato"))
 			})
 		})
 
@@ -646,7 +646,7 @@ var _ = Describe("ExternalNetworker", func() {
 				pluginErr = errors.New("boom")
 			})
 			It("returns the error", func() {
-				Expect(plugin.NetOut(logger, handle, rule)).To(MatchError("external networker net-out: boom"))
+				Expect(plugin.NetOut(logger, handle, rule)).To(MatchError("external networker encountered an error running 'net-out' action: boom"))
 			})
 		})
 
@@ -688,7 +688,7 @@ var _ = Describe("ExternalNetworker", func() {
 			})
 
 			It("returns the error", func() {
-				Expect(plugin.BulkNetOut(logger, handle, rules)).To(MatchError("external networker bulk-net-out: boom"))
+				Expect(plugin.BulkNetOut(logger, handle, rules)).To(MatchError("external networker encountered an error running 'bulk-net-out' action: boom"))
 			})
 		})
 
