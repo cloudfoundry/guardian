@@ -1,9 +1,9 @@
-# code.cloudfoundry.org/commandrunner v0.0.0-20240329145327-1ee98418fdb6
+# code.cloudfoundry.org/commandrunner v0.0.0-20240405142619-6969114863ce
 ## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20240328123147-4c2924087849 => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20240403131634-86ce38dd04c4 => ../idmapper
 ## explicit; go 1.18
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.0.3
@@ -251,7 +251,7 @@ github.com/sirupsen/logrus
 github.com/syndtr/gocapability/capability
 # github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125
 ## explicit
-# github.com/ulikunitz/xz v0.5.11
+# github.com/ulikunitz/xz v0.5.12
 ## explicit; go 1.12
 github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/hash
@@ -271,18 +271,18 @@ github.com/ventu-io/go-shortid
 # github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913
 ## explicit; go 1.15.0
 github.com/xrash/smetrics
-# golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8
+# golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0
 ## explicit; go 1.20
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
 golang.org/x/exp/slices
-# golang.org/x/net v0.22.0
+# golang.org/x/net v0.24.0
 ## explicit; go 1.18
 golang.org/x/net/context
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
-# golang.org/x/sys v0.18.0
+# golang.org/x/sys v0.19.0
 ## explicit; go 1.18
 golang.org/x/sys/unix
 golang.org/x/sys/windows
@@ -305,7 +305,7 @@ golang.org/x/text/internal/utf8internal
 golang.org/x/text/language
 golang.org/x/text/runes
 golang.org/x/text/transform
-# golang.org/x/tools v0.19.0
+# golang.org/x/tools v0.20.0
 ## explicit; go 1.19
 golang.org/x/tools/cover
 golang.org/x/tools/go/ast/inspector
