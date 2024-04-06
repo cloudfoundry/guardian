@@ -21,14 +21,14 @@ require (
 	code.cloudfoundry.org/clock v1.1.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20240405142619-6969114863ce
 	code.cloudfoundry.org/debugserver v0.0.0-20240405144453-34182e5de535
-	code.cloudfoundry.org/garden v0.0.0-20240403131454-85714da173a0
+	code.cloudfoundry.org/garden v0.0.0-20240405184154-4b258b482c64
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240403131634-86ce38dd04c4
+	code.cloudfoundry.org/idmapper v0.0.0-20240405184356-bc7391de6687
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	code.cloudfoundry.org/localip v0.0.0-20240405144441-7c0fb8a04c60
 	github.com/BurntSushi/toml v1.3.2
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.52
+	github.com/cloudfoundry/gosigar v1.3.53
 	github.com/containerd/containerd v1.7.15
 	github.com/containerd/typeurl/v2 v2.1.1
 	github.com/docker/docker v26.0.0+incompatible
