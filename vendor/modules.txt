@@ -1,21 +1,21 @@
-# code.cloudfoundry.org/archiver v0.0.0-20240405144445-0965ea5797be
+# code.cloudfoundry.org/archiver v0.0.0-20240409162627-dfb032b3bdac
 ## explicit; go 1.20
 code.cloudfoundry.org/archiver/extractor/test_helper
 # code.cloudfoundry.org/clock v1.1.0
 ## explicit; go 1.20
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
-# code.cloudfoundry.org/commandrunner v0.0.0-20240405142619-6969114863ce
+# code.cloudfoundry.org/commandrunner v0.0.0-20240409143025-053fd44430bb
 ## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.0.0-20240405144453-34182e5de535
+# code.cloudfoundry.org/debugserver v0.0.0-20240409162631-369419c6e60d
 ## explicit; go 1.19
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20240405184154-4b258b482c64 => ../garden
+# code.cloudfoundry.org/garden v0.0.0-20240409184058-44b21cda626c => ../garden
 ## explicit; go 1.20
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
@@ -40,7 +40,7 @@ code.cloudfoundry.org/lager/v3/chug
 code.cloudfoundry.org/lager/v3/internal/truncate
 code.cloudfoundry.org/lager/v3/lagerctx
 code.cloudfoundry.org/lager/v3/lagertest
-# code.cloudfoundry.org/localip v0.0.0-20240405144441-7c0fb8a04c60
+# code.cloudfoundry.org/localip v0.0.0-20240409162628-e6b88b496fac
 ## explicit; go 1.20
 code.cloudfoundry.org/localip
 # dario.cat/mergo v1.0.0
@@ -599,7 +599,7 @@ github.com/google/go-cmp/cmp/internal/value
 ## explicit; go 1.12
 github.com/google/gofuzz
 github.com/google/gofuzz/bytesource
-# github.com/google/pprof v0.0.0-20240402174815-29b9bb013b0f
+# github.com/google/pprof v0.0.0-20240409012703-83162a5b38cd
 ## explicit; go 1.19
 github.com/google/pprof/profile
 # github.com/google/uuid v1.6.0
@@ -639,7 +639,7 @@ github.com/json-iterator/go
 # github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 ## explicit
 github.com/kardianos/osext
-# github.com/klauspost/compress v1.17.7
+# github.com/klauspost/compress v1.17.8
 ## explicit; go 1.20
 github.com/klauspost/compress
 github.com/klauspost/compress/fse
@@ -961,7 +961,7 @@ golang.org/x/crypto/openpgp/errors
 golang.org/x/crypto/openpgp/packet
 golang.org/x/crypto/openpgp/s2k
 golang.org/x/crypto/pbkdf2
-# golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0
+# golang.org/x/exp v0.0.0-20240409090435-93d18d7e34b8
 ## explicit; go 1.20
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
@@ -1084,7 +1084,7 @@ google.golang.org/genproto/googleapis/api/httpbody
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.63.0
+# google.golang.org/grpc v1.63.2
 ## explicit; go 1.19
 google.golang.org/grpc
 google.golang.org/grpc/attributes
