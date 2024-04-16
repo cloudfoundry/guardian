@@ -9,6 +9,8 @@ replace (
 	github.com/cloudfoundry/gosigar => github.com/cloudfoundry/gosigar v1.3.45
 	// force go-runc back to 1.0.0 since runc 1.7.x is incompatible with anything newer
 	github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
+	// force otelgrpc back to 0.45.0 since otel v.1.19.0 is not comptible with anything newer
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.45.0
 	// force otel back to 1.19 since containerd 1.7.x is incompatible with anything newer
 	go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.19.0
 	go.opentelemetry.io/otel/metric => go.opentelemetry.io/otel/metric v1.19.0
@@ -108,7 +110,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20240409012703-83162a5b38cd // indirect
+	github.com/google/pprof v0.0.0-20240415144954-be81aee2d733 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
@@ -138,7 +140,7 @@ require (
 	github.com/openzipkin/zipkin-go v0.4.2 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
-	github.com/prometheus/client_model v0.3.0 // indirect
+	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
