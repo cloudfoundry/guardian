@@ -20,7 +20,5 @@ apparmor_parser -r ../../jobs/garden/templates/config/garden-default
 go run github.com/onsi/ginkgo/v2/ginkgo ${@}
 #containerd
 CONTAINERD_ENABLED=true go run github.com/onsi/ginkgo/v2/ginkgo ${@}
-#containerd with containerd-processes
-CONTAINERD_FOR_PROCESSES_ENABLED=true CONTAINERD_ENABLED=true go run github.com/onsi/ginkgo/v2/ginkgo ${@}
-#containerd with containerd-processes and cpu-throttling
-CONTAINERD_FOR_PROCESSES_ENABLED=true CONTAINERD_ENABLED=true CPU_THROTTLING_ENABLED=true go run github.com/onsi/ginkgo/v2/ginkgo ${@}
+#containerd and cpu-throttling
+CONTAINERD_ENABLED=true CPU_THROTTLING_ENABLED=true go run github.com/onsi/ginkgo/v2/ginkgo ${@}
