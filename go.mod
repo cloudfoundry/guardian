@@ -33,7 +33,7 @@ require (
 	github.com/cloudfoundry/gosigar v1.3.54
 	github.com/containerd/containerd v1.7.15
 	github.com/containerd/typeurl/v2 v2.1.1
-	github.com/docker/docker v26.0.1+incompatible
+	github.com/docker/docker v26.0.2+incompatible
 	github.com/eapache/go-resiliency v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jessevdk/go-flags v1.5.1-0.20210607101731-3927b71304df
