@@ -19,15 +19,15 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.0.0-20240416163156-1ff6cb24bed7
+	code.cloudfoundry.org/archiver v0.0.0-20240418163434-c40e99445913
 	code.cloudfoundry.org/clock v1.1.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20240417143643-6a39decd883a
-	code.cloudfoundry.org/debugserver v0.0.0-20240416163159-6daef1b4c90c
-	code.cloudfoundry.org/garden v0.0.0-20240416184759-ae39d12cc541
+	code.cloudfoundry.org/debugserver v0.0.0-20240418163436-96a22b512925
+	code.cloudfoundry.org/garden v0.0.0-20240418185000-86dc18318d57
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20240416184931-863a920e3a7a
 	code.cloudfoundry.org/lager/v3 v3.0.3
-	code.cloudfoundry.org/localip v0.0.0-20240416163151-0c7ee3b63ec1
+	code.cloudfoundry.org/localip v0.0.0-20240418163417-db5b659080e9
 	github.com/BurntSushi/toml v1.3.2
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.54
@@ -42,7 +42,7 @@ require (
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/onsi/ginkgo/v2 v2.17.1
-	github.com/onsi/gomega v1.32.0
+	github.com/onsi/gomega v1.33.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/opencontainers/runc v1.1.12

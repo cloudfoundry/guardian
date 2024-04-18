@@ -1,4 +1,4 @@
-# code.cloudfoundry.org/archiver v0.0.0-20240416163156-1ff6cb24bed7
+# code.cloudfoundry.org/archiver v0.0.0-20240418163434-c40e99445913
 ## explicit; go 1.20
 code.cloudfoundry.org/archiver/extractor/test_helper
 # code.cloudfoundry.org/clock v1.1.0
@@ -12,10 +12,10 @@ code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.0.0-20240416163159-6daef1b4c90c
+# code.cloudfoundry.org/debugserver v0.0.0-20240418163436-96a22b512925
 ## explicit; go 1.19
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20240416184759-ae39d12cc541 => ../garden
+# code.cloudfoundry.org/garden v0.0.0-20240418185000-86dc18318d57 => ../garden
 ## explicit; go 1.20
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
@@ -40,7 +40,7 @@ code.cloudfoundry.org/lager/v3/chug
 code.cloudfoundry.org/lager/v3/internal/truncate
 code.cloudfoundry.org/lager/v3/lagerctx
 code.cloudfoundry.org/lager/v3/lagertest
-# code.cloudfoundry.org/localip v0.0.0-20240416163151-0c7ee3b63ec1
+# code.cloudfoundry.org/localip v0.0.0-20240418163417-db5b659080e9
 ## explicit; go 1.20
 code.cloudfoundry.org/localip
 # dario.cat/mergo v1.0.0
@@ -730,7 +730,7 @@ github.com/onsi/ginkgo/v2/internal/parallel_support
 github.com/onsi/ginkgo/v2/internal/testingtproxy
 github.com/onsi/ginkgo/v2/reporters
 github.com/onsi/ginkgo/v2/types
-# github.com/onsi/gomega v1.32.0
+# github.com/onsi/gomega v1.33.0
 ## explicit; go 1.20
 github.com/onsi/gomega
 github.com/onsi/gomega/format
