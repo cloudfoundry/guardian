@@ -3,15 +3,15 @@ module code.cloudfoundry.org/grootfs
 go 1.20
 
 require (
-	code.cloudfoundry.org/commandrunner v0.0.0-20240417143643-6a39decd883a
-	code.cloudfoundry.org/idmapper v0.0.0-20240416184931-863a920e3a7a
+	code.cloudfoundry.org/commandrunner v0.0.0-20240419143856-d3eb31508218
+	code.cloudfoundry.org/idmapper v0.0.0-20240418185114-a130518571e5
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20240311165458-423aa0d4dfc8
 	github.com/containers/image/v5 v5.30.0
 	github.com/containers/storage v1.53.0
 	github.com/docker/distribution v2.8.3+incompatible
-	github.com/docker/docker v26.0.1+incompatible
+	github.com/docker/docker v26.0.2+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/onsi/ginkgo/v2 v2.17.1
 	github.com/onsi/gomega v1.33.0
