@@ -21,11 +21,11 @@ replace (
 require (
 	code.cloudfoundry.org/archiver v0.0.0-20240418163434-c40e99445913
 	code.cloudfoundry.org/clock v1.1.0
-	code.cloudfoundry.org/commandrunner v0.0.0-20240417143643-6a39decd883a
+	code.cloudfoundry.org/commandrunner v0.0.0-20240419143856-d3eb31508218
 	code.cloudfoundry.org/debugserver v0.0.0-20240418163436-96a22b512925
 	code.cloudfoundry.org/garden v0.0.0-20240418185000-86dc18318d57
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240416184931-863a920e3a7a
+	code.cloudfoundry.org/idmapper v0.0.0-20240418185114-a130518571e5
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	code.cloudfoundry.org/localip v0.0.0-20240418163417-db5b659080e9
 	github.com/BurntSushi/toml v1.3.2
@@ -33,7 +33,7 @@ require (
 	github.com/cloudfoundry/gosigar v1.3.54
 	github.com/containerd/containerd v1.7.15
 	github.com/containerd/typeurl/v2 v2.1.1
-	github.com/docker/docker v26.0.1+incompatible
+	github.com/docker/docker v26.0.2+incompatible
 	github.com/eapache/go-resiliency v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jessevdk/go-flags v1.5.1-0.20210607101731-3927b71304df
@@ -62,7 +62,7 @@ require (
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20231105174938-2b5cbb29f3e2 // indirect
-	github.com/Microsoft/go-winio v0.6.1 // indirect
+	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.12.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
