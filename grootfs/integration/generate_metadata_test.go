@@ -22,8 +22,6 @@ var _ = Describe("GenerateVolumeSizeMetadata", func() {
 	)
 
 	BeforeEach(func() {
-		integration.SkipIfNonRoot(GrootfsTestUid)
-
 		Runner = Runner.WithStore(StorePath)
 
 		workDir, err := os.Getwd()

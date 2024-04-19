@@ -138,11 +138,7 @@ var CreateCommand = cli.Command{
 			return cli.Exit(err.Error(), 1)
 		}
 
-		rootless := os.Getuid() != 0
 		var unmounter overlayxfs.Unmounter = mount.RootfulUnmounter{}
-		if rootless {
-			unmounter = mount.RootlessUnmounter{}
-		}
 		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, unmounter, loopback.NewNoopDirectIO())
 		metricsEmitter := metrics.NewEmitter(logger, cfg.MetronEndpoint)
 

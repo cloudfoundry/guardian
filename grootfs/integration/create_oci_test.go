@@ -99,7 +99,6 @@ var _ = Describe("Create with OCI images", func() {
 
 	Context("when the image has a hardlink", func() {
 		BeforeEach(func() {
-			integration.SkipIfNonRoot(GrootfsTestUid)
 			baseImageURL = integration.String2URL(fmt.Sprintf("oci:///%s/assets/oci-test-image/garden-rootfs", workDir))
 		})
 
@@ -389,7 +388,6 @@ var _ = Describe("Create with OCI images", func() {
 
 	Context("when a layer is an uncompressed blob", func() {
 		BeforeEach(func() {
-			integration.SkipIfNonRoot(GrootfsTestUid)
 			baseImageURL = integration.String2URL(fmt.Sprintf("oci:///%s/assets/oci-test-image/tar-layer:latest", workDir))
 		})
 

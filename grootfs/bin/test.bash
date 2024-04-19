@@ -18,4 +18,3 @@ export GROOTFS_USER="nonroot"
 # shellcheck disable=SC2068
 # Double-quoting array expansion here causes ginkgo to fail
 GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 go run github.com/onsi/ginkgo/v2/ginkgo ${@}
-GROOTFS_TEST_UID=5000 GROOTFS_TEST_GID=5000 go run github.com/onsi/ginkgo/v2/ginkgo ${@}

@@ -160,24 +160,9 @@ var _ = Describe("Stats", func() {
 			})
 
 			Context("when running as root user", func() {
-				BeforeEach(func() {
-					integration.SkipIfNonRoot(GrootfsTestUid)
-				})
-
 				It("succeeds", func() {
 					_, err := runner.Stats(filepath.Dir(containerSpec.Root.Path))
 					Expect(err).NotTo(HaveOccurred())
-				})
-			})
-
-			Context("when running as non-root user", func() {
-				BeforeEach(func() {
-					integration.SkipIfRoot(GrootfsTestUid)
-				})
-
-				It("returns an error", func() {
-					_, err := runner.Stats(filepath.Dir(containerSpec.Root.Path))
-					Expect(err.Error()).To(ContainSubstring("missing the setuid bit"))
 				})
 			})
 		})
