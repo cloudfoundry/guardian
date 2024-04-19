@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	"golang.org/x/sys/unix"
 )
 
 var _ = Describe("gdn setup", func() {
@@ -94,28 +93,6 @@ var _ = Describe("gdn setup", func() {
 			contentLines := strings.Split(strings.TrimSpace(content), "\n")
 			Expect(contentLines).To(HaveLen(len(expectedAllowedDevices)))
 			Expect(contentLines).To(ConsistOf(expectedAllowedDevices))
-		})
-
-		Context("when setting up for rootless", func() {
-			BeforeEach(func() {
-				setupArgs = append(setupArgs, "--rootless-uid", idToStr(unprivilegedUID), "--rootless-gid", idToStr(unprivilegedGID))
-			})
-
-			It("chowns the garden cgroup dir to the rootless user for each subsystem", func() {
-				subsystems, err := os.ReadDir(cgroupsRoot)
-				Expect(err).NotTo(HaveOccurred())
-
-				for _, subsystem := range subsystems {
-					path, err := cgrouper.GetCGroupPath(cgroupsRoot, subsystem.Name(), tag, false, cpuThrottlingEnabled())
-					Expect(path).To(BeADirectory())
-					Expect(err).NotTo(HaveOccurred())
-
-					var stat unix.Stat_t
-					Expect(unix.Stat(path, &stat)).To(Succeed())
-					Expect(stat.Uid).To(Equal(unprivilegedUID), "subsystem: "+subsystem.Name())
-					Expect(stat.Gid).To(Equal(unprivilegedGID))
-				}
-			})
 		})
 
 		Context("when CPU throttling is enabled", func() {

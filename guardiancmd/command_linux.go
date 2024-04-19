@@ -84,11 +84,7 @@ func wireEnvFunc() processes.EnvFunc {
 }
 
 func (f *LinuxFactory) WireMkdirer() runrunc.Mkdirer {
-	if runningAsRoot() {
-		return bundlerules.MkdirChowner{Command: preparerootfs.Command, CommandRunner: f.commandRunner}
-	}
-
-	return NoopMkdirer{}
+	return bundlerules.MkdirChowner{Command: preparerootfs.Command, CommandRunner: f.commandRunner}
 }
 
 type NoopMkdirer struct{}
@@ -118,17 +114,7 @@ func (f *LinuxFactory) WireCgroupsStarter(logger lager.Logger) gardener.Starter 
 }
 
 func (cmd *SetupCommand) WireCgroupsStarter(logger lager.Logger) gardener.Starter {
-	starter := createCgroupsStarter(logger, cmd.Tag, rundmc.IsMountPoint, cmd.EnableCPUThrottling)
-
-	if cmd.RootlessUID != nil {
-		starter = starter.WithUID(*cmd.RootlessUID)
-	}
-
-	if cmd.RootlessGID != nil {
-		starter = starter.WithGID(*cmd.RootlessGID)
-	}
-
-	return starter
+	return createCgroupsStarter(logger, cmd.Tag, rundmc.IsMountPoint, cmd.EnableCPUThrottling)
 }
 
 func createCgroupsStarter(logger lager.Logger, tag string, mountPointChecker rundmc.MountPointChecker, cpuThrottlingEnabled bool) *gardencgroups.CgroupStarter {
@@ -207,10 +193,7 @@ func initBindMountAndPath(initPathOnHost string) (specs.Mount, string) {
 }
 
 func defaultBindMounts() []specs.Mount {
-	devptsGid := 0
-	if runningAsRoot() {
-		devptsGid = 5
-	}
+	devptsGid := 5
 
 	return []specs.Mount{
 		{Destination: "/sys", Type: "sysfs", Source: "sysfs", Options: []string{"noexec", "nosuid", "nodev", "ro"}},

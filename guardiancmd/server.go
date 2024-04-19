@@ -211,10 +211,6 @@ func runCommand(cmd *exec.Cmd) {
 	}
 }
 
-func runningAsRoot() bool {
-	return os.Geteuid() == 0
-}
-
 func restoreUnversionedAssets(assetsDir string) (string, error) {
 	linuxAssetsDir := filepath.Join(assetsDir, "linux")
 
