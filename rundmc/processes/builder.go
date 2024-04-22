@@ -21,23 +21,18 @@ func (fn EnvFunc) EnvFor(bndl goci.Bndl, spec garden.ProcessSpec, containerUID i
 
 type ProcBuilder struct {
 	envDeterminer  EnvDeterminer
-	isRootless     bool
 	nonRootMaxCaps []string
 }
 
-func NewBuilder(envDeterminer EnvDeterminer, isRootless bool, nonRootMaxCaps []string) *ProcBuilder {
+func NewBuilder(envDeterminer EnvDeterminer, nonRootMaxCaps []string) *ProcBuilder {
 	return &ProcBuilder{
 		envDeterminer:  envDeterminer,
-		isRootless:     isRootless,
 		nonRootMaxCaps: nonRootMaxCaps,
 	}
 }
 
 func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, user *users.ExecUser) *specs.Process {
-	additionalGIDs := []uint32{}
-	if !p.isRootless {
-		additionalGIDs = toUint32Slice(user.Sgids)
-	}
+	additionalGIDs := toUint32Slice(user.Sgids)
 	return &specs.Process{
 		Args:        append([]string{spec.Path}, spec.Args...),
 		ConsoleSize: console(spec),

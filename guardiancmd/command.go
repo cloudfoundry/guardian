@@ -579,7 +579,7 @@ func (cmd *CommonCommand) wireContainerizer(
 	bndlLoader := &goci.BndlLoader{}
 	depot := cmd.wireDepot(bundleSaver, bndlLoader)
 
-	processBuilder := processes.NewBuilder(wireEnvFunc(), !runningAsRoot(), nonRootMaxCaps)
+	processBuilder := processes.NewBuilder(wireEnvFunc(), nonRootMaxCaps)
 
 	cmdRunner := factory.CommandRunner()
 	runcLogRunner := runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile)
@@ -715,10 +715,6 @@ func (cmd *CommonCommand) wireMetronNotifier(log lager.Logger, metricsProvider m
 func (cmd *CommonCommand) idMappings() (idmapper.MappingList, idmapper.MappingList) {
 	containerRootUID := mustGetMaxValidUID()
 	containerRootGID := mustGetMaxValidUID()
-	if !runningAsRoot() {
-		containerRootUID = os.Geteuid()
-		containerRootGID = os.Getegid()
-	}
 
 	cmd.calculateDefaultMappingLengths(containerRootUID, containerRootGID)
 

@@ -14,7 +14,6 @@ import (
 var _ = Describe("ProcBuilder", func() {
 	var (
 		envDeterminer  *fakes.FakeEnvDeterminer
-		isRootless     bool
 		nonRootMaxCaps = []string{"CAP_FOO", "CAP_BAZ"}
 
 		procBuilder *processes.ProcBuilder
@@ -27,7 +26,6 @@ var _ = Describe("ProcBuilder", func() {
 	BeforeEach(func() {
 		envDeterminer = new(fakes.FakeEnvDeterminer)
 		envDeterminer.EnvForReturns([]string{"ENV"})
-		isRootless = false
 
 		bndl = goci.Bundle().
 			WithHostname("some-hostname").
@@ -79,7 +77,7 @@ var _ = Describe("ProcBuilder", func() {
 		var preparedProc *specs.Process
 
 		JustBeforeEach(func() {
-			procBuilder = processes.NewBuilder(envDeterminer, isRootless, nonRootMaxCaps)
+			procBuilder = processes.NewBuilder(envDeterminer, nonRootMaxCaps)
 			preparedProc = procBuilder.BuildProcess(bndl, processSpec, user)
 		})
 
@@ -188,16 +186,6 @@ var _ = Describe("ProcBuilder", func() {
 					Expect(preparedProc.User.UID).To(Equal(uint32(1)))
 					Expect(preparedProc.User.GID).To(Equal(uint32(2)))
 					Expect(preparedProc.User.AdditionalGids).To(Equal([]uint32{5, 6, 7}))
-				})
-
-				When("garden is running as rootless", func() {
-					BeforeEach(func() {
-						isRootless = true
-					})
-
-					It("passes an empty supplementary group list", func() {
-						Expect(preparedProc.User.AdditionalGids).To(BeEmpty())
-					})
 				})
 
 				It("passes the username, which is used on Windows", func() {
