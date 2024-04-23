@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"code.cloudfoundry.org/grootfs/integration"
 	grootfsRunner "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	. "github.com/onsi/ginkgo/v2"
@@ -18,7 +17,6 @@ var _ = Describe("Delete Store", func() {
 		storePath string
 	)
 	BeforeEach(func() {
-		integration.SkipIfNonRoot(GrootfsTestUid)
 		tmpDir, err := os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 

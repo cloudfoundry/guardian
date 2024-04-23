@@ -72,11 +72,7 @@ var CleanCommand = cli.Command{
 
 		logger.Debug("clean-config", lager.Data{"currentConfig": cfg})
 
-		rootless := os.Getuid() != 0
 		var unmounter overlayxfs.Unmounter = mount.RootfulUnmounter{}
-		if rootless {
-			unmounter = mount.RootlessUnmounter{}
-		}
 		fsDriver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, unmounter, loopback.NewNoopDirectIO())
 
 		imageManager := imagemanagerpkg.NewImageManager(fsDriver, cfg.StorePath)

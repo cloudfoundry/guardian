@@ -52,8 +52,6 @@ var _ = Describe("Create", func() {
 	})
 
 	It("keeps the ownership and permissions", func() {
-		integration.SkipIfNonRoot(GrootfsTestUid)
-
 		containerSpec, err := Runner.Create(groot.CreateSpec{
 			BaseImageURL: integration.String2URL(baseImagePath),
 			ID:           randomImageID,

@@ -86,18 +86,6 @@ func FindGID(group string) uint32 {
 	return uint32(i)
 }
 
-func SkipIfNonRoot(uid int) {
-	if uid != 0 {
-		Skip("These tests can only run as root user. Skipping.")
-	}
-}
-
-func SkipIfRoot(uid int) {
-	if uid == 0 {
-		Skip("These tests can only run as non-root users. Skipping.")
-	}
-}
-
 func CreateFakeTardis() (string, *os.File, *os.File) {
 	tempFolder, bin, binCalledFile := CreateFakeBin("tardis")
 	testhelpers.SuidBinary(bin.Name())

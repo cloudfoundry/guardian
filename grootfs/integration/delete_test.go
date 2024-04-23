@@ -152,10 +152,6 @@ var _ = Describe("Delete", func() {
 	Context("when it fails to unmount the rootfs directory", func() {
 		var mntPoint string
 
-		BeforeEach(func() {
-			integration.SkipIfNonRoot(GrootfsTestUid)
-		})
-
 		JustBeforeEach(func() {
 			mntPoint = filepath.Join(filepath.Dir(containerSpec.Root.Path), overlayxfs.RootfsDir, "mnt")
 			Expect(os.Mkdir(mntPoint, 0700)).To(Succeed())

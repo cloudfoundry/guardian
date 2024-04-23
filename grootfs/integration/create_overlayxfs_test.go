@@ -74,30 +74,7 @@ var _ = Describe("Create (overlay-xfs only)", func() {
 					testhelpers.UnsuidBinary(tardisBin.Name())
 				})
 
-				Context("and groot is running rootless", func() {
-					BeforeEach(func() {
-						integration.SkipIfRoot(GrootfsTestUid)
-					})
-
-					It("returns a sensible error", func() {
-						_, err := Runner.WithTardisBin(tardisBin.Name()).Create(spec)
-						Expect(err.Error()).To(ContainSubstring("missing the setuid bit on tardis"))
-					})
-
-					It("doesn't leak the image dir", func() {
-						_, err := Runner.WithTardisBin(tardisBin.Name()).Create(spec)
-						Expect(err).To(HaveOccurred())
-
-						imagePath := path.Join(Runner.StorePath, "images", randomImageID)
-						Expect(imagePath).ToNot(BeAnExistingFile())
-					})
-				})
-
 				Context("but groot is running as root", func() {
-					BeforeEach(func() {
-						integration.SkipIfNonRoot(GrootfsTestUid)
-					})
-
 					It("succeeds anyway", func() {
 						_, err := Runner.WithTardisBin(tardisBin.Name()).Create(spec)
 						Expect(err).NotTo(HaveOccurred())
