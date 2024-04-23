@@ -19,21 +19,21 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.0.0-20240418163434-c40e99445913
+	code.cloudfoundry.org/archiver v0.0.0-20240423163804-2a617de174c0
 	code.cloudfoundry.org/clock v1.1.0
-	code.cloudfoundry.org/commandrunner v0.0.0-20240419143856-d3eb31508218
-	code.cloudfoundry.org/debugserver v0.0.0-20240418163436-96a22b512925
+	code.cloudfoundry.org/commandrunner v0.0.0-20240423144235-215bc524215e
+	code.cloudfoundry.org/debugserver v0.0.0-20240423163805-e19b7d90601d
 	code.cloudfoundry.org/garden v0.0.0-20240422185338-b6a7119e7b1e
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240418185114-a130518571e5
+	code.cloudfoundry.org/idmapper v0.0.0-20240422185453-3465c44c6a2e
 	code.cloudfoundry.org/lager/v3 v3.0.3
-	code.cloudfoundry.org/localip v0.0.0-20240418163417-db5b659080e9
+	code.cloudfoundry.org/localip v0.0.0-20240423163814-d79f0848b81a
 	github.com/BurntSushi/toml v1.3.2
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.55
 	github.com/containerd/containerd v1.7.15
 	github.com/containerd/typeurl/v2 v2.1.1
-	github.com/docker/docker v26.0.2+incompatible
+	github.com/docker/docker v26.1.0+incompatible
 	github.com/eapache/go-resiliency v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jessevdk/go-flags v1.5.1-0.20210607101731-3927b71304df
