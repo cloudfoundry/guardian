@@ -19,19 +19,19 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.0.0-20240423163804-2a617de174c0
+	code.cloudfoundry.org/archiver v0.0.0-20240425163902-8b2a0fbf664d
 	code.cloudfoundry.org/clock v1.1.0
-	code.cloudfoundry.org/commandrunner v0.0.0-20240423144235-215bc524215e
-	code.cloudfoundry.org/debugserver v0.0.0-20240423163805-e19b7d90601d
+	code.cloudfoundry.org/commandrunner v0.0.0-20240425144352-90fe6552927d
+	code.cloudfoundry.org/debugserver v0.0.0-20240425163856-a2926feff29c
 	code.cloudfoundry.org/garden v0.0.0-20240422185338-b6a7119e7b1e
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20240422185453-3465c44c6a2e
 	code.cloudfoundry.org/lager/v3 v3.0.3
-	code.cloudfoundry.org/localip v0.0.0-20240423163814-d79f0848b81a
+	code.cloudfoundry.org/localip v0.0.0-20240425163849-4800a50a1fc0
 	github.com/BurntSushi/toml v1.3.2
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.55
-	github.com/containerd/containerd v1.7.15
+	github.com/containerd/containerd v1.7.16
 	github.com/containerd/typeurl/v2 v2.1.1
 	github.com/docker/docker v26.1.0+incompatible
 	github.com/eapache/go-resiliency v1.6.0
@@ -83,7 +83,7 @@ require (
 	github.com/containerd/go-runc v1.1.0 // indirect
 	github.com/containerd/imgcrypt v1.1.7 // indirect
 	github.com/containerd/log v0.1.0 // indirect
-	github.com/containerd/nri v0.6.0 // indirect
+	github.com/containerd/nri v0.6.1 // indirect
 	github.com/containerd/ttrpc v1.2.3 // indirect
 	github.com/containerd/typeurl v1.0.2 // indirect
 	github.com/containerd/zfs v1.1.0 // indirect
@@ -110,7 +110,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20240422182052-72c8669ad3e7 // indirect
+	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
@@ -193,8 +193,8 @@ require (
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
-	tags.cncf.io/container-device-interface v0.6.2 // indirect
-	tags.cncf.io/container-device-interface/specs-go v0.6.0 // indirect
+	tags.cncf.io/container-device-interface v0.7.2 // indirect
+	tags.cncf.io/container-device-interface/specs-go v0.7.0 // indirect
 )
 
 replace (

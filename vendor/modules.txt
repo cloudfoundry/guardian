@@ -1,18 +1,18 @@
-# code.cloudfoundry.org/archiver v0.0.0-20240423163804-2a617de174c0
+# code.cloudfoundry.org/archiver v0.0.0-20240425163902-8b2a0fbf664d
 ## explicit; go 1.20
 code.cloudfoundry.org/archiver/extractor/test_helper
 # code.cloudfoundry.org/clock v1.1.0
 ## explicit; go 1.20
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
-# code.cloudfoundry.org/commandrunner v0.0.0-20240423144235-215bc524215e
+# code.cloudfoundry.org/commandrunner v0.0.0-20240425144352-90fe6552927d
 ## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.0.0-20240423163805-e19b7d90601d
+# code.cloudfoundry.org/debugserver v0.0.0-20240425163856-a2926feff29c
 ## explicit; go 1.19
 code.cloudfoundry.org/debugserver
 # code.cloudfoundry.org/garden v0.0.0-20240422185338-b6a7119e7b1e => ../garden
@@ -40,7 +40,7 @@ code.cloudfoundry.org/lager/v3/chug
 code.cloudfoundry.org/lager/v3/internal/truncate
 code.cloudfoundry.org/lager/v3/lagerctx
 code.cloudfoundry.org/lager/v3/lagertest
-# code.cloudfoundry.org/localip v0.0.0-20240423163814-d79f0848b81a
+# code.cloudfoundry.org/localip v0.0.0-20240425163849-4800a50a1fc0
 ## explicit; go 1.20
 code.cloudfoundry.org/localip
 # dario.cat/mergo v1.0.0
@@ -182,7 +182,7 @@ github.com/containerd/cgroups/v3/cgroup2/stats
 # github.com/containerd/console v1.0.4
 ## explicit; go 1.13
 github.com/containerd/console
-# github.com/containerd/containerd v1.7.15
+# github.com/containerd/containerd v1.7.16
 ## explicit; go 1.21
 github.com/containerd/containerd
 github.com/containerd/containerd/api/events
@@ -463,7 +463,7 @@ github.com/containerd/imgcrypt/images/encryption
 # github.com/containerd/log v0.1.0
 ## explicit; go 1.20
 github.com/containerd/log
-# github.com/containerd/nri v0.6.0
+# github.com/containerd/nri v0.6.1
 ## explicit; go 1.19
 github.com/containerd/nri
 github.com/containerd/nri/pkg/adaptation
@@ -598,7 +598,7 @@ github.com/google/go-cmp/cmp/internal/value
 ## explicit; go 1.12
 github.com/google/gofuzz
 github.com/google/gofuzz/bytesource
-# github.com/google/pprof v0.0.0-20240422182052-72c8669ad3e7
+# github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6
 ## explicit; go 1.19
 github.com/google/pprof/profile
 # github.com/google/uuid v1.6.0
@@ -1311,14 +1311,13 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# tags.cncf.io/container-device-interface v0.6.2
-## explicit; go 1.19
-tags.cncf.io/container-device-interface/internal/multierror
+# tags.cncf.io/container-device-interface v0.7.2
+## explicit; go 1.20
 tags.cncf.io/container-device-interface/internal/validation
 tags.cncf.io/container-device-interface/internal/validation/k8s
 tags.cncf.io/container-device-interface/pkg/cdi
 tags.cncf.io/container-device-interface/pkg/parser
-# tags.cncf.io/container-device-interface/specs-go v0.6.0
+# tags.cncf.io/container-device-interface/specs-go v0.7.0
 ## explicit; go 1.19
 tags.cncf.io/container-device-interface/specs-go
 # github.com/Microsoft/hcsshim => github.com/Microsoft/hcsshim v0.11.4
