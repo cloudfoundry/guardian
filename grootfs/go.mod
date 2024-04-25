@@ -3,7 +3,7 @@ module code.cloudfoundry.org/grootfs
 go 1.20
 
 require (
-	code.cloudfoundry.org/commandrunner v0.0.0-20240423144235-215bc524215e
+	code.cloudfoundry.org/commandrunner v0.0.0-20240425144352-90fe6552927d
 	code.cloudfoundry.org/idmapper v0.0.0-20240422185453-3465c44c6a2e
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	github.com/cloudfoundry/dropsonde v1.1.0
@@ -39,7 +39,7 @@ require (
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/pprof v0.0.0-20240422182052-72c8669ad3e7 // indirect
+	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
