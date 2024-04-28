@@ -3,7 +3,7 @@ module code.cloudfoundry.org/grootfs
 go 1.20
 
 require (
-	code.cloudfoundry.org/commandrunner v0.0.0-20240425144352-90fe6552927d
+	code.cloudfoundry.org/commandrunner v0.0.0-20240428144643-688921cfed79
 	code.cloudfoundry.org/idmapper v0.0.0-20240425185827-4196281a8fc3
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	github.com/cloudfoundry/dropsonde v1.1.0
@@ -13,7 +13,7 @@ require (
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/docker v26.1.0+incompatible
 	github.com/docker/go-units v0.5.0
-	github.com/onsi/ginkgo/v2 v2.17.1
+	github.com/onsi/ginkgo/v2 v2.17.2
 	github.com/onsi/gomega v1.33.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
@@ -36,7 +36,7 @@ require (
 	github.com/docker/docker-credential-helpers v0.8.1 // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
-	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
+	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
