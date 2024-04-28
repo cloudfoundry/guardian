@@ -1,18 +1,18 @@
-# code.cloudfoundry.org/archiver v0.0.0-20240425163902-8b2a0fbf664d
+# code.cloudfoundry.org/archiver v0.0.0-20240428164227-f3f7fe4af24d
 ## explicit; go 1.20
 code.cloudfoundry.org/archiver/extractor/test_helper
 # code.cloudfoundry.org/clock v1.1.0
 ## explicit; go 1.20
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
-# code.cloudfoundry.org/commandrunner v0.0.0-20240425144352-90fe6552927d
+# code.cloudfoundry.org/commandrunner v0.0.0-20240428144643-688921cfed79
 ## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.0.0-20240425163856-a2926feff29c
+# code.cloudfoundry.org/debugserver v0.0.0-20240428164226-989147bfd604
 ## explicit; go 1.19
 code.cloudfoundry.org/debugserver
 # code.cloudfoundry.org/garden v0.0.0-20240425185711-86bce9cbe65b => ../garden
@@ -40,7 +40,7 @@ code.cloudfoundry.org/lager/v3/chug
 code.cloudfoundry.org/lager/v3/internal/truncate
 code.cloudfoundry.org/lager/v3/lagerctx
 code.cloudfoundry.org/lager/v3/lagertest
-# code.cloudfoundry.org/localip v0.0.0-20240425163849-4800a50a1fc0
+# code.cloudfoundry.org/localip v0.0.0-20240428164227-14cae1a74938
 ## explicit; go 1.20
 code.cloudfoundry.org/localip
 # dario.cat/mergo v1.0.0
@@ -568,9 +568,9 @@ github.com/go-logr/logr/funcr
 # github.com/go-logr/stdr v1.2.2
 ## explicit; go 1.16
 github.com/go-logr/stdr
-# github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572
-## explicit; go 1.13
-github.com/go-task/slim-sprig
+# github.com/go-task/slim-sprig/v3 v3.0.0
+## explicit; go 1.20
+github.com/go-task/slim-sprig/v3
 # github.com/godbus/dbus/v5 v5.1.0
 ## explicit; go 1.12
 github.com/godbus/dbus/v5
@@ -708,7 +708,7 @@ github.com/mrunalp/fileutils
 # github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 ## explicit
 github.com/nu7hatch/gouuid
-# github.com/onsi/ginkgo/v2 v2.17.1
+# github.com/onsi/ginkgo/v2 v2.17.2
 ## explicit; go 1.20
 github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config

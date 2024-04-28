@@ -19,15 +19,15 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.0.0-20240425163902-8b2a0fbf664d
+	code.cloudfoundry.org/archiver v0.0.0-20240428164227-f3f7fe4af24d
 	code.cloudfoundry.org/clock v1.1.0
-	code.cloudfoundry.org/commandrunner v0.0.0-20240425144352-90fe6552927d
-	code.cloudfoundry.org/debugserver v0.0.0-20240425163856-a2926feff29c
+	code.cloudfoundry.org/commandrunner v0.0.0-20240428144643-688921cfed79
+	code.cloudfoundry.org/debugserver v0.0.0-20240428164226-989147bfd604
 	code.cloudfoundry.org/garden v0.0.0-20240425185711-86bce9cbe65b
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20240425185827-4196281a8fc3
 	code.cloudfoundry.org/lager/v3 v3.0.3
-	code.cloudfoundry.org/localip v0.0.0-20240425163849-4800a50a1fc0
+	code.cloudfoundry.org/localip v0.0.0-20240428164227-14cae1a74938
 	github.com/BurntSushi/toml v1.3.2
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.56
@@ -41,7 +41,7 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.8.1
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo/v2 v2.17.1
+	github.com/onsi/ginkgo/v2 v2.17.2
 	github.com/onsi/gomega v1.33.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
@@ -103,7 +103,7 @@ require (
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
+	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
