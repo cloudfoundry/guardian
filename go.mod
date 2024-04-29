@@ -22,10 +22,10 @@ require (
 	code.cloudfoundry.org/archiver v0.0.0-20240428164227-f3f7fe4af24d
 	code.cloudfoundry.org/clock v1.1.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20240428144643-688921cfed79
-	code.cloudfoundry.org/debugserver v0.0.0-20240428164226-989147bfd604
-	code.cloudfoundry.org/garden v0.0.0-20240425185711-86bce9cbe65b
+	code.cloudfoundry.org/debugserver v0.0.0-20240429164425-f08859865117
+	code.cloudfoundry.org/garden v0.0.0-20240428190028-f286c5f8858f
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240425185827-4196281a8fc3
+	code.cloudfoundry.org/idmapper v0.0.0-20240428190142-70fb13fc9f28
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	code.cloudfoundry.org/localip v0.0.0-20240428164227-14cae1a74938
 	github.com/BurntSushi/toml v1.3.2
@@ -137,7 +137,7 @@ require (
 	github.com/mrunalp/fileutils v0.5.1 // indirect
 	github.com/opencontainers/runtime-tools v0.9.1-0.20221107090550-2e043c6bd626 // indirect
 	github.com/opencontainers/selinux v1.11.0 // indirect
-	github.com/openzipkin/zipkin-go v0.4.2 // indirect
+	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect

@@ -729,8 +729,8 @@ code.cloudfoundry.org/clock v1.1.0 h1:XLzC6W3Ah/Y7ht1rmZ6+QfPdt1iGWEAAtIZXgiaj57
 code.cloudfoundry.org/clock v1.1.0/go.mod h1:yA3fxddT9RINQL2XHS7PS+OXxKCGhfrZmlNUCIM6AKo=
 code.cloudfoundry.org/commandrunner v0.0.0-20240428144643-688921cfed79 h1:qrGNlfI+XKATBjDTefXcn5WWr5d2UJQOCzJseoskNqI=
 code.cloudfoundry.org/commandrunner v0.0.0-20240428144643-688921cfed79/go.mod h1:42CgfoVaijm+ibB/HcoxP0DG2WB6HuBSvT20VPXBrw0=
-code.cloudfoundry.org/debugserver v0.0.0-20240428164226-989147bfd604 h1:yAQfy83TxYD4q3ZMjWHekAfE8rU0rAlavFPZguUUhUY=
-code.cloudfoundry.org/debugserver v0.0.0-20240428164226-989147bfd604/go.mod h1:ropTKP5KKxQt/sbuXQJjQBWdmWSRXDrtqZd4+rtGY5s=
+code.cloudfoundry.org/debugserver v0.0.0-20240429164425-f08859865117 h1:3g+Mboc0UPL9E4tJ6C816aTABKYw7W/qeAI8H8YM+u4=
+code.cloudfoundry.org/debugserver v0.0.0-20240429164425-f08859865117/go.mod h1:UH55C0ZLyCCc7e9tglxMobRy9w+6dJLWrbHgLJ90Ugk=
 code.cloudfoundry.org/lager/v3 v3.0.3 h1:/UTmadZfIaKuT/whEinSxK1mzRfNu1uPfvjFfGqiwzM=
 code.cloudfoundry.org/lager/v3 v3.0.3/go.mod h1:Zn5q1SrIuuHjEUE7xerMKt3ztunrJQCZETAo7rV0CH8=
 code.cloudfoundry.org/localip v0.0.0-20240428164227-14cae1a74938 h1:ctiLBJ0xj794HWg74fA/nkUu2uypV1alpoeyGpPYgx0=
@@ -1724,8 +1724,8 @@ github.com/opencontainers/selinux v1.10.1/go.mod h1:2i0OySw99QjzBBQByd1Gr9gSjvuh
 github.com/opencontainers/selinux v1.11.0 h1:+5Zbo97w3Lbmb3PeqQtpmTkMwsW5nRI3YaLpt7tQ7oU=
 github.com/opencontainers/selinux v1.11.0/go.mod h1:E5dMC3VPuVvVHDYmi78qvhJp8+M586T4DlDRYpFkyec=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
-github.com/openzipkin/zipkin-go v0.4.2 h1:zjqfqHjUpPmB3c1GlCvvgsM1G4LkvqQbBDueDOCg/jA=
-github.com/openzipkin/zipkin-go v0.4.2/go.mod h1:ZeVkFjuuBiSy13y8vpSDCjMi9GoI3hPpCJSBx/EYFhY=
+github.com/openzipkin/zipkin-go v0.4.3 h1:9EGwpqkgnwdEIJ+Od7QVSEIH+ocmm5nPat0G7sjsSdg=
+github.com/openzipkin/zipkin-go v0.4.3/go.mod h1:M9wCJZFWCo2RiY+o1eBCEMe0Dp2S5LDHcMZmk3RmK7c=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pelletier/go-toml v1.8.1/go.mod h1:T2/BmBdy8dvIRq1a/8aqjN41wvWlN4lrapLU/GW4pbc=
