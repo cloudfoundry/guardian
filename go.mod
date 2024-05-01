@@ -23,9 +23,9 @@ require (
 	code.cloudfoundry.org/clock v1.1.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20240430144735-3759ba9b3646
 	code.cloudfoundry.org/debugserver v0.0.0-20240430164510-a9b5a70328ed
-	code.cloudfoundry.org/garden v0.0.0-20240429190132-fe98174c77e9
+	code.cloudfoundry.org/garden v0.0.0-20240430190253-f25dfe4c5dd0
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240428190142-70fb13fc9f28
+	code.cloudfoundry.org/idmapper v0.0.0-20240430190406-bd79f8d6a48e
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	code.cloudfoundry.org/localip v0.0.0-20240430164506-a3c239b1c98e
 	github.com/BurntSushi/toml v1.3.2
