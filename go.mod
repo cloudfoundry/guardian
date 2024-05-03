@@ -19,7 +19,7 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.0.0-20240430164516-f7c0d9876a1c
+	code.cloudfoundry.org/archiver v0.0.0-20240503164829-54569192ba7c
 	code.cloudfoundry.org/clock v1.1.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20240430144735-3759ba9b3646
 	code.cloudfoundry.org/debugserver v0.0.0-20240430164510-a9b5a70328ed
@@ -92,7 +92,7 @@ require (
 	github.com/containers/ocicrypt v1.1.10 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
-	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
+	github.com/cyphar/filepath-securejoin v0.2.5 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
