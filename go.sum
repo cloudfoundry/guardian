@@ -727,8 +727,8 @@ code.cloudfoundry.org/archiver v0.0.0-20240504164959-606c5c897933 h1:TpsaHPY+9vG
 code.cloudfoundry.org/archiver v0.0.0-20240504164959-606c5c897933/go.mod h1:DUTiH3/Q1UycgrgABtwGO3N6n85u2pdPWYAG1Zy93d8=
 code.cloudfoundry.org/clock v1.1.0 h1:XLzC6W3Ah/Y7ht1rmZ6+QfPdt1iGWEAAtIZXgiaj57c=
 code.cloudfoundry.org/clock v1.1.0/go.mod h1:yA3fxddT9RINQL2XHS7PS+OXxKCGhfrZmlNUCIM6AKo=
-code.cloudfoundry.org/commandrunner v0.0.0-20240430144735-3759ba9b3646 h1:FSyiRsmCy2LEEDVMdWkOD9ktubMC6C2mMMvFqLkGEL4=
-code.cloudfoundry.org/commandrunner v0.0.0-20240430144735-3759ba9b3646/go.mod h1:zg9SihoF95wTmRGImrw5Zx2bDLCEpYA+2TXodJYJNIg=
+code.cloudfoundry.org/commandrunner v0.0.0-20240505145242-ca6ad0450b0e h1:jOFwNqpaeB67F/xrLjCAnJAk4wUiFeiT7qxw9Rf/VQU=
+code.cloudfoundry.org/commandrunner v0.0.0-20240505145242-ca6ad0450b0e/go.mod h1:6N2lUxIqSl4dbovVAPVlaBLV3XXuBMEwtwQ2AcgObMc=
 code.cloudfoundry.org/debugserver v0.0.0-20240504164949-ec4d5482b504 h1:CML09I/veaVz2KLr8aIqQpX+Cc4GV1lbBjQR+E7UMbI=
 code.cloudfoundry.org/debugserver v0.0.0-20240504164949-ec4d5482b504/go.mod h1:UYFt+GHL7cE9ib0TtMJDYIug4w1tK1TVZit6hZ5/SZM=
 code.cloudfoundry.org/lager/v3 v3.0.3 h1:/UTmadZfIaKuT/whEinSxK1mzRfNu1uPfvjFfGqiwzM=

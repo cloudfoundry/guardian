@@ -21,11 +21,11 @@ replace (
 require (
 	code.cloudfoundry.org/archiver v0.0.0-20240504164959-606c5c897933
 	code.cloudfoundry.org/clock v1.1.0
-	code.cloudfoundry.org/commandrunner v0.0.0-20240430144735-3759ba9b3646
+	code.cloudfoundry.org/commandrunner v0.0.0-20240505145242-ca6ad0450b0e
 	code.cloudfoundry.org/debugserver v0.0.0-20240504164949-ec4d5482b504
-	code.cloudfoundry.org/garden v0.0.0-20240430190253-f25dfe4c5dd0
+	code.cloudfoundry.org/garden v0.0.0-20240504190741-97e713d6ac8f
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240430190406-bd79f8d6a48e
+	code.cloudfoundry.org/idmapper v0.0.0-20240504190902-205553a87164
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	code.cloudfoundry.org/localip v0.0.0-20240504164949-b01cb2f14f10
 	github.com/BurntSushi/toml v1.3.2

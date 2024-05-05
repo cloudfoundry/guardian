@@ -5,7 +5,7 @@ code.cloudfoundry.org/archiver/extractor/test_helper
 ## explicit; go 1.20
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
-# code.cloudfoundry.org/commandrunner v0.0.0-20240430144735-3759ba9b3646
+# code.cloudfoundry.org/commandrunner v0.0.0-20240505145242-ca6ad0450b0e
 ## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
@@ -15,7 +15,7 @@ code.cloudfoundry.org/commandrunner/windows_command_runner
 # code.cloudfoundry.org/debugserver v0.0.0-20240504164949-ec4d5482b504
 ## explicit; go 1.19
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20240430190253-f25dfe4c5dd0 => ../garden
+# code.cloudfoundry.org/garden v0.0.0-20240504190741-97e713d6ac8f => ../garden
 ## explicit; go 1.20
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
@@ -30,7 +30,7 @@ code.cloudfoundry.org/garden/transport
 # code.cloudfoundry.org/grootfs v0.30.0 => ../grootfs
 ## explicit; go 1.20
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20240430190406-bd79f8d6a48e => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20240504190902-205553a87164 => ../idmapper
 ## explicit; go 1.18
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.0.3
