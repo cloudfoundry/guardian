@@ -3,8 +3,8 @@ module code.cloudfoundry.org/grootfs
 go 1.20
 
 require (
-	code.cloudfoundry.org/commandrunner v0.0.0-20240430144735-3759ba9b3646
-	code.cloudfoundry.org/idmapper v0.0.0-20240430190406-bd79f8d6a48e
+	code.cloudfoundry.org/commandrunner v0.0.0-20240505145242-ca6ad0450b0e
+	code.cloudfoundry.org/idmapper v0.0.0-20240504190902-205553a87164
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20240311165458-423aa0d4dfc8
