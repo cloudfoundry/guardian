@@ -19,15 +19,15 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.0.0-20240509165302-47ab3c8fd0e8
+	code.cloudfoundry.org/archiver v0.0.0-20240510172921-e1824a4905ba
 	code.cloudfoundry.org/clock v1.1.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20240509145649-f385c7d9a37b
-	code.cloudfoundry.org/debugserver v0.0.0-20240509165312-93e40ee13b6f
-	code.cloudfoundry.org/garden v0.0.0-20240508191051-20c24f475fba
+	code.cloudfoundry.org/debugserver v0.0.0-20240510172920-2e46c6dc69d9
+	code.cloudfoundry.org/garden v0.0.0-20240509191138-2c301b84985a
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240508191215-bc9b2962b9a2
+	code.cloudfoundry.org/idmapper v0.0.0-20240509191254-778c424cbd3c
 	code.cloudfoundry.org/lager/v3 v3.0.3
-	code.cloudfoundry.org/localip v0.0.0-20240509165301-8bc1ed51129f
+	code.cloudfoundry.org/localip v0.0.0-20240510172921-bb8a25c4a355
 	github.com/BurntSushi/toml v1.3.2
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.57
