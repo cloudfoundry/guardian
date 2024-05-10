@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	code.cloudfoundry.org/commandrunner v0.0.0-20240509145649-f385c7d9a37b
-	code.cloudfoundry.org/idmapper v0.0.0-20240508191215-bc9b2962b9a2
+	code.cloudfoundry.org/idmapper v0.0.0-20240509191254-778c424cbd3c
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20240507181428-8b8ae008ea35
