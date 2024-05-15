@@ -5,7 +5,7 @@ code.cloudfoundry.org/archiver/extractor/test_helper
 ## explicit; go 1.20
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
-# code.cloudfoundry.org/commandrunner v0.0.0-20240509145649-f385c7d9a37b
+# code.cloudfoundry.org/commandrunner v0.0.0-20240515185236-07f33b5fb036
 ## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
@@ -159,7 +159,7 @@ github.com/cloudfoundry/dropsonde/runtime_stats
 ## explicit; go 1.21
 github.com/cloudfoundry/gosigar
 github.com/cloudfoundry/gosigar/sys/windows
-# github.com/cloudfoundry/sonde-go v0.0.0-20240507181428-8b8ae008ea35
+# github.com/cloudfoundry/sonde-go v0.0.0-20240515174134-adba8bce1248
 ## explicit; go 1.17
 github.com/cloudfoundry/sonde-go/events
 # github.com/containerd/aufs v1.0.0
@@ -987,7 +987,7 @@ golang.org/x/net/internal/timeseries
 golang.org/x/net/proxy
 golang.org/x/net/trace
 golang.org/x/net/websocket
-# golang.org/x/oauth2 v0.17.0
+# golang.org/x/oauth2 v0.18.0
 ## explicit; go 1.18
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
@@ -1082,7 +1082,7 @@ google.golang.org/genproto/googleapis/api/httpbody
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.63.2
+# google.golang.org/grpc v1.64.0
 ## explicit; go 1.19
 google.golang.org/grpc
 google.golang.org/grpc/attributes
