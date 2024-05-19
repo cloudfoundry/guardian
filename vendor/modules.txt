@@ -28,7 +28,7 @@ code.cloudfoundry.org/garden/server/streamer
 code.cloudfoundry.org/garden/server/timebomb
 code.cloudfoundry.org/garden/transport
 # code.cloudfoundry.org/grootfs v0.30.0 => ../grootfs
-## explicit; go 1.20
+## explicit; go 1.21
 code.cloudfoundry.org/grootfs/commands/config
 # code.cloudfoundry.org/idmapper v0.0.0-20240509191254-778c424cbd3c => ../idmapper
 ## explicit; go 1.18
