@@ -1,6 +1,8 @@
 module code.cloudfoundry.org/grootfs
 
-go 1.20
+go 1.21
+
+toolchain go1.22.3
 
 require (
 	code.cloudfoundry.org/commandrunner v0.0.0-20240515185236-07f33b5fb036
@@ -9,7 +11,7 @@ require (
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20240515174134-adba8bce1248
 	github.com/containers/image/v5 v5.30.1
-	github.com/containers/storage v1.53.0
+	github.com/containers/storage v1.54.0
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/docker v26.1.3+incompatible
 	github.com/docker/go-units v0.5.0
