@@ -1,4 +1,4 @@
-# code.cloudfoundry.org/commandrunner v0.0.0-20240521151053-ad3fed403f21
+# code.cloudfoundry.org/commandrunner v0.0.0-20240522151236-22325e44c787
 ## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
@@ -223,8 +223,8 @@ github.com/urfave/cli/v2
 # github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125
 ## explicit
 github.com/ventu-io/go-shortid
-# github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913
-## explicit; go 1.15.0
+# github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1
+## explicit; go 1.15
 github.com/xrash/smetrics
 # golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
 ## explicit; go 1.20
