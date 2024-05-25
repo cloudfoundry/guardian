@@ -23,14 +23,14 @@ require (
 	code.cloudfoundry.org/clock v1.1.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20240524151434-2fc4ecf84fa2
 	code.cloudfoundry.org/debugserver v0.0.0-20240524171011-a228404938b4
-	code.cloudfoundry.org/garden v0.0.0-20240521192510-e538d3d654a1
+	code.cloudfoundry.org/garden v0.0.0-20240525192816-95cc6e9bd84a
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240521192633-bc001bf0e4a5
+	code.cloudfoundry.org/idmapper v0.0.0-20240524192937-6c0cd4e0118b
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	code.cloudfoundry.org/localip v0.0.0-20240524171018-3d7459c0c458
 	github.com/BurntSushi/toml v1.4.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.58
+	github.com/cloudfoundry/gosigar v1.3.59
 	github.com/containerd/containerd v1.7.17
 	github.com/containerd/typeurl/v2 v2.1.1
 	github.com/docker/docker v26.1.3+incompatible
@@ -110,7 +110,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20240521024322-9665fa269a30 // indirect
+	github.com/google/pprof v0.0.0-20240525172833-67f7ab83a680 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
@@ -165,7 +165,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.27.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	golang.org/x/crypto v0.23.0 // indirect
-	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
+	golang.org/x/exp v0.0.0-20240525044651-4c93da0ed11d // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/oauth2 v0.18.0 // indirect
