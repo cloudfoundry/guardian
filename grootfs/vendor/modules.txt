@@ -226,7 +226,7 @@ github.com/ventu-io/go-shortid
 # github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1
 ## explicit; go 1.15
 github.com/xrash/smetrics
-# golang.org/x/exp v0.0.0-20240529005216-23cca8864a10
+# golang.org/x/exp v0.0.0-20240531132922-fd00a4e0eefc
 ## explicit; go 1.20
 golang.org/x/exp/maps
 # golang.org/x/net v0.25.0
