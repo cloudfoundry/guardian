@@ -155,7 +155,7 @@ github.com/cloudfoundry/dropsonde/metric_sender/fake
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/gosigar v1.3.59 => github.com/cloudfoundry/gosigar v1.3.45
+# github.com/cloudfoundry/gosigar v1.3.60 => github.com/cloudfoundry/gosigar v1.3.45
 ## explicit; go 1.21
 github.com/cloudfoundry/gosigar
 github.com/cloudfoundry/gosigar/sys/windows
