@@ -417,7 +417,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 					Mount:        mountByDefault(),
 					DiskLimit:    diskLimit,
 				})
-				Expect(err).To(MatchError(ContainSubstring("uncompressed layer size exceeds quota")))
+				Expect(err).To(MatchError(ContainSubstring("layers exceed disk quota")))
 			})
 
 			Context("when the image is not accounted for in the quota", func() {
