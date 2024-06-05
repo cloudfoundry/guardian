@@ -19,21 +19,21 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.0.0-20240604172007-61cc878c421b
+	code.cloudfoundry.org/archiver v0.0.0-20240605172148-a469d42dc1f4
 	code.cloudfoundry.org/clock v1.1.0
 	code.cloudfoundry.org/commandrunner v0.0.0-20240605152816-dde9de7e7f5d
-	code.cloudfoundry.org/debugserver v0.0.0-20240604172006-4dee5ddcdb7c
+	code.cloudfoundry.org/debugserver v0.0.0-20240605172147-3433a40ea1bc
 	code.cloudfoundry.org/garden v0.0.0-20240604193611-1a2f0f635229
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20240604193731-92235f580020
 	code.cloudfoundry.org/lager/v3 v3.0.3
-	code.cloudfoundry.org/localip v0.0.0-20240604172015-484561499a86
+	code.cloudfoundry.org/localip v0.0.0-20240605172145-e093a99dad61
 	github.com/BurntSushi/toml v1.4.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.60
 	github.com/containerd/containerd v1.7.18
 	github.com/containerd/typeurl/v2 v2.1.1
-	github.com/docker/docker v26.1.3+incompatible
+	github.com/docker/docker v26.1.4+incompatible
 	github.com/eapache/go-resiliency v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jessevdk/go-flags v1.5.1-0.20210607101731-3927b71304df
