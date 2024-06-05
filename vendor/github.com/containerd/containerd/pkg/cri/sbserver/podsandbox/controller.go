@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"time"
 
+	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 
 	"github.com/containerd/containerd"
 	eventtypes "github.com/containerd/containerd/api/events"
-	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/oci"
 	criconfig "github.com/containerd/containerd/pkg/cri/config"
 	imagestore "github.com/containerd/containerd/pkg/cri/store/image"
@@ -36,6 +36,7 @@ import (
 	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/protobuf"
 	"github.com/containerd/containerd/sandbox"
+	"github.com/containerd/errdefs"
 )
 
 // CRIService interface contains things required by controller, but not yet refactored from criService.
@@ -85,7 +86,7 @@ func New(
 
 var _ sandbox.Controller = (*Controller)(nil)
 
-func (c *Controller) Platform(_ctx context.Context, _sandboxID string) (platforms.Platform, error) {
+func (c *Controller) Platform(_ctx context.Context, _sandboxID string) (imagespec.Platform, error) {
 	return platforms.DefaultSpec(), nil
 }
 

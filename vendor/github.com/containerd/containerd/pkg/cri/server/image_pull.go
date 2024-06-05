@@ -41,9 +41,7 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/diff"
-	"github.com/containerd/containerd/errdefs"
 	containerdimages "github.com/containerd/containerd/images"
-	"github.com/containerd/containerd/log"
 	"github.com/containerd/containerd/pkg/cri/annotations"
 	criconfig "github.com/containerd/containerd/pkg/cri/config"
 	crilabels "github.com/containerd/containerd/pkg/cri/labels"
@@ -52,6 +50,8 @@ import (
 	"github.com/containerd/containerd/remotes/docker"
 	"github.com/containerd/containerd/remotes/docker/config"
 	"github.com/containerd/containerd/tracing"
+	"github.com/containerd/errdefs"
+	"github.com/containerd/log"
 )
 
 // For image management:
