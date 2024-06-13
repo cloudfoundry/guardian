@@ -77,13 +77,12 @@ task:
   env:
     HOME: /root
     CIRRUS_WORKING_DIR: /home/runc
-    GO_VERSION: "1.20"
+    GO_VERSION: "1.21"
     BATS_VERSION: "v1.9.0"
     RPMS: gcc git iptables jq glibc-static libseccomp-devel make criu fuse-sshfs
     # yamllint disable rule:key-duplicates
     matrix:
       DISTRO: centos-7
-      DISTRO: centos-stream-8
       DISTRO: centos-stream-9
 
   name: ci / $DISTRO
@@ -104,9 +103,6 @@ task:
       # sysctl
       echo "user.max_user_namespaces=15076" > /etc/sysctl.d/userns.conf
       sysctl --system
-      ;;
-    centos-stream-8)
-      yum config-manager --set-enabled powertools # for glibc-static
       ;;
     centos-stream-9)
       dnf config-manager --set-enabled crb # for glibc-static
@@ -181,7 +177,7 @@ task:
     ssh -tt localhost "make -C /home/runc localintegration"
   integration_systemd_rootless_script: |
     case $DISTRO in
-    centos-7|centos-stream-8)
+    centos-7)
       echo "SKIP: integration_systemd_rootless_script requires cgroup v2"
       ;;
     *)
