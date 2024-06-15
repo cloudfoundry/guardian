@@ -36,7 +36,7 @@ require (
 	github.com/docker/docker v27.0.0+incompatible
 	github.com/eapache/go-resiliency v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/jessevdk/go-flags v1.5.1-0.20210607101731-3927b71304df
+	github.com/jessevdk/go-flags v1.6.1
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.8.1
 	github.com/mitchellh/copystructure v1.2.0

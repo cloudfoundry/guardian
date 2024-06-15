@@ -632,7 +632,7 @@ github.com/intel/goresctrl/pkg/kubernetes
 github.com/intel/goresctrl/pkg/log
 github.com/intel/goresctrl/pkg/rdt
 github.com/intel/goresctrl/pkg/utils
-# github.com/jessevdk/go-flags v1.5.1-0.20210607101731-3927b71304df => github.com/jessevdk/go-flags v1.4.0
+# github.com/jessevdk/go-flags v1.6.1 => github.com/jessevdk/go-flags v1.4.0
 ## explicit
 github.com/jessevdk/go-flags
 # github.com/json-iterator/go v1.1.12
