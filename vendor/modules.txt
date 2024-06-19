@@ -15,7 +15,7 @@ code.cloudfoundry.org/commandrunner/windows_command_runner
 # code.cloudfoundry.org/debugserver v0.0.0-20240618173558-74ca23c0ae8c
 ## explicit; go 1.19
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20240611194356-c66dc427ceca => ../garden
+# code.cloudfoundry.org/garden v0.0.0-20240618195149-8ca9acd40cec => ../garden
 ## explicit; go 1.20
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
