@@ -159,8 +159,8 @@ github.com/cloudfoundry/dropsonde/runtime_stats
 ## explicit; go 1.21
 github.com/cloudfoundry/gosigar
 github.com/cloudfoundry/gosigar/sys/windows
-# github.com/cloudfoundry/sonde-go v0.0.0-20240515174134-adba8bce1248
-## explicit; go 1.17
+# github.com/cloudfoundry/sonde-go v0.0.0-20240620221854-09ef53324489
+## explicit; go 1.18
 github.com/cloudfoundry/sonde-go/events
 # github.com/containerd/aufs v1.0.0
 ## explicit; go 1.13
