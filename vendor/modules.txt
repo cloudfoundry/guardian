@@ -1,18 +1,18 @@
-# code.cloudfoundry.org/archiver v0.0.0-20240618173604-ae53fb2b9670
+# code.cloudfoundry.org/archiver v0.0.0-20240622173936-7869beba5df1
 ## explicit; go 1.20
 code.cloudfoundry.org/archiver/extractor/test_helper
 # code.cloudfoundry.org/clock v1.1.0
 ## explicit; go 1.20
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
-# code.cloudfoundry.org/commandrunner v0.0.0-20240618153606-5b8870f0deba
+# code.cloudfoundry.org/commandrunner v0.0.0-20240622153827-61e59208078a
 ## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.0.0-20240618173558-74ca23c0ae8c
+# code.cloudfoundry.org/debugserver v0.0.0-20240622173946-6ebc359d7f4f
 ## explicit; go 1.19
 code.cloudfoundry.org/debugserver
 # code.cloudfoundry.org/garden v0.0.0-20240618195149-8ca9acd40cec => ../garden
@@ -40,7 +40,7 @@ code.cloudfoundry.org/lager/v3/chug
 code.cloudfoundry.org/lager/v3/internal/truncate
 code.cloudfoundry.org/lager/v3/lagerctx
 code.cloudfoundry.org/lager/v3/lagertest
-# code.cloudfoundry.org/localip v0.0.0-20240618173604-a750d6c15505
+# code.cloudfoundry.org/localip v0.0.0-20240622173945-c9d07224d751
 ## explicit; go 1.20
 code.cloudfoundry.org/localip
 # dario.cat/mergo v1.0.0
@@ -601,7 +601,7 @@ github.com/google/go-cmp/cmp/internal/value
 ## explicit; go 1.12
 github.com/google/gofuzz
 github.com/google/gofuzz/bytesource
-# github.com/google/pprof v0.0.0-20240618054019-d3b898a103f8
+# github.com/google/pprof v0.0.0-20240622144329-c177fd99eaa9
 ## explicit; go 1.19
 github.com/google/pprof/profile
 # github.com/google/uuid v1.6.0

@@ -19,15 +19,15 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.0.0-20240618173604-ae53fb2b9670
+	code.cloudfoundry.org/archiver v0.0.0-20240622173936-7869beba5df1
 	code.cloudfoundry.org/clock v1.1.0
-	code.cloudfoundry.org/commandrunner v0.0.0-20240618153606-5b8870f0deba
-	code.cloudfoundry.org/debugserver v0.0.0-20240618173558-74ca23c0ae8c
+	code.cloudfoundry.org/commandrunner v0.0.0-20240622153827-61e59208078a
+	code.cloudfoundry.org/debugserver v0.0.0-20240622173946-6ebc359d7f4f
 	code.cloudfoundry.org/garden v0.0.0-20240618195149-8ca9acd40cec
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20240618195348-f7f803c58934
 	code.cloudfoundry.org/lager/v3 v3.0.3
-	code.cloudfoundry.org/localip v0.0.0-20240618173604-a750d6c15505
+	code.cloudfoundry.org/localip v0.0.0-20240622173945-c9d07224d751
 	github.com/BurntSushi/toml v1.4.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.61
@@ -111,7 +111,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20240618054019-d3b898a103f8 // indirect
+	github.com/google/pprof v0.0.0-20240622144329-c177fd99eaa9 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
