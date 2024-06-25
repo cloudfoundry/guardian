@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.22.3
 
 require (
-	code.cloudfoundry.org/commandrunner v0.0.0-20240622153827-61e59208078a
+	code.cloudfoundry.org/commandrunner v0.0.0-20240625154102-bc865381621f
 	code.cloudfoundry.org/idmapper v0.0.0-20240622195754-3a3f84b7b792
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	github.com/cloudfoundry/dropsonde v1.1.0
@@ -13,7 +13,7 @@ require (
 	github.com/containers/image/v5 v5.31.1
 	github.com/containers/storage v1.54.0
 	github.com/docker/distribution v2.8.3+incompatible
-	github.com/docker/docker v27.0.0+incompatible
+	github.com/docker/docker v27.0.1+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
@@ -40,7 +40,7 @@ require (
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/pprof v0.0.0-20240622144329-c177fd99eaa9 // indirect
+	github.com/google/pprof v0.0.0-20240625030939-27f56978b8b0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/moby/sys/mountinfo v0.7.1 // indirect
 	github.com/moby/sys/user v0.1.0 // indirect
