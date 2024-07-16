@@ -141,8 +141,8 @@ github.com/google/pprof/profile
 # github.com/gorilla/mux v1.8.1
 ## explicit; go 1.20
 github.com/gorilla/mux
-# github.com/moby/sys/mountinfo v0.7.1
-## explicit; go 1.16
+# github.com/moby/sys/mountinfo v0.7.2
+## explicit; go 1.17
 github.com/moby/sys/mountinfo
 # github.com/moby/sys/user v0.1.0
 ## explicit; go 1.17
@@ -226,7 +226,7 @@ github.com/ventu-io/go-shortid
 # github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1
 ## explicit; go 1.15
 github.com/xrash/smetrics
-# golang.org/x/exp v0.0.0-20240707233637-46b078467d37
+# golang.org/x/exp v0.0.0-20240716175740-e3f259677ff7
 ## explicit; go 1.20
 golang.org/x/exp/maps
 # golang.org/x/net v0.27.0
