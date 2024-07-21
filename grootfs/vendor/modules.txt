@@ -1,4 +1,4 @@
-# code.cloudfoundry.org/commandrunner v0.0.0-20240711155719-69471af38026
+# code.cloudfoundry.org/commandrunner v0.0.0-20240721160731-adebb584c73a
 ## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
@@ -135,7 +135,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20240711041743-f6c9dda6c6da
+# github.com/google/pprof v0.0.0-20240721033354-7089f98c1d14
 ## explicit; go 1.19
 github.com/google/pprof/profile
 # github.com/gorilla/mux v1.8.1
