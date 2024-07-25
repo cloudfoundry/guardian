@@ -16,13 +16,13 @@ require (
 	github.com/docker/docker v27.1.1+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/onsi/ginkgo/v2 v2.19.0
-	github.com/onsi/gomega v1.33.1
+	github.com/onsi/gomega v1.34.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
-	github.com/urfave/cli/v2 v2.27.2
+	github.com/urfave/cli/v2 v2.27.3
 	github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125
 	golang.org/x/sys v0.22.0
 	google.golang.org/protobuf v1.34.2
@@ -43,7 +43,7 @@ require (
 	github.com/google/pprof v0.0.0-20240722153945-304e4f0156b8 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
-	github.com/moby/sys/user v0.1.0 // indirect
+	github.com/moby/sys/user v0.2.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
