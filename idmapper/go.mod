@@ -3,7 +3,7 @@ module code.cloudfoundry.org/idmapper
 go 1.18
 
 require (
-	github.com/onsi/ginkgo/v2 v2.19.0
+	github.com/onsi/ginkgo/v2 v2.19.1
 	github.com/onsi/gomega v1.34.0
 	github.com/opencontainers/runtime-spec v1.2.0
 )
