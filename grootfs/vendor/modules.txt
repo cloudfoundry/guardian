@@ -1,4 +1,4 @@
-# code.cloudfoundry.org/commandrunner v0.0.0-20240806162524-4dc4fdb9d341
+# code.cloudfoundry.org/commandrunner v0.0.0-20240807162722-0c25ae4d419e
 ## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
@@ -152,7 +152,7 @@ github.com/moby/sys/user
 # github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 ## explicit
 github.com/nu7hatch/gouuid
-# github.com/onsi/ginkgo/v2 v2.19.1
+# github.com/onsi/ginkgo/v2 v2.20.0
 ## explicit; go 1.20
 github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config

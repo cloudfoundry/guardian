@@ -5,7 +5,7 @@ go 1.21.0
 toolchain go1.22.3
 
 require (
-	code.cloudfoundry.org/commandrunner v0.0.0-20240806162524-4dc4fdb9d341
+	code.cloudfoundry.org/commandrunner v0.0.0-20240807162722-0c25ae4d419e
 	code.cloudfoundry.org/idmapper v0.0.0-20240806204057-e127ba08629d
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	github.com/cloudfoundry/dropsonde v1.1.0
@@ -15,7 +15,7 @@ require (
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/docker v27.1.1+incompatible
 	github.com/docker/go-units v0.5.0
-	github.com/onsi/ginkgo/v2 v2.19.1
+	github.com/onsi/ginkgo/v2 v2.20.0
 	github.com/onsi/gomega v1.34.1
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
