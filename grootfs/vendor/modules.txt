@@ -1,9 +1,9 @@
-# code.cloudfoundry.org/commandrunner v0.0.0-20240807162722-0c25ae4d419e
+# code.cloudfoundry.org/commandrunner v0.0.0-20240808162750-d70e1b3eb38a
 ## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20240806204057-e127ba08629d => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20240807204255-4390e00fa73a => ../idmapper
 ## explicit; go 1.18
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.0.3
@@ -33,7 +33,7 @@ github.com/cloudfoundry/dropsonde/metric_sender
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/sonde-go v0.0.0-20240620221854-09ef53324489
+# github.com/cloudfoundry/sonde-go v0.0.0-20240807231527-361c7ad33dc7
 ## explicit; go 1.18
 github.com/cloudfoundry/sonde-go/events
 # github.com/containers/image/v5 v5.32.0
@@ -144,8 +144,8 @@ github.com/gorilla/mux
 # github.com/moby/sys/mountinfo v0.7.2
 ## explicit; go 1.17
 github.com/moby/sys/mountinfo
-# github.com/moby/sys/user v0.2.0
-## explicit; go 1.21
+# github.com/moby/sys/user v0.3.0
+## explicit; go 1.17
 github.com/moby/sys/user
 # github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e
 ## explicit; go 1.12
@@ -226,7 +226,7 @@ github.com/ventu-io/go-shortid
 # github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1
 ## explicit; go 1.15
 github.com/xrash/smetrics
-# golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
+# golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa
 ## explicit; go 1.20
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
@@ -237,7 +237,7 @@ golang.org/x/net/context
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
-# golang.org/x/sys v0.23.0
+# golang.org/x/sys v0.24.0
 ## explicit; go 1.18
 golang.org/x/sys/unix
 golang.org/x/sys/windows
