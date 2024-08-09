@@ -1,10 +1,11 @@
 module code.cloudfoundry.org/guardian
 
-go 1.21
+go 1.21.0
+
+toolchain go1.22.5
 
 // TODO: update to containerd 2.0 when it is out, and remove these replace directives
 replace (
-	github.com/cloudfoundry/gosigar => github.com/cloudfoundry/gosigar v1.3.45
 	// force go-runc back to 1.0.0 since runc 1.7.x is incompatible with anything newer
 	github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
 	// force otelgrpc back to 0.45.0 since otel v.1.19.0 is not comptible with anything newer
@@ -19,11 +20,11 @@ replace (
 require (
 	code.cloudfoundry.org/archiver v0.0.0-20240625174243-6d58e629a167
 	code.cloudfoundry.org/clock v1.1.0
-	code.cloudfoundry.org/commandrunner v0.0.0-20240727161716-6d7c182c3f61
+	code.cloudfoundry.org/commandrunner v0.0.0-20240730161934-509c5fe06de7
 	code.cloudfoundry.org/debugserver v0.0.0-20240625174232-b3229b6daea3
 	code.cloudfoundry.org/garden v0.0.0-20240625195848-36e99aad95da
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240727203153-25b0deeeeaf6
+	code.cloudfoundry.org/idmapper v0.0.0-20240729203247-e2669a311764
 	code.cloudfoundry.org/lager/v3 v3.0.3
 	code.cloudfoundry.org/localip v0.0.0-20240625174231-6e14c198f7fa
 	github.com/BurntSushi/toml v1.4.0
@@ -39,7 +40,7 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.8.1
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo/v2 v2.19.1
+	github.com/onsi/ginkgo/v2 v2.20.0
 	github.com/onsi/gomega v1.34.1
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
@@ -52,7 +53,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.3
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vishvananda/netns v0.0.4
-	golang.org/x/sys v0.22.0
+	golang.org/x/sys v0.24.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -162,16 +163,16 @@ require (
 	go.opentelemetry.io/otel/sdk v1.19.0 // indirect
 	go.opentelemetry.io/otel/trace v1.27.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
-	golang.org/x/crypto v0.25.0 // indirect
-	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
-	golang.org/x/mod v0.19.0 // indirect
-	golang.org/x/net v0.27.0 // indirect
+	golang.org/x/crypto v0.26.0 // indirect
+	golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa // indirect
+	golang.org/x/mod v0.20.0 // indirect
+	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/oauth2 v0.18.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/term v0.22.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
+	golang.org/x/term v0.23.0 // indirect
+	golang.org/x/text v0.17.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.23.0 // indirect
+	golang.org/x/tools v0.24.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20240701130421-f6361c86f094 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240624140628-dc46fd24d27d // indirect
