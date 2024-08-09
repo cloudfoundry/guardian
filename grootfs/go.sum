@@ -1,5 +1,5 @@
-code.cloudfoundry.org/commandrunner v0.0.0-20240808162750-d70e1b3eb38a h1:cmKmW8+bY0ZfMUK3E884kvbtd7f7M3RR0mhgf+lcezQ=
-code.cloudfoundry.org/commandrunner v0.0.0-20240808162750-d70e1b3eb38a/go.mod h1:KUspDnOdgWoA0cBS1CBDfB47FQisW5+guzQPdLuySSY=
+code.cloudfoundry.org/commandrunner v0.0.0-20240809162919-eea6c4f85f53 h1:zPckis1TgAU8N7Aaa9OKea19xsnsKEtU8iMXrRrt1m8=
+code.cloudfoundry.org/commandrunner v0.0.0-20240809162919-eea6c4f85f53/go.mod h1:Up9RwEIL4R2E5dY/5+tc3R8pJrWe1Ldt6p8muacfzkg=
 code.cloudfoundry.org/lager/v3 v3.0.3 h1:/UTmadZfIaKuT/whEinSxK1mzRfNu1uPfvjFfGqiwzM=
 code.cloudfoundry.org/lager/v3 v3.0.3/go.mod h1:Zn5q1SrIuuHjEUE7xerMKt3ztunrJQCZETAo7rV0CH8=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
@@ -16,8 +16,8 @@ github.com/cloudfoundry/sonde-go v0.0.0-20240807231527-361c7ad33dc7 h1:on5/mh2F2
 github.com/cloudfoundry/sonde-go v0.0.0-20240807231527-361c7ad33dc7/go.mod h1:mVA0gaXiEALxmQ9Po3yT28jx02L9Kg9nrhiXCvTZZ1M=
 github.com/containerd/log v0.1.0 h1:TCJt7ioM2cr/tfR8GPbGf9/VRAX8D2B4PjzCpfX540I=
 github.com/containerd/log v0.1.0/go.mod h1:VRRf09a7mHDIRezVKTRCrOq78v577GXq3bSa3EhrzVo=
-github.com/containers/image/v5 v5.32.0 h1:yjbweazPfr8xOzQ2hkkYm1A2V0jN96/kES6Gwyxj7hQ=
-github.com/containers/image/v5 v5.32.0/go.mod h1:x5e0RDfGaY6bnQ13gJ2LqbfHvzssfB/y5a8HduGFxJc=
+github.com/containers/image/v5 v5.32.1 h1:fVa7GxRC4BCPGsfSRs4JY12WyeY26SUYQ0NuANaCFrI=
+github.com/containers/image/v5 v5.32.1/go.mod h1:v1l73VeMugfj/QtKI+jhYbwnwFCFnNGckvbST3rQ5Hk=
 github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 h1:Qzk5C6cYglewc+UyGf6lc8Mj2UaPTHy/iF2De0/77CA=
 github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01/go.mod h1:9rfv8iPl1ZP7aqh9YA68wnZv2NUDbXdcdPHVz0pFbPY=
 github.com/containers/ocicrypt v1.2.0 h1:X14EgRK3xNFvJEfI5O4Qn4T3E25ANudSOZz/sirVuPM=
