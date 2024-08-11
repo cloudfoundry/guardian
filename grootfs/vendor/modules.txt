@@ -217,7 +217,7 @@ github.com/sirupsen/logrus
 github.com/syndtr/gocapability/capability
 # github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125
 ## explicit
-# github.com/urfave/cli/v2 v2.27.3
+# github.com/urfave/cli/v2 v2.27.4
 ## explicit; go 1.18
 github.com/urfave/cli/v2
 # github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125
