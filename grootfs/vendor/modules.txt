@@ -1,4 +1,4 @@
-# code.cloudfoundry.org/commandrunner v0.0.0-20240809162919-eea6c4f85f53
+# code.cloudfoundry.org/commandrunner v0.1.0
 ## explicit; go 1.20
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
@@ -6,8 +6,8 @@ code.cloudfoundry.org/commandrunner/linux_command_runner
 # code.cloudfoundry.org/idmapper v0.0.0-20240808204242-c60ed735255b => ../idmapper
 ## explicit; go 1.18
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.0.3
-## explicit; go 1.19
+# code.cloudfoundry.org/lager/v3 v3.1.0
+## explicit; go 1.20
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
 code.cloudfoundry.org/lager/v3/internal/truncate
@@ -107,7 +107,7 @@ github.com/distribution/reference
 github.com/docker/distribution/registry/api/errcode
 github.com/docker/distribution/registry/api/v2
 github.com/docker/distribution/registry/client/auth/challenge
-# github.com/docker/docker v27.1.1+incompatible
+# github.com/docker/docker v27.1.2+incompatible
 ## explicit
 github.com/docker/docker/api/types/versions
 github.com/docker/docker/pkg/system

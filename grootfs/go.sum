@@ -1,7 +1,7 @@
-code.cloudfoundry.org/commandrunner v0.0.0-20240809162919-eea6c4f85f53 h1:zPckis1TgAU8N7Aaa9OKea19xsnsKEtU8iMXrRrt1m8=
-code.cloudfoundry.org/commandrunner v0.0.0-20240809162919-eea6c4f85f53/go.mod h1:Up9RwEIL4R2E5dY/5+tc3R8pJrWe1Ldt6p8muacfzkg=
-code.cloudfoundry.org/lager/v3 v3.0.3 h1:/UTmadZfIaKuT/whEinSxK1mzRfNu1uPfvjFfGqiwzM=
-code.cloudfoundry.org/lager/v3 v3.0.3/go.mod h1:Zn5q1SrIuuHjEUE7xerMKt3ztunrJQCZETAo7rV0CH8=
+code.cloudfoundry.org/commandrunner v0.1.0 h1:RABm+ndiZ6hVFVkxP2Jfe7BGdtNSUxBe5OISHQoHzww=
+code.cloudfoundry.org/commandrunner v0.1.0/go.mod h1:Up9RwEIL4R2E5dY/5+tc3R8pJrWe1Ldt6p8muacfzkg=
+code.cloudfoundry.org/lager/v3 v3.1.0 h1:ZB4VXLSI0bIWhDSjKdEh/Jrs2SXFLX/9+z2WEZhAf2o=
+code.cloudfoundry.org/lager/v3 v3.1.0/go.mod h1:5KBxqCSNJBNf/RXCindvnyAKBWxTgMMO5mtn1qkMoEM=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77 h1:afT88tB6u9JCKQZVAAaa9ICz/uGn5Uw9ekn6P22mYKM=
@@ -36,8 +36,8 @@ github.com/docker/cli v27.1.1+incompatible h1:goaZxOqs4QKxznZjjBWKONQci/MywhtRv2
 github.com/docker/cli v27.1.1+incompatible/go.mod h1:JLrzqnKDaYBop7H2jaqPtU4hHvMKP+vjCwu2uszcLI8=
 github.com/docker/distribution v2.8.3+incompatible h1:AtKxIZ36LoNK51+Z6RpzLpddBirtxJnzDrHLEKxTAYk=
 github.com/docker/distribution v2.8.3+incompatible/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
-github.com/docker/docker v27.1.1+incompatible h1:hO/M4MtV36kzKldqnA37IWhebRA+LnqqcqDja6kVaKY=
-github.com/docker/docker v27.1.1+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+github.com/docker/docker v27.1.2+incompatible h1:AhGzR1xaQIy53qCkxARaFluI00WPGtXn0AJuoQsVYTY=
+github.com/docker/docker v27.1.2+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/docker-credential-helpers v0.8.2 h1:bX3YxiGzFP5sOXWc3bTPEXdEaZSeVMrFgOr3T+zrFAo=
 github.com/docker/docker-credential-helpers v0.8.2/go.mod h1:P3ci7E3lwkZg6XiHdRKft1KckHiO9a2rNtyFbZ/ry9M=
 github.com/docker/go-connections v0.5.0 h1:USnMq7hx7gwdVZq1L49hLXaFtUdTADjXGp+uj1Br63c=
