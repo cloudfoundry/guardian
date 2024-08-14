@@ -200,14 +200,12 @@ func (i *Invocation) runWithFriendlyError(ctx context.Context, stdout, stderr io
 	return
 }
 
-// logf logs if i.Logf is non-nil.
-func (i *Invocation) logf(format string, args ...any) {
-	if i.Logf != nil {
-		i.Logf(format, args...)
-	}
-}
-
 func (i *Invocation) run(ctx context.Context, stdout, stderr io.Writer) error {
+	log := i.Logf
+	if log == nil {
+		log = func(string, ...interface{}) {}
+	}
+
 	goArgs := []string{i.Verb}
 
 	appendModFile := func() {
@@ -279,12 +277,7 @@ func (i *Invocation) run(ctx context.Context, stdout, stderr io.Writer) error {
 		cmd.Dir = i.WorkingDir
 	}
 
-	debugStr := cmdDebugStr(cmd)
-	i.logf("starting %v", debugStr)
-	start := time.Now()
-	defer func() {
-		i.logf("%s for %v", time.Since(start), debugStr)
-	}()
+	defer func(start time.Time) { log("%s for %v", time.Since(start), cmdDebugStr(cmd)) }(time.Now())
 
 	return runCmdContext(ctx, cmd)
 }
@@ -521,7 +514,7 @@ func WriteOverlays(overlay map[string][]byte) (filename string, cleanup func(), 
 	for k, v := range overlay {
 		// Use a unique basename for each file (001-foo.go),
 		// to avoid creating nested directories.
-		base := fmt.Sprintf("%d-%s", 1+len(overlays), filepath.Base(k))
+		base := fmt.Sprintf("%d-%s.go", 1+len(overlays), filepath.Base(k))
 		filename := filepath.Join(dir, base)
 		err := os.WriteFile(filename, v, 0666)
 		if err != nil {

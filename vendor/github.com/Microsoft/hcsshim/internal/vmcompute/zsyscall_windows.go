@@ -33,6 +33,9 @@ func errnoErr(e syscall.Errno) error {
 	case errnoERROR_IO_PENDING:
 		return errERROR_IO_PENDING
 	}
+	// TODO: add more here, after collecting data on the common
+	// error values see on Windows. (perhaps when running
+	// all.bat?)
 	return e
 }
 
@@ -72,7 +75,7 @@ func hcsCloseComputeSystem(computeSystem HcsSystem) (hr error) {
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsCloseComputeSystem.Addr(), uintptr(computeSystem))
+	r0, _, _ := syscall.Syscall(procHcsCloseComputeSystem.Addr(), 1, uintptr(computeSystem), 0, 0)
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -87,7 +90,7 @@ func hcsCloseProcess(process HcsProcess) (hr error) {
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsCloseProcess.Addr(), uintptr(process))
+	r0, _, _ := syscall.Syscall(procHcsCloseProcess.Addr(), 1, uintptr(process), 0, 0)
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -116,7 +119,7 @@ func _hcsCreateComputeSystem(id *uint16, configuration *uint16, identity syscall
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsCreateComputeSystem.Addr(), uintptr(unsafe.Pointer(id)), uintptr(unsafe.Pointer(configuration)), uintptr(identity), uintptr(unsafe.Pointer(computeSystem)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall6(procHcsCreateComputeSystem.Addr(), 5, uintptr(unsafe.Pointer(id)), uintptr(unsafe.Pointer(configuration)), uintptr(identity), uintptr(unsafe.Pointer(computeSystem)), uintptr(unsafe.Pointer(result)), 0)
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -140,7 +143,7 @@ func _hcsCreateProcess(computeSystem HcsSystem, processParameters *uint16, proce
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsCreateProcess.Addr(), uintptr(computeSystem), uintptr(unsafe.Pointer(processParameters)), uintptr(unsafe.Pointer(processInformation)), uintptr(unsafe.Pointer(process)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall6(procHcsCreateProcess.Addr(), 5, uintptr(computeSystem), uintptr(unsafe.Pointer(processParameters)), uintptr(unsafe.Pointer(processInformation)), uintptr(unsafe.Pointer(process)), uintptr(unsafe.Pointer(result)), 0)
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -164,7 +167,7 @@ func _hcsEnumerateComputeSystems(query *uint16, computeSystems **uint16, result 
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsEnumerateComputeSystems.Addr(), uintptr(unsafe.Pointer(query)), uintptr(unsafe.Pointer(computeSystems)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsEnumerateComputeSystems.Addr(), 3, uintptr(unsafe.Pointer(query)), uintptr(unsafe.Pointer(computeSystems)), uintptr(unsafe.Pointer(result)))
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -188,7 +191,7 @@ func _hcsGetComputeSystemProperties(computeSystem HcsSystem, propertyQuery *uint
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsGetComputeSystemProperties.Addr(), uintptr(computeSystem), uintptr(unsafe.Pointer(propertyQuery)), uintptr(unsafe.Pointer(properties)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall6(procHcsGetComputeSystemProperties.Addr(), 4, uintptr(computeSystem), uintptr(unsafe.Pointer(propertyQuery)), uintptr(unsafe.Pointer(properties)), uintptr(unsafe.Pointer(result)), 0, 0)
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -203,7 +206,7 @@ func hcsGetProcessInfo(process HcsProcess, processInformation *HcsProcessInforma
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsGetProcessInfo.Addr(), uintptr(process), uintptr(unsafe.Pointer(processInformation)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsGetProcessInfo.Addr(), 3, uintptr(process), uintptr(unsafe.Pointer(processInformation)), uintptr(unsafe.Pointer(result)))
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -218,7 +221,7 @@ func hcsGetProcessProperties(process HcsProcess, processProperties **uint16, res
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsGetProcessProperties.Addr(), uintptr(process), uintptr(unsafe.Pointer(processProperties)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsGetProcessProperties.Addr(), 3, uintptr(process), uintptr(unsafe.Pointer(processProperties)), uintptr(unsafe.Pointer(result)))
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -242,7 +245,7 @@ func _hcsGetServiceProperties(propertyQuery *uint16, properties **uint16, result
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsGetServiceProperties.Addr(), uintptr(unsafe.Pointer(propertyQuery)), uintptr(unsafe.Pointer(properties)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsGetServiceProperties.Addr(), 3, uintptr(unsafe.Pointer(propertyQuery)), uintptr(unsafe.Pointer(properties)), uintptr(unsafe.Pointer(result)))
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -266,7 +269,7 @@ func _hcsModifyComputeSystem(computeSystem HcsSystem, configuration *uint16, res
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsModifyComputeSystem.Addr(), uintptr(computeSystem), uintptr(unsafe.Pointer(configuration)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsModifyComputeSystem.Addr(), 3, uintptr(computeSystem), uintptr(unsafe.Pointer(configuration)), uintptr(unsafe.Pointer(result)))
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -290,7 +293,7 @@ func _hcsModifyProcess(process HcsProcess, settings *uint16, result **uint16) (h
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsModifyProcess.Addr(), uintptr(process), uintptr(unsafe.Pointer(settings)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsModifyProcess.Addr(), 3, uintptr(process), uintptr(unsafe.Pointer(settings)), uintptr(unsafe.Pointer(result)))
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -314,7 +317,7 @@ func _hcsModifyServiceSettings(settings *uint16, result **uint16) (hr error) {
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsModifyServiceSettings.Addr(), uintptr(unsafe.Pointer(settings)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsModifyServiceSettings.Addr(), 2, uintptr(unsafe.Pointer(settings)), uintptr(unsafe.Pointer(result)), 0)
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -338,7 +341,7 @@ func _hcsOpenComputeSystem(id *uint16, computeSystem *HcsSystem, result **uint16
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsOpenComputeSystem.Addr(), uintptr(unsafe.Pointer(id)), uintptr(unsafe.Pointer(computeSystem)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsOpenComputeSystem.Addr(), 3, uintptr(unsafe.Pointer(id)), uintptr(unsafe.Pointer(computeSystem)), uintptr(unsafe.Pointer(result)))
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -353,7 +356,7 @@ func hcsOpenProcess(computeSystem HcsSystem, pid uint32, process *HcsProcess, re
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsOpenProcess.Addr(), uintptr(computeSystem), uintptr(pid), uintptr(unsafe.Pointer(process)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall6(procHcsOpenProcess.Addr(), 4, uintptr(computeSystem), uintptr(pid), uintptr(unsafe.Pointer(process)), uintptr(unsafe.Pointer(result)), 0, 0)
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -377,7 +380,7 @@ func _hcsPauseComputeSystem(computeSystem HcsSystem, options *uint16, result **u
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsPauseComputeSystem.Addr(), uintptr(computeSystem), uintptr(unsafe.Pointer(options)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsPauseComputeSystem.Addr(), 3, uintptr(computeSystem), uintptr(unsafe.Pointer(options)), uintptr(unsafe.Pointer(result)))
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -392,7 +395,7 @@ func hcsRegisterComputeSystemCallback(computeSystem HcsSystem, callback uintptr,
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsRegisterComputeSystemCallback.Addr(), uintptr(computeSystem), uintptr(callback), uintptr(context), uintptr(unsafe.Pointer(callbackHandle)))
+	r0, _, _ := syscall.Syscall6(procHcsRegisterComputeSystemCallback.Addr(), 4, uintptr(computeSystem), uintptr(callback), uintptr(context), uintptr(unsafe.Pointer(callbackHandle)), 0, 0)
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -407,7 +410,7 @@ func hcsRegisterProcessCallback(process HcsProcess, callback uintptr, context ui
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsRegisterProcessCallback.Addr(), uintptr(process), uintptr(callback), uintptr(context), uintptr(unsafe.Pointer(callbackHandle)))
+	r0, _, _ := syscall.Syscall6(procHcsRegisterProcessCallback.Addr(), 4, uintptr(process), uintptr(callback), uintptr(context), uintptr(unsafe.Pointer(callbackHandle)), 0, 0)
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -431,7 +434,7 @@ func _hcsResumeComputeSystem(computeSystem HcsSystem, options *uint16, result **
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsResumeComputeSystem.Addr(), uintptr(computeSystem), uintptr(unsafe.Pointer(options)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsResumeComputeSystem.Addr(), 3, uintptr(computeSystem), uintptr(unsafe.Pointer(options)), uintptr(unsafe.Pointer(result)))
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -455,7 +458,7 @@ func _hcsSaveComputeSystem(computeSystem HcsSystem, options *uint16, result **ui
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsSaveComputeSystem.Addr(), uintptr(computeSystem), uintptr(unsafe.Pointer(options)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsSaveComputeSystem.Addr(), 3, uintptr(computeSystem), uintptr(unsafe.Pointer(options)), uintptr(unsafe.Pointer(result)))
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -479,7 +482,7 @@ func _hcsShutdownComputeSystem(computeSystem HcsSystem, options *uint16, result 
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsShutdownComputeSystem.Addr(), uintptr(computeSystem), uintptr(unsafe.Pointer(options)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsShutdownComputeSystem.Addr(), 3, uintptr(computeSystem), uintptr(unsafe.Pointer(options)), uintptr(unsafe.Pointer(result)))
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -503,7 +506,7 @@ func _hcsSignalProcess(process HcsProcess, options *uint16, result **uint16) (hr
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsSignalProcess.Addr(), uintptr(process), uintptr(unsafe.Pointer(options)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsSignalProcess.Addr(), 3, uintptr(process), uintptr(unsafe.Pointer(options)), uintptr(unsafe.Pointer(result)))
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -527,7 +530,7 @@ func _hcsStartComputeSystem(computeSystem HcsSystem, options *uint16, result **u
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsStartComputeSystem.Addr(), uintptr(computeSystem), uintptr(unsafe.Pointer(options)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsStartComputeSystem.Addr(), 3, uintptr(computeSystem), uintptr(unsafe.Pointer(options)), uintptr(unsafe.Pointer(result)))
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -551,7 +554,7 @@ func _hcsTerminateComputeSystem(computeSystem HcsSystem, options *uint16, result
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsTerminateComputeSystem.Addr(), uintptr(computeSystem), uintptr(unsafe.Pointer(options)), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsTerminateComputeSystem.Addr(), 3, uintptr(computeSystem), uintptr(unsafe.Pointer(options)), uintptr(unsafe.Pointer(result)))
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -566,7 +569,7 @@ func hcsTerminateProcess(process HcsProcess, result **uint16) (hr error) {
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsTerminateProcess.Addr(), uintptr(process), uintptr(unsafe.Pointer(result)))
+	r0, _, _ := syscall.Syscall(procHcsTerminateProcess.Addr(), 2, uintptr(process), uintptr(unsafe.Pointer(result)), 0)
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -581,7 +584,7 @@ func hcsUnregisterComputeSystemCallback(callbackHandle HcsCallback) (hr error) {
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsUnregisterComputeSystemCallback.Addr(), uintptr(callbackHandle))
+	r0, _, _ := syscall.Syscall(procHcsUnregisterComputeSystemCallback.Addr(), 1, uintptr(callbackHandle), 0, 0)
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
@@ -596,7 +599,7 @@ func hcsUnregisterProcessCallback(callbackHandle HcsCallback) (hr error) {
 	if hr != nil {
 		return
 	}
-	r0, _, _ := syscall.SyscallN(procHcsUnregisterProcessCallback.Addr(), uintptr(callbackHandle))
+	r0, _, _ := syscall.Syscall(procHcsUnregisterProcessCallback.Addr(), 1, uintptr(callbackHandle), 0, 0)
 	if int32(r0) < 0 {
 		if r0&0x1fff0000 == 0x00070000 {
 			r0 &= 0xffff
