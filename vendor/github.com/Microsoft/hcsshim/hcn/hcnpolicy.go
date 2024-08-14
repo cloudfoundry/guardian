@@ -144,11 +144,10 @@ type QosPolicySetting struct {
 
 // OutboundNatPolicySetting sets outbound Network Address Translation on an Endpoint.
 type OutboundNatPolicySetting struct {
-	VirtualIP        string   `json:",omitempty"`
-	Exceptions       []string `json:",omitempty"`
-	Destinations     []string `json:",omitempty"`
-	Flags            NatFlags `json:",omitempty"`
-	MaxPortPoolUsage uint16   `json:",omitempty"`
+	VirtualIP    string   `json:",omitempty"`
+	Exceptions   []string `json:",omitempty"`
+	Destinations []string `json:",omitempty"`
+	Flags        NatFlags `json:",omitempty"`
 }
 
 // SDNRoutePolicySetting sets SDN Route on an Endpoint.
