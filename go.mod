@@ -1,6 +1,6 @@
 module code.cloudfoundry.org/guardian
 
-go 1.21
+go 1.21.0
 
 // TODO: update to containerd 2.0 when it is out, and remove these replace directives
 replace (
