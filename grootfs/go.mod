@@ -10,7 +10,7 @@ require (
 	code.cloudfoundry.org/lager/v3 v3.1.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20240807231527-361c7ad33dc7
-	github.com/containers/image/v5 v5.32.1
+	github.com/containers/image/v5 v5.32.2
 	github.com/containers/storage v1.55.0
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/docker v27.1.2+incompatible
