@@ -5,9 +5,9 @@ go 1.21.0
 toolchain go1.22.3
 
 require (
-	code.cloudfoundry.org/commandrunner v0.2.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240821205239-69614f4a469f
-	code.cloudfoundry.org/lager/v3 v3.2.0
+	code.cloudfoundry.org/commandrunner v0.3.0
+	code.cloudfoundry.org/idmapper v0.0.0-20240822205301-8ae6911f0728
+	code.cloudfoundry.org/lager/v3 v3.3.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20240807231527-361c7ad33dc7
 	github.com/containers/image/v5 v5.32.2
@@ -51,7 +51,7 @@ require (
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	golang.org/x/exp v0.0.0-20240822175202-778ce7bba035 // indirect
+	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect

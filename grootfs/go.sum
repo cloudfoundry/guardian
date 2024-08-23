@@ -1,7 +1,7 @@
-code.cloudfoundry.org/commandrunner v0.2.0 h1:upShEm2sDLYYazMj3tl+0dJ+a2Ai5qC3oRXzg7Yg19Y=
-code.cloudfoundry.org/commandrunner v0.2.0/go.mod h1:BzwlyL3nHSL5I8MoRxzcujQ84AsDPXK8uvo+lzscoDI=
-code.cloudfoundry.org/lager/v3 v3.2.0 h1:TAl3oqpJf5fsRQo0eYtgE6SiuBL16q0Kgl7N20twLkE=
-code.cloudfoundry.org/lager/v3 v3.2.0/go.mod h1:LWbn857OBghV0DtBvyocmnk+OMUG1wPNxAEwlGYfFCI=
+code.cloudfoundry.org/commandrunner v0.3.0 h1:mUCBtGNsa7z9ifLNxFwm4n+3nGKm7p/Xov1rivKIH0I=
+code.cloudfoundry.org/commandrunner v0.3.0/go.mod h1:vnQqxlp+jNLSSjMb1wWKqzMWSL5mEQKxxap9llRRhNQ=
+code.cloudfoundry.org/lager/v3 v3.3.0 h1:adWGo2aBLpHVfUG+3D2FQ4B6Mf2Bcz47KITbn8V4b0k=
+code.cloudfoundry.org/lager/v3 v3.3.0/go.mod h1:k/AYgZTVrwQaneNfQ2EwnZxUb9iUFE7i6AJ3KVOtAdE=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77 h1:afT88tB6u9JCKQZVAAaa9ICz/uGn5Uw9ekn6P22mYKM=
@@ -125,8 +125,8 @@ github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125 h1:EidWq21btmd
 github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125/go.mod h1:6rZqAOk/eYX5FJyjQJ6Z3RBSN389IXX2ijwW4FcggaM=
 github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 h1:gEOO8jv9F4OT7lGCjxCBTO/36wtF6j2nSip77qHd4x4=
 github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1/go.mod h1:Ohn+xnUBiLI6FVj/9LpzZWtj1/D6lUovWYBkxHVV3aM=
-golang.org/x/exp v0.0.0-20240822175202-778ce7bba035 h1:VkSUcpKXdGwUpn/JsiWXwSNnIJVXRfMA4ThL5vwljWg=
-golang.org/x/exp v0.0.0-20240822175202-778ce7bba035/go.mod h1:akd2r19cwCdwSwWeIdzYQGa/EZZyqcOdwWiwj5L5eKQ=
+golang.org/x/exp v0.0.0-20240823005443-9b4947da3948 h1:kx6Ds3MlpiUHKj7syVnbp57++8WpuKPcR5yjLBjvLEA=
+golang.org/x/exp v0.0.0-20240823005443-9b4947da3948/go.mod h1:akd2r19cwCdwSwWeIdzYQGa/EZZyqcOdwWiwj5L5eKQ=
 golang.org/x/net v0.28.0 h1:a9JDOJc5GMUJ0+UDqmLT86WiEy7iWyIhz8gz8E4e5hE=
 golang.org/x/net v0.28.0/go.mod h1:yqtgsTWOOnlGLG9GFRrK3++bGOUEkNBoHZc8MEDWPNg=
 golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
