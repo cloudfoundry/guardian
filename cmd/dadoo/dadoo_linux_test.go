@@ -44,7 +44,7 @@ var _ = Describe("Dadoo", func() {
 		// runc require write permission on the rootfs when in userns
 		Expect(os.Chmod(bundlePath, 0755)).To(Succeed())
 
-		cmd := exec.Command("runc", "spec")
+		cmd := exec.Command("runc", "spec", "--rootless")
 		cmd.Dir = bundlePath
 		Expect(cmd.Run()).To(Succeed())
 
@@ -101,6 +101,7 @@ var _ = Describe("Dadoo", func() {
 	Describe("running dadoo", func() {
 		var (
 			processDir                                  string
+			runcCmd                                     *exec.Cmd
 			runcLogFile                                 *os.File
 			runcLogFilePath                             string
 			stdinPipe, stdoutPipe, stderrPipe, exitPipe string
@@ -559,17 +560,30 @@ var _ = Describe("Dadoo", func() {
 				})
 			})
 
+		}
+
+		Describe("exec", func() {
+			BeforeEach(func() {
+				mode = "exec"
+
+				runcCmd = exec.Command("runc", "create", "--no-new-keyring", "--bundle", bundlePath, filepath.Base(bundlePath))
+			})
+
+			JustBeforeEach(func() {
+				// hangs if GinkgoWriter is attached
+				Expect(runcCmd.Run()).To(Succeed())
+			})
+
+			itRunsRunc()
+
 			Context("when the -runc-root flag is passed", func() {
 				BeforeEach(func() {
 					var err error
 					runcRoot, err = os.MkdirTemp("", "")
 					Expect(err).NotTo(HaveOccurred())
-				})
 
-				JustBeforeEach(func() {
 					// hangs if GinkgoWriter is attached
-					cmd := exec.Command("runc", "--root", runcRoot, "create", "--no-new-keyring", "--bundle", bundlePath, filepath.Base(bundlePath))
-					Expect(cmd.Run()).To(Succeed())
+					runcCmd = exec.Command("runc", "--root", runcRoot, "create", "--no-new-keyring", "--bundle", bundlePath, filepath.Base(bundlePath))
 				})
 
 				AfterEach(func() {
@@ -601,20 +615,6 @@ var _ = Describe("Dadoo", func() {
 					Eventually(sess).Should(gexec.Exit(0))
 				})
 			})
-		}
-
-		Describe("exec", func() {
-			BeforeEach(func() {
-				mode = "exec"
-			})
-
-			JustBeforeEach(func() {
-				// hangs if GinkgoWriter is attached
-				cmd := exec.Command("runc", "create", "--no-new-keyring", "--bundle", bundlePath, filepath.Base(bundlePath))
-				Expect(cmd.Run()).To(Succeed())
-			})
-
-			itRunsRunc()
 		})
 
 		Describe("run", func() {
