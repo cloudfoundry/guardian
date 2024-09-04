@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 var (
@@ -34,8 +35,10 @@ func TestDadoo(t *testing.T) {
 			return nil
 		}
 
-		cgroupsRoot = filepath.Join(os.TempDir(), "dadoo-cgroups")
-		Expect(setupCgroups(cgroupsRoot)).To(Succeed())
+		if !cgroups.IsCgroup2UnifiedMode() {
+			cgroupsRoot = filepath.Join(os.TempDir(), "dadoo-cgroups")
+			Expect(setupCgroups(cgroupsRoot)).To(Succeed())
+		}
 
 		bins["dadoo_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo", "-mod=vendor")
 		Expect(err).NotTo(HaveOccurred())
@@ -76,8 +79,10 @@ func TestDadoo(t *testing.T) {
 			}
 		}
 
-		Expect(syscall.Unmount(cgroupsRoot, 0)).To(Succeed())
-		Expect(os.Remove(cgroupsRoot)).To(Succeed())
+		if !cgroups.IsCgroup2UnifiedMode() {
+			Expect(syscall.Unmount(cgroupsRoot, 0)).To(Succeed())
+			Expect(os.Remove(cgroupsRoot)).To(Succeed())
+		}
 	})
 
 	BeforeEach(func() {
