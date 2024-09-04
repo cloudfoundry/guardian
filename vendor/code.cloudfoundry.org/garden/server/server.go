@@ -131,14 +131,7 @@ func New(
 			case http.StateIdle:
 				select {
 				case <-s.stopping:
-					err := conn.Close()
-					if err != nil {
-						conLogger.Debug("failed-to-close", lager.Data{
-							"error":       err,
-							"local_addr":  conn.LocalAddr(),
-							"remote_addr": conn.RemoteAddr(),
-						})
-					}
+					conn.Close()
 				default:
 					s.mu.Lock()
 					s.conns[conn] = conn
@@ -232,7 +225,6 @@ func (s *GardenServer) Listen() (net.Listener, error) {
 		// deployments, garden server and diego rep always run as different users.
 		// https://www.pivotaltracker.com/story/show/151245015 addresses this
 		// issue.
-		// #nosec G302
 		if err := os.Chmod(s.listenAddr, 0777); err != nil {
 			return nil, err
 		}
@@ -251,10 +243,7 @@ func (s *GardenServer) Stop() error {
 
 	close(s.stopping)
 
-	err := s.listener.Close()
-	if err != nil {
-		s.logger.Debug("failed-to-close-listener", lager.Data{"error": err, "addr": s.listener.Addr()})
-	}
+	s.listener.Close()
 
 	s.mu.Lock()
 	conns := s.conns
@@ -266,17 +255,14 @@ func (s *GardenServer) Stop() error {
 			"addr": c.RemoteAddr(),
 		})
 
-		err := c.Close()
-		if err != nil {
-			s.logger.Debug("failed-to-close-idle-conn", lager.Data{"error": err, "addr": c.RemoteAddr()})
-		}
+		c.Close()
 	}
 
 	s.logger.Info("waiting-for-connections-to-close")
 	s.handling.Wait()
 
 	s.logger.Info("stopping-backend")
-	err = s.backend.Stop()
+	err := s.backend.Stop()
 	if err != nil {
 		return err
 	}
@@ -324,8 +310,7 @@ func (s *GardenServer) reapContainer(container garden.Container) {
 		return
 	}
 
-	err := s.backend.Destroy(container.Handle())
-	s.logger.Error("failed-to-destroy-container", err, lager.Data{"handle": container.Handle()})
+	s.backend.Destroy(container.Handle())
 
 	s.destroysL.Lock()
 	delete(s.destroys, container.Handle())

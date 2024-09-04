@@ -29,10 +29,7 @@ func (sh *streamHandler) streamIn(processWriter io.WriteCloser, stdin io.Reader)
 
 	go func(processInputStream io.WriteCloser, stdin io.Reader, log lager.Logger) {
 		if _, err := io.Copy(processInputStream, stdin); err == nil {
-			err := processInputStream.Close()
-			if err != nil {
-				sh.log.Debug("failed-to-close-input-stream", lager.Data{"error": err})
-			}
+			processInputStream.Close()
 		} else {
 			log.Error("streaming-stdin-payload", err)
 		}
@@ -42,10 +39,7 @@ func (sh *streamHandler) streamIn(processWriter io.WriteCloser, stdin io.Reader)
 func (sh *streamHandler) streamOut(streamWriter io.Writer, streamReader io.Reader) {
 	sh.wg.Add(1)
 	go func() {
-		_, err := io.Copy(streamWriter, streamReader)
-		if err != nil {
-			sh.log.Debug("failed-to-copy-stream-data", lager.Data{"error": err})
-		}
+		io.Copy(streamWriter, streamReader)
 		sh.wg.Done()
 	}()
 }

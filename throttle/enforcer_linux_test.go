@@ -214,12 +214,16 @@ func readCPUShares(cgroupPath string) int {
 }
 
 func mountCPUcgroup(cgroupRoot string) {
-	Expect(syscall.Mount("cgroup", cgroupRoot, "tmpfs", uintptr(0), "mode=0755")).To(Succeed())
+	if cgroups.IsCgroup2UnifiedMode() {
+		Expect(syscall.Mount("cgroup", cgroupRoot, "cgroup2", uintptr(0), "mode=0755")).To(Succeed())
+	} else {
+		Expect(syscall.Mount("cgroup", cgroupRoot, "tmpfs", uintptr(0), "mode=0755")).To(Succeed())
 
-	cpuCgroup := filepath.Join(cgroupRoot, "cpu")
-	Expect(os.MkdirAll(cpuCgroup, 0755)).To(Succeed())
+		cpuCgroup := filepath.Join(cgroupRoot, "cpu")
+		Expect(os.MkdirAll(cpuCgroup, 0755)).To(Succeed())
 
-	Expect(syscall.Mount("cgroup", cpuCgroup, "cgroup", uintptr(0), "cpu,cpuacct")).To(Succeed())
+		Expect(syscall.Mount("cgroup", cpuCgroup, "cgroup", uintptr(0), "cpu,cpuacct")).To(Succeed())
+	}
 }
 
 func umountCgroups(cgroupRoot string) {
