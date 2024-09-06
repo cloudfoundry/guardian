@@ -246,7 +246,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		listenAddr = cmd.Server.BindSocket
 	}
 
-	gardenServer := server.New(listenNetwork, listenAddr, cmd.Containers.DefaultGraceTime, backend, logger.Session("api"))
+	gardenServer := server.New(listenNetwork, listenAddr, cmd.Containers.DefaultGraceTime, cmd.Server.ReadHeaderTimeout, backend, logger.Session("api"))
 	// listen on the socket prior to serving, to ensure unix socket files are created and the healthcheck
 	// process can launch while the backend runs its cleanup. However, don't serve requests in gardenServer
 	// until the cleanup is complete
