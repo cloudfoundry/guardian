@@ -26,6 +26,7 @@ require (
 	github.com/cloudfoundry/gosigar v1.3.70
 	github.com/containerd/containerd v1.7.21
 	github.com/containerd/containerd/api v1.7.19
+	github.com/containerd/errdefs v0.1.0
 	github.com/containerd/typeurl/v2 v2.2.0
 	github.com/docker/docker v27.2.1+incompatible
 	github.com/eapache/go-resiliency v1.7.0
@@ -72,7 +73,6 @@ require (
 	github.com/containerd/cgroups/v3 v3.0.3 // indirect
 	github.com/containerd/console v1.0.4 // indirect
 	github.com/containerd/continuity v0.4.3 // indirect
-	github.com/containerd/errdefs v0.1.0 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/go-cni v1.1.9 // indirect
 	github.com/containerd/go-runc v1.1.0 // indirect
