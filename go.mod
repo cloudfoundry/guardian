@@ -4,32 +4,22 @@ go 1.22.0
 
 toolchain go1.22.6
 
-// TODO: update to containerd 2.0 when it is out, and remove these replace directives
 replace (
-	// pin hcsshim for containerd v1.7.13
-	github.com/Microsoft/hcsshim => github.com/Microsoft/hcsshim v0.11.4
-	github.com/cloudfoundry/gosigar => github.com/cloudfoundry/gosigar v1.3.45
-	// force go-runc back to 1.0.0 since runc 1.7.x is incompatible with anything newer
+	// PIN hcsshim + go-runc back so that they're compatible with github.com/containerd/containerd 1.7.x
+	// TODO: when bumping to containerd 2.0, remove these pins
+	github.com/Microsoft/hcsshim => github.com/Microsoft/hcsshim v0.11.7
 	github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
-	// force otelgrpc back to 0.45.0 since otel v.1.19.0 is not comptible with anything newer
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.45.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.52.0
-	// force otel back to 1.19 since containerd 1.7.x is incompatible with anything newer
-	go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.19.0
-	go.opentelemetry.io/otel/metric => go.opentelemetry.io/otel/metric v1.19.0
-	go.opentelemetry.io/otel/sdk => go.opentelemetry.io/otel/sdk v1.19.0
-	go.opentelemetry.io/otel/trace => go.opentelemetry.io/otel/trace v1.19.0
 )
 
 require (
 	code.cloudfoundry.org/archiver v0.9.0
-	code.cloudfoundry.org/clock v1.11.0
+	code.cloudfoundry.org/clock v1.12.0
 	code.cloudfoundry.org/commandrunner v0.9.0
-	code.cloudfoundry.org/debugserver v0.11.0
-	code.cloudfoundry.org/garden v0.0.0-20240906210158-d3ba7afc2097
+	code.cloudfoundry.org/debugserver v0.12.0
+	code.cloudfoundry.org/garden v0.0.0-20240909185713-e9fe567e6aa7
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240905210557-d9ef54a0db2e
-	code.cloudfoundry.org/lager/v3 v3.4.0
+	code.cloudfoundry.org/idmapper v0.0.0-20240909185944-71b8696099e6
+	code.cloudfoundry.org/lager/v3 v3.5.0
 	code.cloudfoundry.org/localip v0.10.0
 	github.com/BurntSushi/toml v1.4.0
 	github.com/cloudfoundry/dropsonde v1.1.0
@@ -71,7 +61,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
-	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/checkpoint-restore/go-criu/v5 v5.3.0 // indirect
 	github.com/cilium/ebpf v0.11.0 // indirect
@@ -127,7 +117,6 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/miekg/pkcs11 v1.1.1 // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mistifyio/go-zfs/v3 v3.0.1 // indirect
@@ -147,17 +136,17 @@ require (
 	github.com/opencontainers/selinux v1.11.0 // indirect
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/prometheus/client_golang v1.14.0 // indirect
-	github.com/prometheus/client_model v0.4.0 // indirect
-	github.com/prometheus/common v0.37.0 // indirect
-	github.com/prometheus/procfs v0.8.0 // indirect
+	github.com/prometheus/client_golang v1.19.1 // indirect
+	github.com/prometheus/client_model v0.6.1 // indirect
+	github.com/prometheus/common v0.48.0 // indirect
+	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/seccomp/libseccomp-golang v0.9.2-0.20220502022130-f33da4d89646 // indirect
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
 	github.com/tedsuo/rata v1.0.0 // indirect
-	github.com/urfave/cli v1.22.14 // indirect
+	github.com/urfave/cli v1.22.15 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	go.etcd.io/bbolt v1.3.10 // indirect
 	go.mozilla.org/pkcs7 v0.0.0-20200128120323-432b2356ecb1 // indirect
@@ -169,7 +158,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.19.0 // indirect
 	go.opentelemetry.io/otel/metric v1.29.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.21.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.28.0 // indirect
 	go.opentelemetry.io/otel/trace v1.29.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	golang.org/x/crypto v0.27.0 // indirect
@@ -199,7 +188,7 @@ require (
 	k8s.io/utils v0.0.0-20230220204549-a5ecb0141aa5 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
+	sigs.k8s.io/yaml v1.4.0 // indirect
 	tags.cncf.io/container-device-interface v0.7.2 // indirect
 	tags.cncf.io/container-device-interface/specs-go v0.7.0 // indirect
 )
