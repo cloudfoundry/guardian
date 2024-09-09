@@ -19,9 +19,9 @@ import (
 	"github.com/containerd/containerd"
 	apievents "github.com/containerd/containerd/api/events"
 	"github.com/containerd/containerd/cio"
-	"github.com/containerd/containerd/errdefs"
 	ctrdevents "github.com/containerd/containerd/events"
 	v2types "github.com/containerd/containerd/runtime/v2/runc/options"
+	"github.com/containerd/errdefs"
 	"github.com/containerd/typeurl/v2"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
