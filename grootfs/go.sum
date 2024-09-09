@@ -1,7 +1,7 @@
 code.cloudfoundry.org/commandrunner v0.9.0 h1:Gzvctx0tS2ljtjFOkVBlcgQn+5T09HRaJCwA805SHLg=
 code.cloudfoundry.org/commandrunner v0.9.0/go.mod h1:w4xhSS5ShXYMxYFLTsxkxzSszd+WZXluV9hh9c04gyk=
-code.cloudfoundry.org/lager/v3 v3.4.0 h1:HflFoHezSfYDIMNxkGctLKgWIvkr5cJqfo8BHGKOlCw=
-code.cloudfoundry.org/lager/v3 v3.4.0/go.mod h1:tpvCqzex59vTU7Ssgxo9h367EGiL6CrNzuohvnTbsEk=
+code.cloudfoundry.org/lager/v3 v3.5.0 h1:6I00P+t0LlzVxZadPntz3dbrTNEzvWg5y9DFdFrEV54=
+code.cloudfoundry.org/lager/v3 v3.5.0/go.mod h1:1wnCVjRSGEEelGLGVpIl4nXiNPDTaBaLyhQh1Yz5HX4=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77 h1:afT88tB6u9JCKQZVAAaa9ICz/uGn5Uw9ekn6P22mYKM=
