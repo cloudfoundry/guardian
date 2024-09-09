@@ -57,13 +57,13 @@ import (
 	"github.com/containerd/containerd/pkg/deprecation"
 	"github.com/containerd/containerd/pkg/dialer"
 	"github.com/containerd/containerd/pkg/timeout"
-	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/plugin"
 	srvconfig "github.com/containerd/containerd/services/server/config"
 	"github.com/containerd/containerd/services/warning"
 	ssproxy "github.com/containerd/containerd/snapshots/proxy"
 	"github.com/containerd/containerd/sys"
 	"github.com/containerd/log"
+	"github.com/containerd/platforms"
 )
 
 // CreateTopLevelDirectories creates the top-level root and state directories.
@@ -83,6 +83,15 @@ func CreateTopLevelDirectories(config *srvconfig.Config) error {
 
 	if err := sys.MkdirAllWithACL(config.State, 0711); err != nil {
 		return err
+	}
+	if config.State != defaults.DefaultStateDir {
+		// XXX: socketRoot in pkg/shim is hard-coded to the default state directory.
+		// See https://github.com/containerd/containerd/issues/10502#issuecomment-2249268582 for why it's set up that way.
+		// The default fifo directory in pkg/cio is also configured separately and defaults to the default state directory instead of the configured state directory.
+		// Make sure the default state directory is created with the correct permissions.
+		if err := sys.MkdirAllWithACL(defaults.DefaultStateDir, 0o711); err != nil {
+			return err
+		}
 	}
 
 	if config.TempDir != "" {
