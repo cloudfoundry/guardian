@@ -13,6 +13,7 @@ replace (
 	github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
 	// force otelgrpc back to 0.45.0 since otel v.1.19.0 is not comptible with anything newer
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.45.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.52.0
 	// force otel back to 1.19 since containerd 1.7.x is incompatible with anything newer
 	go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.19.0
 	go.opentelemetry.io/otel/metric => go.opentelemetry.io/otel/metric v1.19.0
