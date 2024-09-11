@@ -2,8 +2,6 @@ module code.cloudfoundry.org/guardian
 
 go 1.22.0
 
-toolchain go1.22.7
-
 replace (
 	// PIN hcsshim + go-runc back so that they're compatible with github.com/containerd/containerd 1.7.x
 	// TODO: when bumping to containerd 2.0, remove these pins
