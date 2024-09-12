@@ -25,7 +25,7 @@ func (d *DependencyManager) Register(id string, chainIDs []string) error {
 		return err
 	}
 
-	return os.WriteFile(d.filePath(id), data, 0666)
+	return os.WriteFile(d.filePath(id), data, 0644)
 }
 
 func (d *DependencyManager) Deregister(id string) error {
