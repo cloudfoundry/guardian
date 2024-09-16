@@ -146,7 +146,7 @@ func (r *Runner) SetConfig(cfg config.Config) error {
 		return err
 	}
 
-	if err := os.Chmod(configFile.Name(), 0666); err != nil {
+	if err := os.Chmod(configFile.Name(), 0644); err != nil {
 		return err
 	}
 
