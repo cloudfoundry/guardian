@@ -154,6 +154,7 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 	diffIDHash := sha256.New()
 	digestReader = io.NopCloser(io.TeeReader(digestReader, diffIDHash))
 
+	// #nosec - G110 - We're fine with unbounded file decompression here as we have container filesystem quotas that will prevent this from eating up the entire diego cell disk space
 	uncompressedSize, err := io.Copy(blobTempFile, digestReader)
 	if err != nil {
 		logger.Error("writing-blob-to-file", err)
