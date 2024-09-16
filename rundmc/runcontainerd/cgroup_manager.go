@@ -45,5 +45,5 @@ func (m cgroupManager) SetUseMemoryHierarchy(handle string) error {
 		return err
 	}
 
-	return os.WriteFile(filepath.Join(state.CgroupPaths.Memory, "memory.use_hierarchy"), []byte("1"), os.ModePerm)
+	return os.WriteFile(filepath.Join(state.CgroupPaths.Memory, "memory.use_hierarchy"), []byte("1"), 0644)
 }
