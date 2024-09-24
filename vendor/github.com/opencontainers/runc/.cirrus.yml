@@ -57,7 +57,7 @@ task:
     mkdir -p -m 0700 /root/.ssh
     vagrant ssh-config >> /root/.ssh/config
   guest_info_script: |
-    ssh default 'sh -exc "uname -a && systemctl --version && df -T && cat /etc/os-release && go version"'
+    ssh default 'sh -exc "uname -a && systemctl --version && df -T && cat /etc/os-release && go version && sestatus && rpm -q container-selinux"'
   check_config_script: |
     ssh default /vagrant/script/check-config.sh
   unit_tests_script: |
@@ -79,7 +79,7 @@ task:
     CIRRUS_WORKING_DIR: /home/runc
     GO_VERSION: "1.22"
     BATS_VERSION: "v1.9.0"
-    RPMS: gcc git iptables jq glibc-static libseccomp-devel make criu fuse-sshfs
+    RPMS: gcc git iptables jq glibc-static libseccomp-devel make criu fuse-sshfs container-selinux
     # yamllint disable rule:key-duplicates
     matrix:
       DISTRO: almalinux-8
@@ -119,7 +119,7 @@ task:
     # Install Go.
     PREFIX="https://go.dev/dl/"
     # Find out the latest minor release URL.
-    eval $(curl -fsSL "${PREFIX}?mode=json" | jq -r  --arg Ver "$GO_VERSION" '.[] | select(.version | startswith("go\($Ver)")) | .files[] | select(.os == "linux" and .arch == "amd64" and .kind == "archive") | "filename=\"" + .filename + "\""')
+    filename=$(curl -fsSL "${PREFIX}?mode=json&include=all" | jq -r --arg Ver "go$GO_VERSION." '. | map(select(.version | contains($Ver))) | first | .files[] | select(.os == "linux" and .arch == "amd64" and .kind == "archive") | .filename')
     curl -fsSL "$PREFIX$filename" | tar Cxz /usr/local
     # install bats
     cd /tmp
@@ -156,6 +156,8 @@ task:
     cat /etc/os-release
     # -----
     df -T
+    # -----
+    sestatus
     # -----
     cat /proc/cpuinfo
   check_config_script: |
