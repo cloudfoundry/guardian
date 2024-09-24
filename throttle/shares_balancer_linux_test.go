@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 
 	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/throttle"
@@ -41,11 +40,12 @@ var _ = Describe("SharesBalancer", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		thisTestCgroupPath = filepath.Join(cgroupRoot, "cpu", fmt.Sprintf("balancer-test-%s", id.String()))
+		makeSubCgroup(thisTestCgroupPath)
 
 		goodCgroupPath = filepath.Join(thisTestCgroupPath, gardencgroups.GoodCgroupName)
-		Expect(os.MkdirAll(goodCgroupPath, 0755)).To(Succeed())
+		makeSubCgroup(goodCgroupPath)
 		badCgroupPath = filepath.Join(thisTestCgroupPath, gardencgroups.BadCgroupName)
-		Expect(os.MkdirAll(badCgroupPath, 0755)).To(Succeed())
+		makeSubCgroup(badCgroupPath)
 
 		memoryProvider = new(throttlefakes.FakeMemoryProvider)
 		memoryProvider.TotalMemoryReturns(10000*throttle.MB, nil)
@@ -78,8 +78,8 @@ var _ = Describe("SharesBalancer", func() {
 		var container *exec.Cmd
 
 		BeforeEach(func() {
-			Expect(createCgroup(goodCgroupPath, "container", 1000)).To(Succeed())
-			Expect(createCgroup(badCgroupPath, "container", 1000)).To(Succeed())
+			createCgroup(goodCgroupPath, "container", 1000)
+			createCgroup(badCgroupPath, "container", 1000)
 			container = exec.Command("sleep", "360")
 			Expect(container.Start()).To(Succeed())
 		})
@@ -127,13 +127,8 @@ var _ = Describe("SharesBalancer", func() {
 	})
 })
 
-func createCgroup(parentPath, name string, shares int) error {
+func createCgroup(parentPath, name string, shares int) {
 	cgroupPath := filepath.Join(parentPath, name)
-
-	err := os.MkdirAll(cgroupPath, 0755)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(filepath.Join(cgroupPath, "cpu.shares"), []byte(strconv.Itoa(shares)), 0644)
+	makeSubCgroup(cgroupPath)
+	writeShares(cgroupPath, shares)
 }

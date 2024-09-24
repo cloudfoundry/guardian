@@ -66,12 +66,17 @@ var _ = Describe("Enforcer", func() {
 
 			BeforeEach(func() {
 				goodCgroup = filepath.Join(cpuCgroupPath, gardencgroups.GoodCgroupName)
+				makeSubCgroup(goodCgroup)
 				goodContainerCgroup = filepath.Join(goodCgroup, handle)
+				makeSubCgroup(goodContainerCgroup)
 				Expect(os.MkdirAll(goodContainerCgroup, 0755)).To(Succeed())
-				Expect(os.WriteFile(filepath.Join(goodContainerCgroup, "cpu.shares"), []byte("3456"), 0755)).To(Succeed())
+
+				writeShares(goodContainerCgroup, 3456)
 
 				badCgroup = filepath.Join(cpuCgroupPath, gardencgroups.BadCgroupName)
+				makeSubCgroup(badCgroup)
 				badContainerCgroup = filepath.Join(badCgroup, handle)
+				makeSubCgroup(badContainerCgroup)
 				Expect(os.MkdirAll(badContainerCgroup, 0755)).To(Succeed())
 
 				command = exec.Command("sleep", "360")
@@ -105,7 +110,7 @@ var _ = Describe("Enforcer", func() {
 
 			BeforeEach(func() {
 				containerCgroup = filepath.Join(cpuCgroupPath, handle)
-				Expect(os.MkdirAll(containerCgroup, 0755)).To(Succeed())
+				makeSubCgroup(containerCgroup)
 
 				command = exec.Command("sleep", "360")
 				Expect(command.Start()).To(Succeed())
@@ -142,14 +147,18 @@ var _ = Describe("Enforcer", func() {
 
 			BeforeEach(func() {
 				goodCgroup = filepath.Join(cpuCgroupPath, gardencgroups.GoodCgroupName)
+				makeSubCgroup(goodCgroup)
 				goodContainerCgroup = filepath.Join(goodCgroup, handle)
-				Expect(os.MkdirAll(goodContainerCgroup, 0755)).To(Succeed())
-				Expect(os.WriteFile(filepath.Join(goodContainerCgroup, "cpu.shares"), []byte("6543"), 0755)).To(Succeed())
+				makeSubCgroup(goodContainerCgroup)
+
+				writeShares(goodContainerCgroup, 6543)
 
 				badCgroup = filepath.Join(cpuCgroupPath, gardencgroups.BadCgroupName)
+				makeSubCgroup(badCgroup)
 				badContainerCgroup = filepath.Join(badCgroup, handle)
-				Expect(os.MkdirAll(badContainerCgroup, 0755)).To(Succeed())
-				Expect(os.WriteFile(filepath.Join(badContainerCgroup, "cpu.shares"), []byte("3456"), 0755)).To(Succeed())
+				makeSubCgroup(badContainerCgroup)
+
+				writeShares(badContainerCgroup, 3456)
 
 				command = exec.Command("sleep", "360")
 				Expect(command.Start()).To(Succeed())
@@ -187,7 +196,7 @@ var _ = Describe("Enforcer", func() {
 
 			BeforeEach(func() {
 				containerCgroup = filepath.Join(cpuCgroupPath, handle)
-				Expect(os.MkdirAll(containerCgroup, 0755)).To(Succeed())
+				makeSubCgroup(containerCgroup)
 
 				command = exec.Command("sleep", "360")
 				Expect(command.Start()).To(Succeed())
@@ -205,8 +214,20 @@ var _ = Describe("Enforcer", func() {
 	})
 })
 
+func makeSubCgroup(path string) {
+	Expect(os.MkdirAll(path, 0755)).To(Succeed())
+	if cgroups.IsCgroup2UnifiedMode() {
+		Expect(os.WriteFile(filepath.Join(path, "cgroup.type"), []byte("threaded"), 0644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(path, "cgroup.subtree_control"), []byte("+cpu"), 0755)).To(Succeed())
+	}
+}
+
 func readCPUShares(cgroupPath string) int {
-	shareBytes, err := os.ReadFile(filepath.Join(cgroupPath, "cpu.shares"))
+	cpuSharesFile := "cpu.shares"
+	if cgroups.IsCgroup2UnifiedMode() {
+		cpuSharesFile = "cpu.weight"
+	}
+	shareBytes, err := os.ReadFile(filepath.Join(cgroupPath, cpuSharesFile))
 	Expect(err).NotTo(HaveOccurred())
 	shares, err := strconv.Atoi(strings.TrimSpace(string(shareBytes)))
 	Expect(err).NotTo(HaveOccurred())
@@ -215,7 +236,14 @@ func readCPUShares(cgroupPath string) int {
 
 func mountCPUcgroup(cgroupRoot string) {
 	if cgroups.IsCgroup2UnifiedMode() {
-		Expect(syscall.Mount("cgroup", cgroupRoot, "cgroup2", uintptr(0), "mode=0755")).To(Succeed())
+		Expect(syscall.Mount("cgroup2", cgroupRoot, "tmpfs", uintptr(0), "mode=0755")).To(Succeed())
+
+		cpuCgroup := filepath.Join(cgroupRoot, "cpu")
+		Expect(os.MkdirAll(cpuCgroup, 0755)).To(Succeed())
+
+		Expect(syscall.Mount("cgroup2", cpuCgroup, "cgroup2", 0, "")).To(Succeed())
+
+		Expect(os.WriteFile(filepath.Join(cpuCgroup, "cgroup.subtree_control"), []byte("+cpu"), 0644)).To(Succeed())
 	} else {
 		Expect(syscall.Mount("cgroup", cgroupRoot, "tmpfs", uintptr(0), "mode=0755")).To(Succeed())
 
@@ -231,4 +259,12 @@ func umountCgroups(cgroupRoot string) {
 	Expect(os.RemoveAll(filepath.Join(cpuCgroup, gardencgroups.Garden))).To(Succeed())
 	Expect(syscall.Unmount(cpuCgroup, 0)).To(Succeed())
 	Expect(syscall.Unmount(cgroupRoot, 0)).To(Succeed())
+}
+
+func writeShares(path string, shares int) {
+	cpuSharesFile := "cpu.shares"
+	if cgroups.IsCgroup2UnifiedMode() {
+		cpuSharesFile = "cpu.weight"
+	}
+	Expect(os.WriteFile(filepath.Join(path, cpuSharesFile), []byte(strconv.Itoa(shares)), 0644)).To(Succeed())
 }

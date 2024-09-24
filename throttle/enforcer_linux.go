@@ -13,12 +13,19 @@ import (
 type CPUCgroupEnforcer struct {
 	goodCgroupPath string
 	badCgroupPath  string
+	cpuSharesFile  string
 }
 
 func NewEnforcer(cpuCgroupPath string) CPUCgroupEnforcer {
+	cpuSharesFile := "cpu.shares"
+	if cgroups.IsCgroup2UnifiedMode() {
+		cpuSharesFile = "cpu.weight"
+	}
+
 	return CPUCgroupEnforcer{
 		goodCgroupPath: filepath.Join(cpuCgroupPath, gardencgroups.GoodCgroupName),
 		badCgroupPath:  filepath.Join(cpuCgroupPath, gardencgroups.BadCgroupName),
+		cpuSharesFile:  cpuSharesFile,
 	}
 }
 
@@ -35,11 +42,11 @@ func (c CPUCgroupEnforcer) Punish(logger lager.Logger, handle string) error {
 
 	badContainerCgroupPath := filepath.Join(c.badCgroupPath, handle)
 
-	if err := movePids(goodContainerCgroupPath, badContainerCgroupPath); err != nil {
+	if err := c.movePids(goodContainerCgroupPath, badContainerCgroupPath); err != nil {
 		return err
 	}
 
-	return copyShares(goodContainerCgroupPath, badContainerCgroupPath)
+	return c.copyShares(goodContainerCgroupPath, badContainerCgroupPath)
 }
 
 func (c CPUCgroupEnforcer) Release(logger lager.Logger, handle string) error {
@@ -55,10 +62,10 @@ func (c CPUCgroupEnforcer) Release(logger lager.Logger, handle string) error {
 
 	goodContainerCgroupPath := filepath.Join(c.goodCgroupPath, handle)
 
-	return movePids(badContainerCgroupPath, goodContainerCgroupPath)
+	return c.movePids(badContainerCgroupPath, goodContainerCgroupPath)
 }
 
-func movePids(fromCgroup, toCgroup string) error {
+func (c CPUCgroupEnforcer) movePids(fromCgroup, toCgroup string) error {
 	for {
 		pids, err := cgroups.GetPids(fromCgroup)
 		if err != nil {
@@ -77,17 +84,13 @@ func movePids(fromCgroup, toCgroup string) error {
 	}
 }
 
-func copyShares(fromCgroup, toCgroup string) error {
-	containerShares, err := os.ReadFile(filepath.Join(fromCgroup, "cpu.shares"))
+func (c CPUCgroupEnforcer) copyShares(fromCgroup, toCgroup string) error {
+	containerShares, err := os.ReadFile(filepath.Join(fromCgroup, c.cpuSharesFile))
 	if err != nil {
 		return err
 	}
 
-	return writeCPUShares(toCgroup, containerShares)
-}
-
-func writeCPUShares(cgroupPath string, shares []byte) error {
-	return os.WriteFile(filepath.Join(cgroupPath, "cpu.shares"), shares, 0644)
+	return os.WriteFile(filepath.Join(toCgroup, c.cpuSharesFile), containerShares, 0644)
 }
 
 func exists(logger lager.Logger, cgroupPath string) bool {

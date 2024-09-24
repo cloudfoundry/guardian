@@ -16,6 +16,7 @@ func (r CGroupPath) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec) (goci.
 		return bndl, nil
 	}
 
+	// applying cgroup
 	if spec.CgroupPath != "" {
 		return bndl.WithCGroupPath(filepath.Join(r.Path, spec.CgroupPath)), nil
 	}
