@@ -33,7 +33,7 @@ func CreateBaseImage(rootUID, rootGID, grootUID, grootGID int) string {
 	Expect(os.Chown(grootFilePath, grootUID, grootGID)).To(Succeed())
 
 	grootFolder := path.Join(sourceImagePath, "groot-folder")
-	Expect(os.Mkdir(grootFolder, 0777)).To(Succeed())
+	Expect(os.Mkdir(grootFolder, 0755)).To(Succeed())
 	Expect(os.Chown(grootFolder, grootUID, grootGID)).To(Succeed())
 	Expect(os.WriteFile(path.Join(grootFolder, "hello"), []byte("hello-world"), 0644)).To(Succeed())
 
@@ -41,7 +41,7 @@ func CreateBaseImage(rootUID, rootGID, grootUID, grootGID int) string {
 	Expect(os.WriteFile(rootFilePath, []byte("hello-world"), 0644)).To(Succeed())
 
 	rootFolder := path.Join(sourceImagePath, "root-folder")
-	Expect(os.Mkdir(rootFolder, 0777)).To(Succeed())
+	Expect(os.Mkdir(rootFolder, 0755)).To(Succeed())
 	Expect(os.WriteFile(path.Join(rootFolder, "hello"), []byte("hello-world"), 0644)).To(Succeed())
 
 	grootLinkToRootFile := path.Join(sourceImagePath, "groot-link")
@@ -62,7 +62,7 @@ func UpdateBaseImageTar(tarPath, sourcePath string) {
 	sess, err := gexec.Start(exec.Command("tar", "-cpf", tarPath, "-C", sourcePath, "."), GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(sess, 15*time.Second).Should(gexec.Exit(0))
-	Expect(os.Chmod(tarPath, 0666)).To(Succeed())
+	Expect(os.Chmod(tarPath, 0644)).To(Succeed())
 }
 
 func FindUID(user string) uint32 {
@@ -96,7 +96,7 @@ func CreateFakeBin(binaryName string) (string, *os.File, *os.File) {
 	binCalledFile, err := os.CreateTemp("", "bin-called")
 	Expect(err).NotTo(HaveOccurred())
 	Expect(binCalledFile.Close()).To(Succeed())
-	Expect(os.Chmod(binCalledFile.Name(), 0666)).To(Succeed())
+	Expect(os.Chmod(binCalledFile.Name(), 0644)).To(Succeed())
 
 	tempFolder, err := os.MkdirTemp("", "")
 	Expect(err).NotTo(HaveOccurred())
