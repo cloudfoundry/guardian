@@ -44,6 +44,7 @@ func New(dir string, bundleSaver BundleSaver, bundleLoader BundleLoader) *Direct
 	}
 }
 
+// Making directory for container here
 func (d *DirectoryDepot) Create(log lager.Logger, handle string, bundle goci.Bndl) (string, error) {
 	log = log.Session("depot-create", lager.Data{"handle": handle})
 

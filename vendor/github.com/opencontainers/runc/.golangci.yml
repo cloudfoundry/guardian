@@ -3,6 +3,7 @@
 run:
   build-tags:
     - seccomp
+    - runc_nodmz
 
 linters:
   enable:
@@ -10,3 +11,8 @@ linters:
     - errorlint
     - unconvert
     - unparam
+
+linters-settings:
+  govet:
+    enable:
+      - nilness

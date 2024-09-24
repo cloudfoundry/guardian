@@ -8,8 +8,9 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/specconv"
-	"github.com/opencontainers/runc/types/features"
+	runcfeatures "github.com/opencontainers/runc/types/features"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/opencontainers/runtime-spec/specs-go/features"
 	"github.com/urfave/cli"
 )
 
@@ -19,8 +20,7 @@ var featuresCommand = cli.Command{
 	ArgsUsage: "",
 	Description: `Show the enabled features.
    The result is parsable as a JSON.
-   See https://pkg.go.dev/github.com/opencontainers/runc/types/features for the type definition.
-   The types are experimental and subject to change.
+   See https://github.com/opencontainers/runtime-spec/blob/main/features.md for the type definition.
 `,
 	Action: func(context *cli.Context) error {
 		if err := checkArgs(context, 0, exactArgs); err != nil {
@@ -33,9 +33,9 @@ var featuresCommand = cli.Command{
 			OCIVersionMin: "1.0.0",
 			OCIVersionMax: specs.Version,
 			Annotations: map[string]string{
-				features.AnnotationRuncVersion:           version,
-				features.AnnotationRuncCommit:            gitCommit,
-				features.AnnotationRuncCheckpointEnabled: "true",
+				runcfeatures.AnnotationRuncVersion:           version,
+				runcfeatures.AnnotationRuncCommit:            gitCommit,
+				runcfeatures.AnnotationRuncCheckpointEnabled: "true",
 			},
 			Hooks:        configs.KnownHookNames(),
 			MountOptions: specconv.KnownMountOptions(),
@@ -47,6 +47,7 @@ var featuresCommand = cli.Command{
 					V2:          &t,
 					Systemd:     &t,
 					SystemdUser: &t,
+					Rdma:        &t,
 				},
 				Apparmor: &features.Apparmor{
 					Enabled: &t,
@@ -54,18 +55,33 @@ var featuresCommand = cli.Command{
 				Selinux: &features.Selinux{
 					Enabled: &t,
 				},
+				IntelRdt: &features.IntelRdt{
+					Enabled: &t,
+				},
+				MountExtensions: &features.MountExtensions{
+					IDMap: &features.IDMap{
+						Enabled: &t,
+					},
+				},
+			},
+			PotentiallyUnsafeConfigAnnotations: []string{
+				"bundle",
+				"org.systemd.property.", // prefix form
+				"org.criu.config",
 			},
 		}
 
 		if seccomp.Enabled {
 			feat.Linux.Seccomp = &features.Seccomp{
-				Enabled:   &t,
-				Actions:   seccomp.KnownActions(),
-				Operators: seccomp.KnownOperators(),
-				Archs:     seccomp.KnownArchs(),
+				Enabled:        &t,
+				Actions:        seccomp.KnownActions(),
+				Operators:      seccomp.KnownOperators(),
+				Archs:          seccomp.KnownArchs(),
+				KnownFlags:     seccomp.KnownFlags(),
+				SupportedFlags: seccomp.SupportedFlags(),
 			}
 			major, minor, patch := seccomp.Version()
-			feat.Annotations[features.AnnotationLibseccompVersion] = fmt.Sprintf("%d.%d.%d", major, minor, patch)
+			feat.Annotations[runcfeatures.AnnotationLibseccompVersion] = fmt.Sprintf("%d.%d.%d", major, minor, patch)
 		}
 
 		enc := json.NewEncoder(context.App.Writer)
