@@ -109,6 +109,7 @@ func (r *FakeRegistry) serveManifest(rw http.ResponseWriter, req *http.Request) 
 	if r.failNextManifestRequests > 0 {
 		r.failNextManifestRequests--
 		rw.WriteHeader(http.StatusTeapot)
+		// #nosec G104 - ignore errors when writing HTTP responses so we don't spam our logs during a DoS
 		rw.Write([]byte("null"))
 		return
 	}
@@ -120,6 +121,7 @@ func (r *FakeRegistry) serveBlob(rw http.ResponseWriter, req *http.Request) {
 	if r.failNextBlobRequests > 0 {
 		r.failNextBlobRequests--
 		rw.WriteHeader(http.StatusTeapot)
+		// #nosec G104 - ignore errors when writing HTTP responses so we don't spam our logs during a DoS
 		rw.Write([]byte("null"))
 		return
 	}
