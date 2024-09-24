@@ -19,6 +19,7 @@ func (w *DynamicMultiWriter) Write(p []byte) (int, error) {
 	defer w.mutex.RUnlock()
 
 	for _, writer := range w.writers {
+		// #nosec G104 - for some reason we don't want to return errors from our Write() interface here, ever. Try all writers, and if any fail, ignore it. If all fail, oh well?
 		writer.Write(p)
 	}
 

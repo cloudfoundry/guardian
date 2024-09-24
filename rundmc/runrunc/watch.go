@@ -41,7 +41,10 @@ func (r *OomWatcher) WatchEvents(log lager.Logger, handle string) error {
 	log.Info("watching")
 
 	defer func() {
-		stdoutR.Close()
+		closeErr := stdoutR.Close()
+		if closeErr != nil {
+			log.Debug("failed-to-close-stdout-reader", lager.Data{"error": closeErr})
+		}
 		log.Info("done")
 	}()
 
@@ -50,8 +53,16 @@ func (r *OomWatcher) WatchEvents(log lager.Logger, handle string) error {
 	}
 
 	go func() {
-		defer w.Close()
-		r.commandRunner.Wait(cmd) // avoid zombie
+		defer func() {
+			err := w.Close()
+			if err != nil {
+				log.Debug("error-closing-stdout", lager.Data{"error": err})
+			}
+		}()
+		err := r.commandRunner.Wait(cmd) // avoid zombie
+		if err != nil {
+			log.Debug("error-waiting-on-cmd", lager.Data{"error": err})
+		}
 	}()
 
 	decoder := json.NewDecoder(stdoutR)

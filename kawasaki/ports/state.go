@@ -48,6 +48,5 @@ func SaveState(filePath string, state State) error {
 	}
 	defer stateFile.Close()
 
-	json.NewEncoder(stateFile).Encode(state)
-	return nil
+	return json.NewEncoder(stateFile).Encode(state)
 }

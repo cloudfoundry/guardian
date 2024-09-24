@@ -45,7 +45,10 @@ func main() {
 	}
 
 	if *failOnceIfExists != "" && fileExists(*failOnceIfExists) {
-		os.Remove(*failOnceIfExists)
+		err := os.Remove(*failOnceIfExists)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to remove file %s: %s\n", *failOnceIfExists, err)
+		}
 		os.Exit(1)
 	}
 }

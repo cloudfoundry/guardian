@@ -22,14 +22,20 @@ func (stopper *CgroupStopper) StopAll(log lager.Logger, cgroupName string, excep
 	}
 
 	if !kill {
-		stopper.retrier.Run(func() error {
+		err := stopper.retrier.Run(func() error {
 			return stopper.killAllRemaining(syscall.SIGTERM, devicesSubsystemPath, exceptions)
 		})
+		if err != nil {
+			log.Debug("failed-to-kill-remaining-processes", lager.Data{"error": err, "name": cgroupName})
+		}
 	}
 
-	stopper.retrier.Run(func() error {
+	err = stopper.retrier.Run(func() error {
 		return stopper.killAllRemaining(syscall.SIGKILL, devicesSubsystemPath, exceptions)
 	})
+	if err != nil {
+		log.Debug("failed-to-kill-remaining-processes", lager.Data{"error": err, "name": cgroupName})
+	}
 
 	return nil // we killed, so everything must die
 }

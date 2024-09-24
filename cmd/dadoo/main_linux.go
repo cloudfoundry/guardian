@@ -59,7 +59,10 @@ func run() int {
 		return 2
 	}
 
-	syncPipe.Write([]byte{0})
+	_, err = syncPipe.Write([]byte{0})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to write to sync pipe: %s\n", err)
+	}
 
 	stdoutR, stderrR, err := openStdioKeepAlivePipes(processStateDir)
 	defer closeFile(stdoutR, stderrR)
@@ -91,21 +94,33 @@ func run() int {
 	}
 
 	// we need to be the subreaper so we can wait on the detached container process
-	system.SetSubreaper(os.Getpid())
+	err = system.SetSubreaper(os.Getpid())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to set ourselves as subreaper: %s\n", err)
+	}
 
 	if err := runcCmd.Start(); err != nil {
-		runcExitCodePipe.Write([]byte{2})
+		_, err := runcExitCodePipe.Write([]byte{2})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to write exit code to pipe: %s\n", err)
+		}
 		return 2
 	}
 
 	var status syscall.WaitStatus
 	var rusage syscall.Rusage
 	_, err = syscall.Wait4(runcCmd.Process.Pid, &status, 0, &rusage)
-	check(err)    // Start succeeded but Wait4 failed, this can only be a programmer error
-	logFD.Close() // No more logs from runc so close fd
+	check(err)          // Start succeeded but Wait4 failed, this can only be a programmer error
+	err = logFD.Close() // No more logs from runc so close fd
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to close log file descriptor: %s\n", err)
+	}
 
 	// also check that masterFD is received and streaming or whatevs
-	runcExitCodePipe.Write([]byte{byte(status.ExitStatus())})
+	_, err = runcExitCodePipe.Write([]byte{byte(status.ExitStatus())})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to write exit code to pipe: %s\n", err)
+	}
 	if status.ExitStatus() != 0 {
 		return 3 // nothing to wait for, container didn't launch
 	}
@@ -208,7 +223,10 @@ func setupTTYSocket(stdin io.Reader, stdout io.Writer, winszFifo io.Reader, pidF
 		defer conn.Close()
 
 		// Close ln, to allow for other instances to take over.
-		ln.Close()
+		err = ln.Close()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to close listener: %s\n", ln)
+		}
 
 		// Get the fd of the connection.
 		unixconn, ok := conn.(*net.UnixConn)
@@ -247,7 +265,11 @@ func streamProcess(m *os.File, stdin io.Reader, stdout io.Writer, winszFifo io.R
 	ioWg.Add(1)
 	go func() {
 		defer ioWg.Done()
-		io.Copy(stdout, m)
+		_, err := io.Copy(stdout, m)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to stream stdout: %s\n", err)
+		}
+
 	}()
 
 	go io.Copy(m, stdin)
@@ -259,7 +281,10 @@ func streamProcess(m *os.File, stdin io.Reader, stdout io.Writer, winszFifo io.R
 				fmt.Printf("invalid winsz event: %s\n", err)
 				continue // not much we can do here..
 			}
-			dadoo.SetWinSize(m, winSize)
+			err := dadoo.SetWinSize(m, winSize)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to set window size: %s\n", err)
+			}
 		}
 	}()
 }
@@ -267,7 +292,10 @@ func streamProcess(m *os.File, stdin io.Reader, stdout io.Writer, winszFifo io.R
 func killProcess(pidFilePath string) {
 	pid, err := readPid(pidFilePath)
 	if err == nil {
-		syscall.Kill(pid, syscall.SIGKILL)
+		err := syscall.Kill(pid, syscall.SIGKILL)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to kill process %d: %s\n", pid, err)
+		}
 	}
 }
 
@@ -277,8 +305,10 @@ func readPid(pidFilePath string) (int, error) {
 		pid = -1
 		err error
 	)
+	// #nosec G104 - don't handle errors from this because we actually get it through scope magic in the below parsePid call
 	retrier.Run(func() error {
 		pid, err = parsePid(pidFilePath)
+		//this is required for the interface to Run(), but the above error set will assign the value to the variable that's returned from the parent function
 		return err
 	})
 
@@ -313,6 +343,7 @@ func check(err error) {
 
 func closeFile(closers ...io.Closer) {
 	for _, closer := range closers {
+		// #nosec G104 - no easy way to debug log here, and we want to just loop through and close everything. if failed, likely already closed
 		closer.Close()
 	}
 }

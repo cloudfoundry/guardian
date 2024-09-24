@@ -67,6 +67,7 @@ type WaitWatcher interface { // get it??
 type Watcher struct{}
 
 func (w Watcher) OnExit(log lager.Logger, process Waiter, onExit Runner) {
+	// #nosec G104 - ignore errors waiting for a process to exit, since that means the process is gone, and exactly what we want here.
 	process.Wait()
 	onExit.Run(log)
 }

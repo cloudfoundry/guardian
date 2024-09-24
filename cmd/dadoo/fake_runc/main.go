@@ -9,7 +9,10 @@ import (
 )
 
 func main() {
-	os.WriteFile("/tmp/something", []byte(fmt.Sprintf("%#v", os.Args)), 0755)
+	err := os.WriteFile("/tmp/something", []byte(fmt.Sprintf("%#v", os.Args)), 0755)
+	if err != nil {
+		panic(err)
+	}
 	socketPath, pidPath := "", ""
 	for idx, s := range os.Args {
 		if s == "-console-socket" || s == "--console-socket" {
@@ -26,11 +29,14 @@ func main() {
 
 	// long lived process in pidFile
 	cmd := exec.Command("sleep", "1000")
-	cmd.Start()
+	err = cmd.Start()
+	if err != nil {
+		panic(err)
+	}
 	go cmd.Wait()
 	pid := cmd.Process.Pid
 	fmt.Println("PID", pid)
-	err := os.WriteFile(pidPath, []byte(fmt.Sprintf("%d", pid)), 0755)
+	err = os.WriteFile(pidPath, []byte(fmt.Sprintf("%d", pid)), 0755)
 	if err != nil {
 		panic(err)
 	}
