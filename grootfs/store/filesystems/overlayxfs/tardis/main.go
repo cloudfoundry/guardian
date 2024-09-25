@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis/commands"
@@ -33,5 +34,9 @@ func main() {
 		&commands.HandleOpqWhiteoutsCommand,
 	}
 
-	tardis.Run(os.Args)
+	err := tardis.Run(os.Args)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s", err)
+		os.Exit(1)
+	}
 }
