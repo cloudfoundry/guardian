@@ -13,7 +13,7 @@ require (
 	github.com/containers/image/v5 v5.32.2
 	github.com/containers/storage v1.55.0
 	github.com/docker/distribution v2.8.3+incompatible
-	github.com/docker/docker v27.2.1+incompatible
+	github.com/docker/docker v27.3.1+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/onsi/ginkgo/v2 v2.20.2
 	github.com/onsi/gomega v1.34.2
