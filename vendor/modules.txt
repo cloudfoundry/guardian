@@ -796,7 +796,6 @@ github.com/opencontainers/runc/libcontainer/seccomp/patchbpf
 github.com/opencontainers/runc/libcontainer/specconv
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/system/kernelversion
-github.com/opencontainers/runc/libcontainer/user
 github.com/opencontainers/runc/libcontainer/utils
 github.com/opencontainers/runc/types
 github.com/opencontainers/runc/types/features

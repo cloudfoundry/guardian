@@ -31,6 +31,7 @@ var _ = Describe("gdn server", func() {
 			config.BindIP = "127.0.0.1"
 			config.BindPort = intptr(54321)
 			config.BindSocket = ""
+			config.StartupExpectedToFail = true
 		})
 
 		Context("when we start the server again with the same IP and port", func() {

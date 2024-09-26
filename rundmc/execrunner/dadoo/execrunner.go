@@ -127,6 +127,7 @@ func (d *ExecRunner) runProcess(
 	log lager.Logger, runMode, processID, processPath, sandboxHandle string,
 	pio garden.ProcessIO, tty bool, procJSON io.Reader, extraCleanup func() error,
 ) (proc garden.Process, theErr error) {
+	log.Info("run-process")
 	fd3r, fd3w, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -166,7 +167,9 @@ func (d *ExecRunner) runProcess(
 	cmd.Stdout = dadooLogFile
 	cmd.Stderr = dadooLogFile
 
+	log.Info("dadoo-start-command", lager.Data{"path": d.dadooPath})
 	if err := d.commandRunner.Start(cmd); err != nil {
+		log.Info("failed-to-start")
 		return nil, err
 	}
 	go func() {
@@ -179,6 +182,7 @@ func (d *ExecRunner) runProcess(
 			log.Error("reading-dadoo-log-file", copyErr)
 		}
 	}()
+	log.Info("dadoo-close")
 
 	err = fd3w.Close()
 	if err != nil {
@@ -193,17 +197,21 @@ func (d *ExecRunner) runProcess(
 		log.Debug("failed-closing-sync-writer", lager.Data{"error": err})
 	}
 
+	log.Info("dadoo-open-files")
+
 	stdin, stdout, stderr, err := process.openPipes(pio)
 	if err != nil {
 		return nil, err
 	}
 
+	log.Info("dadoo-syncr-read")
 	syncMsg := make([]byte, 1)
 	_, err = syncr.Read(syncMsg)
 	if err != nil {
 		return nil, err
 	}
 
+	log.Info("dadoo-stream-data")
 	process.streamData(pio, stdin, stdout, stderr)
 
 	doneReadingRuncLogs := make(chan string)

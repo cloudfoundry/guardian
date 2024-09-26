@@ -241,7 +241,7 @@ func setupTTYSocket(stdin io.Reader, stdout io.Writer, winszFifo io.Reader, pidF
 		defer socket.Close()
 
 		// Get the master file descriptor from runC.
-		master, err := cmsg.RecvFd(socket)
+		master, err := cmsg.RecvFile(socket)
 		if err != nil {
 			return
 		}
