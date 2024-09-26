@@ -171,15 +171,27 @@ func (d *ExecRunner) runProcess(
 	}
 	go func() {
 		// wait on spawned process to avoid zombies
-		d.commandRunner.Wait(cmd)
+		waitErr := d.commandRunner.Wait(cmd)
+		if waitErr != nil {
+			log.Debug("faild-waiting-on-process", lager.Data{"error": waitErr})
+		}
 		if copyErr := copyDadooLogsToGuardianLogger(dadooLogFilePath, log); copyErr != nil {
 			log.Error("reading-dadoo-log-file", copyErr)
 		}
 	}()
 
-	fd3w.Close()
-	logw.Close()
-	syncw.Close()
+	err = fd3w.Close()
+	if err != nil {
+		log.Debug("failed-closing-fd3-writer", lager.Data{"error": err})
+	}
+	err = logw.Close()
+	if err != nil {
+		log.Debug("failed-closing-log-writer", lager.Data{"error": err})
+	}
+	err = syncw.Close()
+	if err != nil {
+		log.Debug("failed-closing-sync-writer", lager.Data{"error": err})
+	}
 
 	stdin, stdout, stderr, err := process.openPipes(pio)
 	if err != nil {
@@ -393,8 +405,14 @@ func (p process) streamData(pio garden.ProcessIO, stdin, stdout, stderr *os.File
 
 	if pio.Stdin != nil {
 		go func() {
-			io.Copy(stdin, pio.Stdin)
-			stdin.Close()
+			_, err := io.Copy(stdin, pio.Stdin)
+			if err != nil {
+				p.logger.Debug("faild-copying-from-stdin", lager.Data{"error": err})
+			}
+			err = stdin.Close()
+			if err != nil {
+				p.logger.Debug("faild-closing-stdin", lager.Data{"error": err})
+			}
 		}()
 	}
 
@@ -403,8 +421,14 @@ func (p process) streamData(pio garden.ProcessIO, stdin, stdout, stderr *os.File
 		if p.stdoutWriter.Count() == 1 {
 			p.ioWg.Add(1)
 			go func() {
-				io.Copy(p.stdoutWriter, stdout)
-				stdout.Close()
+				_, err := io.Copy(p.stdoutWriter, stdout)
+				if err != nil {
+					p.logger.Debug("faild-copying-from-stdout", lager.Data{"error": err})
+				}
+				err = stdout.Close()
+				if err != nil {
+					p.logger.Debug("faild-closing-stdout", lager.Data{"error": err})
+				}
 				p.ioWg.Done()
 			}()
 		}
@@ -415,8 +439,14 @@ func (p process) streamData(pio garden.ProcessIO, stdin, stdout, stderr *os.File
 		if p.stderrWriter.Count() == 1 {
 			p.ioWg.Add(1)
 			go func() {
-				io.Copy(p.stderrWriter, stderr)
-				stderr.Close()
+				_, err := io.Copy(p.stderrWriter, stderr)
+				if err != nil {
+					p.logger.Debug("faild-copying-from-stderr", lager.Data{"error": err})
+				}
+				err = stderr.Close()
+				if err != nil {
+					p.logger.Debug("faild-closing-stderr", lager.Data{"error": err})
+				}
 				p.ioWg.Done()
 			}()
 		}
@@ -443,7 +473,10 @@ func (p process) Wait() (int, error) {
 	defer exit.Close()
 
 	buf := make([]byte, 1)
-	exit.Read(buf)
+	_, err = exit.Read(buf)
+	if err != nil {
+		p.logger.Debug("faild-reading-from-pipe", lager.Data{"error": err})
+	}
 
 	p.ioWg.Wait()
 

@@ -74,11 +74,17 @@ func (c *Creator) Create(log lager.Logger, id string, bundle goci.Bndl, pio gard
 		// type *os.File.
 		defer pipeR.Close()
 		go func() {
-			io.Copy(pipeW, pio.Stdin)
+			_, err := io.Copy(pipeW, pio.Stdin)
+			if err != nil {
+				log.Debug("failed-to-copy-from-stdin", lager.Data{"error": err})
+			}
 			// If stdin is exhausted, we must close pipeW to avoid leaking file
 			// descriptors. The user process will still be able to drain the pipe
 			// buffer if it needs to.
-			pipeW.Close()
+			err = pipeW.Close()
+			if err != nil {
+				log.Debug("failed-to-close-pipe", lager.Data{"error": err})
+			}
 		}()
 		cmd.Stdin = pipeR
 	}

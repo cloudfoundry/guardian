@@ -14,6 +14,7 @@ func (DefaultKiller) Kill(signal syscall.Signal, pids ...int) {
 			panic(err) // can't happen on unix systems
 		}
 
+		// #nosec G104 - no logger here, and don't want to panic on errors when sending kill signals
 		process.Signal(signal)
 	}
 }

@@ -127,15 +127,27 @@ func (cc *InstanceChainCreator) Destroy(logger lager.Logger, instanceId string) 
 	}
 
 	// Flush instance chain
-	cc.iptables.FlushChain("filter", instanceChain)
+	err := cc.iptables.FlushChain("filter", instanceChain)
+	if err != nil {
+		logger.Debug("failed-to-flush-chain", lager.Data{"error": err, "chain": instanceChain})
+	}
 
 	// delete instance chain
-	cc.iptables.DeleteChain("filter", instanceChain)
+	err = cc.iptables.DeleteChain("filter", instanceChain)
+	if err != nil {
+		logger.Debug("failed-to-delete-chain", lager.Data{"error": err, "chain": instanceChain})
+	}
 
 	// delete the logging chain
 	instanceLoggingChain := fmt.Sprintf("%s-log", instanceChain)
-	cc.iptables.FlushChain("filter", instanceLoggingChain)
-	cc.iptables.DeleteChain("filter", instanceLoggingChain)
+	err = cc.iptables.FlushChain("filter", instanceLoggingChain)
+	if err != nil {
+		logger.Debug("failed-to-flush-chain", lager.Data{"error": err, "chain": instanceLoggingChain})
+	}
+	err = cc.iptables.DeleteChain("filter", instanceLoggingChain)
+	if err != nil {
+		logger.Debug("failed-to-delete-chain", lager.Data{"error": err, "chain": instanceLoggingChain})
+	}
 
 	return nil
 }

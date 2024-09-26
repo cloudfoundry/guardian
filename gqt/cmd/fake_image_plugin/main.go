@@ -262,7 +262,10 @@ var DeleteCommand = cli.Command{
 			if err != nil {
 				panic(err)
 			}
-			f.Close()
+			err = f.Close()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "failed to close file %s: %s\n", f.Name(), err)
+			}
 
 			f, err = os.OpenFile(binLocationFile, os.O_APPEND|os.O_WRONLY, 0644)
 			if err != nil {

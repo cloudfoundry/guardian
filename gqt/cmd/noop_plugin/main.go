@@ -16,5 +16,9 @@ func main() {
 		return
 	}
 
-	json.NewEncoder(os.Stdout).Encode(specs.Spec{Windows: &specs.Windows{}})
+	err := json.NewEncoder(os.Stdout).Encode(specs.Spec{Windows: &specs.Windows{}})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to encode json: %s\n", err)
+		os.Exit(1)
+	}
 }

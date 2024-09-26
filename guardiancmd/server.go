@@ -276,7 +276,10 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 
 	if cmd.Server.DebugBindIP != nil {
 		addr := fmt.Sprintf("%s:%d", cmd.Server.DebugBindIP.IP(), cmd.Server.DebugBindPort)
-		metrics.StartDebugServer(addr, reconfigurableSink, debugServerMetrics)
+		_, err := metrics.StartDebugServer(addr, reconfigurableSink, debugServerMetrics)
+		if err != nil {
+			logger.Debug("failed-to-start-debug-server", lager.Data{"error": err})
+		}
 	}
 
 	if err := backend.Start(); err != nil {
@@ -316,7 +319,10 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	cmd.saveProperties(logger, cmd.Containers.PropertiesPath, wiring.PropertiesManager)
 
 	portPoolState := wiring.PortPool.RefreshState()
-	ports.SaveState(cmd.Network.PortPoolPropertiesPath, portPoolState)
+	err = ports.SaveState(cmd.Network.PortPoolPropertiesPath, portPoolState)
+	if err != nil {
+		logger.Debug("failed-saving-state", lager.Data{"error": err})
+	}
 
 	return nil
 }

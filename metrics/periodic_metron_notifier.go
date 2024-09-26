@@ -8,12 +8,12 @@ import (
 	dropsonde_metrics "github.com/cloudfoundry/dropsonde/metrics"
 )
 
-func sendMetric(key string, value int) {
-	dropsonde_metrics.SendValue(key, float64(value), "Metric")
+func sendMetric(key string, value int) error {
+	return dropsonde_metrics.SendValue(key, float64(value), "Metric")
 }
 
-func sendDuration(duration time.Duration) {
-	dropsonde_metrics.SendValue("MetricsReporting", float64(duration), "nanos")
+func sendDuration(duration time.Duration) error {
+	return dropsonde_metrics.SendValue("MetricsReporting", float64(duration), "nanos")
 }
 
 type PeriodicMetronNotifier struct {
@@ -58,11 +58,17 @@ func (notifier PeriodicMetronNotifier) Start() {
 				startedAt := notifier.Clock.Now()
 
 				for key, metric := range notifier.metrics {
-					sendMetric(key, metric())
+					err := sendMetric(key, metric())
+					if err != nil {
+						logger.Debug("failed-to-send-metric", lager.Data{"error": err, "metric": key})
+					}
 				}
 
 				finishedAt := notifier.Clock.Now()
-				sendDuration(finishedAt.Sub(startedAt))
+				err := sendDuration(finishedAt.Sub(startedAt))
+				if err != nil {
+					logger.Debug("failed-to-send-metric", lager.Data{"error": err, "metric": "metrics-reporting-duration"})
+				}
 			case <-notifier.stopped:
 				return
 			}
