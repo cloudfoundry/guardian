@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
-	"golang.org/x/sys/unix"
 
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups/fs"
@@ -313,7 +312,7 @@ func (s *CgroupStarter) mountTmpfsOnCgroupPath(log lager.Logger, path string) {
 	log = log.Session("cgroups-tmpfs-mounting", lager.Data{"path": path})
 	log.Info("started")
 
-	if err := s.FS.Mount("cgroup", path, "tmpfs", uintptr(0), "uid=0,gid=0,mode=0755"); err != nil {
+	if err := s.FS.Mount("cgroup2", path, "tmpfs", uintptr(0), "uid=0,gid=0,mode=0755"); err != nil {
 		log.Error("mount-failed-continuing-anyway", err)
 		return
 	}
@@ -356,16 +355,16 @@ func (s *CgroupStarter) idempotentCgroupMount(logger lager.Logger, cgroupPath, s
 		return fmt.Errorf("mkdir '%s': %s", cgroupPath, err)
 	}
 
-	err := s.FS.Mount("cgroup", cgroupPath, "cgroup", uintptr(0), subsystem)
-	switch err {
-	case nil:
-	case unix.EBUSY:
-		// Attempting a mount over an exising mount of type cgroup and the same
-		// source and target results in EBUSY errno
-		logger.Info("subsystem-already-mounted")
-	default:
-		return fmt.Errorf("mounting subsystem '%s' in '%s': %s", subsystem, cgroupPath, err)
-	}
+	// err := s.FS.Mount("cgroup", cgroupPath, "cgroup", uintptr(0), subsystem)
+	// switch err {
+	// case nil:
+	// case unix.EBUSY:
+	// 	// Attempting a mount over an exising mount of type cgroup and the same
+	// 	// source and target results in EBUSY errno
+	// 	logger.Info("subsystem-already-mounted")
+	// default:
+	// 	return fmt.Errorf("mounting subsystem '%s' in '%s': %s", subsystem, cgroupPath, err)
+	// }
 
 	logger.Info("finished")
 

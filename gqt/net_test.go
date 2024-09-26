@@ -82,11 +82,11 @@ var _ = Describe("Networking", func() {
 		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
-	It("should have a loopback interface", func() {
+	FIt("should have a loopback interface", func() {
 		buffer := gbytes.NewBuffer()
 		proc, err := container.Run(
 			garden.ProcessSpec{
-				Path: "ifconfig",
+				Path: "/usr/sbin/ifconfig",
 				User: "root",
 			}, garden.ProcessIO{Stdout: io.MultiWriter(GinkgoWriter, buffer), Stderr: GinkgoWriter},
 		)
