@@ -1,6 +1,6 @@
 # GrootFS: Garden root file system
 
-[![slack.cloudfoundry.org](http://slack.cloudfoundry.org/badge.svg)](http://slack.cloudfoundry.org)
+[![slack.cloudfoundry.org](https://avatars.slack-edge.com/2016-12-06/113395817669_e5ae43108652f8e7dc7d_88.png)](http://slack.cloudfoundry.org)
 
 **Note:** This repository should be imported as
 `code.cloudfoundry.org/grootfs`.
@@ -426,7 +426,7 @@ e.g. Datadog.
 
 ## Running tests in Concourse
 
-GrootFS uses [Concourse](http://concourse.ci/) for both Continuous Integration
+GrootFS uses [Concourse](https://concourse-ci.org/) for both Continuous Integration
 (CI) and testing. One way of running tests locally is with
 `concourse-lite`, which is a [Vagrant](https://www.vagrantup.com/) box.
 
@@ -483,6 +483,5 @@ make integration
 
 * [Garden project](https://github.com/cloudfoundry/garden)
 * [GrootFS Pivotal tracker](https://www.pivotaltracker.com/n/projects/1661239)
-* [GrootFS CI](https://grootfs.ci.cf-app.com)
 * [Cloud Foundry Slack - Invitation](https://slack.cloudfoundry.org/)
 * [Cloud Foundry Slack](https://cloudfoundry.slack.com/)
