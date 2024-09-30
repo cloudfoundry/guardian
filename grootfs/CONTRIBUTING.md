@@ -44,7 +44,7 @@ automated system uses, then we manually make the Pull Request as having a CLA on
 * All dependencies are vendored as submodules (`git submodule update --init --recursive`)
 * GrootFS only compiles in linux - it might be useful to set `GOOS=linux` if developing in a different platform
 * Linux tests will fail locally if run on a different platform. To run these tests on anything other than Linux you'll need to [run the tests on Concourse](https://github.com/cloudfoundry/grootfs#running-tests-in-concourse).
-* If you want to run tests locally you may optionally want to use [ginkgo](https://onsi.github.com/ginkgo). Otherwise you can use `go test`
+* If you want to run tests locally you may optionally want to use [ginkgo](https://github.com/onsi/ginkgo). Otherwise you can use `go test`
 	* To run a package test: `ginkgo ./<package-name>`
 	* To run all tests locally: `ginkgo -r`
 
