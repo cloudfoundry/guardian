@@ -5,7 +5,7 @@
 idmapper is a package which will map a process to the highest user id available.
 It was created to be used by [GrootFS](https://github.com/cloudfoundry/grootfs#grootfs-garden-root-file-system), a root filesystem manager for [CloudFoundry](https://docs.cloudfoundry.org/)'s container runtime.
 
-Unlike the `newuidmap` and `newgidmap` commands found in [Shadow](http://pkg-shadow.alioth.debian.org/), idmapper does not require this user to exist and will not check `/etc/subuid` for valid subuid ranges.
+Unlike the `newuidmap` and `newgidmap` commands found in [Shadow](https://github.com/shadow-maint/shadow), idmapper does not require this user to exist and will not check `/etc/subuid` for valid subuid ranges.
 
 ## Commands
 ### `newuidmap` / `newgidmap`

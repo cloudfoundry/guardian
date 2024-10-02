@@ -3,10 +3,10 @@
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20240925195555-92d3aae90185 => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20240930201018-2c0706a9d777 => ../idmapper
 ## explicit; go 1.22.0
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.6.0
+# code.cloudfoundry.org/lager/v3 v3.7.0
 ## explicit; go 1.22.0
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
@@ -135,7 +135,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20240929191954-255acd752d31
+# github.com/google/pprof v0.0.0-20241001023024-f4c0cfd0cf1d
 ## explicit; go 1.22
 github.com/google/pprof/profile
 # github.com/gorilla/mux v1.8.1
