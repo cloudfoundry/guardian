@@ -5,9 +5,9 @@ go 1.22.0
 toolchain go1.22.3
 
 require (
-	code.cloudfoundry.org/commandrunner v0.10.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240930201018-2c0706a9d777
-	code.cloudfoundry.org/lager/v3 v3.7.0
+	code.cloudfoundry.org/commandrunner v0.11.0
+	code.cloudfoundry.org/idmapper v0.0.0-20241002020320-12677c2510c5
+	code.cloudfoundry.org/lager/v3 v3.8.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20240807231527-361c7ad33dc7
 	github.com/containers/image/v5 v5.32.2
@@ -24,7 +24,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/urfave/cli/v2 v2.27.4
 	github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125
-	golang.org/x/sys v0.25.0
+	golang.org/x/sys v0.26.0
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -53,7 +53,7 @@ require (
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0 // indirect
 	golang.org/x/net v0.29.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/tools v0.25.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
