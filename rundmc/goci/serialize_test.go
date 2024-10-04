@@ -21,7 +21,7 @@ var _ = Describe("Bundle Serialization", func() {
 		bundleSaver          *goci.BundleSaver
 		notFoundRuntimeError = map[string]string{
 			"linux":   "no such file or directory",
-			"windows": "The system cannot find the path specified.",
+			"windows": "The system cannot find the file specified.",
 		}
 	)
 
