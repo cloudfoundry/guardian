@@ -5,11 +5,11 @@ go 1.22.0
 toolchain go1.22.3
 
 require (
-	code.cloudfoundry.org/commandrunner v0.11.0
-	code.cloudfoundry.org/idmapper v0.0.0-20241002020320-12677c2510c5
-	code.cloudfoundry.org/lager/v3 v3.8.0
+	code.cloudfoundry.org/commandrunner v0.12.0
+	code.cloudfoundry.org/idmapper v0.0.0-20241004152436-cc14425dc9d3
+	code.cloudfoundry.org/lager/v3 v3.9.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/sonde-go v0.0.0-20240807231527-361c7ad33dc7
+	github.com/cloudfoundry/sonde-go v0.0.0-20241007161526-e3ce7aa1aabc
 	github.com/containers/image/v5 v5.32.2
 	github.com/containers/storage v1.55.0
 	github.com/docker/distribution v2.8.3+incompatible
@@ -25,7 +25,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.4
 	github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125
 	golang.org/x/sys v0.26.0
-	google.golang.org/protobuf v1.34.2
+	google.golang.org/protobuf v1.35.1
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -40,7 +40,7 @@ require (
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/pprof v0.0.0-20241001023024-f4c0cfd0cf1d // indirect
+	github.com/google/pprof v0.0.0-20241008150032-332c0e1a4a34 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
 	github.com/moby/sys/user v0.3.0 // indirect
@@ -51,10 +51,10 @@ require (
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0 // indirect
-	golang.org/x/net v0.29.0 // indirect
+	golang.org/x/exp v0.0.0-20241004190924-225e2abe05e6 // indirect
+	golang.org/x/net v0.30.0 // indirect
 	golang.org/x/text v0.19.0 // indirect
-	golang.org/x/tools v0.25.0 // indirect
+	golang.org/x/tools v0.26.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
