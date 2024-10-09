@@ -87,6 +87,8 @@ int mkdir_p_as(const char *dir, uid_t uid, gid_t gid) {
  */
 #if defined (__PPC64__)
 #define EXECVEAT_CODE 362
+#elif defined (__aarch64__)
+#define EXECVEAT_CODE 281
 #else
 #define EXECVEAT_CODE 322
 #endif
