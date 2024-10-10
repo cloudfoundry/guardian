@@ -12,12 +12,12 @@ replace (
 require (
 	code.cloudfoundry.org/archiver v0.10.0
 	code.cloudfoundry.org/clock v1.13.0
-	code.cloudfoundry.org/commandrunner v0.10.0
+	code.cloudfoundry.org/commandrunner v0.11.0
 	code.cloudfoundry.org/debugserver v0.13.0
 	code.cloudfoundry.org/garden v0.0.0-20240909195930-f8558dc30506
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20240909185944-71b8696099e6
-	code.cloudfoundry.org/lager/v3 v3.6.0
+	code.cloudfoundry.org/idmapper v0.0.0-20241002020320-12677c2510c5
+	code.cloudfoundry.org/lager/v3 v3.8.0
 	code.cloudfoundry.org/localip v0.11.0
 	github.com/BurntSushi/toml v1.4.0
 	github.com/cloudfoundry/dropsonde v1.1.0
@@ -26,7 +26,7 @@ require (
 	github.com/containerd/containerd/api v1.7.19
 	github.com/containerd/errdefs v0.1.0
 	github.com/containerd/typeurl/v2 v2.2.0
-	github.com/docker/docker v27.2.1+incompatible
+	github.com/docker/docker v27.3.1+incompatible
 	github.com/eapache/go-resiliency v1.7.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jessevdk/go-flags v1.6.1
@@ -47,7 +47,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.4
 	github.com/vishvananda/netlink v1.3.0
 	github.com/vishvananda/netns v0.0.4
-	golang.org/x/sys v0.25.0
+	golang.org/x/sys v0.26.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -85,7 +85,7 @@ require (
 	github.com/containernetworking/plugins v1.2.0 // indirect
 	github.com/containers/ocicrypt v1.2.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/cyphar/filepath-securejoin v0.3.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
@@ -105,7 +105,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20240910150728-a0b0bb1d4134 // indirect
+	github.com/google/pprof v0.0.0-20241001023024-f4c0cfd0cf1d // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
@@ -166,7 +166,7 @@ require (
 	golang.org/x/oauth2 v0.21.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/term v0.24.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.25.0 // indirect
 	google.golang.org/genproto v0.0.0-20240903143218-8af14fe29dc1 // indirect
