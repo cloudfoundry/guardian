@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 var _ = Describe("Creating a Container", func() {
@@ -389,45 +390,100 @@ var _ = Describe("Creating a Container", func() {
 		}
 
 		getContainerCPUShares := func(container garden.Container) int {
-			cpuSharesPath := filepath.Join(client.CgroupSubsystemPath("cpu", container.Handle()), "cpu.shares")
+			cpuSharesFile := "cpu.shares"
+			if cgroups.IsCgroup2UnifiedMode() {
+				cpuSharesFile = "cpu.weight"
+			}
+			cpuSharesPath := filepath.Join(client.CgroupSubsystemPath("cpu", container.Handle()), cpuSharesFile)
 			cpuShares := strings.TrimSpace(readFileString(cpuSharesPath))
 			numShares, err := strconv.Atoi(cpuShares)
 			Expect(err).NotTo(HaveOccurred())
 			return numShares
 		}
 
-		It("can set the cpu weight", func() {
-			container, err := createContainerWithCpuConfig(2, 0)
-			Expect(err).NotTo(HaveOccurred())
+		Context("cgroups v1", func() {
+			BeforeEach(func() {
+				if cgroups.IsCgroup2UnifiedMode() {
+					Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
+				}
+			})
 
-			Expect(getContainerCPUShares(container)).To(Equal(2))
-		})
-
-		It("should return an error when the cpu shares is invalid", func() {
-			_, err := createContainerWithCpuConfig(1, 0)
-
-			Expect(err.Error()).To(ContainSubstring("minimum allowed cpu-shares is 2"))
-		})
-
-		It("should use the default weight value when neither the cpu share or weight are set", func() {
-			container, err := createContainerWithCpuConfig(0, 0)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(getContainerCPUShares(container)).To(Equal(1024))
-		})
-
-		Context("when LimitInShares is set", func() {
-			It("creates a container with the shares", func() {
-				container, err := createContainerWithCpuConfig(0, 123)
+			It("can set the cpu weight", func() {
+				container, err := createContainerWithCpuConfig(2, 0)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(getContainerCPUShares(container)).To(Equal(123))
+
+				Expect(getContainerCPUShares(container)).To(Equal(2))
+			})
+
+			It("should return an error when the cpu shares is invalid", func() {
+				_, err := createContainerWithCpuConfig(1, 0)
+
+				Expect(err.Error()).To(ContainSubstring("minimum allowed cpu-shares is 2"))
+			})
+
+			It("should use the default weight value when neither the cpu share or weight are set", func() {
+				container, err := createContainerWithCpuConfig(0, 0)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(getContainerCPUShares(container)).To(Equal(1024))
+			})
+
+			Context("when LimitInShares is set", func() {
+				It("creates a container with the shares", func() {
+					container, err := createContainerWithCpuConfig(0, 123)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(getContainerCPUShares(container)).To(Equal(123))
+				})
+			})
+
+			Context("when both Weight and LimitInShares are set", func() {
+				It("Weight has precedence", func() {
+					container, err := createContainerWithCpuConfig(123, 456)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(getContainerCPUShares(container)).To(Equal(123))
+				})
 			})
 		})
 
-		Context("when both Weight and LimitInShares are set", func() {
-			It("Weight has precedence", func() {
-				container, err := createContainerWithCpuConfig(123, 456)
+		Context("cgroups v2", func() {
+			BeforeEach(func() {
+				if !cgroups.IsCgroup2UnifiedMode() {
+					Skip("Skipping cgroups v2 tests when cgroups v1 is enabled")
+				}
+			})
+
+			It("can set the cpu weight", func() {
+				container, err := createContainerWithCpuConfig(2, 0)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(getContainerCPUShares(container)).To(Equal(123))
+
+				Expect(getContainerCPUShares(container)).To(Equal(1))
+			})
+
+			It("should return an error when the cpu shares is invalid", func() {
+				_, err := createContainerWithCpuConfig(1, 0)
+
+				Expect(err.Error()).To(ContainSubstring("numerical result out of range"))
+			})
+
+			It("should use the default weight value when neither the cpu share or weight are set", func() {
+				container, err := createContainerWithCpuConfig(0, 0)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(getContainerCPUShares(container)).To(Equal(100))
+			})
+
+			Context("when LimitInShares is set", func() {
+				It("creates a container with the shares", func() {
+					container, err := createContainerWithCpuConfig(0, 123)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(getContainerCPUShares(container)).To(Equal(5))
+				})
+			})
+
+			Context("when both Weight and LimitInShares are set", func() {
+				It("Weight has precedence", func() {
+					container, err := createContainerWithCpuConfig(123, 456)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(getContainerCPUShares(container)).To(Equal(5))
+				})
 			})
 		})
 	})

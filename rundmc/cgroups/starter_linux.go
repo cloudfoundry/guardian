@@ -179,13 +179,11 @@ func (s *CgroupStarter) createAndChownCgroup(logger lager.Logger, mountPath, sub
 	if err := s.createChownedCgroup(logger, gardenCgroupPath); err != nil {
 		return err
 	}
-	println("here1")
 
 	if s.CPUThrottling {
 		if err := s.createChownedCgroup(logger, filepath.Join(gardenCgroupPath, GoodCgroupName)); err != nil {
 			return err
 		}
-		println("here2")
 
 		if err := os.WriteFile(filepath.Join(gardenCgroupPath, GoodCgroupName, "cgroup.subtree_control"), []byte("+cpu"), 0644); err != nil {
 			return err

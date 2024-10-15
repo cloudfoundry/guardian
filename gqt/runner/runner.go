@@ -30,6 +30,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/tedsuo/ifrit"
 	ginkgomon "github.com/tedsuo/ifrit/ginkgomon_v2"
 )
@@ -427,6 +428,10 @@ func (r *RunningGarden) CgroupsRootPath() string {
 }
 
 func CgroupsRootPath(tag string) string {
+	if cgroups.IsCgroup2UnifiedMode() {
+		return filepath.Join("/sys/fs/cgroup/", fmt.Sprintf("garden-%s", tag))
+	}
+
 	return filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", tag))
 }
 

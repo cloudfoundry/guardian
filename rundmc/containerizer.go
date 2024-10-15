@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -351,7 +352,16 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (spec.ActualContai
 
 	var cpuShares, limitInBytes uint64
 	if bundle.Resources() != nil {
-		cpuShares = *bundle.Resources().CPU.Shares
+		if bundle.Resources().CPU != nil {
+			cpuShares = *bundle.Resources().CPU.Shares
+		}
+		if cpuWeight, ok := bundle.Resources().Unified["cpu.weight"]; ok {
+			cpuSharesInt, err := strconv.Atoi(cpuWeight)
+			if err != nil {
+				return spec.ActualContainerSpec{}, err
+			}
+			cpuShares = uint64(cpuSharesInt)
+		}
 		// #nosec G115 - limits should never be negative
 		limitInBytes = uint64(*bundle.Resources().Memory.Limit)
 	} else {
