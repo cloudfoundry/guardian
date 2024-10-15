@@ -5,7 +5,7 @@
 
 export PATH="$PATH:$(dirname $RUNC_BINARY):$(dirname $CONTAINERD_BINARY)"
 source "$CI_DIR/shared/helpers/filesystem-helpers.bash"
-#filesystem_permit_device_control
+filesystem_permit_device_control
 filesystem_create_loop_devices 256
 
 # Set up AppArmor

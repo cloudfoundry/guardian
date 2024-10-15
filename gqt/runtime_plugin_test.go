@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -113,20 +114,53 @@ var _ = Describe("Runtime Plugin", func() {
 				BeforeEach(func() {
 					onlyOnLinux()
 				})
-				It("sets the memory limit", func() {
-					Expect(bundle.Linux.Resources.Memory.Limit).To(PointTo(Equal(int64(1 * 1024 * 1024))))
+
+				Context("cgroups v2", func() {
+					BeforeEach(func() {
+						if !cgroups.IsCgroup2UnifiedMode() {
+							Skip("Skipping cgroups v2 tests when cgroups v1 is enabled")
+						}
+					})
+
+					It("sets the memory limit", func() {
+						Expect(bundle.Linux.Resources.Memory.Limit).To(PointTo(Equal(int64(1 * 1024 * 1024))))
+					})
+
+					It("sets the CPU weight", func() {
+						Expect(bundle.Linux.Resources.Unified["cpu.weight"]).To(Equal("1"))
+					})
+
+					It("sets BlockIO", func() {
+						Expect(bundle.Linux.Resources.BlockIO.Weight).To(PointTo(Equal(uint16(200))))
+					})
+
+					It("sets pid limits", func() {
+						Expect(bundle.Linux.Resources.Pids.Limit).To(Equal(int64(300)))
+					})
 				})
 
-				It("sets the CPU shares", func() {
-					Expect(bundle.Linux.Resources.CPU.Shares).To(PointTo(Equal(uint64(10))))
-				})
+				Context("cgroups v1", func() {
+					BeforeEach(func() {
+						if cgroups.IsCgroup2UnifiedMode() {
+							Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
+						}
+					})
 
-				It("sets BlockIO", func() {
-					Expect(bundle.Linux.Resources.BlockIO.Weight).To(PointTo(Equal(uint16(200))))
-				})
+					It("sets the memory limit", func() {
+						Expect(bundle.Linux.Resources.Memory.Limit).To(PointTo(Equal(int64(1 * 1024 * 1024))))
+					})
 
-				It("sets pid limits", func() {
-					Expect(bundle.Linux.Resources.Pids.Limit).To(Equal(int64(300)))
+					It("sets the CPU shares", func() {
+						Expect(bundle.Linux.Resources.CPU.Shares).To(PointTo(Equal(uint64(10))))
+					})
+
+					It("sets BlockIO", func() {
+						Expect(bundle.Linux.Resources.BlockIO.Weight).To(PointTo(Equal(uint16(200))))
+					})
+
+					It("sets pid limits", func() {
+						Expect(bundle.Linux.Resources.Pids.Limit).To(Equal(int64(300)))
+					})
 				})
 			})
 
