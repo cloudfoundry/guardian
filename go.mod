@@ -14,9 +14,9 @@ require (
 	code.cloudfoundry.org/clock v1.16.0
 	code.cloudfoundry.org/commandrunner v0.12.0
 	code.cloudfoundry.org/debugserver v0.18.0
-	code.cloudfoundry.org/garden v0.0.0-20241009020314-b824595a23ce
+	code.cloudfoundry.org/garden v0.0.0-20241015133258-e596c7c58892
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20241009020523-b8ee56a95e22
+	code.cloudfoundry.org/idmapper v0.0.0-20241015133504-7f68486a3ae9
 	code.cloudfoundry.org/lager/v3 v3.10.0
 	code.cloudfoundry.org/localip v0.14.0
 	github.com/BurntSushi/toml v1.4.0
@@ -131,7 +131,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mrunalp/fileutils v0.5.1 // indirect
 	github.com/opencontainers/runtime-tools v0.9.1-0.20221107090550-2e043c6bd626 // indirect
-	github.com/opencontainers/selinux v1.11.0 // indirect
+	github.com/opencontainers/selinux v1.11.1 // indirect
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/prometheus/client_golang v1.19.1 // indirect
@@ -169,9 +169,9 @@ require (
 	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.26.0 // indirect
-	google.golang.org/genproto v0.0.0-20241007155032-5fefd90f89a9 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240930140551-af27646dc61f // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241007155032-5fefd90f89a9 // indirect
+	google.golang.org/genproto v0.0.0-20241015192408-796eee8c2d53 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20241007155032-5fefd90f89a9 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241015192408-796eee8c2d53 // indirect
 	google.golang.org/grpc v1.67.1 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
