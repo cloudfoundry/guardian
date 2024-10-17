@@ -12,7 +12,7 @@ replace (
 require (
 	code.cloudfoundry.org/archiver v0.14.0
 	code.cloudfoundry.org/clock v1.16.0
-	code.cloudfoundry.org/commandrunner v0.12.0
+	code.cloudfoundry.org/commandrunner v0.13.0
 	code.cloudfoundry.org/debugserver v0.18.0
 	code.cloudfoundry.org/garden v0.0.0-20241015133258-e596c7c58892
 	code.cloudfoundry.org/grootfs v0.30.0
@@ -64,7 +64,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/checkpoint-restore/go-criu/v5 v5.3.0 // indirect
 	github.com/cilium/ebpf v0.11.0 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20241007161526-e3ce7aa1aabc // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20241016180203-3c0e1c24e908 // indirect
 	github.com/containerd/aufs v1.0.0 // indirect
 	github.com/containerd/btrfs/v2 v2.0.0 // indirect
 	github.com/containerd/cgroups v1.1.0 // indirect

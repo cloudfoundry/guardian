@@ -603,8 +603,8 @@ code.cloudfoundry.org/archiver v0.14.0 h1:oZQh8aZn4JzSCOoN+JxUsUBrzMpdz+hwGdOei5
 code.cloudfoundry.org/archiver v0.14.0/go.mod h1:7vnnP9/8ABobyLqJuTbzdr4h/9sYNdlj5OnkArrkf7Q=
 code.cloudfoundry.org/clock v1.16.0 h1:55I1lelxZn45V1DxDGCiwNc6dEXk1KQ2CuYKlSMo948=
 code.cloudfoundry.org/clock v1.16.0/go.mod h1:pYcfbpnOG23567+Mafw9J+aKfKbmD9fegEQxAsks8y0=
-code.cloudfoundry.org/commandrunner v0.12.0 h1:S5TmHrbj1tQvXUnvYpxgEVR6LuOJ0wKfngIGRkk1jDM=
-code.cloudfoundry.org/commandrunner v0.12.0/go.mod h1:GZ1qZKN6W1q2eJsBkjRfafSZOWB//Oh/g9OI94ChU/o=
+code.cloudfoundry.org/commandrunner v0.13.0 h1:l5qL6CfOum84UPnezXV8BwIz0fIrb4MGYgOJ80LwCKM=
+code.cloudfoundry.org/commandrunner v0.13.0/go.mod h1:/Cb04o0xErtoD6/n7x8bk32K1DI0HsmsuSeLBLf3xbo=
 code.cloudfoundry.org/debugserver v0.18.0 h1:AGsrhbyQSTAXJKcPnkUNpdQIhqaC9lPnA2Dj+Kv399s=
 code.cloudfoundry.org/debugserver v0.18.0/go.mod h1:rL03DSjsc2cvE3AmvnSa4/e4F377wMmr5RBEZIcMtnw=
 code.cloudfoundry.org/lager/v3 v3.10.0 h1:63K7qjkVFLEU1Yz3BOcMigRyMh5y7T+mWHLBoQzoczA=
@@ -764,8 +764,8 @@ github.com/cloudfoundry/dropsonde v1.1.0 h1:nerhj8K0heOsv/U/Ddou5Esw56YlNeHHJH6M
 github.com/cloudfoundry/dropsonde v1.1.0/go.mod h1:OrkxsBrAvM8X0Ve9vaSNKLR+/Jeohu3+J0M4JEaTmnM=
 github.com/cloudfoundry/gosigar v1.3.74 h1:0vl7YwU1654sAmqzBP8nWqVB1WDYREwt90bd5C66wMs=
 github.com/cloudfoundry/gosigar v1.3.74/go.mod h1:dLnK+/aGb6s79wYVML+5rPgU9RcOj3QvlWEAr078bE8=
-github.com/cloudfoundry/sonde-go v0.0.0-20241007161526-e3ce7aa1aabc h1:urCvu/ek436fGFtSsPxFyHervb6VUskoc6gSnryV0js=
-github.com/cloudfoundry/sonde-go v0.0.0-20241007161526-e3ce7aa1aabc/go.mod h1:mVA0gaXiEALxmQ9Po3yT28jx02L9Kg9nrhiXCvTZZ1M=
+github.com/cloudfoundry/sonde-go v0.0.0-20241016180203-3c0e1c24e908 h1:hTZbUjHHExhpFrZxaG/yv87J5JT3Hr6tlLqiFXruUJg=
+github.com/cloudfoundry/sonde-go v0.0.0-20241016180203-3c0e1c24e908/go.mod h1:SiB/qvUutgBWlAEuiQLG3M+hEBeRHdNlMGq1YYjFo90=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cncf/udpa/go v0.0.0-20200629203442-efcf912fb354/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
 github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
