@@ -1,4 +1,4 @@
-# code.cloudfoundry.org/commandrunner v0.12.0
+# code.cloudfoundry.org/commandrunner v0.13.0
 ## explicit; go 1.22.0
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
@@ -33,7 +33,7 @@ github.com/cloudfoundry/dropsonde/metric_sender
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/sonde-go v0.0.0-20241007161526-e3ce7aa1aabc
+# github.com/cloudfoundry/sonde-go v0.0.0-20241016180203-3c0e1c24e908
 ## explicit; go 1.18
 github.com/cloudfoundry/sonde-go/events
 # github.com/containers/image/v5 v5.32.2
