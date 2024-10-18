@@ -15,7 +15,7 @@ code.cloudfoundry.org/commandrunner/windows_command_runner
 # code.cloudfoundry.org/debugserver v0.18.0
 ## explicit; go 1.22.0
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20241015133258-e596c7c58892 => ../garden
+# code.cloudfoundry.org/garden v0.0.0-20241018132925-991b03c78f6c => ../garden
 ## explicit; go 1.22.0
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
@@ -30,7 +30,7 @@ code.cloudfoundry.org/garden/transport
 # code.cloudfoundry.org/grootfs v0.30.0 => ../grootfs
 ## explicit; go 1.22.0
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20241015133504-7f68486a3ae9 => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20241018133107-638ac24af7b7 => ../idmapper
 ## explicit; go 1.22.0
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.10.0
