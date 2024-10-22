@@ -457,6 +457,15 @@ func getShares(bundle goci.Bndl) uint64 {
 	}
 	cpu := resources.CPU
 	if cpu == nil {
+		if cpuWeight, ok := resources.Unified["cpu.weight"]; ok {
+			cpuWeightUint, err := strconv.ParseUint(cpuWeight, 10, 64)
+			if err != nil {
+				return 0
+			}
+			// reverse of cgroups.ConvertCPUSharesToCgroupV2Value
+			return (cpuWeightUint-1)*262142/9999 + 2
+		}
+
 		return 0
 	}
 	shares := cpu.Shares

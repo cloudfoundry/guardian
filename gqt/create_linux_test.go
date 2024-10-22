@@ -46,6 +46,10 @@ var _ = Describe("Creating a Container", func() {
 	})
 
 	It("has the expected device list allowed", func() {
+		if cgroups.IsCgroup2UnifiedMode() {
+			Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
+		}
+
 		var err error
 		container, err = client.Create(garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())

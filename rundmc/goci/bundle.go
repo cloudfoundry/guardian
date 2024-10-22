@@ -160,7 +160,16 @@ func (b Bndl) WithMemoryLimit(limit specs.LinuxMemory) Bndl {
 		resources = &specs.LinuxResources{}
 	}
 
-	resources.Memory = &limit
+	if cgroups.IsCgroup2UnifiedMode() {
+		if resources.Unified == nil {
+			resources.Unified = make(map[string]string)
+		}
+		resources.Unified["memory.max"] = fmt.Sprintf("%d", *limit.Limit)
+		resources.Unified["memory.swap.max"] = fmt.Sprintf("%d", *limit.Swap)
+	} else {
+		resources.Memory = &limit
+	}
+
 	b.CloneLinux().Spec.Linux.Resources = resources
 
 	return b
