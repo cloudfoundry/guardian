@@ -362,7 +362,16 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (spec.ActualContai
 			}
 			cpuShares = uint64(cpuSharesInt)
 		}
-		limitInBytes = uint64(*bundle.Resources().Memory.Limit)
+		if bundle.Resources().Memory != nil {
+			limitInBytes = uint64(*bundle.Resources().Memory.Limit)
+		}
+		if memoryMax, ok := bundle.Resources().Unified["memory.max"]; ok {
+			limitInBytesInt, err := strconv.Atoi(memoryMax)
+			if err != nil {
+				return spec.ActualContainerSpec{}, err
+			}
+			limitInBytes = uint64(limitInBytesInt)
+		}
 	} else {
 		log.Debug("bundle-resources-is-nil", lager.Data{"bundle": bundle})
 	}
