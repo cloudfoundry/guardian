@@ -213,7 +213,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 					cgroupProcLines := strings.Split(string(stdout.Contents()), "\n")
 					var cgroupRelativePath string
 					Expect(cgroupProcLines).To(HaveLen(3))
-					procLineSections := strings.Split(cgroupProcLines[0], fmt.Sprintf("::/garden-%s", gdn.Tag))
+					procLineSections := strings.Split(cgroupProcLines[0], fmt.Sprintf("/garden-%s", gdn.Tag))
 					Expect(procLineSections).To(HaveLen(2))
 					cgroupRelativePath = procLineSections[1]
 					cgroupPath = filepath.Join(gdn.CgroupsRootPath(), cgroupRelativePath)

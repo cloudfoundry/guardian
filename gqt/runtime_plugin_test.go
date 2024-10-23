@@ -123,7 +123,7 @@ var _ = Describe("Runtime Plugin", func() {
 					})
 
 					It("sets the memory limit", func() {
-						Expect(bundle.Linux.Resources.Memory.Limit).To(PointTo(Equal(int64(1 * 1024 * 1024))))
+						Expect(bundle.Linux.Resources.Unified["memory.max"]).To(Equal(fmt.Sprintf("%d", 1*1024*1024)))
 					})
 
 					It("sets the CPU weight", func() {
