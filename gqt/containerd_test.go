@@ -525,7 +525,7 @@ var _ = Describe("Containerd", func() {
 					},
 				},
 				Image: garden.ImageRef{
-					URI: "docker://cfgarden/oom",
+					URI: "docker://cloudfoundry/garden-rootfs",
 				},
 			})
 			Expect(err).ToNot(HaveOccurred())
@@ -539,7 +539,7 @@ var _ = Describe("Containerd", func() {
 			stdout := gbytes.NewBuffer()
 			stderr := gbytes.NewBuffer()
 			process, err := container.Run(garden.ProcessSpec{
-				Path: "/usemem",
+				Path: "usemem",
 			}, garden.ProcessIO{
 				Stdout: stdout,
 				Stderr: stderr,
