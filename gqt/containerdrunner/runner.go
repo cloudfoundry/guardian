@@ -90,7 +90,7 @@ func ContainerdConfig(containerdDataDir string) Config {
 }
 
 func NewContainerdProcess(runDir string, config Config) *os.Process {
-	configFile, err := os.OpenFile(filepath.Join(runDir, "containerd.toml"), os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0644)
+	configFile, err := os.OpenFile(filepath.Join(runDir, "containerd.toml"), os.O_TRUNC|os.O_WRONLY|os.O_CREATE, os.ModePerm)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(toml.NewEncoder(configFile).Encode(&config)).To(Succeed())
 	Expect(configFile.Close()).To(Succeed())

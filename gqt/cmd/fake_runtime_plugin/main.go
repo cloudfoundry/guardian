@@ -54,7 +54,7 @@ func main() {
 }
 
 func writeArgs(action string) {
-	err := os.WriteFile(filepath.Join(os.TempDir(), fmt.Sprintf("%s-args", action)), []byte(strings.Join(os.Args, " ")), 0644)
+	err := os.WriteFile(filepath.Join(os.TempDir(), fmt.Sprintf("%s-args", action)), []byte(strings.Join(os.Args, " ")), 0777)
 	if err != nil {
 		panic(err)
 	}
@@ -88,7 +88,7 @@ var CreateCommand = cli.Command{
 	Action: func(ctx *cli.Context) error {
 		writeArgs("create")
 
-		if err := os.WriteFile(ctx.String("pid-file"), []byte(strconv.Itoa(os.Getppid())), 0644); err != nil {
+		if err := os.WriteFile(ctx.String("pid-file"), []byte(strconv.Itoa(os.Getppid())), 0777); err != nil {
 			panic(err)
 		}
 
@@ -116,7 +116,7 @@ var RunCommand = cli.Command{
 	Action: func(ctx *cli.Context) error {
 		writeArgs("run")
 
-		if err := os.WriteFile(ctx.String("pid-file"), []byte(strconv.Itoa(os.Getppid())), 0644); err != nil {
+		if err := os.WriteFile(ctx.String("pid-file"), []byte(strconv.Itoa(os.Getppid())), 0777); err != nil {
 			panic(err)
 		}
 
@@ -232,7 +232,7 @@ var ExecCommand = cli.Command{
 		childCmd := exec.Command(os.Args[0], "child", "--exitcode", exitCodeStr)
 		must(childCmd.Start())
 		childPid := childCmd.Process.Pid
-		must(os.WriteFile(ctx.String("pid-file"), []byte(fmt.Sprintf("%d", childPid)), 0644))
+		must(os.WriteFile(ctx.String("pid-file"), []byte(fmt.Sprintf("%d", childPid)), 0777))
 
 		os.Exit(exitCode)
 
