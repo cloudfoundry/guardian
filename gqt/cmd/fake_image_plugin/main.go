@@ -143,7 +143,7 @@ var CreateCommand = cli.Command{
 
 		argsFile := ctx.String("args-path")
 		if argsFile != "" {
-			err := os.WriteFile(argsFile, []byte(strings.Join(os.Args, " ")), 0644)
+			err := os.WriteFile(argsFile, []byte(strings.Join(os.Args, " ")), 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -151,7 +151,7 @@ var CreateCommand = cli.Command{
 
 		whoamiFile := ctx.String("create-whoami-path")
 		if whoamiFile != "" {
-			err := os.WriteFile(whoamiFile, []byte(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())), 0644)
+			err := os.WriteFile(whoamiFile, []byte(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())), 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -164,7 +164,7 @@ var CreateCommand = cli.Command{
 				panic(err)
 			}
 
-			err = os.WriteFile(binLocationFile, []byte(executable), 0644)
+			err = os.WriteFile(binLocationFile, []byte(executable), 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -173,7 +173,7 @@ var CreateCommand = cli.Command{
 		rootfsPath := ctx.String("rootfs-path")
 		if rootfsPath != "" {
 			rootFSPath := filepath.Join(rootfsPath, "rootfs")
-			if err := os.MkdirAll(rootFSPath, 0755); err != nil {
+			if err := os.MkdirAll(rootFSPath, 0777); err != nil {
 				panic(err)
 			}
 		}
@@ -237,7 +237,7 @@ var DeleteCommand = cli.Command{
 
 		argsFile := ctx.String("args-path")
 		if argsFile != "" {
-			err := os.WriteFile(argsFile, []byte(strings.Join(os.Args, " ")), 0644)
+			err := os.WriteFile(argsFile, []byte(strings.Join(os.Args, " ")), 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -245,7 +245,7 @@ var DeleteCommand = cli.Command{
 
 		whoamiFile := ctx.String("destroy-whoami-path")
 		if whoamiFile != "" {
-			err := os.WriteFile(whoamiFile, []byte(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())), 0644)
+			err := os.WriteFile(whoamiFile, []byte(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())), 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -267,7 +267,7 @@ var DeleteCommand = cli.Command{
 				fmt.Fprintf(os.Stderr, "failed to close file %s: %s\n", f.Name(), err)
 			}
 
-			f, err = os.OpenFile(binLocationFile, os.O_APPEND|os.O_WRONLY, 0644)
+			f, err = os.OpenFile(binLocationFile, os.O_APPEND|os.O_WRONLY, 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -301,7 +301,7 @@ var StatsCommand = cli.Command{
 		}
 		argsFile := ctx.String("args-path")
 		if argsFile != "" {
-			err := os.WriteFile(argsFile, []byte(strings.Join(os.Args, " ")), 0644)
+			err := os.WriteFile(argsFile, []byte(strings.Join(os.Args, " ")), 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -309,7 +309,7 @@ var StatsCommand = cli.Command{
 
 		whoamiFile := ctx.String("metrics-whoami-path")
 		if whoamiFile != "" {
-			err := os.WriteFile(whoamiFile, []byte(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())), 0644)
+			err := os.WriteFile(whoamiFile, []byte(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())), 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -322,7 +322,7 @@ var StatsCommand = cli.Command{
 				panic(err)
 			}
 
-			err = os.WriteFile(binLocationFile, []byte(executable), 0644)
+			err = os.WriteFile(binLocationFile, []byte(executable), 0777)
 			if err != nil {
 				panic(err)
 			}
