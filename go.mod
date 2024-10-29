@@ -7,6 +7,7 @@ replace (
 	// TODO: when bumping to containerd 2.0, remove these pins
 	github.com/Microsoft/hcsshim => github.com/Microsoft/hcsshim v0.11.7
 	github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
+	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.15
 )
 
 require (
