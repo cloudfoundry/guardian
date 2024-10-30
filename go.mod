@@ -13,11 +13,11 @@ replace (
 require (
 	code.cloudfoundry.org/archiver v0.17.0
 	code.cloudfoundry.org/clock v1.19.0
-	code.cloudfoundry.org/commandrunner v0.15.0
+	code.cloudfoundry.org/commandrunner v0.16.0
 	code.cloudfoundry.org/debugserver v0.22.0
-	code.cloudfoundry.org/garden v0.0.0-20241028203425-874b47644cb2
+	code.cloudfoundry.org/garden v0.0.0-20241029172354-7b65841cf35a
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20241028203643-63d4530b057b
+	code.cloudfoundry.org/idmapper v0.0.0-20241030020633-27d1aaa8ad6f
 	code.cloudfoundry.org/lager/v3 v3.13.0
 	code.cloudfoundry.org/localip v0.17.0
 	github.com/BurntSushi/toml v1.4.0
@@ -35,8 +35,8 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.8.1
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo/v2 v2.20.2
-	github.com/onsi/gomega v1.34.2
+	github.com/onsi/ginkgo/v2 v2.21.0
+	github.com/onsi/gomega v1.35.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/opencontainers/runc v1.2.0
@@ -57,7 +57,7 @@ require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6 // indirect
 	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20231105174938-2b5cbb29f3e2 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/Microsoft/hcsshim v0.12.8 // indirect
+	github.com/Microsoft/hcsshim v0.12.9 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
