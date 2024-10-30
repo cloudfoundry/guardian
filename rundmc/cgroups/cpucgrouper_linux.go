@@ -19,14 +19,14 @@ func NewCPUCgrouper(cgroupRoot string) CPUCgrouper {
 	}
 }
 
-func (c CPUCgrouper) CreateBadCgroup(handle string) error {
+func (c CPUCgrouper) PrepareCgroups(handle string) error {
 	if err := os.MkdirAll(filepath.Join(c.cgroupRoot, BadCgroupName, handle), 0755); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c CPUCgrouper) DestroyBadCgroup(handle string) error {
+func (c CPUCgrouper) CleanupCgroups(handle string) error {
 	if err := os.RemoveAll(filepath.Join(c.cgroupRoot, BadCgroupName, handle)); err != nil {
 		return err
 	}

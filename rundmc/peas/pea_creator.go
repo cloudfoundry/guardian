@@ -128,6 +128,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	}
 
 	cgroupPath := filepath.Join(sandboxHandle, processID)
+	// TODO: how to make it domain threaded?
 
 	limits := garden.Limits{}
 	if processSpec.OverrideContainerLimits != nil {

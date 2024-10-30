@@ -1,6 +1,7 @@
 package runcontainerd
 
 import (
+	"fmt"
 	"io"
 
 	"code.cloudfoundry.org/garden"
@@ -44,6 +45,7 @@ func (r *RunContainerPea) RunPea(
 	if processBundle.Spec.Annotations == nil {
 		processBundle.Spec.Annotations = make(map[string]string)
 	}
+	fmt.Printf("creating pea in sandbox container: %#v\n", sandboxHandle)
 	processBundle.Spec.Annotations["container-type"] = "pea"
 	processBundle.Spec.Annotations["sandbox-container"] = sandboxHandle
 

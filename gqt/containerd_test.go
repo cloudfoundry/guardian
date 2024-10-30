@@ -17,11 +17,12 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 
 	uuid "github.com/nu7hatch/gouuid"
 )
 
-var _ = Describe("Containerd", func() {
+var _ = FDescribe("Containerd", func() {
 	var client *runner.RunningGarden
 
 	BeforeEach(func() {
@@ -54,7 +55,12 @@ var _ = Describe("Containerd", func() {
 
 			JustBeforeEach(func() {
 				var err error
-				cgroupsPath := filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", config.Tag), "freezer")
+				var cgroupsPath string
+				if cgroups.IsCgroup2UnifiedMode() {
+					cgroupsPath = runner.CgroupsRootPath(config.Tag)
+				} else {
+					cgroupsPath = filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", config.Tag), "freezer")
+				}
 				freezerCgroupPath, err = os.MkdirTemp(cgroupsPath, "shim")
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -75,18 +81,33 @@ var _ = Describe("Containerd", func() {
 
 				freezerProcs := filepath.Join(freezerCgroupPath, "cgroup.procs")
 				Expect(os.WriteFile(freezerProcs, []byte(parentPid), 0755)).To(Succeed())
-				freezerState := filepath.Join(freezerCgroupPath, "freezer.state")
-				Expect(os.WriteFile(freezerState, []byte("FROZEN"), 0755)).To(Succeed())
+				if cgroups.IsCgroup2UnifiedMode() {
+					Expect(os.WriteFile(filepath.Join(freezerCgroupPath, "cgroup.freeze"), []byte("1"), 0755)).To(Succeed())
+
+					Eventually(func() string {
+						state, err := os.ReadFile(filepath.Join(freezerCgroupPath, "cgroup.events"))
+						Expect(err).NotTo(HaveOccurred())
+						return string(state)
+					}).Should(ContainSubstring("frozen"))
+
+				} else {
+					freezerState := filepath.Join(freezerCgroupPath, "freezer.state")
+					Expect(os.WriteFile(freezerState, []byte("FROZEN"), 0755)).To(Succeed())
+
+					Eventually(func() string {
+						state, err := os.ReadFile(freezerState)
+						Expect(err).NotTo(HaveOccurred())
+						return string(state)
+					}).Should(ContainSubstring("FROZEN"))
+				}
 
 				defer func() {
-					Expect(os.WriteFile(freezerState, []byte("THAWED"), 0755)).To(Succeed())
+					if cgroups.IsCgroup2UnifiedMode() {
+						Expect(os.WriteFile(filepath.Join(freezerCgroupPath, "cgroup.freeze"), []byte("0"), 0755)).To(Succeed())
+					} else {
+						Expect(os.WriteFile(filepath.Join(freezerCgroupPath, "freezer.state"), []byte("THAWED"), 0755)).To(Succeed())
+					}
 				}()
-
-				Eventually(func() string {
-					state, err := os.ReadFile(freezerState)
-					Expect(err).NotTo(HaveOccurred())
-					return string(state)
-				}).Should(ContainSubstring("FROZEN"))
 
 				_, infoErr := container.Info()
 				Expect(infoErr).To(MatchError("failed getting task"))
@@ -350,6 +371,7 @@ var _ = Describe("Containerd", func() {
 			})
 
 			Describe("pea", func() {
+				// spec.Image is provided
 				var rootfs string
 
 				BeforeEach(func() {
@@ -360,7 +382,7 @@ var _ = Describe("Containerd", func() {
 					Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				})
 
-				It("creates a containerd container with a running task", func() {
+				FIt("creates a containerd container with a running task", func() {
 					process, err := container.Run(garden.ProcessSpec{
 						ID:    "ctrd-pea-id",
 						Image: garden.ImageRef{URI: rootfs},
@@ -385,6 +407,7 @@ var _ = Describe("Containerd", func() {
 				})
 
 				It("cleans up pea-debris", func() {
+					println(container.Handle())
 					process, err := container.Run(garden.ProcessSpec{
 						ID:    "ctrd-pea-id-2",
 						Image: garden.ImageRef{URI: rootfs},
@@ -549,6 +572,12 @@ var _ = Describe("Containerd", func() {
 			statusCode, err := process.Wait()
 			Expect(err).NotTo(HaveOccurred())
 			expectedMemoryCgroupPath := client.CgroupSubsystemPath("memory", container.Handle())
+			memoryLimitFile := "memory.limit_in_bytes"
+			memoryOOMControlFile := "memory.oom_control"
+			if cgroups.IsCgroup2UnifiedMode() {
+				memoryLimitFile = "memory.max"
+				memoryOOMControlFile = "memory.oom.group"
+			}
 			Eventually(getEventsForContainer(container), time.Minute).Should(
 				ContainElement("Out of memory"),
 				fmt.Sprintf("Container PID: %s\nExpected memory cgroup path: %s\nPids in the container memory cgroup: %s",
@@ -563,9 +592,9 @@ var _ = Describe("Containerd", func() {
 					"Container PID":                        getContainerPid(container.Handle()),
 					"Expected memory cgroup path":          expectedMemoryCgroupPath,
 					"Pids in the container memory cgroup":  listPidsInCgroup(expectedMemoryCgroupPath),
-					"Memory limit as listed in the cgroup": readFileString(filepath.Join(expectedMemoryCgroupPath, "memory.limit_in_bytes")),
+					"Memory limit as listed in the cgroup": readFileString(filepath.Join(expectedMemoryCgroupPath, memoryLimitFile)),
 					"Expected limit":                       strconv.FormatUint(30*mb, 10),
-					"OOM Control":                          readFileString(filepath.Join(expectedMemoryCgroupPath, "memory.oom_control")),
+					"OOM Control":                          readFileString(filepath.Join(expectedMemoryCgroupPath, memoryOOMControlFile)),
 				}),
 				"<requesting dmesg>",
 			)

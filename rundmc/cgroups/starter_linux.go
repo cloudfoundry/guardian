@@ -353,6 +353,8 @@ func (s *CgroupStarter) idempotentCgroupMount(logger lager.Logger, cgroupPath, s
 		return fmt.Errorf("mkdir '%s': %s", cgroupPath, err)
 	}
 
+	// TODO: only do this for cgroups v1
+
 	// err := s.FS.Mount("cgroup", cgroupPath, "cgroup", uintptr(0), subsystem)
 	// switch err {
 	// case nil:

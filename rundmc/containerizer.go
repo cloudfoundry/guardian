@@ -97,8 +97,8 @@ type PeaUsernameResolver interface {
 }
 
 type CPUCgrouper interface {
-	CreateBadCgroup(handle string) error
-	DestroyBadCgroup(handle string) error
+	PrepareCgroups(handle string) error
+	CleanupCgroups(handle string) error
 	ReadBadCgroupUsage(handle string) (garden.ContainerCPUStat, error)
 }
 
@@ -169,7 +169,7 @@ func (c *Containerizer) WatchRuntimeEvents(log lager.Logger) error {
 // creating container
 // Create creates a bundle in the depot and starts its init process
 func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec) error {
-	log = log.Session("containerizer-create", lager.Data{"handle": spec.Handle})
+	log = log.Session("containerizer-create", lager.Data{"handle": spec.Handle, "spec": spec})
 
 	log.Info("start")
 	defer log.Info("finished")
@@ -179,8 +179,9 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 		log.Error("bundle-generate-failed", err)
 		return err
 	}
+	log.Info("creating-bad-cgroup", lager.Data{"path": (*bundle.Spec.Linux).CgroupsPath})
 
-	if err := c.cpuCgrouper.CreateBadCgroup(spec.Handle); err != nil {
+	if err := c.cpuCgrouper.PrepareCgroups(spec.Handle); err != nil {
 		log.Error("create-bad-cgroup-failed", err)
 		return err
 	}
@@ -318,7 +319,7 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 		return err
 	}
 
-	return c.cpuCgrouper.DestroyBadCgroup(handle)
+	return c.cpuCgrouper.CleanupCgroups(handle)
 }
 
 func (c *Containerizer) RemoveBundle(log lager.Logger, handle string) error {

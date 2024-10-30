@@ -164,7 +164,8 @@ func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, use
 
 func (f *LinuxFactory) WireCPUCgrouper() (rundmc.CPUCgrouper, error) {
 	if !f.config.CPUThrottling.Enabled {
-		return gardencgroups.NoopCPUCgrouper{}, nil
+		// TODO: figure out path
+		return gardencgroups.NewDefaultCgrouper("/sys/fs/cgroup/system.slice/garden-1"), nil
 	}
 
 	gardenCPUCgroupPath, err := f.config.getGardenCPUCgroup()

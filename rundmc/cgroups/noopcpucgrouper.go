@@ -4,11 +4,11 @@ import "code.cloudfoundry.org/garden"
 
 type NoopCPUCgrouper struct{}
 
-func (NoopCPUCgrouper) CreateBadCgroup(string) error {
+func (NoopCPUCgrouper) PrepareCgroups(string) error {
 	return nil
 }
 
-func (NoopCPUCgrouper) DestroyBadCgroup(string) error {
+func (NoopCPUCgrouper) CleanupCgroups(string) error {
 	return nil
 }
 
