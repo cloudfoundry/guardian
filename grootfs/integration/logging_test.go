@@ -174,7 +174,7 @@ var _ = Describe("GrootFS logging", func() {
 			f, err := os.CreateTemp("", "cleanlog")
 			Expect(err).NotTo(HaveOccurred())
 			defer f.Close()
-			Expect(os.Chown(f.Name(), GrootfsTestUid, GrootfsTestGid)).To(Succeed())
+			Expect(os.Chown(f.Name(), int(GrootfsTestUid), int(GrootfsTestGid))).To(Succeed())
 
 			cleanLogFile = f.Name()
 			sourceImagePath = integration.CreateBaseImage(rootUID, rootGID, GrootUID, GrootGID)

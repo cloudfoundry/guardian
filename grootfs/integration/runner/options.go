@@ -187,7 +187,7 @@ func (r Runner) WithNoClean() Runner {
 // SysProcAttributes
 ///////////////////////////////////////////////////////////////////////////////
 
-func (r Runner) RunningAsUser(uid, gid int) Runner {
+func (r Runner) RunningAsUser(uid, gid uint32) Runner {
 	r.SysCredential = syscall.Credential{
 		Uid: uint32(uid),
 		Gid: uint32(gid),

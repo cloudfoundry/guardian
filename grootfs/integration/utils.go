@@ -69,7 +69,7 @@ func FindUID(user string) uint32 {
 	sess, err := gexec.Start(exec.Command("id", "-u", user), nil, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(sess, 10*time.Second).Should(gexec.Exit(0))
-	i, err := strconv.ParseInt(strings.TrimSpace(string(sess.Out.Contents())), 10, 32)
+	i, err := strconv.ParseUint(strings.TrimSpace(string(sess.Out.Contents())), 10, 32)
 	Expect(err).NotTo(HaveOccurred())
 
 	return uint32(i)
@@ -80,7 +80,7 @@ func FindGID(group string) uint32 {
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(sess).Should(gexec.Exit(0))
 
-	i, err := strconv.ParseInt(strings.TrimSpace(string(sess.Out.Contents())), 10, 32)
+	i, err := strconv.ParseUint(strings.TrimSpace(string(sess.Out.Contents())), 10, 32)
 	Expect(err).NotTo(HaveOccurred())
 
 	return uint32(i)

@@ -35,8 +35,8 @@ var (
 	GrootGID         int
 	RegistryUsername string
 	RegistryPassword string
-	GrootfsTestUid   int
-	GrootfsTestGid   int
+	GrootfsTestUid   uint32
+	GrootfsTestGid   uint32
 	TardisBin        string
 )
 
@@ -75,14 +75,23 @@ func TestGroot(t *testing.T) {
 
 		GrootUsername = grootUser.Username
 
-		GrootUID, err = strconv.Atoi(grootUser.Uid)
+		GrootUID64, err := strconv.ParseInt(grootUser.Uid, 10, 32)
 		Expect(err).NotTo(HaveOccurred())
+		GrootUID = int(GrootUID64)
+		Expect(GrootUID).ToNot(BeNumerically("<", 0))
 
-		GrootGID, err = strconv.Atoi(grootUser.Gid)
+		GrootGID64, err := strconv.ParseInt(grootUser.Gid, 10, 32)
 		Expect(err).NotTo(HaveOccurred())
+		GrootGID = int(GrootGID64)
+		Expect(GrootGID).ToNot(BeNumerically("<", 0))
 
-		GrootfsTestUid, _ = strconv.Atoi(os.Getenv("GROOTFS_TEST_UID"))
-		GrootfsTestGid, _ = strconv.Atoi(os.Getenv("GROOTFS_TEST_GID"))
+		GrootfsTestUid64, err := strconv.ParseUint(os.Getenv("GROOTFS_TEST_UID"), 10, 32)
+		Expect(err).NotTo(HaveOccurred())
+		GrootfsTestUid = uint32(GrootfsTestUid64)
+
+		GrootfsTestGid64, err := strconv.ParseUint(os.Getenv("GROOTFS_TEST_GID"), 10, 32)
+		Expect(err).NotTo(HaveOccurred())
+		GrootfsTestGid = uint32(GrootfsTestGid64)
 
 		fmt.Fprintf(os.Stderr, "============> RUNNING %s TESTS (%d:%d) <=============", "OVERLAY-XFS", GrootfsTestUid, GrootfsTestGid)
 	})

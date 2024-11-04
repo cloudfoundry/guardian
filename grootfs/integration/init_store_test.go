@@ -300,7 +300,7 @@ init:
 
 	Context("when the user is not root", func() {
 		It("returns an error", func() {
-			err := runner.RunningAsUser(GrootUID, GrootUID).InitStore(spec)
+			err := runner.RunningAsUser(uint32(GrootUID), uint32(GrootUID)).InitStore(spec)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(fmt.Sprintf("store %s can only be initialized by Root user", runner.StorePath)))
 		})
