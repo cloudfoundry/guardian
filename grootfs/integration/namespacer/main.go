@@ -11,7 +11,7 @@ import (
 
 func main() {
 	rootfsPath := os.Args[1]
-	userId, err := strconv.ParseInt(os.Args[2], 10, 32)
+	userId, err := strconv.ParseUint(os.Args[2], 10, 32)
 	if err != nil {
 		panic(err)
 	}

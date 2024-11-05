@@ -133,10 +133,13 @@ func (s *StoreMeasurer) PathStats(path string) (totalBytes, UsedBytes int64, err
 		return 0, 0, errorspkg.Wrapf(err, "Invalid path %s", s.storePath)
 	}
 
+	// #nosec - file + filesystem sizes will never be negative. changing here will massively impact the codebase's use of int64 throughout public interfaces
 	bsize := uint64(stats.Bsize)
 	free := stats.Bfree * bsize
 	total := stats.Blocks * bsize
+	// #nosec -  this won't overflow until we have filesystems reaching 9.2 exabytes (18_446_744_073_709_551_615 / 2). changing here will massively impact the codebase's use of int64 throughout public interfaces
 	used := int64(total - free)
 
+	// #nosec -  this won't overflow until we have filesystems reaching 9.2 exabytes (18_446_744_073_709_551_615 / 2). changing here will massively impact the codebase's use of int64 throughout public interfaces
 	return int64(total), used, nil
 }

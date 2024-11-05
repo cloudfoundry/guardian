@@ -232,11 +232,11 @@ func unshareWithMount(cmdLine string, mount specs.Mount) *exec.Cmd {
 		fmt.Sprintf("%s; %s", mountCmdLine, cmdLine))
 }
 
-func runAsUser(cmd *exec.Cmd, uid, gid int) error {
+func runAsUser(cmd *exec.Cmd, uid, gid uint32) error {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Credential: &syscall.Credential{
-			Uid: uint32(uid),
-			Gid: uint32(gid),
+			Uid: uid,
+			Gid: gid,
 		},
 	}
 

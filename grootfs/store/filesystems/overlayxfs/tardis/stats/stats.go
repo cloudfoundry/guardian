@@ -56,6 +56,7 @@ func listQuota(logger lager.Logger, imagePath string) (int64, int64, error) {
 		return 0, 0, errorspkg.Wrapf(err, "getting quota %s", imagePath)
 	}
 
+	// #nosec -  this won't overflow until we have filesystems reaching 9.2 exabytes (18_446_744_073_709_551_615 / 2)
 	return int64(quota.BCount), int64(quota.Size), nil
 }
 

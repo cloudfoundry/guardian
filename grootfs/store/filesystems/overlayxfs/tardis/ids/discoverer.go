@@ -1,9 +1,9 @@
 package ids
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"code.cloudfoundry.org/lager/v3"
 
@@ -33,16 +33,17 @@ func (i *Discoverer) Alloc(logger lager.Logger) (projId uint32, err error) {
 	}
 
 	nextId := len(contents) + 1
-	return i.untilSucceeds(nextId)
+	// #nosec G115 - length of an array can't be negative.
+	return i.untilSucceeds(uint32(nextId))
 }
 
-func (i *Discoverer) untilSucceeds(startId int) (uint32, error) {
+func (i *Discoverer) untilSucceeds(startId uint32) (uint32, error) {
 	if startId == 1 {
 		startId++
 	}
 
 	for {
-		if err := os.Mkdir(filepath.Join(i.idsPath, strconv.Itoa(startId)), 0755); err != nil {
+		if err := os.Mkdir(filepath.Join(i.idsPath, fmt.Sprintf("%d", startId)), 0755); err != nil {
 			if os.IsExist(err) {
 				startId++
 			} else {
