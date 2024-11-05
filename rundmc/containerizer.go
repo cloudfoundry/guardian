@@ -351,6 +351,7 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (spec.ActualContai
 	var cpuShares, limitInBytes uint64
 	if bundle.Resources() != nil {
 		cpuShares = *bundle.Resources().CPU.Shares
+		// #nosec G115 - limits should never be negative
 		limitInBytes = uint64(*bundle.Resources().Memory.Limit)
 	} else {
 		log.Debug("bundle-resources-is-nil", lager.Data{"bundle": bundle})

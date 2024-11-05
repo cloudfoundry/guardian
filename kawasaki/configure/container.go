@@ -148,5 +148,6 @@ func exitStatus(err error) (uint32, error) {
 		return 2, exitErr
 	}
 
+	// #nosec G115 - waitstatus is a uint32 that could return -1 if  the program hadn't exited, but we've nsured that prior to calling exitStatus() and by checking ExitError()
 	return uint32(status.ExitStatus()), nil
 }

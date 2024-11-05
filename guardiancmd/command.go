@@ -599,6 +599,7 @@ func (cmd *CommonCommand) wireContainerizer(
 
 	processDepot := execrunner.NewProcessDirDepot(depot)
 
+	// #nosec G115 - the uid/gidmappings lists are capped at maxint32 by idmapper, and should never be negative
 	execRunner := factory.WireExecRunner(runcRoot, uint32(uidMappings.Map(0)), uint32(gidMappings.Map(0)), bundleSaver, depot, processDepot)
 	wireExecerFunc := func(pidGetter runrunc.PidGetter) *runrunc.Execer {
 		return runrunc.NewExecer(depot, processBuilder, factory.WireMkdirer(), userLookupper, execRunner, pidGetter)
@@ -723,8 +724,9 @@ func (cmd *CommonCommand) idMappings() (idmapper.MappingList, idmapper.MappingLi
 	uidMappings := idmapper.MappingList{
 		{
 			ContainerID: 0,
-			HostID:      uint32(containerRootUID),
-			Size:        1,
+			// #nosec G115 - containerRootUID uses idmapper's logic which caps the Uid at MaxInt32, and should not be negative.
+			HostID: uint32(containerRootUID),
+			Size:   1,
 		},
 		{
 			ContainerID: 1,
@@ -735,8 +737,9 @@ func (cmd *CommonCommand) idMappings() (idmapper.MappingList, idmapper.MappingLi
 	gidMappings := idmapper.MappingList{
 		{
 			ContainerID: 0,
-			HostID:      uint32(containerRootGID),
-			Size:        1,
+			// #nosec G115 - containerRootGID uses idmapper's logic which caps the Gid at MaxInt32, and should not be negative.
+			HostID: uint32(containerRootGID),
+			Size:   1,
 		},
 		{
 			ContainerID: 1,
@@ -749,10 +752,12 @@ func (cmd *CommonCommand) idMappings() (idmapper.MappingList, idmapper.MappingLi
 
 func (cmd *CommonCommand) calculateDefaultMappingLengths(containerRootUID, containerRootGID int) {
 	if cmd.Containers.UIDMapLength == 0 {
+		// #nosec G115 - containerRootUID uses idmapper's logic which caps the Uid at MaxInt32, and should not be negative.
 		cmd.Containers.UIDMapLength = uint32(containerRootUID) - cmd.Containers.UIDMapStart
 	}
 
 	if cmd.Containers.GIDMapLength == 0 {
+		// #nosec G115 - containerRootUID uses idmapper's logic which caps the Uid at MaxInt32, and should not be negative.
 		cmd.Containers.GIDMapLength = uint32(containerRootGID) - cmd.Containers.GIDMapStart
 	}
 }
