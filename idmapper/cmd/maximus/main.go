@@ -7,5 +7,6 @@ import (
 )
 
 func main() {
-	fmt.Println(uint32(idmapper.Min(idmapper.MustGetMaxValidUID(), idmapper.MustGetMaxValidGID())))
+	// #nosec G115 - MustGetValidUID/GID would never return negative numbers, so this cast is safe after moving from uint32 to int
+	fmt.Println(uint(idmapper.Min(idmapper.MustGetMaxValidUID(), idmapper.MustGetMaxValidGID())))
 }
