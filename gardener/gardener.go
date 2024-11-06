@@ -538,7 +538,8 @@ func (g *Gardener) checkMaxContainers(handles []string) error {
 		return nil
 	}
 
-	if len(handles) >= int(g.MaxContainers) {
+	// #nosec G115 - length will never be negative
+	if uint64(len(handles)) >= g.MaxContainers {
 		return errors.New("max containers reached")
 	}
 

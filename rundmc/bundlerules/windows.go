@@ -1,6 +1,8 @@
 package bundlerules
 
 import (
+	"math"
+
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -19,11 +21,19 @@ func (w Windows) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec) (goci.Bnd
 	bndl = bndl.WithWindowsMemoryLimit(specs.WindowsMemoryResources{Limit: &limit})
 
 	//lint:ignore SA1019 - we still specify this to make the deprecated logic work until we get rid of the code in garden
-	shares := uint16(spec.Limits.CPU.LimitInShares)
+	shares := spec.Limits.CPU.LimitInShares
 	if spec.Limits.CPU.Weight > 0 {
-		shares = uint16(spec.Limits.CPU.Weight)
+		shares = spec.Limits.CPU.Weight
 	}
-	bndl = bndl.WithWindowsCPUShares(specs.WindowsCPUResources{Shares: &shares})
+
+	var sharesUint uint16
+	if shares > math.MaxUint16 {
+		sharesUint = math.MaxUint16
+	} else {
+		sharesUint = uint16(shares)
+	}
+
+	bndl = bndl.WithWindowsCPUShares(specs.WindowsCPUResources{Shares: &sharesUint})
 
 	return bndl, nil
 }

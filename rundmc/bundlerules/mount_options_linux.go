@@ -22,6 +22,7 @@ func UnprivilegedMountFlagsGetter(path string) ([]string, error) {
 
 	var flags []string
 	for mask, flag := range unprivilegedFlags {
+		// #nosec G115 - all the flags we care about above are positive ints, so we don't need to worry about overflow here
 		if uint64(statfs.Flags)&mask == mask {
 			flags = append(flags, flag)
 		}

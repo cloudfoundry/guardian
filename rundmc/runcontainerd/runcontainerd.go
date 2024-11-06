@@ -129,6 +129,7 @@ func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pi
 	containerRootUID := idmapper.MappingList(bundle.Spec.Linux.UIDMappings).Map(0)
 	containerRootGID := idmapper.MappingList(bundle.Spec.Linux.GIDMappings).Map(0)
 
+	// #nosec G115 - the uid/gidmappings lists are capped at maxint32 by idmapper, and should never be negative
 	err := r.containerManager.Create(log, id, &bundle.Spec, uint32(containerRootUID), uint32(containerRootGID), func() (io.Reader, io.Writer, io.Writer) { return pio.Stdin, pio.Stdout, pio.Stderr })
 	if err != nil {
 		return err

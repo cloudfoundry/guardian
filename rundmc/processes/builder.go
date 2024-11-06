@@ -38,7 +38,9 @@ func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, user
 		ConsoleSize: console(spec),
 		Env:         p.envDeterminer.EnvFor(bndl, spec, user.Uid),
 		User: specs.User{
-			UID:            uint32(user.Uid),
+			// #nosec G115 - uids should be positive and 32bit on linux, but libcontainer uses an int for them
+			UID: uint32(user.Uid),
+			// #nosec G115 - gids should be positive and 32bit on linux, but libcontainer uses an int for them
 			GID:            uint32(user.Gid),
 			AdditionalGids: additionalGIDs,
 			Username:       spec.User,
@@ -96,6 +98,7 @@ func intersect(l1 []string, l2 []string) (result []string) {
 func toUint32Slice(slice []int) []uint32 {
 	result := []uint32{}
 	for _, i := range slice {
+		// #nosec G115 - uids should be positive and 32bit on linux, but libcontainer uses an int for them
 		result = append(result, uint32(i))
 	}
 	return result

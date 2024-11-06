@@ -177,6 +177,7 @@ func (n *Networker) Network(log lager.Logger, containerSpec garden.ContainerSpec
 
 // Capacity returns the number of subnets this network can host
 func (n *Networker) Capacity() uint64 {
+	// #nosec G115 - we would never have a negative pool of subnets
 	return uint64(n.subnetPool.Capacity())
 }
 

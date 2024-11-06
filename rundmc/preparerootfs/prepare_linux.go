@@ -38,7 +38,7 @@ func prepare() {
 	var rootfsPath = flag.String("rootfsPath", "", "rootfs path to chroot into")
 	var uid = flag.Int("uid", 0, "uid to create directories as")
 	var gid = flag.Int("gid", 0, "gid to create directories as")
-	var perm = flag.Int("perm", 0755, "Mode to create the directory with")
+	var perm = flag.Uint("perm", 0755, "Mode to create the directory with")
 	var recreate = flag.Bool("recreate", false, "whether to delete the directory before (re-)creating it")
 
 	flag.Parse()
@@ -62,6 +62,7 @@ func prepare() {
 			rmdir(path)
 		}
 
+		// #nosec G115 - filemodes shouldn't be above 32bit anyway
 		mkdir(path, *uid, *gid, os.FileMode(*perm))
 	}
 }

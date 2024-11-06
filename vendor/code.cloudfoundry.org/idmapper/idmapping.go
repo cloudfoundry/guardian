@@ -11,7 +11,7 @@ type MappingList []specs.LinuxIDMapping
 
 func (m MappingList) Map(id int) int {
 	for _, m := range m {
-		if delta := id - int(m.ContainerID); delta < int(m.Size) {
+		if delta := int(int64(id) - int64(m.ContainerID)); delta < int(m.Size) {
 			return int(m.HostID) + delta
 		}
 	}

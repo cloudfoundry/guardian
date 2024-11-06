@@ -47,27 +47,28 @@ func kernelVersionFromReleaseString(release string) (uint64, error) {
 		return 0, fmt.Errorf("malformed version: %s", release)
 	}
 
-	maj, err := strconv.ParseInt(parts[1], 10, 16)
+	maj, err := strconv.ParseUint(parts[1], 10, 16)
 	if err != nil {
 		return 0, err
 	}
 
-	var min int64
+	var min uint64
 	if parts[2] != "" {
-		min, err = strconv.ParseInt(parts[2], 10, 16)
+		min, err = strconv.ParseUint(parts[2], 10, 16)
 		if err != nil {
 			return 0, err
 		}
 	}
 
-	var patch int64
+	var patch uint64
 	if parts[3] != "" {
-		patch, err = strconv.ParseInt(parts[3], 10, 16)
+		patch, err = strconv.ParseUint(parts[3], 10, 16)
 		if err != nil {
 			return 0, err
 		}
 	}
 
+	// #nosec G115 - strconv.ParseUint validates all of these above
 	return kernelVersion(uint16(maj), uint16(min), uint16(patch)), nil
 }
 

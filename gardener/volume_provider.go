@@ -68,9 +68,10 @@ func (v *VolumeProvider) Create(log lager.Logger, spec garden.ContainerSpec) (sp
 	} else {
 		var err error
 		baseConfig, err = v.VolumeCreator.Create(log.Session("volume-creator"), spec.Handle, RootfsSpec{
-			RootFS:     rootFSURL,
-			Username:   spec.Image.Username,
-			Password:   spec.Image.Password,
+			RootFS:   rootFSURL,
+			Username: spec.Image.Username,
+			Password: spec.Image.Password,
+			// #nosec G115 - itnore int overflow for filesystem attrs as it would require 9 exabytes to cause an issue
 			QuotaSize:  int64(spec.Limits.Disk.ByteHard),
 			QuotaScope: spec.Limits.Disk.Scope,
 			Namespaced: !spec.Privileged,
