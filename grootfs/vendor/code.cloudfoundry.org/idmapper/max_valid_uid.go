@@ -38,6 +38,7 @@ func (u IDMap) MaxValid() (int, error) {
 		m = minUint(maxUint(m, container+size-1), uint(maxInt))
 	}
 
+	// #nosec G115 - maxInt is being used as an upper bound for the value of m, so it should never overflow when cast back to int
 	return int(m), nil
 }
 
