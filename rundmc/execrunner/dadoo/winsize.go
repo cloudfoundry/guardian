@@ -24,8 +24,8 @@ func SetWinSize(f *os.File, ws garden.WindowSize) error {
 		uintptr(f.Fd()),
 		uintptr(syscall.TIOCSWINSZ),
 		uintptr(unsafe.Pointer(&struct {
-			Rows uint16
-			Cols uint16
+			Rows int
+			Cols int
 		}{Rows: ws.Rows, Cols: ws.Columns})),
 		0, 0, 0,
 	)
