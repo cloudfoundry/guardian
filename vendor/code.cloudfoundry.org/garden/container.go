@@ -176,8 +176,8 @@ type TTYSpec struct {
 }
 
 type WindowSize struct {
-	Columns uint16 `json:"columns,omitempty"`
-	Rows    uint16 `json:"rows,omitempty"`
+	Columns int `json:"columns,omitempty"`
+	Rows    int `json:"rows,omitempty"`
 }
 
 type ProcessIO struct {

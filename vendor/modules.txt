@@ -766,7 +766,7 @@ github.com/opencontainers/go-digest/digestset
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.2.1 => github.com/opencontainers/runc v1.1.15
+# github.com/opencontainers/runc v1.2.1 => github.com/opencontainers/runc v1.1.14
 ## explicit; go 1.18
 github.com/opencontainers/runc
 github.com/opencontainers/runc/libcontainer
@@ -1330,7 +1330,7 @@ tags.cncf.io/container-device-interface/pkg/parser
 tags.cncf.io/container-device-interface/specs-go
 # github.com/Microsoft/hcsshim => github.com/Microsoft/hcsshim v0.11.7
 # github.com/containerd/go-runc => github.com/containerd/go-runc v1.0.0
-# github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.15
+# github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.14
 # code.cloudfoundry.org/garden => ../garden
 # code.cloudfoundry.org/grootfs => ../grootfs
 # code.cloudfoundry.org/idmapper => ../idmapper
