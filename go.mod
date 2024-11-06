@@ -15,9 +15,9 @@ require (
 	code.cloudfoundry.org/clock v1.20.0
 	code.cloudfoundry.org/commandrunner v0.17.0
 	code.cloudfoundry.org/debugserver v0.23.0
-	code.cloudfoundry.org/garden v0.0.0-20241030020456-74829d0a2201
+	code.cloudfoundry.org/garden v0.0.0-20241106020650-8b5ced818ad7
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20241030020633-27d1aaa8ad6f
+	code.cloudfoundry.org/idmapper v0.0.0-20241106173217-8c02320d401f
 	code.cloudfoundry.org/lager/v3 v3.14.0
 	code.cloudfoundry.org/localip v0.18.0
 	github.com/BurntSushi/toml v1.4.0
@@ -47,7 +47,7 @@ require (
 	github.com/tedsuo/ifrit v0.0.0-20230516164442-7862c310ad26
 	github.com/urfave/cli/v2 v2.27.5
 	github.com/vishvananda/netlink v1.3.0
-	github.com/vishvananda/netns v0.0.4
+	github.com/vishvananda/netns v0.0.5
 	golang.org/x/sys v0.26.0
 	gopkg.in/yaml.v2 v2.4.0
 )
