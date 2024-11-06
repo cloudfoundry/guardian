@@ -11,22 +11,22 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.17.0
-	code.cloudfoundry.org/clock v1.19.0
-	code.cloudfoundry.org/commandrunner v0.16.0
-	code.cloudfoundry.org/debugserver v0.22.0
-	code.cloudfoundry.org/garden v0.0.0-20241029172354-7b65841cf35a
+	code.cloudfoundry.org/archiver v0.18.0
+	code.cloudfoundry.org/clock v1.20.0
+	code.cloudfoundry.org/commandrunner v0.17.0
+	code.cloudfoundry.org/debugserver v0.23.0
+	code.cloudfoundry.org/garden v0.0.0-20241030020456-74829d0a2201
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20241030020633-27d1aaa8ad6f
-	code.cloudfoundry.org/lager/v3 v3.13.0
-	code.cloudfoundry.org/localip v0.17.0
+	code.cloudfoundry.org/lager/v3 v3.14.0
+	code.cloudfoundry.org/localip v0.18.0
 	github.com/BurntSushi/toml v1.4.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.74
+	github.com/cloudfoundry/gosigar v1.3.75
 	github.com/containerd/containerd v1.7.23
-	github.com/containerd/containerd/api v1.7.19
-	github.com/containerd/errdefs v0.3.0
-	github.com/containerd/typeurl/v2 v2.2.0
+	github.com/containerd/containerd/api v1.8.0
+	github.com/containerd/errdefs v1.0.0
+	github.com/containerd/typeurl/v2 v2.2.2
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/eapache/go-resiliency v1.7.0
 	github.com/hashicorp/go-multierror v1.1.1
@@ -36,10 +36,10 @@ require (
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/onsi/ginkgo/v2 v2.21.0
-	github.com/onsi/gomega v1.35.0
+	github.com/onsi/gomega v1.35.1
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
-	github.com/opencontainers/runc v1.2.0
+	github.com/opencontainers/runc v1.2.1
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
@@ -106,7 +106,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20241029153458-d1b30febd7db // indirect
+	github.com/google/pprof v0.0.0-20241101162523-b92577c0c142 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
@@ -170,9 +170,9 @@ require (
 	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.26.0 // indirect
-	google.golang.org/genproto v0.0.0-20241021214115-324edc3d5d38 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20241015192408-796eee8c2d53 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241021214115-324edc3d5d38 // indirect
+	google.golang.org/genproto v0.0.0-20241104194629-dd2ea8efbc28 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20241021214115-324edc3d5d38 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241104194629-dd2ea8efbc28 // indirect
 	google.golang.org/grpc v1.67.1 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
