@@ -1,6 +1,8 @@
 module code.cloudfoundry.org/guardian
 
-go 1.22.0
+go 1.22.7
+
+toolchain go1.23.2
 
 replace (
 	// PIN hcsshim + go-runc back so that they're compatible with github.com/containerd/containerd 1.7.x
@@ -26,7 +28,7 @@ require (
 	github.com/containerd/containerd v1.7.23
 	github.com/containerd/containerd/api v1.8.0
 	github.com/containerd/errdefs v1.0.0
-	github.com/containerd/typeurl/v2 v2.2.2
+	github.com/containerd/typeurl/v2 v2.2.3
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/eapache/go-resiliency v1.7.0
 	github.com/hashicorp/go-multierror v1.1.1
@@ -164,7 +166,7 @@ require (
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c // indirect
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/oauth2 v0.22.0 // indirect
+	golang.org/x/oauth2 v0.23.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/term v0.25.0 // indirect
 	golang.org/x/text v0.19.0 // indirect
@@ -173,7 +175,7 @@ require (
 	google.golang.org/genproto v0.0.0-20241104194629-dd2ea8efbc28 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241021214115-324edc3d5d38 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241104194629-dd2ea8efbc28 // indirect
-	google.golang.org/grpc v1.67.1 // indirect
+	google.golang.org/grpc v1.68.0 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
