@@ -169,7 +169,7 @@ func (c *Containerizer) WatchRuntimeEvents(log lager.Logger) error {
 // creating container
 // Create creates a bundle in the depot and starts its init process
 func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec) error {
-	log = log.Session("containerizer-create", lager.Data{"handle": spec.Handle, "spec": spec})
+	log = log.Session("containerizer-create", lager.Data{"handle": spec.Handle, "spec": spec, "privileged": spec.Privileged})
 
 	log.Info("start")
 	defer log.Info("finished")

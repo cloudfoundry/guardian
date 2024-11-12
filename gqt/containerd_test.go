@@ -22,7 +22,7 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 )
 
-var _ = FDescribe("Containerd", func() {
+var _ = Describe("Containerd", func() {
 	var client *runner.RunningGarden
 
 	BeforeEach(func() {
@@ -382,7 +382,7 @@ var _ = FDescribe("Containerd", func() {
 					Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				})
 
-				FIt("creates a containerd container with a running task", func() {
+				It("creates a containerd container with a running task", func() {
 					process, err := container.Run(garden.ProcessSpec{
 						ID:    "ctrd-pea-id",
 						Image: garden.ImageRef{URI: rootfs},
