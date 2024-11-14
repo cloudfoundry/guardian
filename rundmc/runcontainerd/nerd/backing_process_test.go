@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/v2/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -31,14 +31,14 @@ var _ = Describe("BackingProcess", func() {
 	Describe("Wait", func() {
 		var (
 			exitCode   int
-			exitCh     chan containerd.ExitStatus
-			exitStatus containerd.ExitStatus
+			exitCh     chan client.ExitStatus
+			exitStatus client.ExitStatus
 			err        error
 		)
 
 		BeforeEach(func() {
-			exitCh = make(chan containerd.ExitStatus, 1)
-			exitStatus = *containerd.NewExitStatus(123, time.Now(), nil)
+			exitCh = make(chan client.ExitStatus, 1)
+			exitStatus = *client.NewExitStatus(123, time.Now(), nil)
 			containerdProcess.WaitReturns(exitCh, nil)
 		})
 
@@ -58,7 +58,7 @@ var _ = Describe("BackingProcess", func() {
 
 		When("waiting for the process fails", func() {
 			BeforeEach(func() {
-				exitStatus = *containerd.NewExitStatus(9, time.Now(), errors.New("wait-failed"))
+				exitStatus = *client.NewExitStatus(9, time.Now(), errors.New("wait-failed"))
 			})
 
 			It("returns the error", func() {
