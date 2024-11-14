@@ -697,8 +697,6 @@ github.com/containerd/cgroups/v3 v3.0.3 h1:S5ByHZ/h9PMe5IOQoN7E+nMc2UcLEM/V48DGD
 github.com/containerd/cgroups/v3 v3.0.3/go.mod h1:8HBe7V3aWGLFPd/k03swSIsGjZhHI2WzJmticMgVuz0=
 github.com/containerd/console v1.0.4 h1:F2g4+oChYvBTsASRTz8NP6iIAi97J3TtSAsLbIFn4ro=
 github.com/containerd/console v1.0.4/go.mod h1:YynlIjWYF8myEu6sdkwKIvGQq+cOckRm6So2avqoYAk=
-github.com/containerd/containerd v1.7.24 h1:zxszGrGjrra1yYJW/6rhm9cJ1ZQ8rkKBR48brqsa7nA=
-github.com/containerd/containerd v1.7.24/go.mod h1:7QUzfURqZWCZV7RLNEn1XjUCQLEf0bkaK4GjUaZehxw=
 github.com/containerd/containerd/api v1.8.0 h1:hVTNJKR8fMc/2Tiw60ZRijntNMd1U+JVMyTRdsD2bS0=
 github.com/containerd/containerd/api v1.8.0/go.mod h1:dFv4lt6S20wTu/hMcP4350RL87qPWLVa/OHOwmmdnYc=
 github.com/containerd/containerd/v2 v2.0.0 h1:qLDdFaAykQrIyLiqwQrNLLz95wiC36bAZVwioUwqShM=
@@ -1940,8 +1938,6 @@ google.golang.org/genproto v0.0.0-20230331144136-dcfb400f0633/go.mod h1:UUQDJDOl
 google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1/go.mod h1:nKE/iIaLqn2bQwXBg8f1g2Ylh6r5MN5CmZvuzZCgsCU=
 google.golang.org/genproto v0.0.0-20230525234025-438c736192d0/go.mod h1:9ExIQyXL5hZrHzQceCwuSYwZZ5QZBazOcprJ5rgs3lY=
 google.golang.org/genproto v0.0.0-20230526161137-0005af68ea54/go.mod h1:zqTuNwFlFRsw5zIts5VnzLQxSRqh+CGOTVMlYbY0Eyk=
-google.golang.org/genproto v0.0.0-20241216192217-9240e9c98484 h1:a/U5otbGrI6mYIO598WriFB1172i6Ktr6FGcatZD3Yw=
-google.golang.org/genproto v0.0.0-20241216192217-9240e9c98484/go.mod h1:Gmd/M/W9fEyf6VSu/mWLnl+9Be51B9CLdxdsKokYq7Y=
 google.golang.org/genproto/googleapis/api v0.0.0-20230525234020-1aefcd67740a/go.mod h1:ts19tUU+Z0ZShN1y3aPyq2+O3d5FUNNgT6FtOzmrNn8=
 google.golang.org/genproto/googleapis/api v0.0.0-20230525234035-dd9d682886f9/go.mod h1:vHYtlOoi6TsQ3Uk2yxR7NI5z8uoV+3pZtR4jmHIkRig=
 google.golang.org/genproto/googleapis/api v0.0.0-20241209162323-e6fa225c2576 h1:CkkIfIt50+lT6NHAVoRYEyAvQGFM7xEwXUUywFvEb3Q=
