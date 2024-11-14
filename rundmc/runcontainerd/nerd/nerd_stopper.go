@@ -3,7 +3,7 @@ package nerd
 import "github.com/containerd/containerd/v2/client"
 
 type NerdStopper struct {
-	client *containerd.Client
+	client *client.Client
 }
 
 func NewNerdStopper(client *client.Client) *NerdStopper {
