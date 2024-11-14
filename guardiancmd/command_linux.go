@@ -140,7 +140,7 @@ func (f *LinuxFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {
 }
 
 func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger, volumizer peas.Volumizer, peaHandlesGetter runcontainerd.PeaHandlesGetter, metricsProvider *metrics.MetricsProvider) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, peas.BundleLoader, error) {
-	containerdClient, err := client.New(f.config.Containerd.Socket, containerd.WithDefaultRuntime(plugin.RuntimeRuncV2))
+	containerdClient, err := client.New(f.config.Containerd.Socket, client.WithDefaultRuntime(plugins.RuntimeRuncV2))
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}

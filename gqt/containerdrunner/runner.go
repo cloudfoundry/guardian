@@ -125,7 +125,7 @@ func NewContainerdProcess(runDir string, config Config) *os.Process {
 }
 
 func ping(config Config) error {
-	client, err := client.New(config.GRPC.Address, containerd.WithDefaultRuntime(plugins.RuntimeLinuxV1))
+	client, err := client.New(config.GRPC.Address, client.WithDefaultRuntime(plugins.RuntimeRuncV2))
 	if err != nil {
 		return err
 	}
