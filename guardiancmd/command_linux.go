@@ -35,12 +35,12 @@ import (
 	"code.cloudfoundry.org/guardian/throttle"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager/v3"
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/leases"
-	"github.com/containerd/containerd/namespaces"
-	"github.com/containerd/containerd/pkg/process"
-	"github.com/containerd/containerd/plugin"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/cmd/containerd-shim-runc-v2/process"
+	"github.com/containerd/containerd/v2/core/leases"
+	"github.com/containerd/containerd/v2/pkg/namespaces"
+	"github.com/containerd/containerd/v2/plugins"
+	cgrouputils "github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
@@ -140,7 +140,7 @@ func (f *LinuxFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {
 }
 
 func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger, volumizer peas.Volumizer, peaHandlesGetter runcontainerd.PeaHandlesGetter, metricsProvider *metrics.MetricsProvider) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, peas.BundleLoader, error) {
-	containerdClient, err := containerd.New(f.config.Containerd.Socket, containerd.WithDefaultRuntime(plugin.RuntimeRuncV2))
+	containerdClient, err := client.New(f.config.Containerd.Socket, containerd.WithDefaultRuntime(plugin.RuntimeRuncV2))
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}

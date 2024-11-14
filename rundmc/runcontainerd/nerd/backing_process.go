@@ -5,20 +5,20 @@ import (
 	"syscall"
 
 	"code.cloudfoundry.org/lager/v3"
-	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/v2/client"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
-//counterfeiter:generate github.com/containerd/containerd.Process
-//counterfeiter:generate github.com/containerd/containerd/cio.IO
+//counterfeiter:generate github.com/containerd/containerd/v2/client.Process
+//counterfeiter:generate github.com/containerd/containerd/v2/pkg/cio.IO
 
 type BackingProcess struct {
 	log               lager.Logger
 	context           context.Context
-	containerdProcess containerd.Process
+	containerdProcess client.Process
 }
 
-func NewBackingProcess(log lager.Logger, p containerd.Process, ctx context.Context) BackingProcess {
+func NewBackingProcess(log lager.Logger, p client.Process, ctx context.Context) BackingProcess {
 	return BackingProcess{
 		log:               log,
 		context:           ctx,
