@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package otlptracehttp // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 
@@ -18,12 +7,14 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -84,10 +75,17 @@ func NewClient(opts ...Option) otlptrace.Client {
 		Transport: ourTransport,
 		Timeout:   cfg.Traces.Timeout,
 	}
-	if cfg.Traces.TLSCfg != nil {
-		transport := ourTransport.Clone()
-		transport.TLSClientConfig = cfg.Traces.TLSCfg
-		httpClient.Transport = transport
+
+	if cfg.Traces.TLSCfg != nil || cfg.Traces.Proxy != nil {
+		clonedTransport := ourTransport.Clone()
+		httpClient.Transport = clonedTransport
+
+		if cfg.Traces.TLSCfg != nil {
+			clonedTransport.TLSClientConfig = cfg.Traces.TLSCfg
+		}
+		if cfg.Traces.Proxy != nil {
+			clonedTransport.Proxy = cfg.Traces.Proxy
+		}
 	}
 
 	stopCh := make(chan struct{})
@@ -152,6 +150,10 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 
 		request.reset(ctx)
 		resp, err := d.client.Do(request.Request)
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) && urlErr.Temporary() {
+			return newResponseError(http.Header{}, err)
+		}
 		if err != nil {
 			return err
 		}
@@ -172,8 +174,11 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			if _, err := io.Copy(&respData, resp.Body); err != nil {
 				return err
 			}
+			if respData.Len() == 0 {
+				return nil
+			}
 
-			if respData.Len() != 0 {
+			if resp.Header.Get("Content-Type") == "application/x-protobuf" {
 				var respProto coltracepb.ExportTraceServiceResponse
 				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
 					return err
@@ -190,12 +195,31 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			}
 			return nil
 
-		case sc == http.StatusTooManyRequests, sc == http.StatusServiceUnavailable:
-			// Retry-able failures.  Drain the body to reuse the connection.
-			if _, err := io.Copy(io.Discard, resp.Body); err != nil {
-				otel.Handle(err)
+		case sc == http.StatusTooManyRequests,
+			sc == http.StatusBadGateway,
+			sc == http.StatusServiceUnavailable,
+			sc == http.StatusGatewayTimeout:
+			// Retry-able failures.
+			rErr := newResponseError(resp.Header, nil)
+
+			// server may return a message with the response
+			// body, so we read it to include in the error
+			// message to be returned. It will help in
+			// debugging the actual issue.
+			var respData bytes.Buffer
+			if _, err := io.Copy(&respData, resp.Body); err != nil {
+				_ = resp.Body.Close()
+				return err
 			}
-			return newResponseError(resp.Header)
+
+			// overwrite the error message with the response body
+			// if it is not empty
+			if respStr := strings.TrimSpace(respData.String()); respStr != "" {
+				// Include response for context.
+				e := errors.New(respStr)
+				rErr = newResponseError(resp.Header, e)
+			}
+			return rErr
 		default:
 			return fmt.Errorf("failed to send to %s: %s", request.URL, resp.Status)
 		}
@@ -236,7 +260,7 @@ func (d *client) newRequest(body []byte) (request, error) {
 		if _, err := gz.Write(body); err != nil {
 			return req, err
 		}
-		// Close needs to be called to ensure body if fully written.
+		// Close needs to be called to ensure body is fully written.
 		if err := gz.Close(); err != nil {
 			return req, err
 		}
@@ -284,22 +308,48 @@ func (r *request) reset(ctx context.Context) {
 // retryableError represents a request failure that can be retried.
 type retryableError struct {
 	throttle int64
+	err      error
 }
 
 // newResponseError returns a retryableError and will extract any explicit
-// throttle delay contained in headers.
-func newResponseError(header http.Header) error {
+// throttle delay contained in headers. The returned error wraps wrapped
+// if it is not nil.
+func newResponseError(header http.Header, wrapped error) error {
 	var rErr retryableError
 	if s, ok := header["Retry-After"]; ok {
 		if t, err := strconv.ParseInt(s[0], 10, 64); err == nil {
 			rErr.throttle = t
 		}
 	}
+
+	rErr.err = wrapped
 	return rErr
 }
 
 func (e retryableError) Error() string {
+	if e.err != nil {
+		return fmt.Sprintf("retry-able request failure: %s", e.err.Error())
+	}
+
 	return "retry-able request failure"
+}
+
+func (e retryableError) Unwrap() error {
+	return e.err
+}
+
+func (e retryableError) As(target interface{}) bool {
+	if e.err == nil {
+		return false
+	}
+
+	switch v := target.(type) {
+	case **retryableError:
+		*v = &e
+		return true
+	default:
+		return false
+	}
 }
 
 // evaluate returns if err is retry-able. If it is and it includes an explicit
@@ -309,7 +359,10 @@ func evaluate(err error) (bool, time.Duration) {
 		return false, 0
 	}
 
-	rErr, ok := err.(retryableError)
+	// Do not use errors.As here, this should only be flattened one layer. If
+	// there are several chained errors, all the errors above it will be
+	// discarded if errors.As is used instead.
+	rErr, ok := err.(retryableError) //nolint:errorlint
 	if !ok {
 		return false, 0
 	}
