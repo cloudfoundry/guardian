@@ -1,12 +1,12 @@
 package nerd
 
-import "github.com/containerd/containerd"
+import "github.com/containerd/containerd/v2/client"
 
 type NerdStopper struct {
 	client *containerd.Client
 }
 
-func NewNerdStopper(client *containerd.Client) *NerdStopper {
+func NewNerdStopper(client *client.Client) *NerdStopper {
 	return &NerdStopper{client: client}
 }
 

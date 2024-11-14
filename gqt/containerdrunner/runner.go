@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/namespaces"
-	"github.com/containerd/containerd/plugin"
+	"github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/pkg/namespaces"
+	"github.com/containerd/containerd/v2/plugins"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -125,7 +125,7 @@ func NewContainerdProcess(runDir string, config Config) *os.Process {
 }
 
 func ping(config Config) error {
-	client, err := containerd.New(config.GRPC.Address, containerd.WithDefaultRuntime(plugin.RuntimeLinuxV1))
+	client, err := client.New(config.GRPC.Address, containerd.WithDefaultRuntime(plugins.RuntimeLinuxV1))
 	if err != nil {
 		return err
 	}

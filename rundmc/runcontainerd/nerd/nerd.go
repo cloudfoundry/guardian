@@ -16,11 +16,11 @@ import (
 	"code.cloudfoundry.org/guardian/metrics"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/lager/v3"
-	"github.com/containerd/containerd"
 	apievents "github.com/containerd/containerd/api/events"
-	api "github.com/containerd/containerd/api/types/runc/options"
-	"github.com/containerd/containerd/cio"
-	ctrdevents "github.com/containerd/containerd/events"
+	ctrdevents "github.com/containerd/containerd/api/events"
+	v2types "github.com/containerd/containerd/api/types/runc/options"
+	"github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/pkg/cio"
 	"github.com/containerd/errdefs"
 	"github.com/containerd/typeurl/v2"
 
@@ -28,13 +28,13 @@ import (
 )
 
 type Nerd struct {
-	client    *containerd.Client
+	client    *client.Client
 	context   context.Context
 	ioFifoDir string
 	mp        *metrics.MetricsProvider
 }
 
-func New(client *containerd.Client, context context.Context, ioFifoDir string, mp *metrics.MetricsProvider) *Nerd {
+func New(client *client.Client, context context.Context, ioFifoDir string, mp *metrics.MetricsProvider) *Nerd {
 	return &Nerd{
 		client:    client,
 		context:   context,
@@ -45,7 +45,7 @@ func New(client *containerd.Client, context context.Context, ioFifoDir string, m
 
 func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, hostUID, hostGID uint32, pio func() (io.Reader, io.Writer, io.Writer)) error {
 	log.Debug("creating-container", lager.Data{"containerID": containerID})
-	container, err := n.client.NewContainer(n.context, containerID, containerd.WithSpec(spec))
+	container, err := n.client.NewContainer(n.context, containerID, client.WithSpec(spec))
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 	}
 
 	log.Debug("creating-task", lager.Data{"containerID": containerID})
-	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), containerd.WithNoNewKeyring, WithUIDAndGID(hostUID, hostGID))
+	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), client.WithNoNewKeyring, WithUIDAndGID(hostUID, hostGID))
 	if err != nil {
 		return err
 	}
@@ -69,11 +69,11 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 		return err
 	}
 
-	return task.CloseIO(n.context, containerd.WithStdinCloser)
+	return task.CloseIO(n.context, client.WithStdinCloser)
 }
 
-func withProcessKillLogging(log lager.Logger, mp *metrics.MetricsProvider) func(context.Context, containerd.Process) error {
-	return func(ctx context.Context, p containerd.Process) error {
+func withProcessKillLogging(log lager.Logger, mp *metrics.MetricsProvider) func(context.Context, client.Process) error {
+	return func(ctx context.Context, p client.Process) error {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 		// ignore errors to wait and kill as we are forcefully killing
@@ -143,7 +143,7 @@ func (n *Nerd) State(log lager.Logger, containerID string) (int, string, error) 
 	return int(task.Pid()), string(status.Status), nil
 }
 
-func (n *Nerd) tryToGetTask(log lager.Logger, container containerd.Container) (containerd.Task, error) {
+func (n *Nerd) tryToGetTask(log lager.Logger, container client.Container) (client.Task, error) {
 	log = log.Session("try-to-get-task")
 
 	const retries = 5
@@ -167,17 +167,17 @@ func (n *Nerd) tryToGetTask(log lager.Logger, container containerd.Container) (c
 	return nil, errors.New("failed getting task")
 }
 
-func (n *Nerd) tryToGetStatus(log lager.Logger, task containerd.Task) (containerd.Status, error) {
+func (n *Nerd) tryToGetStatus(log lager.Logger, task client.Task) (client.Status, error) {
 	log = log.Session("try-to-get-status", lager.Data{"taskID": task.ID()})
 
 	const retries = 5
 	for i := 0; i < retries; i++ {
 		status, err := task.Status(n.context)
 		if err != nil {
-			return containerd.Status{}, err
+			return client.Status{}, err
 		}
 
-		if status.Status != containerd.Unknown {
+		if status.Status != client.Unknown {
 			return status, nil
 		}
 
@@ -185,7 +185,7 @@ func (n *Nerd) tryToGetStatus(log lager.Logger, task containerd.Task) (container
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	return containerd.Status{}, errors.New("failed getting task status")
+	return client.Status{}, errors.New("failed getting task status")
 }
 
 func (n *Nerd) Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer, bool)) (runcontainerd.BackingProcess, error) {
@@ -239,11 +239,11 @@ func (n *Nerd) GetTask(log lager.Logger, id string) (runcontainerd.BackingProces
 	return NewBackingProcess(log, task, n.context), nil
 }
 
-func exponentialBackoffCloseIO(process containerd.Process, ctx context.Context, log lager.Logger, containerID string) {
+func exponentialBackoffCloseIO(process client.Process, ctx context.Context, log lager.Logger, containerID string) {
 	duration := 3 * time.Second
 	retries := 10
 	for i := 0; i < retries; i++ {
-		if err := process.CloseIO(ctx, containerd.WithStdinCloser); err != nil {
+		if err := process.CloseIO(ctx, client.WithStdinCloser); err != nil {
 			log.Error("failed-closing-stdin", err, lager.Data{"containerID": containerID, "processID": process.ID()})
 			time.Sleep(duration)
 			duration *= 2
@@ -297,7 +297,7 @@ func (n *Nerd) GetContainerPID(log lager.Logger, containerID string) (uint32, er
 	return task.Pid(), nil
 }
 
-func (n *Nerd) loadContainer(log lager.Logger, containerID string) (containerd.Container, error) {
+func (n *Nerd) loadContainer(log lager.Logger, containerID string) (client.Container, error) {
 	log.Debug("loading-container", lager.Data{"containerID": containerID})
 	container, err := n.client.LoadContainer(n.context, containerID)
 	if err != nil {
@@ -311,7 +311,7 @@ func (n *Nerd) loadContainer(log lager.Logger, containerID string) (containerd.C
 	return container, nil
 }
 
-func (n *Nerd) loadContainers(labels ...runcontainerd.ContainerFilter) ([]containerd.Container, error) {
+func (n *Nerd) loadContainers(labels ...runcontainerd.ContainerFilter) ([]client.Container, error) {
 	var flattenedLabels []string
 	for _, label := range labels {
 		flattenedLabels = append(flattenedLabels, fmt.Sprintf("labels.\"%s\"%s%s", label.Label, label.ComparisonOp, label.Value))
@@ -320,7 +320,7 @@ func (n *Nerd) loadContainers(labels ...runcontainerd.ContainerFilter) ([]contai
 	return n.client.Containers(n.context, strings.Join(flattenedLabels, ","))
 }
 
-func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (containerd.Container, containerd.Task, error) {
+func (n *Nerd) loadContainerAndTask(log lager.Logger, containerID string) (client.Container, client.Task, error) {
 	container, err := n.loadContainer(log, containerID)
 	if err != nil {
 		return nil, nil, err
@@ -429,9 +429,9 @@ func (n *Nerd) RemoveBundle(log lager.Logger, handle string) error {
 	return err
 }
 
-func WithUIDAndGID(uid, gid uint32) containerd.NewTaskOpts {
-	return func(ctx context.Context, c *containerd.Client, ti *containerd.TaskInfo) error {
-		return updateTaskInfoCreateOptions(ti, func(opts *api.Options) error {
+func WithUIDAndGID(uid, gid uint32) client.NewTaskOpts {
+	return func(ctx context.Context, c *client.Client, ti *client.TaskInfo) error {
+		return updateTaskInfoCreateOptions(ti, func(opts *v2types.Options) error {
 			opts.IoUid = uid
 			opts.IoGid = gid
 			return nil
@@ -439,11 +439,11 @@ func WithUIDAndGID(uid, gid uint32) containerd.NewTaskOpts {
 	}
 }
 
-func updateTaskInfoCreateOptions(taskInfo *containerd.TaskInfo, updateCreateOptions func(createOptions *api.Options) error) error {
+func updateTaskInfoCreateOptions(taskInfo *client.TaskInfo, updateCreateOptions func(createOptions *v2types.Options) error) error {
 	if taskInfo.Options == nil {
-		taskInfo.Options = &api.Options{}
+		taskInfo.Options = &v2types.Options{}
 	}
-	opts, ok := taskInfo.Options.(*api.Options)
+	opts, ok := taskInfo.Options.(*v2types.Options)
 
 	if !ok {
 		return errors.New("could not cast TaskInfo Options to CreateOptions")

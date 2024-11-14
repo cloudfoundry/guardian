@@ -17,10 +17,10 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/lager/v3/lagertest"
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/leases"
-	"github.com/containerd/containerd/namespaces"
-	"github.com/containerd/containerd/plugin"
+	"github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/core/leases"
+	"github.com/containerd/containerd/v2/pkg/namespaces"
+	"github.com/containerd/containerd/v2/plugins"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -39,7 +39,7 @@ var (
 	cgroupsPath string
 
 	testConfig        *TestConfig
-	containerdClient  *containerd.Client
+	containerdClient  *client.Client
 	containerdContext context.Context
 	containerdProcess *os.Process
 )
@@ -79,7 +79,7 @@ var _ = BeforeEach(func() {
 	containerdConfig := containerdrunner.ContainerdConfig(runDir)
 	containerdProcess = containerdrunner.NewContainerdProcess(runDir, containerdConfig)
 
-	containerdClient, err = containerd.New(containerdConfig.GRPC.Address, containerd.WithDefaultRuntime(plugin.RuntimeRuncV2))
+	containerdClient, err = client.New(containerdConfig.GRPC.Address, client.WithDefaultRuntime(plugin.RuntimeRuncV2))
 	Expect(err).NotTo(HaveOccurred())
 
 	containerdContext = namespaces.WithNamespace(context.Background(), fmt.Sprintf("nerdspace%d", GinkgoParallelProcess()))
