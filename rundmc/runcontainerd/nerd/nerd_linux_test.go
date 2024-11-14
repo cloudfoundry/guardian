@@ -14,10 +14,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/containerd/containerd"
 	apievents "github.com/containerd/containerd/api/events"
-	"github.com/containerd/containerd/containers"
-	"github.com/containerd/containerd/oci"
+	"github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/core/containers"
+	"github.com/containerd/containerd/v2/pkg/oci"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -462,7 +462,7 @@ var _ = Describe("Nerd", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(pid).NotTo(BeZero())
-			Expect(status).To(BeEquivalentTo(containerd.Running))
+			Expect(status).To(BeEquivalentTo(client.Running))
 		})
 	})
 
@@ -597,7 +597,7 @@ func createRootfs(modifyRootfs func(string), perm os.FileMode) string {
 	return unpackedRootfs
 }
 
-func generateSpec(context context.Context, client *containerd.Client, containerID string, opts ...oci.SpecOpts) *specs.Spec {
+func generateSpec(context context.Context, client *client.Client, containerID string, opts ...oci.SpecOpts) *specs.Spec {
 	spec, err := oci.GenerateSpec(context, client, &containers.Container{ID: containerID}, opts...)
 	Expect(err).NotTo(HaveOccurred())
 	spec.Process.Args = []string{"/bin/sleep", "999999"}
