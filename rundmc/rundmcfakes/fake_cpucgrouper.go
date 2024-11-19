@@ -9,26 +9,26 @@ import (
 )
 
 type FakeCPUCgrouper struct {
-	CreateBadCgroupStub        func(string) error
-	createBadCgroupMutex       sync.RWMutex
-	createBadCgroupArgsForCall []struct {
+	CleanupCgroupsStub        func(string) error
+	cleanupCgroupsMutex       sync.RWMutex
+	cleanupCgroupsArgsForCall []struct {
 		arg1 string
 	}
-	createBadCgroupReturns struct {
+	cleanupCgroupsReturns struct {
 		result1 error
 	}
-	createBadCgroupReturnsOnCall map[int]struct {
+	cleanupCgroupsReturnsOnCall map[int]struct {
 		result1 error
 	}
-	DestroyBadCgroupStub        func(string) error
-	destroyBadCgroupMutex       sync.RWMutex
-	destroyBadCgroupArgsForCall []struct {
+	PrepareCgroupsStub        func(string) error
+	prepareCgroupsMutex       sync.RWMutex
+	prepareCgroupsArgsForCall []struct {
 		arg1 string
 	}
-	destroyBadCgroupReturns struct {
+	prepareCgroupsReturns struct {
 		result1 error
 	}
-	destroyBadCgroupReturnsOnCall map[int]struct {
+	prepareCgroupsReturnsOnCall map[int]struct {
 		result1 error
 	}
 	ReadBadCgroupUsageStub        func(string) (garden.ContainerCPUStat, error)
@@ -48,16 +48,16 @@ type FakeCPUCgrouper struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCPUCgrouper) CreateBadCgroup(arg1 string) error {
-	fake.createBadCgroupMutex.Lock()
-	ret, specificReturn := fake.createBadCgroupReturnsOnCall[len(fake.createBadCgroupArgsForCall)]
-	fake.createBadCgroupArgsForCall = append(fake.createBadCgroupArgsForCall, struct {
+func (fake *FakeCPUCgrouper) CleanupCgroups(arg1 string) error {
+	fake.cleanupCgroupsMutex.Lock()
+	ret, specificReturn := fake.cleanupCgroupsReturnsOnCall[len(fake.cleanupCgroupsArgsForCall)]
+	fake.cleanupCgroupsArgsForCall = append(fake.cleanupCgroupsArgsForCall, struct {
 		arg1 string
 	}{arg1})
-	stub := fake.CreateBadCgroupStub
-	fakeReturns := fake.createBadCgroupReturns
-	fake.recordInvocation("CreateBadCgroup", []interface{}{arg1})
-	fake.createBadCgroupMutex.Unlock()
+	stub := fake.CleanupCgroupsStub
+	fakeReturns := fake.cleanupCgroupsReturns
+	fake.recordInvocation("CleanupCgroups", []interface{}{arg1})
+	fake.cleanupCgroupsMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
 	}
@@ -67,58 +67,58 @@ func (fake *FakeCPUCgrouper) CreateBadCgroup(arg1 string) error {
 	return fakeReturns.result1
 }
 
-func (fake *FakeCPUCgrouper) CreateBadCgroupCallCount() int {
-	fake.createBadCgroupMutex.RLock()
-	defer fake.createBadCgroupMutex.RUnlock()
-	return len(fake.createBadCgroupArgsForCall)
+func (fake *FakeCPUCgrouper) CleanupCgroupsCallCount() int {
+	fake.cleanupCgroupsMutex.RLock()
+	defer fake.cleanupCgroupsMutex.RUnlock()
+	return len(fake.cleanupCgroupsArgsForCall)
 }
 
-func (fake *FakeCPUCgrouper) CreateBadCgroupCalls(stub func(string) error) {
-	fake.createBadCgroupMutex.Lock()
-	defer fake.createBadCgroupMutex.Unlock()
-	fake.CreateBadCgroupStub = stub
+func (fake *FakeCPUCgrouper) CleanupCgroupsCalls(stub func(string) error) {
+	fake.cleanupCgroupsMutex.Lock()
+	defer fake.cleanupCgroupsMutex.Unlock()
+	fake.CleanupCgroupsStub = stub
 }
 
-func (fake *FakeCPUCgrouper) CreateBadCgroupArgsForCall(i int) string {
-	fake.createBadCgroupMutex.RLock()
-	defer fake.createBadCgroupMutex.RUnlock()
-	argsForCall := fake.createBadCgroupArgsForCall[i]
+func (fake *FakeCPUCgrouper) CleanupCgroupsArgsForCall(i int) string {
+	fake.cleanupCgroupsMutex.RLock()
+	defer fake.cleanupCgroupsMutex.RUnlock()
+	argsForCall := fake.cleanupCgroupsArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeCPUCgrouper) CreateBadCgroupReturns(result1 error) {
-	fake.createBadCgroupMutex.Lock()
-	defer fake.createBadCgroupMutex.Unlock()
-	fake.CreateBadCgroupStub = nil
-	fake.createBadCgroupReturns = struct {
+func (fake *FakeCPUCgrouper) CleanupCgroupsReturns(result1 error) {
+	fake.cleanupCgroupsMutex.Lock()
+	defer fake.cleanupCgroupsMutex.Unlock()
+	fake.CleanupCgroupsStub = nil
+	fake.cleanupCgroupsReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeCPUCgrouper) CreateBadCgroupReturnsOnCall(i int, result1 error) {
-	fake.createBadCgroupMutex.Lock()
-	defer fake.createBadCgroupMutex.Unlock()
-	fake.CreateBadCgroupStub = nil
-	if fake.createBadCgroupReturnsOnCall == nil {
-		fake.createBadCgroupReturnsOnCall = make(map[int]struct {
+func (fake *FakeCPUCgrouper) CleanupCgroupsReturnsOnCall(i int, result1 error) {
+	fake.cleanupCgroupsMutex.Lock()
+	defer fake.cleanupCgroupsMutex.Unlock()
+	fake.CleanupCgroupsStub = nil
+	if fake.cleanupCgroupsReturnsOnCall == nil {
+		fake.cleanupCgroupsReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.createBadCgroupReturnsOnCall[i] = struct {
+	fake.cleanupCgroupsReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeCPUCgrouper) DestroyBadCgroup(arg1 string) error {
-	fake.destroyBadCgroupMutex.Lock()
-	ret, specificReturn := fake.destroyBadCgroupReturnsOnCall[len(fake.destroyBadCgroupArgsForCall)]
-	fake.destroyBadCgroupArgsForCall = append(fake.destroyBadCgroupArgsForCall, struct {
+func (fake *FakeCPUCgrouper) PrepareCgroups(arg1 string) error {
+	fake.prepareCgroupsMutex.Lock()
+	ret, specificReturn := fake.prepareCgroupsReturnsOnCall[len(fake.prepareCgroupsArgsForCall)]
+	fake.prepareCgroupsArgsForCall = append(fake.prepareCgroupsArgsForCall, struct {
 		arg1 string
 	}{arg1})
-	stub := fake.DestroyBadCgroupStub
-	fakeReturns := fake.destroyBadCgroupReturns
-	fake.recordInvocation("DestroyBadCgroup", []interface{}{arg1})
-	fake.destroyBadCgroupMutex.Unlock()
+	stub := fake.PrepareCgroupsStub
+	fakeReturns := fake.prepareCgroupsReturns
+	fake.recordInvocation("PrepareCgroups", []interface{}{arg1})
+	fake.prepareCgroupsMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
 	}
@@ -128,44 +128,44 @@ func (fake *FakeCPUCgrouper) DestroyBadCgroup(arg1 string) error {
 	return fakeReturns.result1
 }
 
-func (fake *FakeCPUCgrouper) DestroyBadCgroupCallCount() int {
-	fake.destroyBadCgroupMutex.RLock()
-	defer fake.destroyBadCgroupMutex.RUnlock()
-	return len(fake.destroyBadCgroupArgsForCall)
+func (fake *FakeCPUCgrouper) PrepareCgroupsCallCount() int {
+	fake.prepareCgroupsMutex.RLock()
+	defer fake.prepareCgroupsMutex.RUnlock()
+	return len(fake.prepareCgroupsArgsForCall)
 }
 
-func (fake *FakeCPUCgrouper) DestroyBadCgroupCalls(stub func(string) error) {
-	fake.destroyBadCgroupMutex.Lock()
-	defer fake.destroyBadCgroupMutex.Unlock()
-	fake.DestroyBadCgroupStub = stub
+func (fake *FakeCPUCgrouper) PrepareCgroupsCalls(stub func(string) error) {
+	fake.prepareCgroupsMutex.Lock()
+	defer fake.prepareCgroupsMutex.Unlock()
+	fake.PrepareCgroupsStub = stub
 }
 
-func (fake *FakeCPUCgrouper) DestroyBadCgroupArgsForCall(i int) string {
-	fake.destroyBadCgroupMutex.RLock()
-	defer fake.destroyBadCgroupMutex.RUnlock()
-	argsForCall := fake.destroyBadCgroupArgsForCall[i]
+func (fake *FakeCPUCgrouper) PrepareCgroupsArgsForCall(i int) string {
+	fake.prepareCgroupsMutex.RLock()
+	defer fake.prepareCgroupsMutex.RUnlock()
+	argsForCall := fake.prepareCgroupsArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeCPUCgrouper) DestroyBadCgroupReturns(result1 error) {
-	fake.destroyBadCgroupMutex.Lock()
-	defer fake.destroyBadCgroupMutex.Unlock()
-	fake.DestroyBadCgroupStub = nil
-	fake.destroyBadCgroupReturns = struct {
+func (fake *FakeCPUCgrouper) PrepareCgroupsReturns(result1 error) {
+	fake.prepareCgroupsMutex.Lock()
+	defer fake.prepareCgroupsMutex.Unlock()
+	fake.PrepareCgroupsStub = nil
+	fake.prepareCgroupsReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeCPUCgrouper) DestroyBadCgroupReturnsOnCall(i int, result1 error) {
-	fake.destroyBadCgroupMutex.Lock()
-	defer fake.destroyBadCgroupMutex.Unlock()
-	fake.DestroyBadCgroupStub = nil
-	if fake.destroyBadCgroupReturnsOnCall == nil {
-		fake.destroyBadCgroupReturnsOnCall = make(map[int]struct {
+func (fake *FakeCPUCgrouper) PrepareCgroupsReturnsOnCall(i int, result1 error) {
+	fake.prepareCgroupsMutex.Lock()
+	defer fake.prepareCgroupsMutex.Unlock()
+	fake.PrepareCgroupsStub = nil
+	if fake.prepareCgroupsReturnsOnCall == nil {
+		fake.prepareCgroupsReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.destroyBadCgroupReturnsOnCall[i] = struct {
+	fake.prepareCgroupsReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -237,10 +237,10 @@ func (fake *FakeCPUCgrouper) ReadBadCgroupUsageReturnsOnCall(i int, result1 gard
 func (fake *FakeCPUCgrouper) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.createBadCgroupMutex.RLock()
-	defer fake.createBadCgroupMutex.RUnlock()
-	fake.destroyBadCgroupMutex.RLock()
-	defer fake.destroyBadCgroupMutex.RUnlock()
+	fake.cleanupCgroupsMutex.RLock()
+	defer fake.cleanupCgroupsMutex.RUnlock()
+	fake.prepareCgroupsMutex.RLock()
+	defer fake.prepareCgroupsMutex.RUnlock()
 	fake.readBadCgroupUsageMutex.RLock()
 	defer fake.readBadCgroupUsageMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

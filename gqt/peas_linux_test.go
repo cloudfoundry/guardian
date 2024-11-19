@@ -196,7 +196,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 
 				JustBeforeEach(func() {
 					stdout := gbytes.NewBuffer()
-					_, err := ctr.Run(garden.ProcessSpec{
+					process, err := ctr.Run(garden.ProcessSpec{
 						Path:  "sh",
 						Args:  []string{"-c", "cat /proc/self/cgroup && echo done && sleep 3600"},
 						Image: garden.ImageRef{URI: "raw://" + peaRootfs},
@@ -210,13 +210,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Eventually(stdout).Should(gbytes.Say("done"))
 
-					cgroupProcLines := strings.Split(string(stdout.Contents()), "\n")
-					var cgroupRelativePath string
-					Expect(cgroupProcLines).To(HaveLen(3))
-					procLineSections := strings.Split(cgroupProcLines[0], fmt.Sprintf("/garden-%s", gdn.Tag))
-					Expect(procLineSections).To(HaveLen(2))
-					cgroupRelativePath = procLineSections[1]
-					cgroupPath = filepath.Join(gdn.CgroupsRootPath(), cgroupRelativePath)
+					cgroupPath = filepath.Join(gdn.CgroupsRootPath(), process.ID())
 				})
 
 				Context("when started with low cpu limit turned on", func() {

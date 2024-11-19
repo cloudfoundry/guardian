@@ -33,7 +33,7 @@ var _ = Describe("Rundmc/Cgroups/Cpucgrouper", func() {
 		})
 
 		It("creates the bad cgroup in the correct place", func() {
-			Expect(cpuCgrouper.CreateBadCgroup("gingerbread!")).To(Succeed())
+			Expect(cpuCgrouper.PrepareCgroups("gingerbread!")).To(Succeed())
 			path := filepath.Join(rootPath, cgroups.BadCgroupName, "gingerbread!")
 			Expect(path).To(BeADirectory())
 		})
@@ -48,7 +48,7 @@ var _ = Describe("Rundmc/Cgroups/Cpucgrouper", func() {
 		})
 
 		It("deletes the bad cgroup", func() {
-			Expect(cpuCgrouper.DestroyBadCgroup("frenchtoast!")).To(Succeed())
+			Expect(cpuCgrouper.CleanupCgroups("frenchtoast!")).To(Succeed())
 			Expect(badCgroupPath).NotTo(BeADirectory())
 		})
 	})

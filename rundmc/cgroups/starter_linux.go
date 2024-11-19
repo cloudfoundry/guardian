@@ -10,7 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
 
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups/fs"
@@ -87,6 +89,16 @@ func (s *CgroupStarter) Start() error {
 func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 	defer s.ProcCgroups.Close()
 	defer s.ProcSelfCgroups.Close()
+	if cgroups.IsCgroup2UnifiedMode() {
+		cgroupPath := filepath.Join(Root, s.GardenCgroup)
+		logger.Info("creating-cgroups-path", lager.Data{"path": cgroupPath})
+		if err := os.MkdirAll(filepath.Join(Root, s.GardenCgroup), 0755); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	if err := os.MkdirAll(s.CgroupPath, 0755); err != nil {
 		return err
 	}
@@ -310,7 +322,7 @@ func (s *CgroupStarter) mountTmpfsOnCgroupPath(log lager.Logger, path string) {
 	log = log.Session("cgroups-tmpfs-mounting", lager.Data{"path": path})
 	log.Info("started")
 
-	if err := s.FS.Mount("cgroup2", path, "tmpfs", uintptr(0), "uid=0,gid=0,mode=0755"); err != nil {
+	if err := s.FS.Mount("cgroup", path, "tmpfs", uintptr(0), "uid=0,gid=0,mode=0755"); err != nil {
 		log.Error("mount-failed-continuing-anyway", err)
 		return
 	}
@@ -353,18 +365,16 @@ func (s *CgroupStarter) idempotentCgroupMount(logger lager.Logger, cgroupPath, s
 		return fmt.Errorf("mkdir '%s': %s", cgroupPath, err)
 	}
 
-	// TODO: only do this for cgroups v1
-
-	// err := s.FS.Mount("cgroup", cgroupPath, "cgroup", uintptr(0), subsystem)
-	// switch err {
-	// case nil:
-	// case unix.EBUSY:
-	// 	// Attempting a mount over an exising mount of type cgroup and the same
-	// 	// source and target results in EBUSY errno
-	// 	logger.Info("subsystem-already-mounted")
-	// default:
-	// 	return fmt.Errorf("mounting subsystem '%s' in '%s': %s", subsystem, cgroupPath, err)
-	// }
+	err := s.FS.Mount("cgroup", cgroupPath, "cgroup", uintptr(0), subsystem)
+	switch err {
+	case nil:
+	case unix.EBUSY:
+		// Attempting a mount over an exising mount of type cgroup and the same
+		// source and target results in EBUSY errno
+		logger.Info("subsystem-already-mounted")
+	default:
+		return fmt.Errorf("mounting subsystem '%s' in '%s': %s", subsystem, cgroupPath, err)
+	}
 
 	logger.Info("finished")
 

@@ -1,6 +1,9 @@
 package cgroups
 
 import (
+	"os"
+	"path/filepath"
+
 	"code.cloudfoundry.org/garden"
 )
 
@@ -15,13 +18,10 @@ func NewDefaultCgrouper(cgroupRoot string) DefaultCgrouper {
 }
 
 func (c DefaultCgrouper) PrepareCgroups(handle string) error {
-	// cgroupPath := filepath.Join(c.cgroupRoot, handle)
-	// if err := os.MkdirAll(cgroupPath, 0755); err != nil {
-	// 	return err
-	// }
-	// if err := os.WriteFile(filepath.Join(cgroupPath, "cgroup.subtree_control"), []byte("+cpuset +cpu +io +memory +hugetlb +pids +rdma +misc"), 0755); err != nil {
-	// 	return err
-	// }
+	cgroupPath := filepath.Join(c.cgroupRoot, handle)
+	if err := os.MkdirAll(cgroupPath, 0755); err != nil {
+		return err
+	}
 	return nil
 }
 

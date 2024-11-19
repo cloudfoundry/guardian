@@ -24,6 +24,7 @@ import (
 	"code.cloudfoundry.org/garden/client/connection"
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/kawasaki/mtu"
+	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	"code.cloudfoundry.org/localip"
@@ -429,7 +430,7 @@ func (r *RunningGarden) CgroupsRootPath() string {
 
 func CgroupsRootPath(tag string) string {
 	if cgroups.IsCgroup2UnifiedMode() {
-		return filepath.Join("/sys/fs/cgroup/system.slice", fmt.Sprintf("garden-%s", tag))
+		return filepath.Join(gardencgroups.Root, fmt.Sprintf("%s-%s", gardencgroups.Garden, tag))
 	}
 
 	return filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", tag))

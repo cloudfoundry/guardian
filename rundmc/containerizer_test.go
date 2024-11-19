@@ -95,8 +95,8 @@ var _ = Describe("Rundmc", func() {
 				BaseConfig: specs.Spec{Root: &specs.Root{}},
 			})).To(Succeed())
 
-			Expect(fakeCPUCgrouper.CreateBadCgroupCallCount()).To(Equal(1))
-			actualHandle := fakeCPUCgrouper.CreateBadCgroupArgsForCall(0)
+			Expect(fakeCPUCgrouper.PrepareCgroupsCallCount()).To(Equal(1))
+			actualHandle := fakeCPUCgrouper.PrepareCgroupsArgsForCall(0)
 			Expect(actualHandle).To(Equal("exuberant!"))
 		})
 
@@ -125,7 +125,7 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when creating the bad cgroup fails", func() {
 			BeforeEach(func() {
-				fakeCPUCgrouper.CreateBadCgroupReturns(errors.New("BOOHOO"))
+				fakeCPUCgrouper.PrepareCgroupsReturns(errors.New("BOOHOO"))
 			})
 
 			It("should propagate the error", func() {
@@ -407,8 +407,8 @@ var _ = Describe("Rundmc", func() {
 
 		It("destroys the bad cgroup", func() {
 			Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-			Expect(fakeCPUCgrouper.DestroyBadCgroupCallCount()).To(Equal(1))
-			Expect(fakeCPUCgrouper.DestroyBadCgroupArgsForCall(0)).To(Equal("some-handle"))
+			Expect(fakeCPUCgrouper.CleanupCgroupsCallCount()).To(Equal(1))
+			Expect(fakeCPUCgrouper.CleanupCgroupsArgsForCall(0)).To(Equal("some-handle"))
 		})
 
 		Context("when the runtime fails to destroy", func() {
@@ -423,7 +423,7 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when deleting the bad cgroup fails", func() {
 			BeforeEach(func() {
-				fakeCPUCgrouper.DestroyBadCgroupReturns(errors.New("POOH"))
+				fakeCPUCgrouper.CleanupCgroupsReturns(errors.New("POOH"))
 			})
 
 			It("propagates the error back", func() {
