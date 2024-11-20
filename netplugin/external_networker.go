@@ -124,12 +124,14 @@ func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 	}
 
 	containerIP, ok := p.configStore.Get(containerSpec.Handle, gardener.ContainerIPKey)
+	containerIPv6, ok := p.configStore.Get(containerSpec.Handle, gardener.ContainerIPv6Key)
 	if ok {
 		log.Info("external-binary-write-dns-to-config", lager.Data{
 			"dnsServers": pluginNameservers,
 		})
 		cfg := kawasaki.NetworkConfig{
 			ContainerIP:           net.ParseIP(containerIP),
+			ContainerIPv6:         net.ParseIP(containerIPv6),
 			BridgeIP:              net.ParseIP(containerIP),
 			ContainerHandle:       containerSpec.Handle,
 			OperatorNameservers:   p.operatorNameservers,

@@ -11,7 +11,7 @@ import (
 
 //counterfeiter:generate . HostFileCompiler
 type HostFileCompiler interface {
-	Compile(log lager.Logger, ip net.IP, handle string, additionalHostEntries []string) ([]byte, error)
+	Compile(log lager.Logger, ip, ipv6 net.IP, handle string, additionalHostEntries []string) ([]byte, error)
 }
 
 //counterfeiter:generate . ResolvCompiler
@@ -29,7 +29,9 @@ type ResolvConfigurer struct {
 func (d *ResolvConfigurer) Configure(log lager.Logger, cfg NetworkConfig, pid int) error {
 	log = log.Session("dns-resolve-configure")
 
-	containerHostsContents, err := d.HostsFileCompiler.Compile(log, cfg.ContainerIP, cfg.ContainerHandle, cfg.AdditionalHostEntries)
+	containerHostsContents, err := d.HostsFileCompiler.Compile(
+		log, cfg.ContainerIP, cfg.ContainerIPv6, cfg.ContainerHandle, cfg.AdditionalHostEntries)
+
 	if err != nil {
 		log.Error("compiling-hosts-file", err)
 		return err
