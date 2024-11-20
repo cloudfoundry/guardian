@@ -16,10 +16,10 @@ require (
 	code.cloudfoundry.org/archiver v0.19.0
 	code.cloudfoundry.org/clock v1.21.0
 	code.cloudfoundry.org/commandrunner v0.18.0
-	code.cloudfoundry.org/debugserver v0.24.0
+	code.cloudfoundry.org/debugserver v0.25.0
 	code.cloudfoundry.org/garden v0.0.0-20241113020722-7ea4dc0ff4fc
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20241107162109-4deb42ee1274
+	code.cloudfoundry.org/idmapper v0.0.0-20241113020911-1cb6a76827ab
 	code.cloudfoundry.org/lager/v3 v3.15.0
 	code.cloudfoundry.org/localip v0.19.0
 	github.com/BurntSushi/toml v1.4.0
@@ -41,7 +41,7 @@ require (
 	github.com/onsi/gomega v1.35.1
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
-	github.com/opencontainers/runc v1.2.1
+	github.com/opencontainers/runc v1.2.2
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
@@ -73,7 +73,7 @@ require (
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/containerd/cgroups/v3 v3.0.3 // indirect
 	github.com/containerd/console v1.0.4 // indirect
-	github.com/containerd/continuity v0.4.4 // indirect
+	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/go-cni v1.1.9 // indirect
 	github.com/containerd/go-runc v1.1.0 // indirect
@@ -92,7 +92,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.3.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/go-events v0.0.0-20241017185736-969db071c880 // indirect
+	github.com/docker/go-events v0.0.0-20241114183025-9940093291f5 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
@@ -172,11 +172,11 @@ require (
 	golang.org/x/text v0.20.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.27.0 // indirect
-	google.golang.org/genproto v0.0.0-20241104194629-dd2ea8efbc28 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20241021214115-324edc3d5d38 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241104194629-dd2ea8efbc28 // indirect
+	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20241113202542-65e8d215514f // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/grpc v1.68.0 // indirect
-	google.golang.org/protobuf v1.35.1 // indirect
+	google.golang.org/protobuf v1.35.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.26.2 // indirect

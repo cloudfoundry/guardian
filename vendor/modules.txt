@@ -12,7 +12,7 @@ code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.24.0
+# code.cloudfoundry.org/debugserver v0.25.0
 ## explicit; go 1.22.0
 code.cloudfoundry.org/debugserver
 # code.cloudfoundry.org/garden v0.0.0-20241113020722-7ea4dc0ff4fc => ../garden
@@ -30,7 +30,7 @@ code.cloudfoundry.org/garden/transport
 # code.cloudfoundry.org/grootfs v0.30.0 => ../grootfs
 ## explicit; go 1.22.6
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20241107162109-4deb42ee1274 => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20241113020911-1cb6a76827ab => ../idmapper
 ## explicit; go 1.22.0
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.15.0
@@ -438,7 +438,7 @@ github.com/containerd/containerd/api/services/version/v1
 github.com/containerd/containerd/api/types
 github.com/containerd/containerd/api/types/task
 github.com/containerd/containerd/api/types/transfer
-# github.com/containerd/continuity v0.4.4
+# github.com/containerd/continuity v0.4.5
 ## explicit; go 1.21
 github.com/containerd/continuity
 github.com/containerd/continuity/devices
@@ -543,7 +543,7 @@ github.com/distribution/reference
 # github.com/docker/docker v27.3.1+incompatible
 ## explicit
 github.com/docker/docker/pkg/reexec
-# github.com/docker/go-events v0.0.0-20241017185736-969db071c880
+# github.com/docker/go-events v0.0.0-20241114183025-9940093291f5
 ## explicit
 github.com/docker/go-events
 # github.com/docker/go-metrics v0.0.1
@@ -766,7 +766,7 @@ github.com/opencontainers/go-digest/digestset
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.2.1 => github.com/opencontainers/runc v1.1.14
+# github.com/opencontainers/runc v1.2.2 => github.com/opencontainers/runc v1.1.14
 ## explicit; go 1.18
 github.com/opencontainers/runc
 github.com/opencontainers/runc/libcontainer
@@ -1074,13 +1074,13 @@ golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# google.golang.org/genproto v0.0.0-20241104194629-dd2ea8efbc28
+# google.golang.org/genproto v0.0.0-20241118233622-e639e219e697
 ## explicit; go 1.21
 google.golang.org/genproto/protobuf/field_mask
-# google.golang.org/genproto/googleapis/api v0.0.0-20241021214115-324edc3d5d38
+# google.golang.org/genproto/googleapis/api v0.0.0-20241113202542-65e8d215514f
 ## explicit; go 1.21
 google.golang.org/genproto/googleapis/api/httpbody
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20241104194629-dd2ea8efbc28
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20241118233622-e639e219e697
 ## explicit; go 1.21
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/errdetails
@@ -1147,7 +1147,7 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-# google.golang.org/protobuf v1.35.1
+# google.golang.org/protobuf v1.35.2
 ## explicit; go 1.21
 google.golang.org/protobuf/encoding/protodelim
 google.golang.org/protobuf/encoding/protojson
