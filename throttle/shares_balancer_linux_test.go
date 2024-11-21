@@ -39,13 +39,15 @@ var _ = Describe("SharesBalancer", func() {
 		id, err := uuid.NewV4()
 		Expect(err).NotTo(HaveOccurred())
 
-		thisTestCgroupPath = filepath.Join(cgroupRoot, "cpu", fmt.Sprintf("balancer-test-%s", id.String()))
-		makeSubCgroup(thisTestCgroupPath)
+		cgroupName := fmt.Sprintf("balancer-test-%s", id.String())
+
+		thisTestCgroupPath = filepath.Join(cgroupRoot, "cpu", cgroupName)
+		makeSubCgroup(thisTestCgroupPath, filepath.Join("cpu", cgroupName))
 
 		goodCgroupPath = filepath.Join(thisTestCgroupPath, gardencgroups.GoodCgroupName)
-		makeSubCgroup(goodCgroupPath)
+		makeSubCgroup(thisTestCgroupPath, gardencgroups.GoodCgroupName)
 		badCgroupPath = filepath.Join(thisTestCgroupPath, gardencgroups.BadCgroupName)
-		makeSubCgroup(badCgroupPath)
+		makeSubCgroup(thisTestCgroupPath, gardencgroups.BadCgroupName)
 
 		memoryProvider = new(throttlefakes.FakeMemoryProvider)
 		memoryProvider.TotalMemoryReturns(10000*throttle.MB, nil)
@@ -129,6 +131,6 @@ var _ = Describe("SharesBalancer", func() {
 
 func createCgroup(parentPath, name string, shares int) {
 	cgroupPath := filepath.Join(parentPath, name)
-	makeSubCgroup(cgroupPath)
+	makeSubCgroup(parentPath, name)
 	writeShares(cgroupPath, shares)
 }

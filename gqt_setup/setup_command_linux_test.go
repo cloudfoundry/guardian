@@ -63,6 +63,9 @@ var _ = Describe("gdn setup", func() {
 
 	Describe("cgroups", func() {
 		It("sets up cgroups", func() {
+			if cgroups.IsCgroup2UnifiedMode() {
+				Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
+			}
 			mountpointCmd := exec.Command("mountpoint", "-q", cgroupsRoot+"/")
 			mountpointCmd.Stdout = GinkgoWriter
 			mountpointCmd.Stderr = GinkgoWriter

@@ -11,6 +11,7 @@ import (
 	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/throttle"
 	"code.cloudfoundry.org/lager/v3/lagertest"
+	"github.com/containerd/cgroups/v3/cgroup2"
 	uuid "github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,7 +28,7 @@ var _ = Describe("Enforcer", func() {
 	)
 
 	BeforeEach(func() {
-		logger = lagertest.NewTestLogger("container-metrics-test")
+		logger = lagertest.NewTestLogger("enforcer-test")
 		uuid, err := uuid.NewV4()
 		Expect(err).NotTo(HaveOccurred())
 		handle = uuid.String()
@@ -66,18 +67,14 @@ var _ = Describe("Enforcer", func() {
 
 			BeforeEach(func() {
 				goodCgroup = filepath.Join(cpuCgroupPath, gardencgroups.GoodCgroupName)
-				makeSubCgroup(goodCgroup)
 				goodContainerCgroup = filepath.Join(goodCgroup, handle)
-				makeSubCgroup(goodContainerCgroup)
-				Expect(os.MkdirAll(goodContainerCgroup, 0755)).To(Succeed())
+				makeSubCgroup(goodCgroup, handle)
 
 				writeShares(goodContainerCgroup, 3456)
 
 				badCgroup = filepath.Join(cpuCgroupPath, gardencgroups.BadCgroupName)
-				makeSubCgroup(badCgroup)
 				badContainerCgroup = filepath.Join(badCgroup, handle)
-				makeSubCgroup(badContainerCgroup)
-				Expect(os.MkdirAll(badContainerCgroup, 0755)).To(Succeed())
+				makeSubCgroup(badCgroup, handle)
 
 				command = exec.Command("sleep", "360")
 				Expect(command.Start()).To(Succeed())
@@ -110,7 +107,7 @@ var _ = Describe("Enforcer", func() {
 
 			BeforeEach(func() {
 				containerCgroup = filepath.Join(cpuCgroupPath, handle)
-				makeSubCgroup(containerCgroup)
+				makeSubCgroup(cpuCgroupPath, handle)
 
 				command = exec.Command("sleep", "360")
 				Expect(command.Start()).To(Succeed())
@@ -147,16 +144,14 @@ var _ = Describe("Enforcer", func() {
 
 			BeforeEach(func() {
 				goodCgroup = filepath.Join(cpuCgroupPath, gardencgroups.GoodCgroupName)
-				makeSubCgroup(goodCgroup)
 				goodContainerCgroup = filepath.Join(goodCgroup, handle)
-				makeSubCgroup(goodContainerCgroup)
+				makeSubCgroup(goodCgroup, handle)
 
 				writeShares(goodContainerCgroup, 6543)
 
 				badCgroup = filepath.Join(cpuCgroupPath, gardencgroups.BadCgroupName)
-				makeSubCgroup(badCgroup)
 				badContainerCgroup = filepath.Join(badCgroup, handle)
-				makeSubCgroup(badContainerCgroup)
+				makeSubCgroup(badCgroup, handle)
 
 				writeShares(badContainerCgroup, 3456)
 
@@ -196,7 +191,7 @@ var _ = Describe("Enforcer", func() {
 
 			BeforeEach(func() {
 				containerCgroup = filepath.Join(cpuCgroupPath, handle)
-				makeSubCgroup(containerCgroup)
+				makeSubCgroup(cpuCgroupPath, handle)
 
 				command = exec.Command("sleep", "360")
 				Expect(command.Start()).To(Succeed())
@@ -214,11 +209,11 @@ var _ = Describe("Enforcer", func() {
 	})
 })
 
-func makeSubCgroup(path string) {
+func makeSubCgroup(root string, path string) {
 	Expect(os.MkdirAll(path, 0755)).To(Succeed())
 	if cgroups.IsCgroup2UnifiedMode() {
-		Expect(os.WriteFile(filepath.Join(path, "cgroup.type"), []byte("threaded"), 0644)).To(Succeed())
-		Expect(os.WriteFile(filepath.Join(path, "cgroup.subtree_control"), []byte("+cpu"), 0755)).To(Succeed())
+		_, err := cgroup2.NewManager(root, "/"+path, &cgroup2.Resources{CPU: &cgroup2.CPU{}})
+		Expect(err).NotTo(HaveOccurred())
 	}
 }
 
@@ -243,7 +238,8 @@ func mountCPUcgroup(cgroupRoot string) {
 
 		Expect(syscall.Mount("cgroup2", cpuCgroup, "cgroup2", 0, "")).To(Succeed())
 
-		Expect(os.WriteFile(filepath.Join(cpuCgroup, "cgroup.subtree_control"), []byte("+cpu"), 0644)).To(Succeed())
+		_, err := cgroup2.NewManager(cpuCgroup, "/", &cgroup2.Resources{})
+		Expect(err).NotTo(HaveOccurred())
 	} else {
 		Expect(syscall.Mount("cgroup", cgroupRoot, "tmpfs", uintptr(0), "mode=0755")).To(Succeed())
 
