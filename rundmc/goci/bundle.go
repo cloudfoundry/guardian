@@ -165,7 +165,7 @@ func (b Bndl) WithMemoryLimit(limit specs.LinuxMemory) Bndl {
 			resources.Unified = make(map[string]string)
 		}
 		if limit.Limit != nil && *limit.Limit > 0 {
-			resources.Unified["memory.max"] = fmt.Sprintf("%d", *limit.Swap)
+			resources.Unified["memory.max"] = fmt.Sprintf("%d", *limit.Limit)
 		}
 		if limit.Swap != nil && *limit.Swap > 0 {
 			resources.Unified["memory.swap.max"] = fmt.Sprintf("%d", *limit.Swap)

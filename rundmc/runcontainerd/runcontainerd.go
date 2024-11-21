@@ -148,6 +148,9 @@ func updateAnnotationsIfNeeded(bundle *goci.Bndl) {
 			bundle.Spec.Annotations = make(map[string]string)
 		}
 		bundle.Spec.Annotations["container-type"] = "garden-init"
+		if bundle.Spec.Linux.CgroupsPath != "" {
+			bundle.Spec.Linux.CgroupsPath = filepath.Join(bundle.Spec.Linux.CgroupsPath, "init")
+		}
 	}
 }
 

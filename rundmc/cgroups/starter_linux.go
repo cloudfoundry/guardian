@@ -197,10 +197,6 @@ func (s *CgroupStarter) createAndChownCgroup(logger lager.Logger, mountPath, sub
 			return err
 		}
 
-		if err := os.WriteFile(filepath.Join(gardenCgroupPath, GoodCgroupName, "cgroup.subtree_control"), []byte("+cpu"), 0644); err != nil {
-			return err
-		}
-
 		if contains(strings.Split(subsystem, ","), "cpu") {
 			return s.createChownedCgroup(logger, filepath.Join(gardenCgroupPath, BadCgroupName))
 		}

@@ -407,7 +407,6 @@ var _ = Describe("Containerd", func() {
 				})
 
 				It("cleans up pea-debris", func() {
-					println(container.Handle())
 					process, err := container.Run(garden.ProcessSpec{
 						ID:    "ctrd-pea-id-2",
 						Image: garden.ImageRef{URI: rootfs},

@@ -18,14 +18,13 @@ func NewDefaultCgrouper(cgroupRoot string) DefaultCgrouper {
 }
 
 func (c DefaultCgrouper) PrepareCgroups(handle string) error {
-	cgroupPath := filepath.Join(c.cgroupRoot, handle)
-	if err := os.MkdirAll(cgroupPath, 0755); err != nil {
-		return err
-	}
 	return nil
 }
 
-func (DefaultCgrouper) CleanupCgroups(string) error {
+func (c DefaultCgrouper) CleanupCgroups(handle string) error {
+	if err := os.RemoveAll(filepath.Join(c.cgroupRoot, handle)); err != nil {
+		return err
+	}
 	return nil
 }
 

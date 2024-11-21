@@ -18,7 +18,6 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 	multierror "github.com/hashicorp/go-multierror"
 	uuid "github.com/nu7hatch/gouuid"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	errorwrapper "github.com/pkg/errors"
 )
@@ -160,7 +159,6 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	extraCleanup := func() error {
 		return p.PeaCleaner.Clean(log, processID)
 	}
-
 	proc, runErr := p.ExecRunner.RunPea(log, processID, bndl, sandboxHandle, procIO, preparedProcess.Terminal, nil, extraCleanup)
 	if runErr != nil {
 		destroyErr := p.Volumizer.Destroy(log, processID)
@@ -181,19 +179,10 @@ func (p *PeaCreator) linuxNamespaces(log lager.Logger, sandboxHandle string, pri
 	linuxNamespaces["network"] = fmt.Sprintf("/proc/%d/ns/net", originalCtrInitPid)
 	linuxNamespaces["ipc"] = fmt.Sprintf("/proc/%d/ns/ipc", originalCtrInitPid)
 	linuxNamespaces["uts"] = fmt.Sprintf("/proc/%d/ns/uts", originalCtrInitPid)
+	linuxNamespaces["pid"] = fmt.Sprintf("/proc/%d/ns/pid", originalCtrInitPid)
 
 	if !privileged {
 		linuxNamespaces["user"] = fmt.Sprintf("/proc/%d/ns/user", originalCtrInitPid)
-	}
-
-	if cgroups.IsCgroup2UnifiedMode() {
-		// peas have their own pid name space so that they can be killed independently
-		// Otherwise, deleting one container will signal all processes in a shared pid namespace
-		// https://github.com/opencontainers/runc/blob/main/libcontainer/container_linux.go#L386
-		linuxNamespaces["pid"] = ""
-		linuxNamespaces["cgroup"] = fmt.Sprintf("/proc/%d/ns/cgroup", originalCtrInitPid)
-	} else {
-		linuxNamespaces["pid"] = fmt.Sprintf("/proc/%d/ns/pid", originalCtrInitPid)
 	}
 
 	return linuxNamespaces, nil

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -23,6 +24,10 @@ import (
 	v2types "github.com/containerd/containerd/runtime/v2/runc/options"
 	"github.com/containerd/errdefs"
 	"github.com/containerd/typeurl/v2"
+
+	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
+	"github.com/opencontainers/runc/libcontainer/configs"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -44,7 +49,63 @@ func New(client *containerd.Client, context context.Context, ioFifoDir string, m
 
 // Creating container with spec
 func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, hostUID, hostGID uint32, pio func() (io.Reader, io.Writer, io.Writer)) error {
-	log.Debug("creating-container", lager.Data{"containerID": containerID})
+	log.Debug("creating-container", lager.Data{"containerID": containerID, "spec": spec.Linux.Resources})
+	if cgroups.IsCgroup2UnifiedMode() {
+		if spec.Annotations["container-type"] == "garden-init" {
+			parentPath := filepath.Join(fs2.UnifiedMountpoint, filepath.Dir(spec.Linux.CgroupsPath))
+			if spec.Linux.Resources != nil {
+				// from rundmc/bundlerules/limits.go
+				var resources = &configs.Resources{}
+				if spec.Linux.Resources.Unified != nil {
+					resources.Unified = make(map[string]string)
+					if spec.Linux.Resources.Unified["cpu.weight"] != "" {
+						resources.Unified["cpu.weight"] = spec.Linux.Resources.Unified["cpu.weight"]
+					}
+					if spec.Linux.Resources.Unified["cpu.max"] != "" {
+						resources.Unified["cpu.max"] = spec.Linux.Resources.Unified["cpu.max"]
+					}
+					if spec.Linux.Resources.Unified["memory.max"] != "" {
+						resources.Unified["memory.max"] = spec.Linux.Resources.Unified["cpu.max"]
+					}
+					if spec.Linux.Resources.Unified["memory.swap.max"] != "" {
+						resources.Unified["memory.swap.max"] = spec.Linux.Resources.Unified["cpu.max"]
+					}
+				}
+				if spec.Linux.Resources.CPU != nil {
+					if spec.Linux.Resources.CPU.Shares != nil {
+						resources.CpuShares = *spec.Linux.Resources.CPU.Shares
+					}
+					if spec.Linux.Resources.CPU.Quota != nil {
+						resources.CpuQuota = *spec.Linux.Resources.CPU.Quota
+					}
+					if spec.Linux.Resources.CPU.Period != nil {
+						resources.CpuPeriod = *spec.Linux.Resources.CPU.Period
+					}
+				}
+				if spec.Linux.Resources.Memory != nil {
+					if spec.Linux.Resources.Memory.Limit != nil {
+						resources.Memory = *spec.Linux.Resources.Memory.Limit
+					}
+					if spec.Linux.Resources.Memory.Swap != nil {
+						resources.MemorySwap = *spec.Linux.Resources.Memory.Swap
+					}
+				}
+				cgroupManager, err := fs2.NewManager(&configs.Cgroup{}, parentPath)
+				if err != nil {
+					return err
+				}
+				err = fs2.CreateCgroupPath(parentPath, &configs.Cgroup{})
+				if err != nil {
+					return err
+				}
+				err = cgroupManager.Set(resources)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	container, err := n.client.NewContainer(n.context, containerID, containerd.WithSpec(spec))
 	if err != nil {
 		return err
