@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -674,9 +675,14 @@ var _ = Describe("Rundmc", func() {
 
 				actualMetrics, err := containerizer.Metrics(logger, "foo")
 				Expect(err).NotTo(HaveOccurred())
-
-				expectedEntitlement := uint64(float64(cpuShares) * (entitlementPerSharePercent / 100) * float64(containerAge))
-				Expect(actualMetrics.CPUEntitlement).To(Equal(expectedEntitlement))
+				if cgroups.IsCgroup2UnifiedMode() {
+					// We loose up to one decimal when converting shares to weight and back, see  ConvertCPUSharesToCgroupV2Value
+					expectedEntitlement := uint64(float64(cpuShares) * (entitlementPerSharePercent / 100) * float64(containerAge-1*time.Second))
+					Expect(actualMetrics.CPUEntitlement).To(Equal(expectedEntitlement))
+				} else {
+					expectedEntitlement := uint64(float64(cpuShares) * (entitlementPerSharePercent / 100) * float64(containerAge))
+					Expect(actualMetrics.CPUEntitlement).To(Equal(expectedEntitlement))
+				}
 			})
 
 			Context("when peas metrics are requested", func() {
