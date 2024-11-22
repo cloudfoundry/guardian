@@ -115,10 +115,10 @@ var _ = Describe("Limits", func() {
 					"b *:* m",
 					"c 136:* rwm",
 					"c 5:2 rwm",
-					"c 10:200 rwm",
 				}
 
 				if privileged {
+					expectedAllowedDevices = append(expectedAllowedDevices, "c 10:200 rwm")
 					expectedAllowedDevices = append(expectedAllowedDevices, "c 10:229 rwm")
 				}
 
