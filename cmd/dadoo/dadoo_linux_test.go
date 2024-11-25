@@ -567,12 +567,19 @@ var _ = Describe("Dadoo", func() {
 				})
 
 				JustBeforeEach(func() {
+					//This Deletion is to clean up the pid namspace from the other tests
+					// hangs if GinkgoWriter is attached
+					cmdDelete := exec.Command("runc", "delete", "-f", filepath.Base(bundlePath))
+					Expect(cmdDelete.Run()).To(Succeed())
+
 					// hangs if GinkgoWriter is attached
 					cmd := exec.Command("runc", "--root", runcRoot, "create", "--no-new-keyring", "--bundle", bundlePath, filepath.Base(bundlePath))
 					Expect(cmd.Run()).To(Succeed())
 				})
 
 				AfterEach(func() {
+					cmd := exec.Command("runc", "--root", runcRoot, "delete", "-f", filepath.Base(bundlePath))
+					Expect(cmd.Run()).To(Succeed())
 					Expect(os.RemoveAll(runcRoot)).To(Succeed())
 				})
 
@@ -611,6 +618,11 @@ var _ = Describe("Dadoo", func() {
 			JustBeforeEach(func() {
 				// hangs if GinkgoWriter is attached
 				cmd := exec.Command("runc", "create", "--no-new-keyring", "--bundle", bundlePath, filepath.Base(bundlePath))
+				Expect(cmd.Run()).To(Succeed())
+			})
+
+			AfterEach(func() {
+				cmd := exec.Command("runc", "delete", "-f", filepath.Base(bundlePath))
 				Expect(cmd.Run()).To(Succeed())
 			})
 
