@@ -13,19 +13,19 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.19.0
-	code.cloudfoundry.org/clock v1.21.0
-	code.cloudfoundry.org/commandrunner v0.18.0
-	code.cloudfoundry.org/debugserver v0.25.0
-	code.cloudfoundry.org/garden v0.0.0-20241113020722-7ea4dc0ff4fc
+	code.cloudfoundry.org/archiver v0.20.0
+	code.cloudfoundry.org/clock v1.22.0
+	code.cloudfoundry.org/commandrunner v0.19.0
+	code.cloudfoundry.org/debugserver v0.26.0
+	code.cloudfoundry.org/garden v0.0.0-20241120020832-f199cabc97c3
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20241113020911-1cb6a76827ab
-	code.cloudfoundry.org/lager/v3 v3.15.0
-	code.cloudfoundry.org/localip v0.19.0
+	code.cloudfoundry.org/lager/v3 v3.16.0
+	code.cloudfoundry.org/localip v0.20.0
 	github.com/BurntSushi/toml v1.4.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.76
-	github.com/containerd/containerd v1.7.23
+	github.com/cloudfoundry/gosigar v1.3.77
+	github.com/containerd/containerd v1.7.24
 	github.com/containerd/containerd/api v1.8.0
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/typeurl/v2 v2.2.3
@@ -37,8 +37,8 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.8.1
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo/v2 v2.21.0
-	github.com/onsi/gomega v1.35.1
+	github.com/onsi/ginkgo/v2 v2.22.0
+	github.com/onsi/gomega v1.36.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/opencontainers/runc v1.2.2
@@ -108,7 +108,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20241101162523-b92577c0c142 // indirect
+	github.com/google/pprof v0.0.0-20241122213907-cbe949e5a41b // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
