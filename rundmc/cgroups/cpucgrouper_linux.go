@@ -1,6 +1,7 @@
 package cgroups
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -40,22 +41,40 @@ func (c CPUCgrouper) CleanupCgroups(handle string) error {
 }
 
 func (c CPUCgrouper) ReadBadCgroupUsage(handle string) (garden.ContainerCPUStat, error) {
-	stats := cgroups.Stats{}
-	cpuactCgroup := &fs.CpuacctGroup{}
-
 	path := filepath.Join(c.cgroupRoot, BadCgroupName, handle)
-	if _, err := os.Stat(path); err != nil {
-		return garden.ContainerCPUStat{}, err
+
+	var stats *cgroups.Stats
+
+	if cgroups.IsCgroup2UnifiedMode() {
+		cgroupManager, err := fs2.NewManager(&configs.Cgroup{}, path)
+		if err != nil {
+			return garden.ContainerCPUStat{}, err
+		}
+		stats, err = cgroupManager.GetStats()
+		if err != nil {
+			return garden.ContainerCPUStat{}, err
+		}
+	} else {
+		cpuactCgroup := &fs.CpuacctGroup{}
+
+		if _, err := os.Stat(path); err != nil {
+			return garden.ContainerCPUStat{}, err
+		}
+
+		if err := cpuactCgroup.GetStats(path, stats); err != nil {
+			return garden.ContainerCPUStat{}, err
+		}
 	}
 
-	if err := cpuactCgroup.GetStats(path, &stats); err != nil {
-		return garden.ContainerCPUStat{}, err
+	if stats != nil {
+		cpuStats := garden.ContainerCPUStat{
+			Usage:  stats.CpuStats.CpuUsage.TotalUsage,
+			System: stats.CpuStats.CpuUsage.UsageInKernelmode,
+			User:   stats.CpuStats.CpuUsage.UsageInUsermode,
+		}
+
+		return cpuStats, nil
 	}
 
-	cpuStats := garden.ContainerCPUStat{
-		Usage:  stats.CpuStats.CpuUsage.TotalUsage,
-		System: stats.CpuStats.CpuUsage.UsageInKernelmode,
-		User:   stats.CpuStats.CpuUsage.UsageInUsermode,
-	}
-	return cpuStats, nil
+	return garden.ContainerCPUStat{}, fmt.Errorf("failed-to-read-bad-cgroup-stats")
 }
