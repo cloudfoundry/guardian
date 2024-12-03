@@ -20,11 +20,12 @@ import (
 
 var _ = Describe("Enforcer", func() {
 	var (
-		logger        *lagertest.TestLogger
-		handle        string
-		cgroupRoot    string
-		cpuCgroupPath string
-		command       *exec.Cmd
+		logger            *lagertest.TestLogger
+		handle            string
+		cgroupRoot        string
+		cpuCgroupPath     string
+		command           *exec.Cmd
+		expectedCPUShares int
 	)
 
 	BeforeEach(func() {
@@ -38,6 +39,11 @@ var _ = Describe("Enforcer", func() {
 
 		mountCPUcgroup(cgroupRoot)
 		cpuCgroupPath = filepath.Join(cgroupRoot, "cpu")
+
+		expectedCPUShares = 3456
+		if cgroups.IsCgroup2UnifiedMode() {
+			expectedCPUShares = int(cgroups.ConvertCPUSharesToCgroupV2Value(3456))
+		}
 	})
 
 	AfterEach(func() {
@@ -96,7 +102,7 @@ var _ = Describe("Enforcer", func() {
 
 			It("copies CPU shares to the bad container cgroup", func() {
 				badContainerShares := readCPUShares(badContainerCgroup)
-				Expect(badContainerShares).To(Equal(3456))
+				Expect(badContainerShares).To(Equal(expectedCPUShares))
 			})
 		})
 
@@ -136,10 +142,11 @@ var _ = Describe("Enforcer", func() {
 
 		Context("containers that have been created after cpu throttling enablement", func() {
 			var (
-				goodCgroup          string
-				goodContainerCgroup string
-				badCgroup           string
-				badContainerCgroup  string
+				goodCgroup            string
+				goodContainerCgroup   string
+				badCgroup             string
+				badContainerCgroup    string
+				expectedGoodCPUShares int
 			)
 
 			BeforeEach(func() {
@@ -148,6 +155,10 @@ var _ = Describe("Enforcer", func() {
 				makeSubCgroup(goodCgroup, handle)
 
 				writeShares(goodContainerCgroup, 6543)
+				expectedGoodCPUShares = 6543
+				if cgroups.IsCgroup2UnifiedMode() {
+					expectedGoodCPUShares = int(cgroups.ConvertCPUSharesToCgroupV2Value(uint64(6543)))
+				}
 
 				badCgroup = filepath.Join(cpuCgroupPath, gardencgroups.BadCgroupName)
 				badContainerCgroup = filepath.Join(badCgroup, handle)
@@ -175,12 +186,12 @@ var _ = Describe("Enforcer", func() {
 
 			It("preserves CPU shares in the good container cgroup", func() {
 				badContainerShares := readCPUShares(goodContainerCgroup)
-				Expect(badContainerShares).To(Equal(6543))
+				Expect(badContainerShares).To(Equal(expectedGoodCPUShares))
 			})
 
 			It("preserves CPU shares in the bad container cgroup", func() {
 				badContainerShares := readCPUShares(badContainerCgroup)
-				Expect(badContainerShares).To(Equal(3456))
+				Expect(badContainerShares).To(Equal(expectedCPUShares))
 			})
 		})
 
@@ -261,6 +272,7 @@ func writeShares(path string, shares int) {
 	cpuSharesFile := "cpu.shares"
 	if cgroups.IsCgroup2UnifiedMode() {
 		cpuSharesFile = "cpu.weight"
+		shares = int(cgroups.ConvertCPUSharesToCgroupV2Value(uint64(shares)))
 	}
 	Expect(os.WriteFile(filepath.Join(path, cpuSharesFile), []byte(strconv.Itoa(shares)), 0644)).To(Succeed())
 }

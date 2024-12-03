@@ -14,6 +14,9 @@ import (
 
 func GetCGroupPath(cgroupsRootPath, subsystem, tag string, privileged, throttlingCPU bool) (string, error) {
 	if cgroups.IsCgroup2UnifiedMode() {
+		if throttlingCPU {
+			return filepath.Join(cgroupsRootPath, rundmc_cgroups.GoodCgroupName), nil
+		}
 		return cgroupsRootPath, nil
 	}
 	parentCgroup := "garden"

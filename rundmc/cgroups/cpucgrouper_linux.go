@@ -7,6 +7,8 @@ import (
 	"code.cloudfoundry.org/garden"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fs"
+	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
+	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 type CPUCgrouper struct {
@@ -21,6 +23,10 @@ func NewCPUCgrouper(cgroupRoot string) CPUCgrouper {
 
 func (c CPUCgrouper) PrepareCgroups(handle string) error {
 	if err := os.MkdirAll(filepath.Join(c.cgroupRoot, BadCgroupName, handle), 0755); err != nil {
+		return err
+	}
+	err := fs2.CreateCgroupPath(filepath.Join(c.cgroupRoot, BadCgroupName, handle), &configs.Cgroup{})
+	if err != nil {
 		return err
 	}
 	return nil

@@ -290,20 +290,28 @@ func getRuntimeDir() string {
 }
 
 func (cmd *CommonCommand) getGardenCPUCgroup() (string, error) {
-	cpuCgroupSubPath, err := cgrouputils.ParseCgroupFile("/proc/self/cgroup")
-	if err != nil {
-		return "", err
-	}
-
-	cgroupsMountpoint := gardencgroups.Root
 	gardenCgroup := gardencgroups.Garden
-
 	if cmd.Server.Tag != "" {
-		cgroupsMountpoint = filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", cmd.Server.Tag))
 		gardenCgroup = fmt.Sprintf("%s-%s", gardenCgroup, cmd.Server.Tag)
 	}
 
-	return filepath.Join(cgroupsMountpoint, "cpu", cpuCgroupSubPath["cpu"], gardenCgroup), nil
+	if cgrouputils.IsCgroup2UnifiedMode() {
+		return filepath.Join(gardencgroups.Root, gardenCgroup), nil
+
+	} else {
+		cpuCgroupSubPath, err := cgrouputils.ParseCgroupFile("/proc/self/cgroup")
+		if err != nil {
+			return "", err
+		}
+
+		cgroupsMountpoint := gardencgroups.Root
+
+		if cmd.Server.Tag != "" {
+			cgroupsMountpoint = filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", cmd.Server.Tag))
+		}
+
+		return filepath.Join(cgroupsMountpoint, "cpu", cpuCgroupSubPath["cpu"], gardenCgroup), nil
+	}
 }
 
 func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containerizer *rundmc.Containerizer, memoryProvider throttle.MemoryProvider, cpuEntitlementPerShare float64) (Service, error) {

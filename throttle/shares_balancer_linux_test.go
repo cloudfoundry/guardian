@@ -18,14 +18,16 @@ import (
 
 var _ = Describe("SharesBalancer", func() {
 	var (
-		err                error
-		logger             *lagertest.TestLogger
-		sharesBalancer     throttle.SharesBalancer
-		memoryProvider     *throttlefakes.FakeMemoryProvider
-		cgroupRoot         string
-		thisTestCgroupPath string
-		goodCgroupPath     string
-		badCgroupPath      string
+		err                   error
+		logger                *lagertest.TestLogger
+		sharesBalancer        throttle.SharesBalancer
+		memoryProvider        *throttlefakes.FakeMemoryProvider
+		cgroupRoot            string
+		thisTestCgroupPath    string
+		goodCgroupPath        string
+		badCgroupPath         string
+		expectedGoodCPUShares int
+		expectedBadCPUShares  int
 	)
 
 	BeforeEach(func() {
@@ -53,6 +55,13 @@ var _ = Describe("SharesBalancer", func() {
 		memoryProvider.TotalMemoryReturns(10000*throttle.MB, nil)
 
 		sharesBalancer = throttle.NewSharesBalancer(thisTestCgroupPath, memoryProvider, 0.5)
+		if cgroups.IsCgroup2UnifiedMode() {
+			expectedGoodCPUShares = int(cgroups.ConvertCPUSharesToCgroupV2Value(9998))
+			expectedBadCPUShares = int(cgroups.ConvertCPUSharesToCgroupV2Value(2))
+		} else {
+			expectedGoodCPUShares = 9998
+			expectedBadCPUShares = 2
+		}
 	})
 
 	AfterEach(func() {
@@ -71,8 +80,8 @@ var _ = Describe("SharesBalancer", func() {
 
 	When("no containers have been created yet", func() {
 		It("assigns all available shares to the good cgroup", func() {
-			Expect(readCPUShares(goodCgroupPath)).To(Equal(9998))
-			Expect(readCPUShares(badCgroupPath)).To(Equal(2))
+			Expect(readCPUShares(goodCgroupPath)).To(Equal(expectedGoodCPUShares))
+			Expect(readCPUShares(badCgroupPath)).To(Equal(expectedBadCPUShares))
 		})
 	})
 
@@ -98,8 +107,8 @@ var _ = Describe("SharesBalancer", func() {
 			})
 
 			It("keeps everything the same", func() {
-				Expect(readCPUShares(goodCgroupPath)).To(Equal(9998))
-				Expect(readCPUShares(badCgroupPath)).To(Equal(2))
+				Expect(readCPUShares(goodCgroupPath)).To(Equal(expectedGoodCPUShares))
+				Expect(readCPUShares(badCgroupPath)).To(Equal(expectedBadCPUShares))
 			})
 		})
 
@@ -109,8 +118,16 @@ var _ = Describe("SharesBalancer", func() {
 			})
 
 			It("assigns the adjusted sum of the contained shares to the bad cgroup, the rest to the good cgroup", func() {
-				Expect(readCPUShares(goodCgroupPath)).To(Equal(9500))
-				Expect(readCPUShares(badCgroupPath)).To(Equal(500))
+				expectedGoodCPUShares = 9500
+				expectedBadCPUShares = 500
+
+				if cgroups.IsCgroup2UnifiedMode() {
+					expectedGoodCPUShares = int(cgroups.ConvertCPUSharesToCgroupV2Value(9500))
+					expectedBadCPUShares = int(cgroups.ConvertCPUSharesToCgroupV2Value(500))
+				}
+
+				Expect(readCPUShares(goodCgroupPath)).To(Equal(expectedGoodCPUShares))
+				Expect(readCPUShares(badCgroupPath)).To(Equal(expectedBadCPUShares))
 			})
 
 			When("the container goes back to the good cgroup", func() {
@@ -121,8 +138,8 @@ var _ = Describe("SharesBalancer", func() {
 				})
 
 				It("assigns the container shares back to the good cgroup", func() {
-					Expect(readCPUShares(goodCgroupPath)).To(Equal(9998))
-					Expect(readCPUShares(badCgroupPath)).To(Equal(2))
+					Expect(readCPUShares(goodCgroupPath)).To(Equal(expectedGoodCPUShares))
+					Expect(readCPUShares(badCgroupPath)).To(Equal(expectedBadCPUShares))
 				})
 			})
 		})

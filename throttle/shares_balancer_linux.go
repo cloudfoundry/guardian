@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"code.cloudfoundry.org/guardian/rundmc"
 	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/lager/v3"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -18,21 +19,14 @@ type SharesBalancer struct {
 	goodCgroupPath string
 	badCgroupPath  string
 	multiplier     float64
-	cpuSharesFile  string
 }
 
 func NewSharesBalancer(cpuCgroupPath string, memoryProvider MemoryProvider, multiplier float64) SharesBalancer {
-	cpuSharesFile := "cpu.shares"
-	if cgroups.IsCgroup2UnifiedMode() {
-		cpuSharesFile = "cpu.weight"
-	}
-
 	return SharesBalancer{
 		memoryProvider: memoryProvider,
 		goodCgroupPath: filepath.Join(cpuCgroupPath, gardencgroups.GoodCgroupName),
 		badCgroupPath:  filepath.Join(cpuCgroupPath, gardencgroups.BadCgroupName),
 		multiplier:     multiplier,
-		cpuSharesFile:  cpuSharesFile,
 	}
 }
 
@@ -43,7 +37,7 @@ func (b SharesBalancer) Run(logger lager.Logger) error {
 
 	totalMemoryInBytes, _ := b.memoryProvider.TotalMemory()
 
-	badShares, err := b.countShares(b.badCgroupPath)
+	badShares, err := b.countShares(logger, b.badCgroupPath)
 	if err != nil {
 		return err
 	}
@@ -68,7 +62,7 @@ func (b SharesBalancer) Run(logger lager.Logger) error {
 	return nil
 }
 
-func (b SharesBalancer) countShares(cgroupPath string) (uint64, error) {
+func (b SharesBalancer) countShares(logger lager.Logger, cgroupPath string) (uint64, error) {
 	children, err := os.ReadDir(cgroupPath)
 	if err != nil {
 		return 0, err
@@ -98,7 +92,20 @@ func (b SharesBalancer) countShares(cgroupPath string) (uint64, error) {
 }
 
 func (b SharesBalancer) getShares(cgroupPath string) (uint64, error) {
-	bytes, err := os.ReadFile(filepath.Join(cgroupPath, b.cpuSharesFile))
+	if cgroups.IsCgroup2UnifiedMode() {
+		bytes, err := os.ReadFile(filepath.Join(cgroupPath, "cpu.weight"))
+		if err != nil {
+			return 0, err
+		}
+
+		weight, err := strconv.ParseUint(strings.TrimSpace(string(bytes)), 10, 64)
+		if err != nil {
+			return 0, err
+		}
+		return rundmc.ConvertCgroupV2ValueToCPUShares(weight), nil
+	}
+
+	bytes, err := os.ReadFile(filepath.Join(cgroupPath, "cpu.shares"))
 	if err != nil {
 		return 0, err
 	}
@@ -108,7 +115,11 @@ func (b SharesBalancer) getShares(cgroupPath string) (uint64, error) {
 
 func (b SharesBalancer) setShares(logger lager.Logger, cgroupPath string, shares uint64) error {
 	logger.Info("set-shares", lager.Data{"cgroupPath": cgroupPath, "shares": shares})
-	return os.WriteFile(filepath.Join(cgroupPath, b.cpuSharesFile), []byte(strconv.FormatUint(shares, 10)), 0644)
+	if cgroups.IsCgroup2UnifiedMode() {
+		weight := cgroups.ConvertCPUSharesToCgroupV2Value(shares)
+		return os.WriteFile(filepath.Join(cgroupPath, "cpu.weight"), []byte(strconv.FormatUint(weight, 10)), 0644)
+	}
+	return os.WriteFile(filepath.Join(cgroupPath, "cpu.shares"), []byte(strconv.FormatUint(shares, 10)), 0644)
 }
 
 func hasProcs(cgroupPath string) bool {

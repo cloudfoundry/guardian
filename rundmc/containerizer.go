@@ -471,8 +471,7 @@ func getShares(bundle goci.Bndl) uint64 {
 			if err != nil {
 				return 0
 			}
-			// reverse of cgroups.ConvertCPUSharesToCgroupV2Value
-			return (cpuWeightUint-1)*262142/9999 + 2
+			return ConvertCgroupV2ValueToCPUShares(cpuWeightUint)
 		}
 
 		return 0
