@@ -51,7 +51,7 @@ optional registry component defaults to [Docker Hub](https://hub.docker.com/).
 ## Docker V2 Schema 1 image
 
 An image, stored in a Docker V2 registry, with a manifest which conforms to the
-[Docker manifest schema 1](https://docker-docs.uclv.cu/registry/spec/manifest-v2-1/).
+[Docker manifest schema 1](https://distribution.github.io/distribution/spec/deprecated-schema-v1/).
 This manifest format is deprecated, but GrootFS is still capable of fetching and utilising these images.
 Internally, this is done by converting the image to Schema 2 format once fetched. This is an expensive
 process since Schema 1 manifests do not contain diff IDs, and so layers must be fetched in order for these
@@ -60,7 +60,7 @@ to be computed.
 ## Docker V2 Schema 2 image
 
 An image, stored in a Docker V2 registry, with a manifest which conforms to the
-[Docker manifest schema 1](https://docker-docs.uclv.cu/registry/spec/manifest-v2-2/).
+[Docker manifest schema 1](https://distribution.github.io/distribution/spec/manifest-v2-2/).
 This is the manifest format currently used to describe Docker images generated with modern Docker tooling.
 
 ## OCI image
@@ -84,7 +84,7 @@ to fetch and store the config and layer blobs that it describes.
 
 ## Docker V2 Registry
 
-Currently the only registry type supported by GrootFS is the [Docker Registry HTTP API V2](https://docker-docs.uclv.cu/registry/spec/api/). The Docker V1 registry
+Currently the only registry type supported by GrootFS is the [Docker Registry HTTP API V2](https://distribution.github.io/distribution/spec/api/). The Docker V1 registry
 API has long since been deprecated and is not supported by GrootFS.
 
 ## Store
