@@ -1,7 +1,7 @@
-code.cloudfoundry.org/commandrunner v0.19.0 h1:+jw9LdjTOWJVRHGcydFBaLGZZEGotkbNnlUEwiyJib4=
-code.cloudfoundry.org/commandrunner v0.19.0/go.mod h1:S9oLlEUn2Ol01ROWxbZapXqiHfvB4HdXigkQouUBf/c=
-code.cloudfoundry.org/lager/v3 v3.16.0 h1:v7LnlPN+6tiLmE4qHLP4FHRwywRoG3cNE43vIS35O2E=
-code.cloudfoundry.org/lager/v3 v3.16.0/go.mod h1:BBAP7NdUAZLLhJhcbjFWX4w4uNpDWgSMMAPc6lX/wT0=
+code.cloudfoundry.org/commandrunner v0.20.0 h1:gPBIK4reYuxPmihNUKWLZa+fH4yt9RET7mreu1PrTdQ=
+code.cloudfoundry.org/commandrunner v0.20.0/go.mod h1:5ajRxIAj9mWdkmV7ub7lmW76rMIEKA0e72KNdEK6Lvo=
+code.cloudfoundry.org/lager/v3 v3.17.0 h1:YW115U4MMyXeG9r1+fCE0+WVxFpVH4t91mD5jJj2PcI=
+code.cloudfoundry.org/lager/v3 v3.17.0/go.mod h1:oZJDNgt+DIGNvd5Qt99OKAZ4LnzX3nIoYNiN7jnM0Ig=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77 h1:afT88tB6u9JCKQZVAAaa9ICz/uGn5Uw9ekn6P22mYKM=
@@ -52,8 +52,8 @@ github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1v
 github.com/go-task/slim-sprig/v3 v3.0.0/go.mod h1:W848ghGpv3Qj3dhTPRyJypKRiqCdHZiAzKg9hl15HA8=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
-github.com/google/pprof v0.0.0-20241122213907-cbe949e5a41b h1:SXO0REt4iu865upYCk8aKBBJQ4BqoE0ReP23ClMu60s=
-github.com/google/pprof v0.0.0-20241122213907-cbe949e5a41b/go.mod h1:vavhavw2zAxS5dIdcRluK6cSGGPlZynqzFM8NdvU144=
+github.com/google/pprof v0.0.0-20241203143554-1e3fdc7de467 h1:keEZFtbLJugfE0qHn+Ge1JCE71spzkchQobDf3mzS/4=
+github.com/google/pprof v0.0.0-20241203143554-1e3fdc7de467/go.mod h1:vavhavw2zAxS5dIdcRluK6cSGGPlZynqzFM8NdvU144=
 github.com/gorilla/mux v1.8.1 h1:TuBL49tXwgrFYWhqrNgrUNEY92u81SPhu7sTdzQEiWY=
 github.com/gorilla/mux v1.8.1/go.mod h1:AKf9I4AEqPTmMytcMc0KkNouC66V3BtZ4qD5fmWSiMQ=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
