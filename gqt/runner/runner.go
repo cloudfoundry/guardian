@@ -24,14 +24,12 @@ import (
 	"code.cloudfoundry.org/garden/client/connection"
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/kawasaki/mtu"
-	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	"code.cloudfoundry.org/localip"
 	multierror "github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/tedsuo/ifrit"
 	ginkgomon "github.com/tedsuo/ifrit/ginkgomon_v2"
 )
@@ -429,10 +427,6 @@ func (r *RunningGarden) CgroupsRootPath() string {
 }
 
 func CgroupsRootPath(tag string) string {
-	if cgroups.IsCgroup2UnifiedMode() {
-		return filepath.Join(gardencgroups.Root, fmt.Sprintf("%s-%s", gardencgroups.Garden, tag))
-	}
-
 	return filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", tag))
 }
 

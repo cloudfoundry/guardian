@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	Root   = "/sys/fs/cgroup"
-	Garden = "garden"
-	Header = "#subsys_name hierarchy num_cgroups enabled"
+	Root    = "/sys/fs/cgroup"
+	Garden  = "garden"
+	Unified = "unified"
+	Header  = "#subsys_name hierarchy num_cgroups enabled"
 )
 
 type CgroupsFormatError struct {
@@ -89,15 +90,6 @@ func (s *CgroupStarter) Start() error {
 func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 	defer s.ProcCgroups.Close()
 	defer s.ProcSelfCgroups.Close()
-	if cgroups.IsCgroup2UnifiedMode() {
-		cgroupPath := filepath.Join(Root, s.GardenCgroup)
-		logger.Info("creating-cgroups-path", lager.Data{"path": cgroupPath})
-		if err := os.MkdirAll(filepath.Join(Root, s.GardenCgroup), 0755); err != nil {
-			return err
-		}
-
-		return nil
-	}
 
 	if err := os.MkdirAll(s.CgroupPath, 0755); err != nil {
 		return err
@@ -111,6 +103,12 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		s.mountTmpfsOnCgroupPath(logger, s.CgroupPath)
 	} else {
 		logger.Info("cgroups-tmpfs-already-mounted", lager.Data{"path": s.CgroupPath})
+	}
+
+	if cgroups.IsCgroup2UnifiedMode() {
+		mountPath := path.Join(s.CgroupPath, Unified)
+		gardenCgroupPath := filepath.Join(mountPath, s.GardenCgroup)
+		return s.createAndChownCgroupV2(logger, mountPath, gardenCgroupPath)
 	}
 
 	subsystemGroupings, err := s.subsystemGroupings()
@@ -205,12 +203,68 @@ func (s *CgroupStarter) createAndChownCgroup(logger lager.Logger, mountPath, sub
 	return nil
 }
 
+func (s *CgroupStarter) createAndChownCgroupV2(logger lager.Logger, mountPath, gardenCgroupPath string) error {
+	if err := s.idempotentCgroupV2Mount(logger, mountPath); err != nil {
+		return err
+	}
+
+	if err := s.createChownedCgroup(logger, gardenCgroupPath); err != nil {
+		return err
+	}
+	if err := enableSupportedControllers(gardenCgroupPath); err != nil {
+		return err
+	}
+
+	if s.CPUThrottling {
+		goodCgroupPath := filepath.Join(gardenCgroupPath, GoodCgroupName)
+		if err := s.createChownedCgroup(logger, goodCgroupPath); err != nil {
+			return err
+		}
+		if err := enableSupportedControllers(goodCgroupPath); err != nil {
+			return err
+		}
+
+		badCgroupPath := filepath.Join(gardenCgroupPath, BadCgroupName)
+		if err := s.createChownedCgroup(logger, badCgroupPath); err != nil {
+			return err
+		}
+		if err := enableSupportedControllers(badCgroupPath); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (s *CgroupStarter) createChownedCgroup(logger lager.Logger, cgroupPath string) error {
 	if err := s.createGardenCgroup(logger, cgroupPath); err != nil {
 		return err
 	}
 
 	return s.recursiveChown(cgroupPath)
+}
+
+// from fs2.CreateCgroupPath
+func enableSupportedControllers(cgroupPath string) error {
+	const (
+		cgStCtlFile = "cgroup.subtree_control"
+	)
+	parentPath := filepath.Dir(cgroupPath)
+	content, err := cgroups.ReadFile(parentPath, "/cgroup.controllers")
+	if err != nil {
+		return err
+	}
+
+	ctrs := strings.Fields(content)
+	res := "+" + strings.Join(ctrs, " +")
+
+	if err := cgroups.WriteFile(parentPath, cgStCtlFile, res); err != nil {
+		allCtrs := strings.Split(res, " ")
+		for _, ctr := range allCtrs {
+			_ = cgroups.WriteFile(parentPath, cgStCtlFile, ctr)
+		}
+	}
+	return nil
 }
 
 func procSelfSubsystems(m map[string]group) []string {
@@ -370,6 +424,33 @@ func (s *CgroupStarter) idempotentCgroupMount(logger lager.Logger, cgroupPath, s
 		logger.Info("subsystem-already-mounted")
 	default:
 		return fmt.Errorf("mounting subsystem '%s' in '%s': %s", subsystem, cgroupPath, err)
+	}
+
+	logger.Info("finished")
+
+	return nil
+}
+
+func (s *CgroupStarter) idempotentCgroupV2Mount(logger lager.Logger, cgroupPath string) error {
+	logger = logger.Session("mount-cgroup", lager.Data{
+		"path": cgroupPath,
+	})
+
+	logger.Info("started")
+
+	if err := os.MkdirAll(cgroupPath, 0755); err != nil {
+		return fmt.Errorf("mkdir '%s': %s", cgroupPath, err)
+	}
+
+	err := s.FS.Mount("cgroup", cgroupPath, "cgroup2", uintptr(0), "")
+	switch err {
+	case nil:
+	case unix.EBUSY:
+		// Attempting a mount over an exising mount of type cgroup and the same
+		// source and target results in EBUSY errno
+		logger.Info("subsystem-already-mounted")
+	default:
+		return fmt.Errorf("mounting cgroup v2 '%s': %s", cgroupPath, err)
 	}
 
 	logger.Info("finished")

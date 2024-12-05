@@ -11,9 +11,10 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
-	"code.cloudfoundry.org/guardian/rundmc/cgroups"
+	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 var _ = Describe("throttle tests", func() {
@@ -33,7 +34,7 @@ var _ = Describe("throttle tests", func() {
 
 		var err error
 		container, err = client.Create(garden.ContainerSpec{
-			Image: garden.ImageRef{URI: "docker:///cfgarden/throttled-or-not"},
+			Image: garden.ImageRef{URI: "docker:///cloudfoundry/garden-rootfs"},
 			Limits: garden.Limits{
 				CPU: garden.CPULimits{
 					Weight: 1000,
@@ -45,7 +46,7 @@ var _ = Describe("throttle tests", func() {
 		containerPort, _, err = container.NetIn(0, 8080)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = container.Run(garden.ProcessSpec{Path: "/go/src/app/main"}, garden.ProcessIO{})
+		_, err = container.Run(garden.ProcessSpec{Path: "/bin/throttled-or-not"}, garden.ProcessIO{})
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() (string, error) {
@@ -69,21 +70,21 @@ var _ = Describe("throttle tests", func() {
 	}
 
 	It("will create both a good and a bad cgroup for that container", func() {
-		goodCgroupPath := ensureInCgroup(cgroups.GoodCgroupName)
-		badCgroup := strings.Replace(goodCgroupPath, cgroups.GoodCgroupName, cgroups.BadCgroupName, 1)
+		goodCgroupPath := ensureInCgroup(gardencgroups.GoodCgroupName)
+		badCgroup := strings.Replace(goodCgroupPath, gardencgroups.GoodCgroupName, gardencgroups.BadCgroupName, 1)
 		Expect(badCgroup).To(BeAnExistingFile())
 	})
 
 	It("will eventually move the app to the bad cgroup", func() {
-		ensureInCgroup(cgroups.GoodCgroupName)
+		ensureInCgroup(gardencgroups.GoodCgroupName)
 		Expect(spin(container, containerPort)).To(Succeed())
-		ensureInCgroup(cgroups.BadCgroupName)
+		ensureInCgroup(gardencgroups.BadCgroupName)
 	})
 
 	It("preserves the container shares in the bad cgroup", func() {
-		goodCgroupPath := ensureInCgroup(cgroups.GoodCgroupName)
+		goodCgroupPath := ensureInCgroup(gardencgroups.GoodCgroupName)
 		Expect(spin(container, containerPort)).To(Succeed())
-		badCgroupPath := ensureInCgroup(cgroups.BadCgroupName)
+		badCgroupPath := ensureInCgroup(gardencgroups.BadCgroupName)
 
 		goodShares := readCgroupFile(goodCgroupPath, "cpu.shares")
 		badShares := readCgroupFile(badCgroupPath, "cpu.shares")
@@ -96,18 +97,18 @@ var _ = Describe("throttle tests", func() {
 
 		currentCgroupPath := getAbsoluteCPUCgroupPath(config.Tag, currentCgroupSubpath)
 
-		badCgroup := strings.Replace(currentCgroupPath, cgroups.GoodCgroupName, cgroups.BadCgroupName, 1)
+		badCgroup := strings.Replace(currentCgroupPath, gardencgroups.GoodCgroupName, gardencgroups.BadCgroupName, 1)
 
 		Expect(client.Destroy(container.Handle())).To(Succeed())
 		Expect(badCgroup).NotTo(BeAnExistingFile())
 	})
 
 	It("CPU metrics are combined from the good and bad cgroup", func() {
-		goodCgroupPath := ensureInCgroup(cgroups.GoodCgroupName)
+		goodCgroupPath := ensureInCgroup(gardencgroups.GoodCgroupName)
 		// Spinning the app should stop updating the usage in the good cgroup
 		Expect(spin(container, containerPort)).To(Succeed())
 
-		ensureInCgroup(cgroups.BadCgroupName)
+		ensureInCgroup(gardencgroups.BadCgroupName)
 
 		goodCgroupUsage := readCgroupFile(goodCgroupPath, "cpuacct.usage")
 
@@ -122,12 +123,12 @@ var _ = Describe("throttle tests", func() {
 	When("a bad application starts behaving nicely again", func() {
 		BeforeEach(func() {
 			Expect(spin(container, containerPort)).To(Succeed())
-			ensureInCgroup(cgroups.BadCgroupName)
+			ensureInCgroup(gardencgroups.BadCgroupName)
 			Expect(unspin(container, containerPort)).To(Succeed())
 		})
 
 		It("will eventually move the app to the good cgroup", func() {
-			ensureInCgroup(cgroups.GoodCgroupName)
+			ensureInCgroup(gardencgroups.GoodCgroupName)
 		})
 	})
 })
@@ -174,6 +175,9 @@ func httpGet(url string) (string, error) {
 
 func getAbsoluteCPUCgroupPath(tag, cgroupSubPath string) string {
 	cgroupMountpoint := fmt.Sprintf("/tmp/cgroups-%s", tag)
+	if cgroups.IsCgroup2UnifiedMode() {
+		return filepath.Join(cgroupMountpoint, gardencgroups.Unified)
+	}
 	return filepath.Join(cgroupMountpoint, "cpu", cgroupSubPath)
 }
 

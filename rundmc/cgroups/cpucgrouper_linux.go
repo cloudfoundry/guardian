@@ -23,13 +23,17 @@ func NewCPUCgrouper(cgroupRoot string) CPUCgrouper {
 }
 
 func (c CPUCgrouper) PrepareCgroups(handle string) error {
-	if err := os.MkdirAll(filepath.Join(c.cgroupRoot, BadCgroupName, handle), 0755); err != nil {
+	badCgroupPath := filepath.Join(c.cgroupRoot, BadCgroupName, handle)
+	if err := os.MkdirAll(badCgroupPath, 0755); err != nil {
 		return err
 	}
-	err := fs2.CreateCgroupPath(filepath.Join(c.cgroupRoot, BadCgroupName, handle), &configs.Cgroup{})
-	if err != nil {
+	if err := enableSupportedControllers(badCgroupPath); err != nil {
 		return err
 	}
+	// err := fs2.CreateCgroupPath(filepath.Join(c.cgroupRoot, BadCgroupName, handle), &configs.Cgroup{})
+	// if err != nil {
+	// 	return err
+	// }
 	return nil
 }
 

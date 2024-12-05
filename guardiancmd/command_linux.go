@@ -295,23 +295,22 @@ func (cmd *CommonCommand) getGardenCPUCgroup() (string, error) {
 		gardenCgroup = fmt.Sprintf("%s-%s", gardenCgroup, cmd.Server.Tag)
 	}
 
-	if cgrouputils.IsCgroup2UnifiedMode() {
-		return filepath.Join(gardencgroups.Root, gardenCgroup), nil
-
-	} else {
-		cpuCgroupSubPath, err := cgrouputils.ParseCgroupFile("/proc/self/cgroup")
-		if err != nil {
-			return "", err
-		}
-
-		cgroupsMountpoint := gardencgroups.Root
-
-		if cmd.Server.Tag != "" {
-			cgroupsMountpoint = filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", cmd.Server.Tag))
-		}
-
-		return filepath.Join(cgroupsMountpoint, "cpu", cpuCgroupSubPath["cpu"], gardenCgroup), nil
+	cpuCgroupSubPath, err := cgrouputils.ParseCgroupFile("/proc/self/cgroup")
+	if err != nil {
+		return "", err
 	}
+
+	cgroupsMountpoint := gardencgroups.Root
+
+	if cmd.Server.Tag != "" {
+		cgroupsMountpoint = filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", cmd.Server.Tag))
+	}
+
+	if cgrouputils.IsCgroup2UnifiedMode() {
+		return filepath.Join(cgroupsMountpoint, gardencgroups.Unified, gardenCgroup), nil
+	}
+
+	return filepath.Join(cgroupsMountpoint, "cpu", cpuCgroupSubPath["cpu"], gardenCgroup), nil
 }
 
 func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containerizer *rundmc.Containerizer, memoryProvider throttle.MemoryProvider, cpuEntitlementPerShare float64) (Service, error) {

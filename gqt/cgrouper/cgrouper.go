@@ -13,12 +13,6 @@ import (
 )
 
 func GetCGroupPath(cgroupsRootPath, subsystem, tag string, privileged, throttlingCPU bool) (string, error) {
-	if cgroups.IsCgroup2UnifiedMode() {
-		if throttlingCPU {
-			return filepath.Join(cgroupsRootPath, rundmc_cgroups.GoodCgroupName), nil
-		}
-		return cgroupsRootPath, nil
-	}
 	parentCgroup := "garden"
 	if tag != "" {
 		parentCgroup = fmt.Sprintf("garden-%s", tag)
@@ -32,6 +26,10 @@ func GetCGroupPath(cgroupsRootPath, subsystem, tag string, privileged, throttlin
 	// tag.
 	if privileged {
 		parentCgroup = ""
+	}
+
+	if cgroups.IsCgroup2UnifiedMode() {
+		return filepath.Join(cgroupsRootPath, rundmc_cgroups.Unified, parentCgroup), nil
 	}
 
 	currentCgroup, err := getCGroup(subsystem)

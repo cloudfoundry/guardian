@@ -13,8 +13,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
-	"github.com/opencontainers/runc/libcontainer/configs"
 )
 
 var _ = Describe("CPU shares rebalancing", func() {
@@ -39,11 +37,10 @@ var _ = Describe("CPU shares rebalancing", func() {
 		client = runner.Start(config)
 		var err error
 		goodCgroupPath, err = cgrouper.GetCGroupPath(client.CgroupsRootPath(), "cpu", strconv.Itoa(GinkgoParallelProcess()), false, cpuThrottlingEnabled())
+		println(goodCgroupPath)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(fs2.CreateCgroupPath(goodCgroupPath, &configs.Cgroup{})).To(Succeed())
 
 		badCgroupPath = filepath.Join(goodCgroupPath, "..", "bad")
-		Expect(fs2.CreateCgroupPath(badCgroupPath, &configs.Cgroup{})).To(Succeed())
 		cpuSharesFile = "cpu.shares"
 		badWeight = 2
 		if cgroups.IsCgroup2UnifiedMode() {
@@ -73,10 +70,12 @@ var _ = Describe("CPU shares rebalancing", func() {
 		JustBeforeEach(func() {
 			Eventually(func() int64 { return readCgroupFile(badCgroupPath, cpuSharesFile) }).Should(Equal(badWeight))
 			goodCgroupInitialShares = readCgroupFile(goodCgroupPath, cpuSharesFile)
+			println(goodCgroupInitialShares)
 			containerWeight = 1000
 			if cgroups.IsCgroup2UnifiedMode() {
 				containerWeight = int64(cgroups.ConvertCPUSharesToCgroupV2Value(1000))
 			}
+			println("0")
 
 			var err error
 			container, err = client.Create(garden.ContainerSpec{
@@ -87,6 +86,7 @@ var _ = Describe("CPU shares rebalancing", func() {
 					},
 				},
 			})
+			println("1")
 			Expect(err).NotTo(HaveOccurred())
 
 			containerPort, _, err = container.NetIn(0, 8080)
@@ -106,7 +106,7 @@ var _ = Describe("CPU shares rebalancing", func() {
 				ensureInCgroup(container, containerPort, gardencgroups.BadCgroupName)
 			})
 
-			It("redistributes the container shares to the bad cgroup", func() {
+			FIt("redistributes the container shares to the bad cgroup", func() {
 				Eventually(func() int64 { return readCgroupFile(goodCgroupPath, cpuSharesFile) }).Should(Equal(int64(goodCgroupInitialShares - (containerWeight - badWeight))))
 				Eventually(func() int64 { return readCgroupFile(badCgroupPath, cpuSharesFile) }).Should(Equal(containerWeight))
 			})
