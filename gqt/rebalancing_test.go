@@ -80,7 +80,7 @@ var _ = Describe("CPU shares rebalancing", func() {
 
 			var err error
 			container, err = client.Create(garden.ContainerSpec{
-				Image: garden.ImageRef{URI: "docker:///cfgarden/throttled-or-not"},
+				Image: garden.ImageRef{URI: "docker:///cloudfoundry/garden-rootfs"},
 				Limits: garden.Limits{
 					CPU: garden.CPULimits{
 						Weight: 1000,
@@ -92,7 +92,7 @@ var _ = Describe("CPU shares rebalancing", func() {
 			containerPort, _, err = container.NetIn(0, 8080)
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = container.Run(garden.ProcessSpec{Path: "/go/src/app/main"}, garden.ProcessIO{})
+			_, err = container.Run(garden.ProcessSpec{Path: "/bin/throttled-or-not"}, garden.ProcessIO{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() (string, error) {
