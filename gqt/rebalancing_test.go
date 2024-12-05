@@ -106,7 +106,7 @@ var _ = Describe("CPU shares rebalancing", func() {
 				ensureInCgroup(container, containerPort, gardencgroups.BadCgroupName)
 			})
 
-			FIt("redistributes the container shares to the bad cgroup", func() {
+			It("redistributes the container shares to the bad cgroup", func() {
 				Eventually(func() int64 { return readCgroupFile(goodCgroupPath, cpuSharesFile) }).Should(Equal(int64(goodCgroupInitialShares - (containerWeight - badWeight))))
 				Eventually(func() int64 { return readCgroupFile(badCgroupPath, cpuSharesFile) }).Should(Equal(containerWeight))
 			})

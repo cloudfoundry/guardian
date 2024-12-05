@@ -14,6 +14,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -57,7 +58,7 @@ var _ = Describe("Containerd", func() {
 				var err error
 				var cgroupsPath string
 				if cgroups.IsCgroup2UnifiedMode() {
-					cgroupsPath = runner.CgroupsRootPath(config.Tag)
+					cgroupsPath = filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", config.Tag), gardencgroups.Unified)
 				} else {
 					cgroupsPath = filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", config.Tag), "freezer")
 				}

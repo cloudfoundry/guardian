@@ -99,7 +99,49 @@ var _ = Describe("cgroupstarter", func() {
 
 		It("mkdirs the cgroup path", func() {
 			starter.Start()
-			Expect(path.Join(gardencgroups.Root, "garden")).To(BeADirectory())
+			Expect(path.Join(tmpDir, "cgroup")).To(BeADirectory())
+		})
+
+		Context("when the cgroup path is not a mountpoint", func() {
+			BeforeEach(func() {
+				cgroupPathMounted = false
+			})
+
+			It("mounts it", func() {
+				starter.Start()
+
+				Expect(fakeFS.MountCallCount()).To(BeNumerically(">", 0))
+				expected := newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup"), "tmpfs", 0, "uid=0,gid=0,mode=0755")
+				Expect(newMountArgs(fakeFS.MountArgsForCall(0))).To(Equal(expected))
+			})
+		})
+
+		Context("when the cgroup path exists", func() {
+			It("does not mount it again", func() {
+				starter.Start()
+				for i := 0; i < fakeFS.MountCallCount(); i++ {
+					Expect(newMountArgs(fakeFS.MountArgsForCall(i)).target).NotTo(Equal(filepath.Join(tmpDir, "cgroup")))
+				}
+			})
+		})
+
+		Context("when there is an error checking for a mountpoint on Start", func() {
+			BeforeEach(func() {
+				cgroupPathMountCheckError = errors.New("mountpoint check error")
+			})
+
+			It("returns an error", func() {
+				Expect(starter.Start()).To(MatchError("mountpoint check error"))
+			})
+		})
+
+		It("mounts the unified hierarchy", func() {
+			starter.Start()
+
+			Expect(fakeFS.MountCallCount()).To(Equal(1))
+
+			expected := newMountArgs("cgroup", filepath.Join(tmpDir, "cgroup", "unified"), "cgroup2", 0, "")
+			Expect(newMountArgs(fakeFS.MountArgsForCall(0))).To(Equal(expected))
 		})
 	})
 
