@@ -76,8 +76,6 @@ var _ = Describe("Enforcer", func() {
 				goodContainerCgroup = filepath.Join(goodCgroup, handle)
 				makeSubCgroup(goodCgroup, handle)
 
-				writeShares(goodContainerCgroup, 3456)
-
 				badCgroup = filepath.Join(cpuCgroupPath, gardencgroups.BadCgroupName)
 				badContainerCgroup = filepath.Join(badCgroup, handle)
 				makeSubCgroup(badCgroup, handle)
@@ -85,24 +83,58 @@ var _ = Describe("Enforcer", func() {
 				command = exec.Command("sleep", "360")
 				Expect(command.Start()).To(Succeed())
 
-				Expect(cgroups.WriteCgroupProc(goodContainerCgroup, command.Process.Pid)).To(Succeed())
 			})
 
-			It("moves the process to the bad cgroup", func() {
-				Expect(punishErr).NotTo(HaveOccurred())
+			Context("when good cgroup doesn't have child init cgroup", func() {
+				BeforeEach(func() {
+					writeShares(goodContainerCgroup, 3456)
+					Expect(cgroups.WriteCgroupProc(goodContainerCgroup, command.Process.Pid)).To(Succeed())
+				})
 
-				pids, err := cgroups.GetPids(goodContainerCgroup)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(pids).To(BeEmpty())
+				It("moves the process to the bad cgroup", func() {
+					Expect(punishErr).NotTo(HaveOccurred())
 
-				pids, err = cgroups.GetPids(badContainerCgroup)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(pids).To(ContainElement(command.Process.Pid))
+					pids, err := cgroups.GetPids(goodContainerCgroup)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(pids).To(BeEmpty())
+
+					pids, err = cgroups.GetPids(badContainerCgroup)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(pids).To(ContainElement(command.Process.Pid))
+				})
+
+				It("copies CPU shares to the bad container cgroup", func() {
+					badContainerShares := readCPUShares(badContainerCgroup)
+					Expect(badContainerShares).To(Equal(expectedCPUShares))
+				})
 			})
 
-			It("copies CPU shares to the bad container cgroup", func() {
-				badContainerShares := readCPUShares(badContainerCgroup)
-				Expect(badContainerShares).To(Equal(expectedCPUShares))
+			Context("when good cgroup has init child cgroup", func() {
+				var initCgroupPath string
+
+				BeforeEach(func() {
+					makeSubCgroup(goodContainerCgroup, "init")
+					initCgroupPath = filepath.Join(goodContainerCgroup, "init")
+					writeShares(initCgroupPath, 7890)
+					Expect(cgroups.WriteCgroupProc(initCgroupPath, command.Process.Pid)).To(Succeed())
+				})
+
+				It("moves the process to the bad cgroup", func() {
+					Expect(punishErr).NotTo(HaveOccurred())
+
+					pids, err := cgroups.GetPids(goodContainerCgroup)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(pids).To(BeEmpty())
+
+					pids, err = cgroups.GetPids(badContainerCgroup)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(pids).To(ContainElement(command.Process.Pid))
+				})
+
+				It("copies CPU shares to the bad container cgroup", func() {
+					badContainerShares := readCPUShares(badContainerCgroup)
+					Expect(badContainerShares).To(Equal(int(cgroups.ConvertCPUSharesToCgroupV2Value(7890))))
+				})
 			})
 		})
 
@@ -172,26 +204,61 @@ var _ = Describe("Enforcer", func() {
 				Expect(cgroups.WriteCgroupProc(badContainerCgroup, command.Process.Pid)).To(Succeed())
 			})
 
-			It("moves the process to the good cgroup", func() {
-				Expect(releaseErr).NotTo(HaveOccurred())
+			Context("when good cgroup doesn't have child init cgroup", func() {
+				It("moves the process to the good cgroup", func() {
+					Expect(releaseErr).NotTo(HaveOccurred())
 
-				pids, err := cgroups.GetPids(badContainerCgroup)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(pids).To(BeEmpty())
+					pids, err := cgroups.GetPids(badContainerCgroup)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(pids).To(BeEmpty())
 
-				pids, err = cgroups.GetPids(goodContainerCgroup)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(pids).To(ContainElement(command.Process.Pid))
+					pids, err = cgroups.GetPids(goodContainerCgroup)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(pids).To(ContainElement(command.Process.Pid))
+				})
+
+				It("preserves CPU shares in the good container cgroup", func() {
+					goodContainerShares := readCPUShares(goodContainerCgroup)
+					Expect(goodContainerShares).To(Equal(expectedGoodCPUShares))
+				})
+
+				It("preserves CPU shares in the bad container cgroup", func() {
+					badContainerShares := readCPUShares(badContainerCgroup)
+					Expect(badContainerShares).To(Equal(expectedCPUShares))
+				})
 			})
 
-			It("preserves CPU shares in the good container cgroup", func() {
-				badContainerShares := readCPUShares(goodContainerCgroup)
-				Expect(badContainerShares).To(Equal(expectedGoodCPUShares))
-			})
+			Context("when good cgroup has init child cgroup", func() {
+				var initCgroupPath string
 
-			It("preserves CPU shares in the bad container cgroup", func() {
-				badContainerShares := readCPUShares(badContainerCgroup)
-				Expect(badContainerShares).To(Equal(expectedCPUShares))
+				BeforeEach(func() {
+					makeSubCgroup(goodContainerCgroup, "init")
+					initCgroupPath = filepath.Join(goodContainerCgroup, "init")
+					writeShares(initCgroupPath, 6543)
+					Expect(cgroups.WriteCgroupProc(initCgroupPath, command.Process.Pid)).To(Succeed())
+				})
+
+				It("moves the process to the good init cgroup", func() {
+					Expect(releaseErr).NotTo(HaveOccurred())
+
+					pids, err := cgroups.GetPids(badContainerCgroup)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(pids).To(BeEmpty())
+
+					pids, err = cgroups.GetPids(initCgroupPath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(pids).To(ContainElement(command.Process.Pid))
+				})
+
+				It("preserves CPU shares in the good container cgroup", func() {
+					goodContainerInitShares := readCPUShares(initCgroupPath)
+					Expect(goodContainerInitShares).To(Equal(expectedGoodCPUShares))
+				})
+
+				It("preserves CPU shares in the bad container cgroup", func() {
+					badContainerShares := readCPUShares(badContainerCgroup)
+					Expect(badContainerShares).To(Equal(expectedCPUShares))
+				})
 			})
 		})
 

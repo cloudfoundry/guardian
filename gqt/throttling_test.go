@@ -34,7 +34,6 @@ var _ = Describe("throttle tests", func() {
 
 		var err error
 		container, err = client.Create(garden.ContainerSpec{
-			Image: garden.ImageRef{URI: "docker:///cloudfoundry/garden-rootfs"},
 			Limits: garden.Limits{
 				CPU: garden.CPULimits{
 					Weight: 1000,

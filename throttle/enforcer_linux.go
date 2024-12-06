@@ -42,6 +42,16 @@ func (c CPUCgroupEnforcer) Punish(logger lager.Logger, handle string) error {
 
 	badContainerCgroupPath := filepath.Join(c.badCgroupPath, handle)
 
+	// for peas in cgroups v2 processes are added to init cgroup
+	goodInitCgroupPath := filepath.Join(goodContainerCgroupPath, gardencgroups.InitCgroup)
+	if exists(logger, goodInitCgroupPath) {
+		if err := c.movePids(goodInitCgroupPath, badContainerCgroupPath); err != nil {
+			return err
+		}
+
+		return c.copyShares(goodInitCgroupPath, badContainerCgroupPath)
+	}
+
 	if err := c.movePids(goodContainerCgroupPath, badContainerCgroupPath); err != nil {
 		return err
 	}
@@ -61,6 +71,12 @@ func (c CPUCgroupEnforcer) Release(logger lager.Logger, handle string) error {
 	}
 
 	goodContainerCgroupPath := filepath.Join(c.goodCgroupPath, handle)
+
+	// for peas in cgroups v2 processes are added to init cgroup
+	goodInitCgroupPath := filepath.Join(goodContainerCgroupPath, gardencgroups.InitCgroup)
+	if exists(logger, goodInitCgroupPath) {
+		return c.movePids(badContainerCgroupPath, goodInitCgroupPath)
+	}
 
 	return c.movePids(badContainerCgroupPath, goodContainerCgroupPath)
 }

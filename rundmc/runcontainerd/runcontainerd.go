@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"code.cloudfoundry.org/guardian/rundmc"
+	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -149,7 +150,7 @@ func updateAnnotationsIfNeeded(bundle *goci.Bndl) {
 		}
 		bundle.Spec.Annotations["container-type"] = "garden-init"
 		if bundle.Spec.Linux.CgroupsPath != "" {
-			bundle.Spec.Linux.CgroupsPath = filepath.Join(bundle.Spec.Linux.CgroupsPath, "init")
+			bundle.Spec.Linux.CgroupsPath = filepath.Join(bundle.Spec.Linux.CgroupsPath, gardencgroups.InitCgroup)
 		}
 	}
 }
