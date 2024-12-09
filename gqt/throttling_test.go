@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -63,7 +64,7 @@ var _ = Describe("throttle tests", func() {
 			var err error
 			cgroupPath, err = getCgroup(container, containerPort)
 			return cgroupPath, err
-		}, "2m", "100ms").Should(HaveSuffix(filepath.Join(cgroupType, container.Handle())))
+		}, "2m", "100ms").Should(ContainSubstring(filepath.Join(cgroupType, container.Handle())))
 
 		return getAbsoluteCPUCgroupPath(config.Tag, cgroupPath)
 	}
@@ -71,6 +72,11 @@ var _ = Describe("throttle tests", func() {
 	It("will create both a good and a bad cgroup for that container", func() {
 		goodCgroupPath := ensureInCgroup(gardencgroups.GoodCgroupName)
 		badCgroup := strings.Replace(goodCgroupPath, gardencgroups.GoodCgroupName, gardencgroups.BadCgroupName, 1)
+		if cgroups.IsCgroup2UnifiedMode() {
+			// only main process is moved to bad cgroup, other peas are left in good cgroup
+			// in cgroups v2 main process is in init folder
+			badCgroup = strings.TrimSuffix(badCgroup, "init")
+		}
 		Expect(badCgroup).To(BeAnExistingFile())
 	})
 
@@ -85,8 +91,12 @@ var _ = Describe("throttle tests", func() {
 		Expect(spin(container, containerPort)).To(Succeed())
 		badCgroupPath := ensureInCgroup(gardencgroups.BadCgroupName)
 
-		goodShares := readCgroupFile(goodCgroupPath, "cpu.shares")
-		badShares := readCgroupFile(badCgroupPath, "cpu.shares")
+		cpuSharesFile := "cpu.shares"
+		if cgroups.IsCgroup2UnifiedMode() {
+			cpuSharesFile = "cpu.weight"
+		}
+		goodShares := readCgroupFile(goodCgroupPath, cpuSharesFile)
+		badShares := readCgroupFile(badCgroupPath, cpuSharesFile)
 		Expect(goodShares).To(Equal(badShares))
 	})
 
@@ -109,7 +119,12 @@ var _ = Describe("throttle tests", func() {
 
 		ensureInCgroup(gardencgroups.BadCgroupName)
 
-		goodCgroupUsage := readCgroupFile(goodCgroupPath, "cpuacct.usage")
+		var goodCgroupUsage int64
+		if cgroups.IsCgroup2UnifiedMode() {
+			goodCgroupUsage = readCgroupV2CPUUsage(goodCgroupPath)
+		} else {
+			goodCgroupUsage = readCgroupFile(goodCgroupPath, "cpuacct.usage")
+		}
 
 		// This value won't change in the future since the app is in the good cgroup
 		metrics, err := container.Metrics()
@@ -175,7 +190,7 @@ func httpGet(url string) (string, error) {
 func getAbsoluteCPUCgroupPath(tag, cgroupSubPath string) string {
 	cgroupMountpoint := fmt.Sprintf("/tmp/cgroups-%s", tag)
 	if cgroups.IsCgroup2UnifiedMode() {
-		return filepath.Join(cgroupMountpoint, gardencgroups.Unified)
+		return filepath.Join(cgroupMountpoint, gardencgroups.Unified, cgroupSubPath)
 	}
 	return filepath.Join(cgroupMountpoint, "cpu", cgroupSubPath)
 }
@@ -188,4 +203,18 @@ func readCgroupFile(cgroupPath, file string) int64 {
 	Expect(err).NotTo(HaveOccurred())
 
 	return usage
+}
+
+func readCgroupV2CPUUsage(cgroupPath string) int64 {
+	statContents, err := os.ReadFile(filepath.Join(cgroupPath, "cpu.stat"))
+	Expect(err).NotTo(HaveOccurred())
+	r, err := regexp.Compile("usage_usec (.*)\n")
+	Expect(err).NotTo(HaveOccurred())
+	matches := r.FindStringSubmatch(string(statContents))
+	Expect(matches).To(HaveLen(2))
+	usage, err := strconv.ParseInt(matches[1], 10, 64)
+	Expect(err).NotTo(HaveOccurred())
+
+	// return value in ms, see opencontainers/runc/libcontainer/cgroups/fs2/cpu.go
+	return usage * 1000
 }

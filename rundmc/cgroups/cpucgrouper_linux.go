@@ -30,10 +30,6 @@ func (c CPUCgrouper) PrepareCgroups(handle string) error {
 	if err := enableSupportedControllers(badCgroupPath); err != nil {
 		return err
 	}
-	// err := fs2.CreateCgroupPath(filepath.Join(c.cgroupRoot, BadCgroupName, handle), &configs.Cgroup{})
-	// if err != nil {
-	// 	return err
-	// }
 	return nil
 }
 
