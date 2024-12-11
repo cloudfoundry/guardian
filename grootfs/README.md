@@ -1,9 +1,9 @@
 # grootfs
 
 [![Go Report
-Card](https://goreportcard.com/badge/code.cloudfoundry.org/grootfs)](https://goreportcard.com/report/code.cloudfoundry.org/gorouter)
+Card](https://goreportcard.com/badge/code.cloudfoundry.org/grootfs)](https://goreportcard.com/report/code.cloudfoundry.org/grootfs)
 [![Go
-Reference](https://pkg.go.dev/badge/code.cloudfoundry.org/grootfs.svg)](https://pkg.go.dev/code.cloudfoundry.org/gorouter)
+Reference](https://pkg.go.dev/badge/code.cloudfoundry.org/grootfs.svg)](https://pkg.go.dev/code.cloudfoundry.org/grootfs)
 
 GrootFS is the [Cloud Foundry](https://www.cloudfoundry.org) component
 that provides filesystem isolation for containers and deals with
