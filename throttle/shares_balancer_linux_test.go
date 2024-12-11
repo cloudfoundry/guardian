@@ -74,6 +74,39 @@ var _ = Describe("SharesBalancer", func() {
 		})
 	})
 
+	Context("when memory is less than the total sum of bad shares", func() {
+		var container1, container2 *exec.Cmd
+
+		BeforeEach(func() {
+			memoryProvider.TotalMemoryReturns(999*throttle.MB, nil)
+
+			createCgroup(badCgroupPath, "container1", 1000)
+			createCgroup(badCgroupPath, "container2", 1000)
+
+			container1 = exec.Command("sleep", "360")
+			Expect(container1.Start()).To(Succeed())
+			Expect(cgroups.WriteCgroupProc(filepath.Join(badCgroupPath, "container1"), container1.Process.Pid)).To(Succeed())
+
+			container2 = exec.Command("sleep", "360")
+			Expect(container2.Start()).To(Succeed())
+			Expect(cgroups.WriteCgroupProc(filepath.Join(badCgroupPath, "container2"), container2.Process.Pid)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(container1.Process.Kill()).To(Succeed())
+			_, err := container1.Process.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(container2.Process.Kill()).To(Succeed())
+			_, err = container2.Process.Wait()
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("assigns the adjusted sum of the contained shares to the bad cgroup, the rest to the good cgroup", func() {
+			Expect(readCPUShares(goodCgroupPath)).To(Equal(262144))
+			Expect(readCPUShares(badCgroupPath)).To(Equal(1000))
+		})
+	})
+
 	When("a container is created", func() {
 		var container *exec.Cmd
 
