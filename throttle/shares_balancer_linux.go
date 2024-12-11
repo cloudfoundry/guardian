@@ -12,7 +12,10 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
-const MB uint64 = 1024 * 1024
+const (
+	MB           uint64 = 1024 * 1024
+	MaxCPUWeight uint64 = 10000
+)
 
 type SharesBalancer struct {
 	memoryProvider MemoryProvider
@@ -48,6 +51,12 @@ func (b SharesBalancer) Run(logger lager.Logger) error {
 		badShares = 2
 	}
 	goodShares := totalMemoryInBytes/MB - badShares
+	// When sum of bad shares exceed total memory we get a negative number which translates to large number
+	// For cpu.shares in cgroups v1 this gets automatically set to MAX_SHARES
+	// This is questionable behavior for cgroups v1 but at this point we just mimic this behavior
+	if cgroups.IsCgroup2UnifiedMode() && goodShares > MaxCPUWeight {
+		goodShares = MaxCPUWeight
+	}
 
 	err = b.setShares(logger, b.goodCgroupPath, goodShares)
 	if err != nil {
