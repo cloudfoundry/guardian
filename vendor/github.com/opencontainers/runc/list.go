@@ -5,13 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"syscall"
 	"text/tabwriter"
 	"time"
 
+	"github.com/moby/sys/user"
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runc/libcontainer/utils"
 	"github.com/urfave/cli"
 )
@@ -111,20 +110,17 @@ To list containers created using a non-default value for "--root":
 }
 
 func getContainers(context *cli.Context) ([]containerState, error) {
-	factory, err := loadFactory(context)
-	if err != nil {
-		return nil, err
-	}
 	root := context.GlobalString("root")
-	absRoot, err := filepath.Abs(root)
+	list, err := os.ReadDir(root)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) && context.IsSet("root") {
+			// Ignore non-existing default root directory
+			// (no containers created yet).
+			return nil, nil
+		}
+		// Report other errors, including non-existent custom --root.
 		return nil, err
 	}
-	list, err := os.ReadDir(absRoot)
-	if err != nil {
-		fatal(err)
-	}
-
 	var s []containerState
 	for _, item := range list {
 		if !item.IsDir() {
@@ -136,7 +132,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 				// Possible race with runc delete.
 				continue
 			}
-			fatal(err)
+			return nil, err
 		}
 		// This cast is safe on Linux.
 		uid := st.Sys().(*syscall.Stat_t).Uid
@@ -145,7 +141,7 @@ func getContainers(context *cli.Context) ([]containerState, error) {
 			owner.Name = fmt.Sprintf("#%d", uid)
 		}
 
-		container, err := factory.Load(item.Name())
+		container, err := libcontainer.Load(root, item.Name())
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "load container %s: %v\n", item.Name(), err)
 			continue

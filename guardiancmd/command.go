@@ -26,7 +26,7 @@ import (
 	"code.cloudfoundry.org/guardian/properties"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
-	"code.cloudfoundry.org/guardian/rundmc/cgroups"
+	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/deleter"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
@@ -46,6 +46,7 @@ import (
 	"code.cloudfoundry.org/localip"
 	"github.com/eapache/go-resiliency/retrier"
 	uuid "github.com/nu7hatch/gouuid"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -544,12 +545,18 @@ func (cmd *CommonCommand) wireContainerizer(
 	})
 
 	cgroupRootPath := "garden"
+	if cgroups.IsCgroup2UnifiedMode() {
+		// For cgroups v2 runc will append extra slice if path is not absolute
+		// See github.com/opencontainers/runc/libcontainer/cgroups/fs2/fs2.go#NewManager
+		cgroupRootPath = "/garden"
+	}
+
 	if cmd.Server.Tag != "" {
 		cgroupRootPath = fmt.Sprintf("%s-%s", cgroupRootPath, cmd.Server.Tag)
 	}
 
 	if cmd.CPUThrottling.Enabled {
-		cgroupRootPath = filepath.Join(cgroupRootPath, cgroups.GoodCgroupName)
+		cgroupRootPath = filepath.Join(cgroupRootPath, gardencgroups.GoodCgroupName)
 	}
 
 	bundleRules := []rundmc.BundlerRule{

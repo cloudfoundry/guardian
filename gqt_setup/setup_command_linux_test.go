@@ -10,10 +10,11 @@ import (
 
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
-	"code.cloudfoundry.org/guardian/rundmc/cgroups"
+	rundmccgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 var _ = Describe("gdn setup", func() {
@@ -62,6 +63,9 @@ var _ = Describe("gdn setup", func() {
 
 	Describe("cgroups", func() {
 		It("sets up cgroups", func() {
+			if cgroups.IsCgroup2UnifiedMode() {
+				Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
+			}
 			mountpointCmd := exec.Command("mountpoint", "-q", cgroupsRoot+"/")
 			mountpointCmd.Stdout = GinkgoWriter
 			mountpointCmd.Stderr = GinkgoWriter
@@ -70,6 +74,10 @@ var _ = Describe("gdn setup", func() {
 		})
 
 		It("allows both OCI default and garden specific devices", func() {
+			if cgroups.IsCgroup2UnifiedMode() {
+				Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
+			}
+
 			privileged := false
 			cgroupPath, err := cgrouper.GetCGroupPath(cgroupsRoot, "devices", tag, privileged, cpuThrottlingEnabled())
 			Expect(err).NotTo(HaveOccurred())
@@ -88,7 +96,6 @@ var _ = Describe("gdn setup", func() {
 				"b *:* m",
 				"c 136:* rwm",
 				"c 5:2 rwm",
-				"c 10:200 rwm",
 			}
 			contentLines := strings.Split(strings.TrimSpace(content), "\n")
 			Expect(contentLines).To(HaveLen(len(expectedAllowedDevices)))
@@ -106,13 +113,13 @@ var _ = Describe("gdn setup", func() {
 				path, err := cgrouper.GetCGroupPath(cgroupsRoot, "cpu", tag, false, cpuThrottlingEnabled())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(path).To(BeADirectory())
-				Expect(filepath.Base(path)).To(Equal(cgroups.GoodCgroupName))
+				Expect(filepath.Base(path)).To(Equal(rundmccgroups.GoodCgroupName))
 			})
 
 			It("creates the bad cpu cgroup", func() {
 				path, err := cgrouper.GetCGroupPath(cgroupsRoot, "cpu", tag, false, cpuThrottlingEnabled())
 				Expect(err).NotTo(HaveOccurred())
-				badCgroupPath := filepath.Join(path, "..", cgroups.BadCgroupName)
+				badCgroupPath := filepath.Join(path, "..", rundmccgroups.BadCgroupName)
 				Expect(badCgroupPath).To(BeADirectory())
 			})
 		})

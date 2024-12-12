@@ -11,7 +11,6 @@ import (
 )
 
 var _ = Describe("Port Pool", func() {
-
 	Context("when the port pool is exhausted by container creation", func() {
 		var (
 			portPoolStart int
