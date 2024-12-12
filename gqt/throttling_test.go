@@ -6,14 +6,16 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
-	"code.cloudfoundry.org/guardian/rundmc/cgroups"
+	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 var _ = Describe("throttle tests", func() {
@@ -33,7 +35,6 @@ var _ = Describe("throttle tests", func() {
 
 		var err error
 		container, err = client.Create(garden.ContainerSpec{
-			Image: garden.ImageRef{URI: "docker:///cfgarden/throttled-or-not"},
 			Limits: garden.Limits{
 				CPU: garden.CPULimits{
 					Weight: 1000,
@@ -45,7 +46,7 @@ var _ = Describe("throttle tests", func() {
 		containerPort, _, err = container.NetIn(0, 8080)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = container.Run(garden.ProcessSpec{Path: "/go/src/app/main"}, garden.ProcessIO{})
+		_, err = container.Run(garden.ProcessSpec{Path: "/bin/throttled-or-not"}, garden.ProcessIO{})
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() (string, error) {
@@ -63,30 +64,39 @@ var _ = Describe("throttle tests", func() {
 			var err error
 			cgroupPath, err = getCgroup(container, containerPort)
 			return cgroupPath, err
-		}, "2m", "100ms").Should(HaveSuffix(filepath.Join(cgroupType, container.Handle())))
+		}, "2m", "100ms").Should(ContainSubstring(filepath.Join(cgroupType, container.Handle())))
 
 		return getAbsoluteCPUCgroupPath(config.Tag, cgroupPath)
 	}
 
 	It("will create both a good and a bad cgroup for that container", func() {
-		goodCgroupPath := ensureInCgroup(cgroups.GoodCgroupName)
-		badCgroup := strings.Replace(goodCgroupPath, cgroups.GoodCgroupName, cgroups.BadCgroupName, 1)
+		goodCgroupPath := ensureInCgroup(gardencgroups.GoodCgroupName)
+		badCgroup := strings.Replace(goodCgroupPath, gardencgroups.GoodCgroupName, gardencgroups.BadCgroupName, 1)
+		if cgroups.IsCgroup2UnifiedMode() {
+			// only main process is moved to bad cgroup, other peas are left in good cgroup
+			// in cgroups v2 main process is in init folder
+			badCgroup = strings.TrimSuffix(badCgroup, "init")
+		}
 		Expect(badCgroup).To(BeAnExistingFile())
 	})
 
 	It("will eventually move the app to the bad cgroup", func() {
-		ensureInCgroup(cgroups.GoodCgroupName)
+		ensureInCgroup(gardencgroups.GoodCgroupName)
 		Expect(spin(container, containerPort)).To(Succeed())
-		ensureInCgroup(cgroups.BadCgroupName)
+		ensureInCgroup(gardencgroups.BadCgroupName)
 	})
 
 	It("preserves the container shares in the bad cgroup", func() {
-		goodCgroupPath := ensureInCgroup(cgroups.GoodCgroupName)
+		goodCgroupPath := ensureInCgroup(gardencgroups.GoodCgroupName)
 		Expect(spin(container, containerPort)).To(Succeed())
-		badCgroupPath := ensureInCgroup(cgroups.BadCgroupName)
+		badCgroupPath := ensureInCgroup(gardencgroups.BadCgroupName)
 
-		goodShares := readCgroupFile(goodCgroupPath, "cpu.shares")
-		badShares := readCgroupFile(badCgroupPath, "cpu.shares")
+		cpuSharesFile := "cpu.shares"
+		if cgroups.IsCgroup2UnifiedMode() {
+			cpuSharesFile = "cpu.weight"
+		}
+		goodShares := readCgroupFile(goodCgroupPath, cpuSharesFile)
+		badShares := readCgroupFile(badCgroupPath, cpuSharesFile)
 		Expect(goodShares).To(Equal(badShares))
 	})
 
@@ -96,38 +106,42 @@ var _ = Describe("throttle tests", func() {
 
 		currentCgroupPath := getAbsoluteCPUCgroupPath(config.Tag, currentCgroupSubpath)
 
-		badCgroup := strings.Replace(currentCgroupPath, cgroups.GoodCgroupName, cgroups.BadCgroupName, 1)
+		badCgroup := strings.Replace(currentCgroupPath, gardencgroups.GoodCgroupName, gardencgroups.BadCgroupName, 1)
 
 		Expect(client.Destroy(container.Handle())).To(Succeed())
 		Expect(badCgroup).NotTo(BeAnExistingFile())
 	})
 
 	It("CPU metrics are combined from the good and bad cgroup", func() {
-		goodCgroupPath := ensureInCgroup(cgroups.GoodCgroupName)
+		goodCgroupPath := ensureInCgroup(gardencgroups.GoodCgroupName)
 		// Spinning the app should stop updating the usage in the good cgroup
 		Expect(spin(container, containerPort)).To(Succeed())
 
-		ensureInCgroup(cgroups.BadCgroupName)
+		ensureInCgroup(gardencgroups.BadCgroupName)
 
-		goodCgroupUsage := readCgroupFile(goodCgroupPath, "cpuacct.usage")
-
-		// This value won't change in the future since the app is in the good cgroup
-		metrics, err := container.Metrics()
-		Expect(err).NotTo(HaveOccurred())
-
+		var goodCgroupUsage int64
+		if cgroups.IsCgroup2UnifiedMode() {
+			goodCgroupUsage = readCgroupV2CPUUsage(goodCgroupPath)
+		} else {
+			goodCgroupUsage = readCgroupFile(goodCgroupPath, "cpuacct.usage")
+		}
 		// Usage should be bigger than just the value in the metrics
-		Expect(metrics.CPUStat.Usage).To(BeNumerically(">", goodCgroupUsage))
+		Eventually(func() uint64 {
+			metrics, err := container.Metrics()
+			Expect(err).NotTo(HaveOccurred())
+			return metrics.CPUStat.Usage
+		}).Should(BeNumerically(">", goodCgroupUsage))
 	})
 
 	When("a bad application starts behaving nicely again", func() {
 		BeforeEach(func() {
 			Expect(spin(container, containerPort)).To(Succeed())
-			ensureInCgroup(cgroups.BadCgroupName)
+			ensureInCgroup(gardencgroups.BadCgroupName)
 			Expect(unspin(container, containerPort)).To(Succeed())
 		})
 
 		It("will eventually move the app to the good cgroup", func() {
-			ensureInCgroup(cgroups.GoodCgroupName)
+			ensureInCgroup(gardencgroups.GoodCgroupName)
 		})
 	})
 })
@@ -174,6 +188,9 @@ func httpGet(url string) (string, error) {
 
 func getAbsoluteCPUCgroupPath(tag, cgroupSubPath string) string {
 	cgroupMountpoint := fmt.Sprintf("/tmp/cgroups-%s", tag)
+	if cgroups.IsCgroup2UnifiedMode() {
+		return filepath.Join(cgroupMountpoint, gardencgroups.Unified, cgroupSubPath)
+	}
 	return filepath.Join(cgroupMountpoint, "cpu", cgroupSubPath)
 }
 
@@ -185,4 +202,18 @@ func readCgroupFile(cgroupPath, file string) int64 {
 	Expect(err).NotTo(HaveOccurred())
 
 	return usage
+}
+
+func readCgroupV2CPUUsage(cgroupPath string) int64 {
+	statContents, err := os.ReadFile(filepath.Join(cgroupPath, "cpu.stat"))
+	Expect(err).NotTo(HaveOccurred())
+	r, err := regexp.Compile("usage_usec (.*)\n")
+	Expect(err).NotTo(HaveOccurred())
+	matches := r.FindStringSubmatch(string(statContents))
+	Expect(matches).To(HaveLen(2))
+	usage, err := strconv.ParseInt(matches[1], 10, 64)
+	Expect(err).NotTo(HaveOccurred())
+
+	// usage_usec is ms, return value in ns, see opencontainers/runc/libcontainer/cgroups/fs2/cpu.go
+	return usage * 1000
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -96,9 +97,9 @@ type PeaUsernameResolver interface {
 }
 
 type CPUCgrouper interface {
-	CreateBadCgroup(handle string) error
-	DestroyBadCgroup(handle string) error
-	ReadBadCgroupUsage(handle string) (garden.ContainerCPUStat, error)
+	PrepareCgroups(handle string) error
+	CleanupCgroups(handle string) error
+	ReadTotalCgroupUsage(handle string, cpuStats garden.ContainerCPUStat) (garden.ContainerCPUStat, error)
 }
 
 // Containerizer knows how to manage a depot of container bundles
@@ -178,8 +179,8 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 		return err
 	}
 
-	if err := c.cpuCgrouper.CreateBadCgroup(spec.Handle); err != nil {
-		log.Error("create-bad-cgroup-failed", err)
+	if err := c.cpuCgrouper.PrepareCgroups(spec.Handle); err != nil {
+		log.Error("prepare-cgroups-failed", err)
 		return err
 	}
 
@@ -316,7 +317,7 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 		return err
 	}
 
-	return c.cpuCgrouper.DestroyBadCgroup(handle)
+	return c.cpuCgrouper.CleanupCgroups(handle)
 }
 
 func (c *Containerizer) RemoveBundle(log lager.Logger, handle string) error {
@@ -350,9 +351,27 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (spec.ActualContai
 
 	var cpuShares, limitInBytes uint64
 	if bundle.Resources() != nil {
-		cpuShares = *bundle.Resources().CPU.Shares
-		// #nosec G115 - limits should never be negative
-		limitInBytes = uint64(*bundle.Resources().Memory.Limit)
+		if bundle.Resources().CPU != nil {
+			cpuShares = *bundle.Resources().CPU.Shares
+		}
+		if cpuWeight, ok := bundle.Resources().Unified["cpu.weight"]; ok {
+			cpuSharesInt, err := strconv.Atoi(cpuWeight)
+			if err != nil {
+				return spec.ActualContainerSpec{}, err
+			}
+			cpuShares = uint64(cpuSharesInt)
+		}
+		if bundle.Resources().Memory != nil {
+			// #nosec G115 - limits should never be negative
+			limitInBytes = uint64(*bundle.Resources().Memory.Limit)
+		}
+		if memoryMax, ok := bundle.Resources().Unified["memory.max"]; ok {
+			limitInBytesInt, err := strconv.Atoi(memoryMax)
+			if err != nil {
+				return spec.ActualContainerSpec{}, err
+			}
+			limitInBytes = uint64(limitInBytesInt)
+		}
 	} else {
 		log.Debug("bundle-resources-is-nil", lager.Data{"bundle": bundle})
 	}
@@ -381,15 +400,19 @@ func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.Actua
 		return gardener.ActualContainerMetrics{}, err
 	}
 
-	badCpuStats, err := c.readBadCgroupUsage(handle)
+	totalCPUUsage, err := c.cpuCgrouper.ReadTotalCgroupUsage(handle, containerMetrics.CPU)
 	if err != nil {
-		return gardener.ActualContainerMetrics{}, err
+		if os.IsNotExist(err) || strings.Contains(err.Error(), "no such file or directory") {
+			totalCPUUsage = containerMetrics.CPU
+		} else {
+			return gardener.ActualContainerMetrics{}, err
+		}
 	}
 
 	containerMetrics.CPU = garden.ContainerCPUStat{
-		Usage:  containerMetrics.CPU.Usage + badCpuStats.Usage,
-		User:   containerMetrics.CPU.User + badCpuStats.User,
-		System: containerMetrics.CPU.System + badCpuStats.System,
+		Usage:  totalCPUUsage.Usage,
+		User:   totalCPUUsage.User,
+		System: totalCPUUsage.System,
 	}
 
 	actualContainerMetrics := gardener.ActualContainerMetrics{
@@ -409,10 +432,10 @@ func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.Actua
 	return actualContainerMetrics, nil
 }
 
-func (c *Containerizer) readBadCgroupUsage(handle string) (garden.ContainerCPUStat, error) {
-	badCpuStats, err := c.cpuCgrouper.ReadBadCgroupUsage(handle)
+func (c *Containerizer) readTotalCgroupUsage(handle string, containerCPUStats garden.ContainerCPUStat) (garden.ContainerCPUStat, error) {
+	totalCpuStats, err := c.cpuCgrouper.ReadTotalCgroupUsage(handle, containerCPUStats)
 	if err == nil {
-		return badCpuStats, nil
+		return totalCpuStats, nil
 	}
 
 	if os.IsNotExist(err) {
@@ -446,6 +469,14 @@ func getShares(bundle goci.Bndl) uint64 {
 	}
 	cpu := resources.CPU
 	if cpu == nil {
+		if cpuWeight, ok := resources.Unified["cpu.weight"]; ok {
+			cpuWeightUint, err := strconv.ParseUint(cpuWeight, 10, 64)
+			if err != nil {
+				return 0
+			}
+			return ConvertCgroupV2ValueToCPUShares(cpuWeightUint)
+		}
+
 		return 0
 	}
 	shares := cpu.Shares

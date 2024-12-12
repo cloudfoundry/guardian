@@ -7,6 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 var _ = Describe("CPU entitlement", func() {
@@ -49,7 +50,12 @@ var _ = Describe("CPU entitlement", func() {
 		Expect(err).NotTo(HaveOccurred())
 		expectedCpuEntitlementPerShare := float64(cpuCores*100) / memoryInMb
 
-		Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", expectedCpuEntitlementPerShare, 0.0001))
+		if cgroups.IsCgroup2UnifiedMode() {
+			// when shares are converted to weight fraction part is lost
+			Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", expectedCpuEntitlementPerShare, 0.01))
+		} else {
+			Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", expectedCpuEntitlementPerShare, 0.0001))
+		}
 	})
 
 	Context("when CPU entitlement per share is set", func() {
@@ -59,10 +65,14 @@ var _ = Describe("CPU entitlement", func() {
 
 		It("uses it", func() {
 			actualCpuEntitlementPerShare := getCpuEntitlementPerShare(container, containerSpec.Limits.CPU.Weight)
-			Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", *config.CPUEntitlementPerShare, 0.01))
+			if cgroups.IsCgroup2UnifiedMode() {
+				// when shares are converted to weight fraction part is lost
+				Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", *config.CPUEntitlementPerShare, 1))
+			} else {
+				Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", *config.CPUEntitlementPerShare, 0.01))
+			}
 		})
 	})
-
 })
 
 func getCpuEntitlementPerShare(container garden.Container, shares uint64) float64 {
