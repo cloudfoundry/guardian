@@ -37,6 +37,9 @@ func (c CPUCgrouper) CleanupCgroups(handle string) error {
 	if err := os.RemoveAll(filepath.Join(c.cgroupRoot, BadCgroupName, handle)); err != nil {
 		return err
 	}
+	if err := os.RemoveAll(filepath.Join(c.cgroupRoot, GoodCgroupName, handle)); err != nil {
+		return err
+	}
 	return nil
 }
 

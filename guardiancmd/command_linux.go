@@ -328,7 +328,7 @@ func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containeriz
 		return nil, err
 	}
 
-	enforcer := throttle.NewEnforcer(gardenCPUCgroup)
+	enforcer := throttle.NewEnforcer(gardenCPUCgroup, containerdRuncRoot(), containerdNamespace)
 	throttler := throttle.NewThrottler(metricsSource, enforcer)
 	sharesBalancer := throttle.NewSharesBalancer(gardenCPUCgroup, memoryProvider, sharesMultiplier)
 

@@ -1,22 +1,27 @@
 package throttle
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 
 	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 
 	"code.cloudfoundry.org/lager/v3"
+	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 type CPUCgroupEnforcer struct {
 	goodCgroupPath string
 	badCgroupPath  string
 	cpuSharesFile  string
+	runcRoot       string
+	namespace      string
 }
 
-func NewEnforcer(cpuCgroupPath string) CPUCgroupEnforcer {
+func NewEnforcer(cpuCgroupPath string, runcRoot string, namespace string) CPUCgroupEnforcer {
 	cpuSharesFile := "cpu.shares"
 	if cgroups.IsCgroup2UnifiedMode() {
 		cpuSharesFile = "cpu.weight"
@@ -26,6 +31,8 @@ func NewEnforcer(cpuCgroupPath string) CPUCgroupEnforcer {
 		goodCgroupPath: filepath.Join(cpuCgroupPath, gardencgroups.GoodCgroupName),
 		badCgroupPath:  filepath.Join(cpuCgroupPath, gardencgroups.BadCgroupName),
 		cpuSharesFile:  cpuSharesFile,
+		runcRoot:       runcRoot,
+		namespace:      namespace,
 	}
 }
 
@@ -45,18 +52,22 @@ func (c CPUCgroupEnforcer) Punish(logger lager.Logger, handle string) error {
 	// for peas in cgroups v2 processes are added to init cgroup
 	goodInitCgroupPath := filepath.Join(goodContainerCgroupPath, gardencgroups.InitCgroup)
 	if exists(logger, goodInitCgroupPath) {
+		if err := c.copyShares(goodInitCgroupPath, badContainerCgroupPath); err != nil {
+			return err
+		}
+
 		if err := c.movePids(goodInitCgroupPath, badContainerCgroupPath); err != nil {
 			return err
 		}
 
-		return c.copyShares(goodInitCgroupPath, badContainerCgroupPath)
+		return c.updateContainerStateCgroupPath(handle, badContainerCgroupPath)
 	}
 
-	if err := c.movePids(goodContainerCgroupPath, badContainerCgroupPath); err != nil {
+	if err := c.copyShares(goodContainerCgroupPath, badContainerCgroupPath); err != nil {
 		return err
 	}
 
-	return c.copyShares(goodContainerCgroupPath, badContainerCgroupPath)
+	return c.movePids(goodContainerCgroupPath, badContainerCgroupPath)
 }
 
 func (c CPUCgroupEnforcer) Release(logger lager.Logger, handle string) error {
@@ -75,10 +86,16 @@ func (c CPUCgroupEnforcer) Release(logger lager.Logger, handle string) error {
 	// for peas in cgroups v2 processes are added to init cgroup
 	goodInitCgroupPath := filepath.Join(goodContainerCgroupPath, gardencgroups.InitCgroup)
 	if exists(logger, goodInitCgroupPath) {
-		return c.movePids(badContainerCgroupPath, goodInitCgroupPath)
+		if err := c.movePids(badContainerCgroupPath, goodInitCgroupPath); err != nil {
+			return err
+		}
+	} else {
+		if err := c.movePids(badContainerCgroupPath, goodContainerCgroupPath); err != nil {
+			return err
+		}
 	}
 
-	return c.movePids(badContainerCgroupPath, goodContainerCgroupPath)
+	return c.updateContainerStateCgroupPath(handle, badContainerCgroupPath)
 }
 
 func (c CPUCgroupEnforcer) movePids(fromCgroup, toCgroup string) error {
@@ -107,6 +124,57 @@ func (c CPUCgroupEnforcer) copyShares(fromCgroup, toCgroup string) error {
 	}
 
 	return os.WriteFile(filepath.Join(toCgroup, c.cpuSharesFile), containerShares, 0644)
+}
+
+// Runc pulls container cgroup path from the container state file
+// In cgroup v1, runc is using cgroup path for device to determine container pid files
+// In cgroup v2, runc is using unified cgroup path which needs to be updated
+func (c CPUCgroupEnforcer) updateContainerStateCgroupPath(handle string, cgroupPath string) (retErr error) {
+	if !cgroups.IsCgroup2UnifiedMode() {
+		return nil
+	}
+
+	stateDir := filepath.Join(c.runcRoot, c.namespace)
+	statePath := filepath.Join(stateDir, handle, "state.json")
+	stateFile, err := os.Open(statePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	defer stateFile.Close()
+
+	var state libcontainer.State
+	err = json.NewDecoder(stateFile).Decode(&state)
+	if err != nil {
+		return err
+	}
+
+	state.CgroupPaths[""] = cgroupPath
+
+	tmpFile, err := os.CreateTemp(stateDir, "state-")
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if retErr != nil {
+			tmpFile.Close()
+			os.Remove(tmpFile.Name())
+		}
+	}()
+
+	err = utils.WriteJSON(tmpFile, state)
+	if err != nil {
+		return err
+	}
+	err = tmpFile.Close()
+	if err != nil {
+		return err
+	}
+
+	return os.Rename(tmpFile.Name(), statePath)
 }
 
 func exists(logger lager.Logger, cgroupPath string) bool {

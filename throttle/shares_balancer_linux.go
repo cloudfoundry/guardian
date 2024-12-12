@@ -40,7 +40,7 @@ func (b SharesBalancer) Run(logger lager.Logger) error {
 
 	totalMemoryInBytes, _ := b.memoryProvider.TotalMemory()
 
-	badShares, err := b.countShares(logger, b.badCgroupPath)
+	badShares, err := b.countShares(b.badCgroupPath)
 	if err != nil {
 		return err
 	}
@@ -51,12 +51,6 @@ func (b SharesBalancer) Run(logger lager.Logger) error {
 		badShares = 2
 	}
 	goodShares := totalMemoryInBytes/MB - badShares
-	// When sum of bad shares exceed total memory we get a negative number which translates to large number
-	// For cpu.shares in cgroups v1 this gets automatically set to MAX_SHARES
-	// This is questionable behavior for cgroups v1 but at this point we just mimic this behavior
-	if cgroups.IsCgroup2UnifiedMode() && goodShares > MaxCPUWeight {
-		goodShares = MaxCPUWeight
-	}
 
 	err = b.setShares(logger, b.goodCgroupPath, goodShares)
 	if err != nil {
@@ -71,7 +65,7 @@ func (b SharesBalancer) Run(logger lager.Logger) error {
 	return nil
 }
 
-func (b SharesBalancer) countShares(logger lager.Logger, cgroupPath string) (uint64, error) {
+func (b SharesBalancer) countShares(cgroupPath string) (uint64, error) {
 	children, err := os.ReadDir(cgroupPath)
 	if err != nil {
 		return 0, err
@@ -126,6 +120,12 @@ func (b SharesBalancer) setShares(logger lager.Logger, cgroupPath string, shares
 	logger.Info("set-shares", lager.Data{"cgroupPath": cgroupPath, "shares": shares})
 	if cgroups.IsCgroup2UnifiedMode() {
 		weight := cgroups.ConvertCPUSharesToCgroupV2Value(shares)
+		// When sum of bad shares exceed total memory we get a negative number which translates to large number
+		// For cpu.shares in cgroups v1 this gets automatically set to MAX_SHARES
+		// This is questionable behavior for cgroups v1 but at this point we just mimic this behavior
+		if weight > MaxCPUWeight {
+			weight = MaxCPUWeight
+		}
 		return os.WriteFile(filepath.Join(cgroupPath, "cpu.weight"), []byte(strconv.FormatUint(weight, 10)), 0644)
 	}
 	return os.WriteFile(filepath.Join(cgroupPath, "cpu.shares"), []byte(strconv.FormatUint(shares, 10)), 0644)
