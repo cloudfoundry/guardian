@@ -59,9 +59,10 @@ var _ = Describe("Enforcer", func() {
 		)
 
 		JustBeforeEach(func() {
-			enforcer := throttle.NewEnforcer(cpuCgroupPath)
+			enforcer := throttle.NewEnforcer(cpuCgroupPath, "some-runc-path", "some-namespace")
 			punishErr = enforcer.Punish(logger, handle)
 		})
+		// TODO: add tests for saving state
 
 		Context("containers that have been created after cpu throttling enablement", func() {
 			var (
@@ -168,7 +169,7 @@ var _ = Describe("Enforcer", func() {
 		)
 
 		JustBeforeEach(func() {
-			enforcer := throttle.NewEnforcer(cpuCgroupPath)
+			enforcer := throttle.NewEnforcer(cpuCgroupPath, "some-runc-path", "some-namespace")
 			releaseErr = enforcer.Release(logger, handle)
 		})
 

@@ -125,13 +125,12 @@ var _ = Describe("throttle tests", func() {
 		} else {
 			goodCgroupUsage = readCgroupFile(goodCgroupPath, "cpuacct.usage")
 		}
-
-		// This value won't change in the future since the app is in the good cgroup
-		metrics, err := container.Metrics()
-		Expect(err).NotTo(HaveOccurred())
-
 		// Usage should be bigger than just the value in the metrics
-		Expect(metrics.CPUStat.Usage).To(BeNumerically(">", goodCgroupUsage))
+		Eventually(func() uint64 {
+			metrics, err := container.Metrics()
+			Expect(err).NotTo(HaveOccurred())
+			return metrics.CPUStat.Usage
+		}).Should(BeNumerically(">", goodCgroupUsage))
 	})
 
 	When("a bad application starts behaving nicely again", func() {
@@ -215,6 +214,6 @@ func readCgroupV2CPUUsage(cgroupPath string) int64 {
 	usage, err := strconv.ParseInt(matches[1], 10, 64)
 	Expect(err).NotTo(HaveOccurred())
 
-	// return value in ms, see opencontainers/runc/libcontainer/cgroups/fs2/cpu.go
+	// usage_usec is ms, return value in ns, see opencontainers/runc/libcontainer/cgroups/fs2/cpu.go
 	return usage * 1000
 }

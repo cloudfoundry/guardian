@@ -67,7 +67,11 @@ func (c CPUCgroupEnforcer) Punish(logger lager.Logger, handle string) error {
 		return err
 	}
 
-	return c.movePids(goodContainerCgroupPath, badContainerCgroupPath)
+	if err := c.movePids(goodContainerCgroupPath, badContainerCgroupPath); err != nil {
+		return err
+	}
+
+	return c.updateContainerStateCgroupPath(handle, badContainerCgroupPath)
 }
 
 func (c CPUCgroupEnforcer) Release(logger lager.Logger, handle string) error {
@@ -89,13 +93,13 @@ func (c CPUCgroupEnforcer) Release(logger lager.Logger, handle string) error {
 		if err := c.movePids(badContainerCgroupPath, goodInitCgroupPath); err != nil {
 			return err
 		}
-	} else {
-		if err := c.movePids(badContainerCgroupPath, goodContainerCgroupPath); err != nil {
-			return err
-		}
+		return c.updateContainerStateCgroupPath(handle, goodInitCgroupPath)
 	}
 
-	return c.updateContainerStateCgroupPath(handle, badContainerCgroupPath)
+	if err := c.movePids(badContainerCgroupPath, goodContainerCgroupPath); err != nil {
+		return err
+	}
+	return c.updateContainerStateCgroupPath(handle, goodContainerCgroupPath)
 }
 
 func (c CPUCgroupEnforcer) movePids(fromCgroup, toCgroup string) error {
