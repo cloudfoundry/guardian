@@ -574,14 +574,20 @@ func isContainerd() bool {
 }
 
 func (r *RunningGarden) getContainerdContainerPid(containerID string) string {
-	processesTable := r.runCtr([]string{"tasks", "ps", containerID})
+	var processesTable, pid string
+	Eventually(func() string {
+		processesTable := r.runCtr([]string{"tasks", "ps", containerID})
 
-	re := regexp.MustCompile(`(?m)^([0-9]+).*`)
-	res := re.FindAllStringSubmatch(processesTable, -1)
-	Expect(res).To(HaveLen(1), "Unexpected output from ctr tasks: "+processesTable)
-	Expect(res[0]).To(HaveLen(2), "Unexpected output from ctr tasks: "+processesTable)
+		re := regexp.MustCompile(`(?m)^([0-9]+).*`)
+		res := re.FindAllStringSubmatch(processesTable, -1)
+		if len(res) == 1 && len(res[0]) == 2 {
+			pid = res[0][1]
+			return res[0][1]
+		}
+		return ""
+	}).ShouldNot(BeEmpty(), "Unexpected output from ctr tasks:"+processesTable)
 
-	return res[0][1]
+	return pid
 }
 
 func (r *RunningGarden) runCtr(args []string) string {

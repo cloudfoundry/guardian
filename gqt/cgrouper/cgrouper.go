@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"code.cloudfoundry.org/guardian/rundmc/cgroups"
+	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
+
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 func GetCGroupPath(cgroupsRootPath, subsystem, tag string, privileged, throttlingCPU bool) (string, error) {
@@ -17,13 +19,17 @@ func GetCGroupPath(cgroupsRootPath, subsystem, tag string, privileged, throttlin
 	}
 
 	if throttlingCPU {
-		parentCgroup = filepath.Join(parentCgroup, cgroups.GoodCgroupName)
+		parentCgroup = filepath.Join(parentCgroup, gardencgroups.GoodCgroupName)
 	}
 
 	// We always use the cgroup root for privileged containers, regardless of
 	// tag.
 	if privileged {
 		parentCgroup = ""
+	}
+
+	if cgroups.IsCgroup2UnifiedMode() {
+		return filepath.Join(cgroupsRootPath, gardencgroups.Unified, parentCgroup), nil
 	}
 
 	currentCgroup, err := getCGroup(subsystem)

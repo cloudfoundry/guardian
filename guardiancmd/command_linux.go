@@ -40,7 +40,7 @@ import (
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/pkg/process"
 	"github.com/containerd/containerd/plugin"
-	cgrouputils "github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
@@ -163,14 +163,15 @@ func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, use
 }
 
 func (f *LinuxFactory) WireCPUCgrouper() (rundmc.CPUCgrouper, error) {
-	if !f.config.CPUThrottling.Enabled {
-		return gardencgroups.NoopCPUCgrouper{}, nil
-	}
-
 	gardenCPUCgroupPath, err := f.config.getGardenCPUCgroup()
 	if err != nil {
 		return nil, err
 	}
+
+	if !f.config.CPUThrottling.Enabled {
+		return gardencgroups.NewDefaultCgrouper(gardenCPUCgroupPath), nil
+	}
+
 	return gardencgroups.NewCPUCgrouper(gardenCPUCgroupPath), nil
 }
 
@@ -214,10 +215,14 @@ func privilegedMounts() []specs.Mount {
 }
 
 func unprivilegedMounts() []specs.Mount {
-	return []specs.Mount{
+	mounts := []specs.Mount{
 		{Destination: "/proc", Type: "proc", Source: "proc", Options: []string{"nosuid", "noexec", "nodev"}},
-		{Destination: "/sys/fs/cgroup", Type: "cgroup", Source: "cgroup", Options: []string{"ro", "nosuid", "noexec", "nodev"}},
 	}
+
+	if !cgroups.IsCgroup2UnifiedMode() {
+		mounts = append(mounts, specs.Mount{Destination: "/sys/fs/cgroup", Type: "cgroup", Source: "cgroup", Options: []string{"ro", "nosuid", "noexec", "nodev"}})
+	}
+	return mounts
 }
 
 func getPrivilegedDevices() []specs.LinuxDevice {
@@ -284,17 +289,24 @@ func getRuntimeDir() string {
 }
 
 func (cmd *CommonCommand) getGardenCPUCgroup() (string, error) {
-	cpuCgroupSubPath, err := cgrouputils.ParseCgroupFile("/proc/self/cgroup")
-	if err != nil {
-		return "", err
-	}
-
 	cgroupsMountpoint := gardencgroups.Root
 	gardenCgroup := gardencgroups.Garden
 
 	if cmd.Server.Tag != "" {
 		cgroupsMountpoint = filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", cmd.Server.Tag))
+		if cgroups.IsCgroup2UnifiedMode() {
+			cgroupsMountpoint = filepath.Join(cgroupsMountpoint, gardencgroups.Unified)
+		}
 		gardenCgroup = fmt.Sprintf("%s-%s", gardenCgroup, cmd.Server.Tag)
+	}
+
+	if cgroups.IsCgroup2UnifiedMode() {
+		return filepath.Join(cgroupsMountpoint, gardenCgroup), nil
+	}
+
+	cpuCgroupSubPath, err := cgroups.ParseCgroupFile("/proc/self/cgroup")
+	if err != nil {
+		return "", err
 	}
 
 	return filepath.Join(cgroupsMountpoint, "cpu", cpuCgroupSubPath["cpu"], gardenCgroup), nil
@@ -315,7 +327,7 @@ func (cmd *CommonCommand) wireCpuThrottlingService(log lager.Logger, containeriz
 		return nil, err
 	}
 
-	enforcer := throttle.NewEnforcer(gardenCPUCgroup)
+	enforcer := throttle.NewEnforcer(gardenCPUCgroup, containerdRuncRoot(), containerdNamespace)
 	throttler := throttle.NewThrottler(metricsSource, enforcer)
 	sharesBalancer := throttle.NewSharesBalancer(gardenCPUCgroup, memoryProvider, sharesMultiplier)
 

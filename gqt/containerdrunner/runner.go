@@ -17,6 +17,7 @@ import (
 )
 
 type Config struct {
+	Version         int         `toml:"version"`
 	Root            string      `toml:"root"`
 	State           string      `toml:"state"`
 	Subreaper       bool        `toml:"subreaper"`
@@ -39,15 +40,32 @@ type DebugConfig struct {
 }
 
 type Plugins struct {
-	Linux Linux `toml:"linux"`
+	IoContainerdGrpcV1Linux IoContainerdGrpcV1Linux `toml:"io.containerd.runtime.v1.linux"`
+	IoContainerdGrpcV1Cri   IoContainerdGrpcV1Cri   `toml:"io.containerd.grpc.v1.cri"`
+}
+type IoContainerdGrpcV1Cri struct {
+	IoContainerdGrpcV1CriContainerd IoContainerdGrpcV1CriContainerd `toml:"containerd"`
 }
 
-type Linux struct {
+type IoContainerdGrpcV1CriContainerd struct {
+	ContainerdRuntimes ContainerdRuntimes `toml:"runtimes"`
+}
+
+type ContainerdRuntimes struct {
+	RuntimesRunc RuntimesRunc `toml:"runc"`
+}
+
+type RuntimesRunc struct {
+	RuntimeType string `toml:"runtime_type"`
+}
+
+type IoContainerdGrpcV1Linux struct {
 	ShimDebug bool `toml:"shim_debug"`
 }
 
 func ContainerdConfig(containerdDataDir string) Config {
 	return Config{
+		Version:   2,
 		Root:      filepath.Join(containerdDataDir, "root"),
 		State:     filepath.Join(containerdDataDir, "state"),
 		Subreaper: true,
@@ -60,30 +78,32 @@ func ContainerdConfig(containerdDataDir string) Config {
 			Level:   "debug",
 		},
 		DisabledPlugins: []string{
-			"aufs",
-			"devmapper",
-			"overlayfs",
-			"zfs",
-			"walking",
-			"scheduler",
-			"diff-service",
-			"images-service",
-			"namespaces-service",
-			"snapshots-service",
-			"diff",
-			"healthcheck",
-			"images",
-			"namespaces",
-			"snapshots",
-			"version",
-			"cri",
-			"leases",
-			"leases-service",
-			"restart",
+			"io.containerd.snapshotter.v1.aufs",
+			"io.containerd.snapshotter.v1.devmapper",
+			"io.containerd.snapshotter.v1.overlayfs",
+			"io.containerd.snapshotter.v1.zfs",
+			"io.containerd.differ.v1.walking",
+			"io.containerd.gc.v1.scheduler",
+			"io.containerd.service.v1.diff-service",
+			"io.containerd.service.v1.images-service",
+			"io.containerd.service.v1.namespaces-service",
+			"io.containerd.service.v1.snapshots-service",
+			"io.containerd.service.v1.leases-service",
+			"io.containerd.grpc.v1.diff",
+			"io.containerd.grpc.v1.healthcheck",
+			"io.containerd.grpc.v1.images",
+			"io.containerd.grpc.v1.snapshots",
+			"io.containerd.grpc.v1.version",
+			"io.containerd.grpc.v1.cri",
+			"io.containerd.grpc.v1.leases",
+			"io.containerd.internal.v1.restart",
 		},
 		Plugins: Plugins{
-			Linux: Linux{
+			IoContainerdGrpcV1Linux: IoContainerdGrpcV1Linux{
 				ShimDebug: true,
+			},
+			IoContainerdGrpcV1Cri: IoContainerdGrpcV1Cri{
+				IoContainerdGrpcV1CriContainerd{ContainerdRuntimes{RuntimesRunc{RuntimeType: "io.containerd.runc.v2"}}},
 			},
 		},
 	}
