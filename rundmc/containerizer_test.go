@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -95,8 +96,8 @@ var _ = Describe("Rundmc", func() {
 				BaseConfig: specs.Spec{Root: &specs.Root{}},
 			})).To(Succeed())
 
-			Expect(fakeCPUCgrouper.CreateBadCgroupCallCount()).To(Equal(1))
-			actualHandle := fakeCPUCgrouper.CreateBadCgroupArgsForCall(0)
+			Expect(fakeCPUCgrouper.PrepareCgroupsCallCount()).To(Equal(1))
+			actualHandle := fakeCPUCgrouper.PrepareCgroupsArgsForCall(0)
 			Expect(actualHandle).To(Equal("exuberant!"))
 		})
 
@@ -125,7 +126,7 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when creating the bad cgroup fails", func() {
 			BeforeEach(func() {
-				fakeCPUCgrouper.CreateBadCgroupReturns(errors.New("BOOHOO"))
+				fakeCPUCgrouper.PrepareCgroupsReturns(errors.New("BOOHOO"))
 			})
 
 			It("should propagate the error", func() {
@@ -407,8 +408,8 @@ var _ = Describe("Rundmc", func() {
 
 		It("destroys the bad cgroup", func() {
 			Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-			Expect(fakeCPUCgrouper.DestroyBadCgroupCallCount()).To(Equal(1))
-			Expect(fakeCPUCgrouper.DestroyBadCgroupArgsForCall(0)).To(Equal("some-handle"))
+			Expect(fakeCPUCgrouper.CleanupCgroupsCallCount()).To(Equal(1))
+			Expect(fakeCPUCgrouper.CleanupCgroupsArgsForCall(0)).To(Equal("some-handle"))
 		})
 
 		Context("when the runtime fails to destroy", func() {
@@ -423,7 +424,7 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when deleting the bad cgroup fails", func() {
 			BeforeEach(func() {
-				fakeCPUCgrouper.DestroyBadCgroupReturns(errors.New("POOH"))
+				fakeCPUCgrouper.CleanupCgroupsReturns(errors.New("POOH"))
 			})
 
 			It("propagates the error back", func() {
@@ -613,7 +614,7 @@ var _ = Describe("Rundmc", func() {
 			}, nil)
 		})
 
-		It("returns the CPU metrics", func() {
+		It("returns the CPU metrics reported by cgrouper", func() {
 			containerStats := gardener.StatsContainerMetrics{
 				CPU: garden.ContainerCPUStat{
 					Usage:  1,
@@ -623,9 +624,9 @@ var _ = Describe("Rundmc", func() {
 			}
 
 			cpuStats := garden.ContainerCPUStat{
-				Usage:  1,
-				User:   2,
-				System: 3,
+				Usage:  2,
+				User:   4,
+				System: 6,
 			}
 
 			expectedMetrics := gardener.ActualContainerMetrics{
@@ -638,8 +639,11 @@ var _ = Describe("Rundmc", func() {
 				},
 			}
 			fakeOCIRuntime.StatsReturns(containerStats, nil)
-			fakeCPUCgrouper.ReadBadCgroupUsageReturns(cpuStats, nil)
+			fakeCPUCgrouper.ReadTotalCgroupUsageReturns(cpuStats, nil)
 			Expect(containerizer.Metrics(logger, "foo")).To(Equal(expectedMetrics))
+			handle, stats := fakeCPUCgrouper.ReadTotalCgroupUsageArgsForCall(0)
+			Expect(handle).To(Equal("foo"))
+			Expect(stats).To(Equal(containerStats.CPU))
 		})
 
 		Context("when cpu entitlement per share is defined", func() {
@@ -674,9 +678,14 @@ var _ = Describe("Rundmc", func() {
 
 				actualMetrics, err := containerizer.Metrics(logger, "foo")
 				Expect(err).NotTo(HaveOccurred())
-
-				expectedEntitlement := uint64(float64(cpuShares) * (entitlementPerSharePercent / 100) * float64(containerAge))
-				Expect(actualMetrics.CPUEntitlement).To(Equal(expectedEntitlement))
+				if cgroups.IsCgroup2UnifiedMode() {
+					// We loose up to one decimal when converting shares to weight and back, see  ConvertCPUSharesToCgroupV2Value
+					expectedEntitlement := uint64(float64(cpuShares) * (entitlementPerSharePercent / 100) * float64(containerAge-1*time.Second))
+					Expect(actualMetrics.CPUEntitlement).To(Equal(expectedEntitlement))
+				} else {
+					expectedEntitlement := uint64(float64(cpuShares) * (entitlementPerSharePercent / 100) * float64(containerAge))
+					Expect(actualMetrics.CPUEntitlement).To(Equal(expectedEntitlement))
+				}
 			})
 
 			Context("when peas metrics are requested", func() {
@@ -705,7 +714,7 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when the cpu cgrouper fails to provide bad cgroup usage", func() {
 			BeforeEach(func() {
-				fakeCPUCgrouper.ReadBadCgroupUsageReturns(garden.ContainerCPUStat{}, errors.New("potato"))
+				fakeCPUCgrouper.ReadTotalCgroupUsageReturns(garden.ContainerCPUStat{}, errors.New("potato"))
 			})
 
 			It("should return the error", func() {
@@ -718,7 +727,29 @@ var _ = Describe("Rundmc", func() {
 			var runtimeStats gardener.StatsContainerMetrics
 
 			BeforeEach(func() {
-				fakeCPUCgrouper.ReadBadCgroupUsageReturns(garden.ContainerCPUStat{}, os.ErrNotExist)
+				fakeCPUCgrouper.ReadTotalCgroupUsageReturns(garden.ContainerCPUStat{}, os.ErrNotExist)
+
+				runtimeStats = gardener.StatsContainerMetrics{
+					CPU: garden.ContainerCPUStat{
+						Usage:  1,
+						User:   2,
+						System: 3,
+					},
+				}
+				fakeOCIRuntime.StatsReturns(runtimeStats, nil)
+			})
+
+			It("returns runtime stats only", func() {
+				Expect(containerizer.Metrics(logger, "foo")).To(Equal(gardener.ActualContainerMetrics{StatsContainerMetrics: runtimeStats}))
+			})
+		})
+
+		Context("when the bad cgroup does not exist and error type is not recognized", func() {
+			var runtimeStats gardener.StatsContainerMetrics
+
+			BeforeEach(func() {
+				err := errors.New("error while statting cgroup v2: [open group.procs: no such file or directory]")
+				fakeCPUCgrouper.ReadTotalCgroupUsageReturns(garden.ContainerCPUStat{}, err)
 
 				runtimeStats = gardener.StatsContainerMetrics{
 					CPU: garden.ContainerCPUStat{

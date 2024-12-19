@@ -4,10 +4,22 @@ package runcontainerdfakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 )
 
 type FakeCgroupManager struct {
+	SetUnifiedResourcesStub        func(goci.Bndl) error
+	setUnifiedResourcesMutex       sync.RWMutex
+	setUnifiedResourcesArgsForCall []struct {
+		arg1 goci.Bndl
+	}
+	setUnifiedResourcesReturns struct {
+		result1 error
+	}
+	setUnifiedResourcesReturnsOnCall map[int]struct {
+		result1 error
+	}
 	SetUseMemoryHierarchyStub        func(string) error
 	setUseMemoryHierarchyMutex       sync.RWMutex
 	setUseMemoryHierarchyArgsForCall []struct {
@@ -21,6 +33,67 @@ type FakeCgroupManager struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeCgroupManager) SetUnifiedResources(arg1 goci.Bndl) error {
+	fake.setUnifiedResourcesMutex.Lock()
+	ret, specificReturn := fake.setUnifiedResourcesReturnsOnCall[len(fake.setUnifiedResourcesArgsForCall)]
+	fake.setUnifiedResourcesArgsForCall = append(fake.setUnifiedResourcesArgsForCall, struct {
+		arg1 goci.Bndl
+	}{arg1})
+	stub := fake.SetUnifiedResourcesStub
+	fakeReturns := fake.setUnifiedResourcesReturns
+	fake.recordInvocation("SetUnifiedResources", []interface{}{arg1})
+	fake.setUnifiedResourcesMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeCgroupManager) SetUnifiedResourcesCallCount() int {
+	fake.setUnifiedResourcesMutex.RLock()
+	defer fake.setUnifiedResourcesMutex.RUnlock()
+	return len(fake.setUnifiedResourcesArgsForCall)
+}
+
+func (fake *FakeCgroupManager) SetUnifiedResourcesCalls(stub func(goci.Bndl) error) {
+	fake.setUnifiedResourcesMutex.Lock()
+	defer fake.setUnifiedResourcesMutex.Unlock()
+	fake.SetUnifiedResourcesStub = stub
+}
+
+func (fake *FakeCgroupManager) SetUnifiedResourcesArgsForCall(i int) goci.Bndl {
+	fake.setUnifiedResourcesMutex.RLock()
+	defer fake.setUnifiedResourcesMutex.RUnlock()
+	argsForCall := fake.setUnifiedResourcesArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeCgroupManager) SetUnifiedResourcesReturns(result1 error) {
+	fake.setUnifiedResourcesMutex.Lock()
+	defer fake.setUnifiedResourcesMutex.Unlock()
+	fake.SetUnifiedResourcesStub = nil
+	fake.setUnifiedResourcesReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeCgroupManager) SetUnifiedResourcesReturnsOnCall(i int, result1 error) {
+	fake.setUnifiedResourcesMutex.Lock()
+	defer fake.setUnifiedResourcesMutex.Unlock()
+	fake.SetUnifiedResourcesStub = nil
+	if fake.setUnifiedResourcesReturnsOnCall == nil {
+		fake.setUnifiedResourcesReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.setUnifiedResourcesReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeCgroupManager) SetUseMemoryHierarchy(arg1 string) error {
@@ -87,6 +160,8 @@ func (fake *FakeCgroupManager) SetUseMemoryHierarchyReturnsOnCall(i int, result1
 func (fake *FakeCgroupManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.setUnifiedResourcesMutex.RLock()
+	defer fake.setUnifiedResourcesMutex.RUnlock()
 	fake.setUseMemoryHierarchyMutex.RLock()
 	defer fake.setUseMemoryHierarchyMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

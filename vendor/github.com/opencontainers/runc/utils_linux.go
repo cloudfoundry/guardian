@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 
@@ -19,49 +18,21 @@ import (
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
+	"github.com/opencontainers/runc/libcontainer/system/kernelversion"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 var errEmptyID = errors.New("container id cannot be empty")
 
-// loadFactory returns the configured factory instance for execing containers.
-func loadFactory(context *cli.Context) (libcontainer.Factory, error) {
-	root := context.GlobalString("root")
-	abs, err := filepath.Abs(root)
-	if err != nil {
-		return nil, err
-	}
-
-	// We resolve the paths for {newuidmap,newgidmap} from the context of runc,
-	// to avoid doing a path lookup in the nsexec context. TODO: The binary
-	// names are not currently configurable.
-	newuidmap, err := exec.LookPath("newuidmap")
-	if err != nil {
-		newuidmap = ""
-	}
-	newgidmap, err := exec.LookPath("newgidmap")
-	if err != nil {
-		newgidmap = ""
-	}
-
-	return libcontainer.New(abs,
-		libcontainer.CriuPath(context.GlobalString("criu")),
-		libcontainer.NewuidmapPath(newuidmap),
-		libcontainer.NewgidmapPath(newgidmap))
-}
-
-// getContainer returns the specified container instance by loading it from state
-// with the default factory.
-func getContainer(context *cli.Context) (libcontainer.Container, error) {
+// getContainer returns the specified container instance by loading it from
+// a state directory (root).
+func getContainer(context *cli.Context) (*libcontainer.Container, error) {
 	id := context.Args().First()
 	if id == "" {
 		return nil, errEmptyID
 	}
-	factory, err := loadFactory(context)
-	if err != nil {
-		return nil, err
-	}
-	return factory.Load(id)
+	root := context.GlobalString("root")
+	return libcontainer.Load(root, id)
 }
 
 func getDefaultImagePath() string {
@@ -91,6 +62,16 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 		lp.ConsoleHeight = uint16(p.ConsoleSize.Height)
 	}
 
+	if p.Scheduler != nil {
+		s := *p.Scheduler
+		lp.Scheduler = &s
+	}
+
+	if p.IOPriority != nil {
+		ioPriority := *p.IOPriority
+		lp.IOPriority = &ioPriority
+	}
+
 	if p.Capabilities != nil {
 		lp.Capabilities = &configs.Capabilities{}
 		lp.Capabilities.Bounding = p.Capabilities.Bounding
@@ -110,12 +91,6 @@ func newProcess(p specs.Process) (*libcontainer.Process, error) {
 		lp.Rlimits = append(lp.Rlimits, rl)
 	}
 	return lp, nil
-}
-
-func destroy(container libcontainer.Container) {
-	if err := container.Destroy(); err != nil {
-		logrus.Error(err)
-	}
 }
 
 // setupIO modifies the given process config according to the options.
@@ -191,7 +166,7 @@ func createPidFile(path string, process *libcontainer.Process) error {
 	return os.Rename(tmpName, path)
 }
 
-func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcontainer.Container, error) {
+func createContainer(context *cli.Context, id string, spec *specs.Spec) (*libcontainer.Container, error) {
 	rootlessCg, err := shouldUseRootlessCgroupManager(context)
 	if err != nil {
 		return nil, err
@@ -209,11 +184,8 @@ func createContainer(context *cli.Context, id string, spec *specs.Spec) (libcont
 		return nil, err
 	}
 
-	factory, err := loadFactory(context)
-	if err != nil {
-		return nil, err
-	}
-	return factory.Create(id, config)
+	root := context.GlobalString("root")
+	return libcontainer.Create(root, id, config)
 }
 
 type runner struct {
@@ -225,7 +197,8 @@ type runner struct {
 	preserveFDs     int
 	pidFile         string
 	consoleSocket   string
-	container       libcontainer.Container
+	pidfdSocket     string
+	container       *libcontainer.Container
 	action          CtAct
 	notifySocket    *notifySocket
 	criuOpts        *libcontainer.CriuOpts
@@ -255,8 +228,10 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)
 	}
 	baseFd := 3 + len(process.ExtraFiles)
+	procSelfFd, closer := utils.ProcThreadSelf("fd/")
+	defer closer()
 	for i := baseFd; i < baseFd+r.preserveFDs; i++ {
-		_, err = os.Stat("/proc/self/fd/" + strconv.Itoa(i))
+		_, err = os.Stat(filepath.Join(procSelfFd, strconv.Itoa(i)))
 		if err != nil {
 			return -1, fmt.Errorf("unable to stat preserved-fd %d (of %d): %w", i-baseFd, r.preserveFDs, err)
 		}
@@ -280,6 +255,14 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		return -1, err
 	}
 	defer tty.Close()
+
+	if r.pidfdSocket != "" {
+		connClose, err := setupPidfdSocket(process, r.pidfdSocket)
+		if err != nil {
+			return -1, err
+		}
+		defer connClose()
+	}
 
 	switch r.action {
 	case CT_ACT_CREATE:
@@ -320,7 +303,9 @@ func (r *runner) run(config *specs.Process) (int, error) {
 
 func (r *runner) destroy() {
 	if r.shouldDestroy {
-		destroy(r.container)
+		if err := r.container.Destroy(); err != nil {
+			logrus.Warn(err)
+		}
 	}
 }
 
@@ -416,6 +401,7 @@ func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.C
 		listenFDs:       listenFDs,
 		notifySocket:    notifySocket,
 		consoleSocket:   context.String("console-socket"),
+		pidfdSocket:     context.String("pidfd-socket"),
 		detach:          context.Bool("detach"),
 		pidFile:         context.String("pid-file"),
 		preserveFDs:     context.Int("preserve-fds"),
@@ -424,4 +410,37 @@ func startContainer(context *cli.Context, action CtAct, criuOpts *libcontainer.C
 		init:            true,
 	}
 	return r.run(spec.Process)
+}
+
+func setupPidfdSocket(process *libcontainer.Process, sockpath string) (_clean func(), _ error) {
+	linux530 := kernelversion.KernelVersion{Kernel: 5, Major: 3}
+	ok, err := kernelversion.GreaterEqualThan(linux530)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, fmt.Errorf("--pidfd-socket requires >= v5.3 kernel")
+	}
+
+	conn, err := net.Dial("unix", sockpath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to dail %s: %w", sockpath, err)
+	}
+
+	uc, ok := conn.(*net.UnixConn)
+	if !ok {
+		conn.Close()
+		return nil, errors.New("failed to cast to UnixConn")
+	}
+
+	socket, err := uc.File()
+	if err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("failed to dup socket: %w", err)
+	}
+
+	process.PidfdSocket = socket
+	return func() {
+		conn.Close()
+	}, nil
 }
