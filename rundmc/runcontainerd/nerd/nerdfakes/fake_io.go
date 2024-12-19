@@ -4,7 +4,7 @@ package nerdfakes
 import (
 	"sync"
 
-	"github.com/containerd/containerd/cio"
+	"github.com/containerd/containerd/v2/pkg/cio"
 )
 
 type FakeIO struct {
