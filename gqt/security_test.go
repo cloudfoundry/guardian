@@ -164,7 +164,7 @@ var _ = Describe("Security", func() {
 		It("should allow the ptrace syscall without CAP_SYS_PTRACE", func() {
 			container, err := client.Create(garden.ContainerSpec{
 				Image: garden.ImageRef{
-					URI: "docker://index.docker.io/cfgarden/strace",
+					URI: "docker://cloudfoundry/garden-fuse",
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())

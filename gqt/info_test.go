@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 var _ = Describe("Info", func() {
@@ -90,14 +91,14 @@ var _ = Describe("Info", func() {
 	When("the container has a memory limit applied", func() {
 		BeforeEach(func() {
 			containerLimits = garden.Limits{Memory: garden.MemoryLimits{LimitInBytes: 30 * mb}}
-			image = garden.ImageRef{URI: "docker://cfgarden/oom"}
+			image = garden.ImageRef{URI: "docker://cloudfoundry/garden-rootfs"}
 		})
 
 		It("adds an out of memory event", func() {
 			stdout := gbytes.NewBuffer()
 			stderr := gbytes.NewBuffer()
 			process, err := container.Run(garden.ProcessSpec{
-				Path: "/usemem",
+				Path: "usemem",
 			}, garden.ProcessIO{
 				Stdout: stdout,
 				Stderr: stderr,
@@ -107,6 +108,12 @@ var _ = Describe("Info", func() {
 			statusCode, err := process.Wait()
 			Expect(err).NotTo(HaveOccurred())
 			expectedMemoryCgroupPath := client.CgroupSubsystemPath("memory", container.Handle())
+			memoryLimitFile := "memory.limit_in_bytes"
+			memoryOOMControlFile := "memory.oom_control"
+			if cgroups.IsCgroup2UnifiedMode() {
+				memoryLimitFile = "memory.max"
+				memoryOOMControlFile = "memory.oom.group"
+			}
 			Eventually(getEventsForContainer(container), time.Minute).Should(
 				ContainElement("Out of memory"),
 				fmt.Sprintf("%#v", map[string]string{
@@ -116,9 +123,9 @@ var _ = Describe("Info", func() {
 					"Container PID":                        getContainerPid(container.Handle()),
 					"Expected memory cgroup path":          expectedMemoryCgroupPath,
 					"Pids in the container memory cgroup":  listPidsInCgroup(expectedMemoryCgroupPath),
-					"Memory limit as listed in the cgroup": readFileString(filepath.Join(expectedMemoryCgroupPath, "memory.limit_in_bytes")),
+					"Memory limit as listed in the cgroup": readFileString(filepath.Join(expectedMemoryCgroupPath, memoryLimitFile)),
 					"Expected limit":                       strconv.FormatUint(containerLimits.Memory.LimitInBytes, 10),
-					"OOM Control":                          readFileString(filepath.Join(expectedMemoryCgroupPath, "memory.oom_control")),
+					"OOM Control":                          readFileString(filepath.Join(expectedMemoryCgroupPath, memoryOOMControlFile)),
 				}),
 				"<requesting dmesg>",
 			)
