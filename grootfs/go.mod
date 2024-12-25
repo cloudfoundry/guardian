@@ -5,18 +5,18 @@ go 1.22.6
 toolchain go1.23.3
 
 require (
-	code.cloudfoundry.org/commandrunner v0.21.0
-	code.cloudfoundry.org/idmapper v0.0.0-20241211021558-aa20b549123e
-	code.cloudfoundry.org/lager/v3 v3.19.0
+	code.cloudfoundry.org/commandrunner v0.22.0
+	code.cloudfoundry.org/idmapper v0.0.0-20241220223201-c77a6f0c8b97
+	code.cloudfoundry.org/lager/v3 v3.20.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/sonde-go v0.0.0-20241016180203-3c0e1c24e908
+	github.com/cloudfoundry/sonde-go v0.0.0-20241223073712-8666f251e654
 	github.com/containers/image/v5 v5.33.0
 	github.com/containers/storage v1.56.0
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/docker v27.4.1+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/onsi/ginkgo/v2 v2.22.1
-	github.com/onsi/gomega v1.36.1
+	github.com/onsi/gomega v1.36.2
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/opencontainers/runtime-spec v1.2.0
@@ -25,7 +25,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.5
 	github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125
 	golang.org/x/sys v0.28.0
-	google.golang.org/protobuf v1.36.0
+	google.golang.org/protobuf v1.36.1
 	gopkg.in/yaml.v2 v2.4.0
 )
 
