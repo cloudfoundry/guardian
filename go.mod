@@ -13,18 +13,18 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.24.0
-	code.cloudfoundry.org/clock v1.26.0
-	code.cloudfoundry.org/commandrunner v0.22.0
-	code.cloudfoundry.org/debugserver v0.30.0
-	code.cloudfoundry.org/garden v0.0.0-20241220222956-8586d072bbe1
+	code.cloudfoundry.org/archiver v0.25.0
+	code.cloudfoundry.org/clock v1.27.0
+	code.cloudfoundry.org/commandrunner v0.23.0
+	code.cloudfoundry.org/debugserver v0.31.0
+	code.cloudfoundry.org/garden v0.0.0-20241225021532-d08842acfc0b
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20241220223201-c77a6f0c8b97
-	code.cloudfoundry.org/lager/v3 v3.20.0
-	code.cloudfoundry.org/localip v0.24.0
+	code.cloudfoundry.org/idmapper v0.0.0-20250101021739-6d54e6402a7f
+	code.cloudfoundry.org/lager/v3 v3.21.0
+	code.cloudfoundry.org/localip v0.25.0
 	github.com/BurntSushi/toml v1.4.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.81
+	github.com/cloudfoundry/gosigar v1.3.82
 	github.com/containerd/containerd v1.7.24
 	github.com/containerd/containerd/api v1.8.0
 	github.com/containerd/errdefs v1.0.0
@@ -37,7 +37,7 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.8.1
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo/v2 v2.22.1
+	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
@@ -81,7 +81,7 @@ require (
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/nri v0.6.1 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
-	github.com/containerd/ttrpc v1.2.6 // indirect
+	github.com/containerd/ttrpc v1.2.7 // indirect
 	github.com/containerd/typeurl v1.0.2 // indirect
 	github.com/containerd/zfs v1.1.0 // indirect
 	github.com/containernetworking/cni v1.1.2 // indirect
@@ -173,9 +173,9 @@ require (
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.28.0 // indirect
-	google.golang.org/genproto v0.0.0-20241223144023-3abc09e42ca8 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20241219192143-6b3ec007d9bb // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241223144023-3abc09e42ca8 // indirect
+	google.golang.org/genproto v0.0.0-20241230172942-26aa7a208def // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20241223144023-3abc09e42ca8 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241230172942-26aa7a208def // indirect
 	google.golang.org/grpc v1.69.2 // indirect
 	google.golang.org/protobuf v1.36.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
