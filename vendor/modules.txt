@@ -128,16 +128,18 @@ github.com/cespare/xxhash/v2
 ## explicit; go 1.16
 github.com/checkpoint-restore/go-criu/v6
 github.com/checkpoint-restore/go-criu/v6/rpc
-# github.com/cilium/ebpf v0.16.0
-## explicit; go 1.21
+# github.com/cilium/ebpf v0.17.1
+## explicit; go 1.22
 github.com/cilium/ebpf
 github.com/cilium/ebpf/asm
 github.com/cilium/ebpf/btf
 github.com/cilium/ebpf/internal
 github.com/cilium/ebpf/internal/kallsyms
 github.com/cilium/ebpf/internal/kconfig
+github.com/cilium/ebpf/internal/linux
 github.com/cilium/ebpf/internal/sys
 github.com/cilium/ebpf/internal/sysenc
+github.com/cilium/ebpf/internal/testutils/fdtrace
 github.com/cilium/ebpf/internal/tracefs
 github.com/cilium/ebpf/internal/unix
 github.com/cilium/ebpf/link
@@ -769,13 +771,8 @@ github.com/opencontainers/go-digest/digestset
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-<<<<<<< HEAD
-# github.com/opencontainers/runc v1.2.4 => github.com/opencontainers/runc v1.1.14
-## explicit; go 1.18
-=======
-# github.com/opencontainers/runc v1.2.3
+# github.com/opencontainers/runc v1.2.4
 ## explicit; go 1.22
->>>>>>> dfdebc85 (Cgroups v2 support)
 github.com/opencontainers/runc
 github.com/opencontainers/runc/libcontainer
 github.com/opencontainers/runc/libcontainer/apparmor
@@ -990,9 +987,6 @@ golang.org/x/crypto/openpgp/errors
 golang.org/x/crypto/openpgp/packet
 golang.org/x/crypto/openpgp/s2k
 golang.org/x/crypto/pbkdf2
-# golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
-## explicit; go 1.22.0
-golang.org/x/exp/constraints
 # golang.org/x/mod v0.22.0
 ## explicit; go 1.22.0
 golang.org/x/mod/internal/lazyregexp

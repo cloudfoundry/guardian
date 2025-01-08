@@ -175,6 +175,7 @@ var _ = Describe("Limits", func() {
 						"b *:* m",
 						"c 136:* rwm",
 						"c 5:2 rwm",
+						"c 10:200 rwm",
 					}
 
 					if privileged {

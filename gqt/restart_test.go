@@ -414,6 +414,7 @@ var _ = Describe("Surviving Restarts", func() {
 						"b *:* m",
 						"c 136:* rwm",
 						"c 5:2 rwm",
+						"c 10:200 rwm",
 					}
 					contentLines := strings.Split(strings.TrimSpace(content), "\n")
 					Expect(contentLines).To(HaveLen(len(expectedAllowedDevices)))

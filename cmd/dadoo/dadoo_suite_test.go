@@ -80,9 +80,8 @@ func TestDadoo(t *testing.T) {
 
 		if cgroups.IsCgroup2UnifiedMode() {
 			Expect(syscall.Unmount(filepath.Join(cgroupsRoot, gardencgroups.Unified), 0)).To(Succeed())
-		} else {
-			Expect(syscall.Unmount(cgroupsRoot, 0)).To(Succeed())
 		}
+		Expect(syscall.Unmount(cgroupsRoot, 0)).To(Succeed())
 		Expect(os.Remove(cgroupsRoot)).To(Succeed())
 	})
 
