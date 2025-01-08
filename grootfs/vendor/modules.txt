@@ -1,12 +1,12 @@
-# code.cloudfoundry.org/commandrunner v0.23.0
+# code.cloudfoundry.org/commandrunner v0.24.0
 ## explicit; go 1.22.0
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20241225021713-8fadc38d912f => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20250101021739-6d54e6402a7f => ../idmapper
 ## explicit; go 1.22.0
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.21.0
+# code.cloudfoundry.org/lager/v3 v3.22.0
 ## explicit; go 1.22.0
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
@@ -33,7 +33,7 @@ github.com/cloudfoundry/dropsonde/metric_sender
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/sonde-go v0.0.0-20241223073712-8666f251e654
+# github.com/cloudfoundry/sonde-go v0.0.0-20250107093625-3b887caf8df2
 ## explicit; go 1.18
 github.com/cloudfoundry/sonde-go/events
 # github.com/containers/image/v5 v5.33.0
@@ -227,15 +227,15 @@ github.com/ventu-io/go-shortid
 # github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1
 ## explicit; go 1.15
 github.com/xrash/smetrics
-# golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
+# golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
 ## explicit; go 1.22.0
 golang.org/x/exp/maps
-# golang.org/x/net v0.33.0
+# golang.org/x/net v0.34.0
 ## explicit; go 1.18
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
-# golang.org/x/sys v0.28.0
+# golang.org/x/sys v0.29.0
 ## explicit; go 1.18
 golang.org/x/sys/unix
 golang.org/x/sys/windows
@@ -258,11 +258,11 @@ golang.org/x/text/internal/utf8internal
 golang.org/x/text/language
 golang.org/x/text/runes
 golang.org/x/text/transform
-# golang.org/x/tools v0.28.0
+# golang.org/x/tools v0.29.0
 ## explicit; go 1.22.0
 golang.org/x/tools/cover
 golang.org/x/tools/go/ast/inspector
-# google.golang.org/protobuf v1.36.1
+# google.golang.org/protobuf v1.36.2
 ## explicit; go 1.21
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
