@@ -30,7 +30,7 @@ code.cloudfoundry.org/garden/transport
 # code.cloudfoundry.org/grootfs v0.30.0 => ../grootfs
 ## explicit; go 1.22.6
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20250101021739-6d54e6402a7f => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20250108023745-eb5c1eb1fdec => ../idmapper
 ## explicit; go 1.22.0
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.22.0
@@ -176,8 +176,8 @@ github.com/containerd/btrfs/v2
 # github.com/containerd/cgroups v1.1.0
 ## explicit; go 1.17
 github.com/containerd/cgroups/stats/v1
-# github.com/containerd/cgroups/v3 v3.0.3
-## explicit; go 1.18
+# github.com/containerd/cgroups/v3 v3.0.5
+## explicit; go 1.22.0
 github.com/containerd/cgroups/v3
 github.com/containerd/cgroups/v3/cgroup1
 github.com/containerd/cgroups/v3/cgroup1/stats
@@ -186,7 +186,7 @@ github.com/containerd/cgroups/v3/cgroup2/stats
 # github.com/containerd/console v1.0.4
 ## explicit; go 1.13
 github.com/containerd/console
-# github.com/containerd/containerd v1.7.24
+# github.com/containerd/containerd v1.7.25
 ## explicit; go 1.21
 github.com/containerd/containerd
 github.com/containerd/containerd/archive
@@ -440,6 +440,7 @@ github.com/containerd/containerd/api/services/transfer/v1
 github.com/containerd/containerd/api/services/ttrpc/events/v1
 github.com/containerd/containerd/api/services/version/v1
 github.com/containerd/containerd/api/types
+github.com/containerd/containerd/api/types/runc/options
 github.com/containerd/containerd/api/types/task
 github.com/containerd/containerd/api/types/transfer
 # github.com/containerd/continuity v0.4.5

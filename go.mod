@@ -18,14 +18,14 @@ require (
 	code.cloudfoundry.org/debugserver v0.32.0
 	code.cloudfoundry.org/garden v0.0.0-20250108022507-4d85c9b08b69
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250101021739-6d54e6402a7f
+	code.cloudfoundry.org/idmapper v0.0.0-20250108023745-eb5c1eb1fdec
 	code.cloudfoundry.org/lager/v3 v3.22.0
 	code.cloudfoundry.org/localip v0.26.0
 	github.com/BurntSushi/toml v1.4.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.83
-	github.com/containerd/cgroups/v3 v3.0.3
-	github.com/containerd/containerd v1.7.24
+	github.com/containerd/cgroups/v3 v3.0.5
+	github.com/containerd/containerd v1.7.25
 	github.com/containerd/containerd/api v1.8.0
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/typeurl/v2 v2.2.3
