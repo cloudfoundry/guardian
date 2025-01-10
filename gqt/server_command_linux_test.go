@@ -34,6 +34,10 @@ var _ = Describe("gdn server", func() {
 		})
 
 		Context("when we start the server again with the same IP and port", func() {
+			BeforeEach(func() {
+				config.StartupExpectedToFail = true
+			})
+
 			It("crashes", func() {
 				client := runner.Start(config)
 				Eventually(client).Should(gbytes.Say("listen tcp 127.0.0.1:54321: bind: address already in use"))

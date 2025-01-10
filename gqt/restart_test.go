@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 var _ = Describe("Surviving Restarts", func() {
@@ -394,10 +395,14 @@ var _ = Describe("Surviving Restarts", func() {
 				})
 
 				It("allows both OCI default and garden specific devices", func() {
+					if cgroups.IsCgroup2UnifiedMode() {
+						Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
+					}
+
 					cgroupPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), "devices", config.Tag, containerSpec.Privileged, cpuThrottlingEnabled())
 					Expect(err).NotTo(HaveOccurred())
 
-					content := readFileString(filepath.Join(cgroupPath, "devices.list"))
+					content := readFileString(filepath.Join(cgroupPath, container.Handle(), "devices.list"))
 					expectedAllowedDevices := []string{
 						"c 1:3 rwm",
 						"c 5:0 rwm",
@@ -405,7 +410,6 @@ var _ = Describe("Surviving Restarts", func() {
 						"c 1:9 rwm",
 						"c 1:5 rwm",
 						"c 1:7 rwm",
-						"c 10:229 rwm",
 						"c *:* m",
 						"b *:* m",
 						"c 136:* rwm",

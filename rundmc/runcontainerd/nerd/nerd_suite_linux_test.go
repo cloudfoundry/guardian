@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	cgrouputils "github.com/opencontainers/runc/libcontainer/cgroups"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
@@ -61,7 +62,9 @@ func TestNerd(t *testing.T) {
 
 var _ = SynchronizedBeforeSuite(func() []byte {
 	cgroupsPath = filepath.Join(os.TempDir(), "cgroups")
-	setupCgroups(cgroupsPath)
+	if !cgrouputils.IsCgroup2UnifiedMode() {
+		setupCgroups(cgroupsPath)
+	}
 	return nil
 }, func(_ []byte) {})
 
@@ -101,7 +104,9 @@ var _ = AfterEach(func() {
 })
 
 var _ = SynchronizedAfterSuite(func() {}, func() {
-	teardownCgroups(cgroupsPath)
+	if !cgrouputils.IsCgroup2UnifiedMode() {
+		teardownCgroups(cgroupsPath)
+	}
 })
 
 func setupCgroups(cgroupsRoot string) {

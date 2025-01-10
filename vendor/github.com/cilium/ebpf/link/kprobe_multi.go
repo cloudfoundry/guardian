@@ -60,7 +60,7 @@ func KprobeMulti(prog *ebpf.Program, opts KprobeMultiOptions) (Link, error) {
 //
 // Requires at least Linux 5.18.
 func KretprobeMulti(prog *ebpf.Program, opts KprobeMultiOptions) (Link, error) {
-	return kprobeMulti(prog, opts, unix.BPF_F_KPROBE_MULTI_RETURN)
+	return kprobeMulti(prog, opts, sys.BPF_F_KPROBE_MULTI_RETURN)
 }
 
 func kprobeMulti(prog *ebpf.Program, opts KprobeMultiOptions, flags uint32) (Link, error) {
@@ -80,10 +80,6 @@ func kprobeMulti(prog *ebpf.Program, opts KprobeMultiOptions, flags uint32) (Lin
 	}
 	if cookies > 0 && cookies != syms && cookies != addrs {
 		return nil, fmt.Errorf("Cookies must be exactly Symbols or Addresses in length: %w", errInvalidInput)
-	}
-
-	if err := haveBPFLinkKprobeMulti(); err != nil {
-		return nil, err
 	}
 
 	attr := &sys.LinkCreateKprobeMultiAttr{
@@ -113,7 +109,11 @@ func kprobeMulti(prog *ebpf.Program, opts KprobeMultiOptions, flags uint32) (Lin
 	if errors.Is(err, unix.EINVAL) {
 		return nil, fmt.Errorf("%w (missing kernel symbol or prog's AttachType not AttachTraceKprobeMulti?)", err)
 	}
+
 	if err != nil {
+		if haveFeatErr := haveBPFLinkKprobeMulti(); haveFeatErr != nil {
+			return nil, haveFeatErr
+		}
 		return nil, err
 	}
 
@@ -126,19 +126,30 @@ type kprobeMultiLink struct {
 
 var _ Link = (*kprobeMultiLink)(nil)
 
-func (kml *kprobeMultiLink) Update(prog *ebpf.Program) error {
+func (kml *kprobeMultiLink) Update(_ *ebpf.Program) error {
 	return fmt.Errorf("update kprobe_multi: %w", ErrNotSupported)
 }
 
-func (kml *kprobeMultiLink) Pin(string) error {
-	return fmt.Errorf("pin kprobe_multi: %w", ErrNotSupported)
+func (kml *kprobeMultiLink) Info() (*Info, error) {
+	var info sys.KprobeMultiLinkInfo
+	if err := sys.ObjInfo(kml.fd, &info); err != nil {
+		return nil, fmt.Errorf("kprobe multi link info: %s", err)
+	}
+	extra := &KprobeMultiInfo{
+		count:  info.Count,
+		flags:  info.Flags,
+		missed: info.Missed,
+	}
+
+	return &Info{
+		info.Type,
+		info.Id,
+		ebpf.ProgramID(info.ProgId),
+		extra,
+	}, nil
 }
 
-func (kml *kprobeMultiLink) Unpin() error {
-	return fmt.Errorf("unpin kprobe_multi: %w", ErrNotSupported)
-}
-
-var haveBPFLinkKprobeMulti = internal.NewFeatureTest("bpf_link_kprobe_multi", "5.18", func() error {
+var haveBPFLinkKprobeMulti = internal.NewFeatureTest("bpf_link_kprobe_multi", func() error {
 	prog, err := ebpf.NewProgram(&ebpf.ProgramSpec{
 		Name: "probe_kpm_link",
 		Type: ebpf.Kprobe,
@@ -177,4 +188,4 @@ var haveBPFLinkKprobeMulti = internal.NewFeatureTest("bpf_link_kprobe_multi", "5
 	fd.Close()
 
 	return nil
-})
+}, "5.18")
