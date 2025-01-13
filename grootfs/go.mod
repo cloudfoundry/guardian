@@ -9,11 +9,11 @@ require (
 	code.cloudfoundry.org/idmapper v0.0.0-20250108023745-eb5c1eb1fdec
 	code.cloudfoundry.org/lager/v3 v3.22.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/sonde-go v0.0.0-20250107093625-3b887caf8df2
+	github.com/cloudfoundry/sonde-go v0.0.0-20250113140334-595e96981704
 	github.com/containers/image/v5 v5.33.0
 	github.com/containers/storage v1.56.0
 	github.com/docker/distribution v2.8.3+incompatible
-	github.com/docker/docker v27.4.1+incompatible
+	github.com/docker/docker v27.5.0+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2

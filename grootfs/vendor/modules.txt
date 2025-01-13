@@ -33,7 +33,7 @@ github.com/cloudfoundry/dropsonde/metric_sender
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/sonde-go v0.0.0-20250107093625-3b887caf8df2
+# github.com/cloudfoundry/sonde-go v0.0.0-20250113140334-595e96981704
 ## explicit; go 1.18
 github.com/cloudfoundry/sonde-go/events
 # github.com/containers/image/v5 v5.33.0
@@ -107,7 +107,7 @@ github.com/distribution/reference
 github.com/docker/distribution/registry/api/errcode
 github.com/docker/distribution/registry/api/v2
 github.com/docker/distribution/registry/client/auth/challenge
-# github.com/docker/docker v27.4.1+incompatible
+# github.com/docker/docker v27.5.0+incompatible
 ## explicit
 github.com/docker/docker/api/types/versions
 github.com/docker/docker/pkg/system
