@@ -102,7 +102,7 @@ func (f *WindowsFactory) WireContainerd(processBuilder *processes.ProcBuilder, u
 }
 
 func (f *WindowsFactory) WireCPUCgrouper() (rundmc.CPUCgrouper, error) {
-	return cgroups.NoopCPUCgrouper{}, nil
+	return cgroups.DefaultCgrouper{}, nil
 }
 
 func (f *WindowsFactory) WireContainerNetworkMetricsProvider(_ gardener.Containerizer, _ gardener.PropertyManager) gardener.ContainerNetworkMetricsProvider {
@@ -162,6 +162,10 @@ func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
 
 func (cmd *CommonCommand) wireKernelParams() []rundmc.BundlerRule {
 	return []rundmc.BundlerRule{}
+}
+
+func (cmd *CommonCommand) getCgroupRootPath() string {
+	return "garden"
 }
 
 func (cmd *CommonCommand) computeRuncRoot() string {

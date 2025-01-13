@@ -18,7 +18,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 
 	uuid "github.com/nu7hatch/gouuid"
 )
@@ -57,7 +56,7 @@ var _ = Describe("Containerd", func() {
 			JustBeforeEach(func() {
 				var err error
 				var cgroupsPath string
-				if cgroups.IsCgroup2UnifiedMode() {
+				if gardencgroups.IsCgroup2UnifiedMode() {
 					cgroupsPath = filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", config.Tag), gardencgroups.Unified)
 				} else {
 					cgroupsPath = filepath.Join("/tmp", fmt.Sprintf("cgroups-%s", config.Tag), "freezer")
@@ -82,7 +81,7 @@ var _ = Describe("Containerd", func() {
 
 				freezerProcs := filepath.Join(freezerCgroupPath, "cgroup.procs")
 				Expect(os.WriteFile(freezerProcs, []byte(parentPid), 0755)).To(Succeed())
-				if cgroups.IsCgroup2UnifiedMode() {
+				if gardencgroups.IsCgroup2UnifiedMode() {
 					Expect(os.WriteFile(filepath.Join(freezerCgroupPath, "cgroup.freeze"), []byte("1"), 0755)).To(Succeed())
 
 					Eventually(func() string {
@@ -103,7 +102,7 @@ var _ = Describe("Containerd", func() {
 				}
 
 				defer func() {
-					if cgroups.IsCgroup2UnifiedMode() {
+					if gardencgroups.IsCgroup2UnifiedMode() {
 						Expect(os.WriteFile(filepath.Join(freezerCgroupPath, "cgroup.freeze"), []byte("0"), 0755)).To(Succeed())
 					} else {
 						Expect(os.WriteFile(filepath.Join(freezerCgroupPath, "freezer.state"), []byte("THAWED"), 0755)).To(Succeed())
@@ -574,7 +573,7 @@ var _ = Describe("Containerd", func() {
 			expectedMemoryCgroupPath := client.CgroupSubsystemPath("memory", container.Handle())
 			memoryLimitFile := "memory.limit_in_bytes"
 			memoryOOMControlFile := "memory.oom_control"
-			if cgroups.IsCgroup2UnifiedMode() {
+			if gardencgroups.IsCgroup2UnifiedMode() {
 				memoryLimitFile = "memory.max"
 				memoryOOMControlFile = "memory.oom.group"
 			}

@@ -21,11 +21,9 @@ import (
 )
 
 const (
-	Root       = "/sys/fs/cgroup"
-	Garden     = "garden"
-	Unified    = "unified"
-	InitCgroup = "init"
-	Header     = "#subsys_name hierarchy num_cgroups enabled"
+	Root   = "/sys/fs/cgroup"
+	Garden = "garden"
+	Header = "#subsys_name hierarchy num_cgroups enabled"
 )
 
 type CgroupsFormatError struct {

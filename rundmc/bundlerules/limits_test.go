@@ -5,11 +5,11 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 
 	"code.cloudfoundry.org/garden"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
+	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
@@ -37,7 +37,7 @@ var _ = Describe("LimitsRule", func() {
 
 	Context("cgroup v1", func() {
 		BeforeEach(func() {
-			if cgroups.IsCgroup2UnifiedMode() {
+			if gardencgroups.IsCgroup2UnifiedMode() {
 				Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
 			}
 		})
@@ -187,7 +187,7 @@ var _ = Describe("LimitsRule", func() {
 
 	Context("cgroup v2", func() {
 		BeforeEach(func() {
-			if !cgroups.IsCgroup2UnifiedMode() {
+			if !gardencgroups.IsCgroup2UnifiedMode() {
 				Skip("Skipping cgroups v2 tests when cgroups v1 is enabled")
 			}
 		})
@@ -236,7 +236,7 @@ var _ = Describe("LimitsRule", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(newBndl.Resources().Unified["cpu.weight"]).To(Equal(fmt.Sprintf("%d", cgroups.ConvertCPUSharesToCgroupV2Value(1))))
+			Expect(newBndl.Resources().Unified["cpu.weight"]).To(Equal(fmt.Sprintf("%d", gardencgroups.ConvertCPUSharesToCgroupV2Value(1))))
 			Expect(newBndl.Resources().Unified["cpu.max"]).To(Equal(""))
 		})
 
@@ -285,7 +285,7 @@ var _ = Describe("LimitsRule", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(newBndl.Resources().Unified["cpu.weight"]).To(Equal(fmt.Sprintf("%d", cgroups.ConvertCPUSharesToCgroupV2Value(1))))
+				Expect(newBndl.Resources().Unified["cpu.weight"]).To(Equal(fmt.Sprintf("%d", gardencgroups.ConvertCPUSharesToCgroupV2Value(1))))
 				Expect(newBndl.Resources().Unified["cpu.max"]).To(Equal(""))
 			})
 		})
@@ -312,7 +312,7 @@ var _ = Describe("LimitsRule", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(newBndl.Resources().Unified["cpu.weight"]).To(Equal(fmt.Sprintf("%d", cgroups.ConvertCPUSharesToCgroupV2Value(1))))
+				Expect(newBndl.Resources().Unified["cpu.weight"]).To(Equal(fmt.Sprintf("%d", gardencgroups.ConvertCPUSharesToCgroupV2Value(1))))
 				Expect(newBndl.Resources().Unified["cpu.max"]).To(Equal(""))
 			})
 		})
@@ -326,7 +326,7 @@ var _ = Describe("LimitsRule", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(newBndl.Resources().Unified["cpu.weight"]).To(Equal(fmt.Sprintf("%d", cgroups.ConvertCPUSharesToCgroupV2Value(2))))
+				Expect(newBndl.Resources().Unified["cpu.weight"]).To(Equal(fmt.Sprintf("%d", gardencgroups.ConvertCPUSharesToCgroupV2Value(2))))
 				Expect(newBndl.Resources().Unified["cpu.max"]).To(Equal(""))
 			})
 		})

@@ -46,7 +46,7 @@ import (
 	"code.cloudfoundry.org/localip"
 	"github.com/eapache/go-resiliency/retrier"
 	uuid "github.com/nu7hatch/gouuid"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
+
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -544,12 +544,7 @@ func (cmd *CommonCommand) wireContainerizer(
 		"unprivileged": unprivilegedBundle,
 	})
 
-	cgroupRootPath := "garden"
-	if cgroups.IsCgroup2UnifiedMode() {
-		// For cgroups v2 runc will append extra slice if path is not absolute
-		// See github.com/opencontainers/runc/libcontainer/cgroups/fs2/fs2.go#NewManager
-		cgroupRootPath = "/garden"
-	}
+	cgroupRootPath := cmd.getCgroupRootPath()
 
 	if cmd.Server.Tag != "" {
 		cgroupRootPath = fmt.Sprintf("%s-%s", cgroupRootPath, cmd.Server.Tag)

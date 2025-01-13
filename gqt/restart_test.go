@@ -15,12 +15,12 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	uuid "github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 var _ = Describe("Surviving Restarts", func() {
@@ -395,7 +395,7 @@ var _ = Describe("Surviving Restarts", func() {
 				})
 
 				It("allows both OCI default and garden specific devices", func() {
-					if cgroups.IsCgroup2UnifiedMode() {
+					if gardencgroups.IsCgroup2UnifiedMode() {
 						Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
 					}
 

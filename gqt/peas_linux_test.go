@@ -15,7 +15,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 var _ = Describe("Partially shared containers (peas)", func() {
@@ -190,7 +189,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 
 			Context("cgroups v2", func() {
 				BeforeEach(func() {
-					if !cgroups.IsCgroup2UnifiedMode() {
+					if !gardencgroups.IsCgroup2UnifiedMode() {
 						Skip("Skipping cgroups v2 tests when cgroups v1 is enabled")
 					}
 				})
@@ -255,7 +254,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 
 			Context("cgroups v1", func() {
 				BeforeEach(func() {
-					if cgroups.IsCgroup2UnifiedMode() {
+					if gardencgroups.IsCgroup2UnifiedMode() {
 						Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
 					}
 				})

@@ -15,7 +15,6 @@ import (
 	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 var _ = Describe("throttle tests", func() {
@@ -72,7 +71,7 @@ var _ = Describe("throttle tests", func() {
 	It("will create both a good and a bad cgroup for that container", func() {
 		goodCgroupPath := ensureInCgroup(gardencgroups.GoodCgroupName)
 		badCgroup := strings.Replace(goodCgroupPath, gardencgroups.GoodCgroupName, gardencgroups.BadCgroupName, 1)
-		if cgroups.IsCgroup2UnifiedMode() {
+		if gardencgroups.IsCgroup2UnifiedMode() {
 			// only main process is moved to bad cgroup, other peas are left in good cgroup
 			// in cgroups v2 main process is in init folder
 			badCgroup = strings.TrimSuffix(badCgroup, "init")
@@ -92,7 +91,7 @@ var _ = Describe("throttle tests", func() {
 		badCgroupPath := ensureInCgroup(gardencgroups.BadCgroupName)
 
 		cpuSharesFile := "cpu.shares"
-		if cgroups.IsCgroup2UnifiedMode() {
+		if gardencgroups.IsCgroup2UnifiedMode() {
 			cpuSharesFile = "cpu.weight"
 		}
 		goodShares := readCgroupFile(goodCgroupPath, cpuSharesFile)
@@ -120,7 +119,7 @@ var _ = Describe("throttle tests", func() {
 		ensureInCgroup(gardencgroups.BadCgroupName)
 
 		var goodCgroupUsage int64
-		if cgroups.IsCgroup2UnifiedMode() {
+		if gardencgroups.IsCgroup2UnifiedMode() {
 			goodCgroupUsage = readCgroupV2CPUUsage(goodCgroupPath)
 		} else {
 			goodCgroupUsage = readCgroupFile(goodCgroupPath, "cpuacct.usage")
@@ -188,7 +187,7 @@ func httpGet(url string) (string, error) {
 
 func getAbsoluteCPUCgroupPath(tag, cgroupSubPath string) string {
 	cgroupMountpoint := fmt.Sprintf("/tmp/cgroups-%s", tag)
-	if cgroups.IsCgroup2UnifiedMode() {
+	if gardencgroups.IsCgroup2UnifiedMode() {
 		return filepath.Join(cgroupMountpoint, gardencgroups.Unified, cgroupSubPath)
 	}
 	return filepath.Join(cgroupMountpoint, "cpu", cgroupSubPath)

@@ -12,7 +12,6 @@ import (
 	"code.cloudfoundry.org/guardian/sysinfo"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 var _ = Describe("CPU shares rebalancing", func() {
@@ -42,10 +41,10 @@ var _ = Describe("CPU shares rebalancing", func() {
 		badCgroupPath = filepath.Join(goodCgroupPath, "..", "bad")
 		cpuSharesFile = "cpu.shares"
 		badWeight = 2
-		if cgroups.IsCgroup2UnifiedMode() {
+		if gardencgroups.IsCgroup2UnifiedMode() {
 			cpuSharesFile = "cpu.weight"
-			goodWeight = int64(cgroups.ConvertCPUSharesToCgroupV2Value(1024))
-			badWeight = int64(cgroups.ConvertCPUSharesToCgroupV2Value(2))
+			goodWeight = int64(gardencgroups.ConvertCPUSharesToCgroupV2Value(1024))
+			badWeight = int64(gardencgroups.ConvertCPUSharesToCgroupV2Value(2))
 		}
 	})
 
@@ -70,8 +69,8 @@ var _ = Describe("CPU shares rebalancing", func() {
 			Eventually(func() int64 { return readCgroupFile(badCgroupPath, cpuSharesFile) }).Should(Equal(badWeight))
 			goodCgroupInitialShares = readCgroupFile(goodCgroupPath, cpuSharesFile)
 			containerWeight = 1000
-			if cgroups.IsCgroup2UnifiedMode() {
-				containerWeight = int64(cgroups.ConvertCPUSharesToCgroupV2Value(1000))
+			if gardencgroups.IsCgroup2UnifiedMode() {
+				containerWeight = int64(gardencgroups.ConvertCPUSharesToCgroupV2Value(1000))
 			}
 
 			var err error
@@ -103,7 +102,7 @@ var _ = Describe("CPU shares rebalancing", func() {
 
 			It("redistributes the container shares to the bad cgroup", func() {
 				Eventually(func() int64 { return readCgroupFile(goodCgroupPath, cpuSharesFile) }).Should(Equal(int64(goodCgroupInitialShares - (containerWeight - badWeight))))
-				if cgroups.IsCgroup2UnifiedMode() {
+				if gardencgroups.IsCgroup2UnifiedMode() {
 					// rounding errors when converting between cgroups v2 weight and cgroups v1 shares
 					Eventually(func() int64 { return readCgroupFile(badCgroupPath, cpuSharesFile) }).Should(BeNumerically("~", containerWeight, 1))
 				} else {
@@ -119,7 +118,7 @@ var _ = Describe("CPU shares rebalancing", func() {
 
 				It("redistributes the container shares to the good cgroup", func() {
 					Eventually(func() int64 { return readCgroupFile(goodCgroupPath, cpuSharesFile) }).Should(Equal(goodCgroupInitialShares))
-					if cgroups.IsCgroup2UnifiedMode() {
+					if gardencgroups.IsCgroup2UnifiedMode() {
 						// rounding errors when converting between cgroups v2 weight and cgroups v1 shares
 						Eventually(func() int64 { return readCgroupFile(badCgroupPath, cpuSharesFile) }).Should(BeNumerically("~", int64(2), 1))
 					} else {
@@ -142,8 +141,8 @@ var _ = Describe("CPU shares rebalancing", func() {
 				})
 
 				It("sets the bad cgroup shares proportionally", func() {
-					if cgroups.IsCgroup2UnifiedMode() {
-						Eventually(func() int64 { return readCgroupFile(badCgroupPath, cpuSharesFile) }, "5s").Should(BeNumerically("~", int64(cgroups.ConvertCPUSharesToCgroupV2Value(2000)), 1))
+					if gardencgroups.IsCgroup2UnifiedMode() {
+						Eventually(func() int64 { return readCgroupFile(badCgroupPath, cpuSharesFile) }, "5s").Should(BeNumerically("~", int64(gardencgroups.ConvertCPUSharesToCgroupV2Value(2000)), 1))
 					} else {
 						Eventually(func() int64 { return readCgroupFile(badCgroupPath, cpuSharesFile) }, "5s").Should(BeNumerically("~", 2000, 1))
 					}

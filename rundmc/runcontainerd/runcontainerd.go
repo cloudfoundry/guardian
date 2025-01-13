@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"code.cloudfoundry.org/guardian/rundmc"
-	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -20,7 +19,6 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 	apievents "github.com/containerd/containerd/api/events"
 	uuid "github.com/nu7hatch/gouuid"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -128,8 +126,9 @@ func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pi
 	updateAnnotationsIfNeeded(&bundle)
 	log.Debug("Annotations after update", lager.Data{"id": id, "Annotations": bundle.Spec.Annotations})
 
-	err := r.updateResourcesIfNeeded(log, id, &bundle)
+	err := r.cgroupManager.SetUnifiedResources(bundle)
 	if err != nil {
+		log.Error("failed-to-set-unified-resources", err)
 		return err
 	}
 	containerRootUID := idmapper.MappingList(bundle.Spec.Linux.UIDMappings).Map(0)
@@ -145,22 +144,6 @@ func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pi
 		return r.cgroupManager.SetUseMemoryHierarchy(id)
 	}
 
-	return nil
-}
-
-func (r *RunContainerd) updateResourcesIfNeeded(log lager.Logger, id string, bundle *goci.Bndl) error {
-	if bundle.Spec.Linux.CgroupsPath != "" && bundle.Spec.Annotations["container-type"] == "garden-init" && cgroups.IsCgroup2UnifiedMode() {
-		// In cgroups v2 we move init process to "init" child cgroup
-		// and set resources manually on parent cgroup
-		newCgroupPath := filepath.Join(bundle.Spec.Linux.CgroupsPath, gardencgroups.InitCgroup)
-		log.Debug("Updating cgroup path for garden-init container", lager.Data{"id": id, "path": newCgroupPath})
-		err := r.cgroupManager.SetUnifiedResources(*bundle)
-		if err != nil {
-			log.Error("failed-to-set-unified-resources", err)
-			return err
-		}
-		bundle.Spec.Linux.CgroupsPath = newCgroupPath
-	}
 	return nil
 }
 

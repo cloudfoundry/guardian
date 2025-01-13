@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
-
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 func GetCGroupPath(cgroupsRootPath, subsystem, tag string, privileged, throttlingCPU bool) (string, error) {
@@ -28,7 +26,7 @@ func GetCGroupPath(cgroupsRootPath, subsystem, tag string, privileged, throttlin
 		parentCgroup = ""
 	}
 
-	if cgroups.IsCgroup2UnifiedMode() {
+	if gardencgroups.IsCgroup2UnifiedMode() {
 		return filepath.Join(cgroupsRootPath, gardencgroups.Unified, parentCgroup), nil
 	}
 

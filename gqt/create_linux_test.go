@@ -16,6 +16,7 @@ import (
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"code.cloudfoundry.org/guardian/guardiancmd"
+	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/sysctl"
 
 	. "code.cloudfoundry.org/guardian/matchers"
@@ -23,7 +24,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 var _ = Describe("Creating a Container", func() {
@@ -46,7 +46,7 @@ var _ = Describe("Creating a Container", func() {
 	})
 
 	It("has the expected device list allowed", func() {
-		if cgroups.IsCgroup2UnifiedMode() {
+		if gardencgroups.IsCgroup2UnifiedMode() {
 			Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
 		}
 
@@ -395,7 +395,7 @@ var _ = Describe("Creating a Container", func() {
 
 		getContainerCPUShares := func(container garden.Container) int {
 			cpuSharesFile := "cpu.shares"
-			if cgroups.IsCgroup2UnifiedMode() {
+			if gardencgroups.IsCgroup2UnifiedMode() {
 				cpuSharesFile = "cpu.weight"
 			}
 			cpuSharesPath := filepath.Join(client.CgroupSubsystemPath("cpu", container.Handle()), cpuSharesFile)
@@ -407,7 +407,7 @@ var _ = Describe("Creating a Container", func() {
 
 		Context("cgroups v1", func() {
 			BeforeEach(func() {
-				if cgroups.IsCgroup2UnifiedMode() {
+				if gardencgroups.IsCgroup2UnifiedMode() {
 					Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
 				}
 			})
@@ -450,7 +450,7 @@ var _ = Describe("Creating a Container", func() {
 
 		Context("cgroups v2", func() {
 			BeforeEach(func() {
-				if !cgroups.IsCgroup2UnifiedMode() {
+				if !gardencgroups.IsCgroup2UnifiedMode() {
 					Skip("Skipping cgroups v2 tests when cgroups v1 is enabled")
 				}
 			})

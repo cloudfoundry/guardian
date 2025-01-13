@@ -261,6 +261,15 @@ func (cmd *CommonCommand) wireKernelParams() []rundmc.BundlerRule {
 	}
 }
 
+func (cmd *CommonCommand) getCgroupRootPath() string {
+	if cgroups.IsCgroup2UnifiedMode() {
+		// For cgroups v2 runc will append extra slice if path is not absolute
+		// See github.com/opencontainers/runc/libcontainer/cgroups/fs2/fs2.go#NewManager
+		return "/garden"
+	}
+	return "garden"
+}
+
 func containerdRuncRoot() string {
 	if root := getRuntimeDir(); root != "" {
 		return root

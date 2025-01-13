@@ -10,11 +10,11 @@ import (
 
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	rundmccgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 var _ = Describe("gdn setup", func() {
@@ -63,7 +63,7 @@ var _ = Describe("gdn setup", func() {
 
 	Describe("cgroups", func() {
 		It("sets up cgroups", func() {
-			if cgroups.IsCgroup2UnifiedMode() {
+			if gardencgroups.IsCgroup2UnifiedMode() {
 				Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
 			}
 			mountpointCmd := exec.Command("mountpoint", "-q", cgroupsRoot+"/")
@@ -74,7 +74,7 @@ var _ = Describe("gdn setup", func() {
 		})
 
 		It("allows both OCI default and garden specific devices", func() {
-			if cgroups.IsCgroup2UnifiedMode() {
+			if gardencgroups.IsCgroup2UnifiedMode() {
 				Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
 			}
 

@@ -9,10 +9,10 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
 var _ = Describe("Info", func() {
@@ -110,7 +110,7 @@ var _ = Describe("Info", func() {
 			expectedMemoryCgroupPath := client.CgroupSubsystemPath("memory", container.Handle())
 			memoryLimitFile := "memory.limit_in_bytes"
 			memoryOOMControlFile := "memory.oom_control"
-			if cgroups.IsCgroup2UnifiedMode() {
+			if gardencgroups.IsCgroup2UnifiedMode() {
 				memoryLimitFile = "memory.max"
 				memoryOOMControlFile = "memory.oom.group"
 			}
