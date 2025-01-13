@@ -432,19 +432,6 @@ func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.Actua
 	return actualContainerMetrics, nil
 }
 
-func (c *Containerizer) readTotalCgroupUsage(handle string, containerCPUStats garden.ContainerCPUStat) (garden.ContainerCPUStat, error) {
-	totalCpuStats, err := c.cpuCgrouper.ReadTotalCgroupUsage(handle, containerCPUStats)
-	if err == nil {
-		return totalCpuStats, nil
-	}
-
-	if os.IsNotExist(err) {
-		return garden.ContainerCPUStat{}, nil
-	}
-
-	return garden.ContainerCPUStat{}, err
-}
-
 func (c *Containerizer) Shutdown() error {
 	return c.runtimeStopper.Stop()
 }

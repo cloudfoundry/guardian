@@ -18,9 +18,9 @@ import (
 	"code.cloudfoundry.org/lager/v3"
 	"github.com/containerd/containerd"
 	apievents "github.com/containerd/containerd/api/events"
+	api "github.com/containerd/containerd/api/types/runc/options"
 	"github.com/containerd/containerd/cio"
 	ctrdevents "github.com/containerd/containerd/events"
-	v2types "github.com/containerd/containerd/runtime/v2/runc/options"
 	"github.com/containerd/errdefs"
 	"github.com/containerd/typeurl/v2"
 
@@ -431,7 +431,7 @@ func (n *Nerd) RemoveBundle(log lager.Logger, handle string) error {
 
 func WithUIDAndGID(uid, gid uint32) containerd.NewTaskOpts {
 	return func(ctx context.Context, c *containerd.Client, ti *containerd.TaskInfo) error {
-		return updateTaskInfoCreateOptions(ti, func(opts *v2types.Options) error {
+		return updateTaskInfoCreateOptions(ti, func(opts *api.Options) error {
 			opts.IoUid = uid
 			opts.IoGid = gid
 			return nil
@@ -439,11 +439,11 @@ func WithUIDAndGID(uid, gid uint32) containerd.NewTaskOpts {
 	}
 }
 
-func updateTaskInfoCreateOptions(taskInfo *containerd.TaskInfo, updateCreateOptions func(createOptions *v2types.Options) error) error {
+func updateTaskInfoCreateOptions(taskInfo *containerd.TaskInfo, updateCreateOptions func(createOptions *api.Options) error) error {
 	if taskInfo.Options == nil {
-		taskInfo.Options = &v2types.Options{}
+		taskInfo.Options = &api.Options{}
 	}
-	opts, ok := taskInfo.Options.(*v2types.Options)
+	opts, ok := taskInfo.Options.(*api.Options)
 
 	if !ok {
 		return errors.New("could not cast TaskInfo Options to CreateOptions")
