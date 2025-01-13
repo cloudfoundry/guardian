@@ -50,7 +50,7 @@ func (c CPUCgroupEnforcer) Punish(logger lager.Logger, handle string) error {
 	badContainerCgroupPath := filepath.Join(c.badCgroupPath, handle)
 
 	// in cgroups v2 containerd garden-init process is added to init cgroup
-	goodInitCgroupPath := filepath.Join(goodContainerCgroupPath, gardencgroups.InitCgroup)
+	goodInitCgroupPath := filepath.Join(goodContainerCgroupPath, gardencgroups.InitCgroupName)
 	if exists(logger, goodInitCgroupPath) {
 		if err := c.copyShares(goodInitCgroupPath, badContainerCgroupPath); err != nil {
 			return err
@@ -88,7 +88,7 @@ func (c CPUCgroupEnforcer) Release(logger lager.Logger, handle string) error {
 	goodContainerCgroupPath := filepath.Join(c.goodCgroupPath, handle)
 
 	// in cgroups v2 containerd garden-init process is added to init cgroup
-	goodInitCgroupPath := filepath.Join(goodContainerCgroupPath, gardencgroups.InitCgroup)
+	goodInitCgroupPath := filepath.Join(goodContainerCgroupPath, gardencgroups.InitCgroupName)
 	if exists(logger, goodInitCgroupPath) {
 		if err := c.movePids(badContainerCgroupPath, goodInitCgroupPath); err != nil {
 			return err
