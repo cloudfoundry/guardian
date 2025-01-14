@@ -11,7 +11,6 @@ import (
 	"code.cloudfoundry.org/guardian/gqt/cgrouper"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
-	rundmccgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -114,13 +113,13 @@ var _ = Describe("gdn setup", func() {
 				path, err := cgrouper.GetCGroupPath(cgroupsRoot, "cpu", tag, false, cpuThrottlingEnabled())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(path).To(BeADirectory())
-				Expect(filepath.Base(path)).To(Equal(rundmccgroups.GoodCgroupName))
+				Expect(filepath.Base(path)).To(Equal(gardencgroups.GoodCgroupName))
 			})
 
 			It("creates the bad cpu cgroup", func() {
 				path, err := cgrouper.GetCGroupPath(cgroupsRoot, "cpu", tag, false, cpuThrottlingEnabled())
 				Expect(err).NotTo(HaveOccurred())
-				badCgroupPath := filepath.Join(path, "..", rundmccgroups.BadCgroupName)
+				badCgroupPath := filepath.Join(path, "..", gardencgroups.BadCgroupName)
 				Expect(badCgroupPath).To(BeADirectory())
 			})
 		})
