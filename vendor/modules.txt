@@ -544,9 +544,6 @@ github.com/davecgh/go-spew/spew
 # github.com/distribution/reference v0.6.0
 ## explicit; go 1.20
 github.com/distribution/reference
-# github.com/docker/docker v27.5.0+incompatible
-## explicit
-github.com/docker/docker/pkg/reexec
 # github.com/docker/go-events v0.0.0-20241114183025-9940093291f5
 ## explicit
 github.com/docker/go-events
