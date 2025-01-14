@@ -13,7 +13,7 @@ import (
 	fakes "code.cloudfoundry.org/guardian/gardener/gardenerfakes"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
-	"github.com/docker/docker/pkg/reexec"
+	"github.com/moby/sys/reexec"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/vishvananda/netlink"

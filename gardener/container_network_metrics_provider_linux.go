@@ -11,7 +11,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/kawasaki/netns"
 	"code.cloudfoundry.org/lager/v3"
-	"github.com/docker/docker/pkg/reexec"
+	"github.com/moby/sys/reexec"
 	"github.com/vishvananda/netlink"
 )
 

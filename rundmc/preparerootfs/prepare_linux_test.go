@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
-	"github.com/docker/docker/pkg/reexec"
+	"github.com/moby/sys/reexec"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"

@@ -13,7 +13,7 @@ import (
 	"code.cloudfoundry.org/guardian/kawasaki/netns"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
-	"github.com/docker/docker/pkg/reexec"
+	"github.com/moby/sys/reexec"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/docker/docker/pkg/reexec"
+	"github.com/moby/sys/reexec"
 
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/kawasaki/devices"
