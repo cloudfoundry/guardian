@@ -115,7 +115,7 @@ func (b Bndl) WithBlockIO(blockIO specs.LinuxBlockIO) Bndl {
 }
 
 func (b Bndl) WithCPUShares(shares specs.LinuxCPU) Bndl {
-	b.setCPUShares(shares)
+	b = b.setCPUShares(shares)
 	return b
 }
 
@@ -132,7 +132,7 @@ func (b Bndl) WithWindowsCPUShares(shares specs.WindowsCPUResources) Bndl {
 }
 
 func (b Bndl) WithMemoryLimit(limit specs.LinuxMemory) Bndl {
-	b.setMemoryLimit(limit)
+	b = b.setMemoryLimit(limit)
 	return b
 }
 
