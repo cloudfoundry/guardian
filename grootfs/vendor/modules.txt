@@ -36,7 +36,7 @@ github.com/cloudfoundry/dropsonde/runtime_stats
 # github.com/cloudfoundry/sonde-go v0.0.0-20250113140334-595e96981704
 ## explicit; go 1.18
 github.com/cloudfoundry/sonde-go/events
-# github.com/containers/image/v5 v5.33.0
+# github.com/containers/image/v5 v5.33.1
 ## explicit; go 1.22.6
 github.com/containers/image/v5/directory/explicitfilepath
 github.com/containers/image/v5/docker
@@ -262,7 +262,7 @@ golang.org/x/text/transform
 ## explicit; go 1.22.0
 golang.org/x/tools/cover
 golang.org/x/tools/go/ast/inspector
-# google.golang.org/protobuf v1.36.2
+# google.golang.org/protobuf v1.36.3
 ## explicit; go 1.21
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
