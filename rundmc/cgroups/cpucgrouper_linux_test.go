@@ -27,8 +27,12 @@ var _ = Describe("Rundmc/Cgroups/Cpucgrouper", func() {
 
 	Context("bad cgroup", func() {
 		BeforeEach(func() {
+			cgroupsRoot := ""
+			if cgroups.IsCgroup2UnifiedMode() {
+				cgroupsRoot = cgroups.Root
+			}
 			var err error
-			rootPath, err = os.MkdirTemp(cgroups.Root, "garden")
+			rootPath, err = os.MkdirTemp(cgroupsRoot, "garden")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
