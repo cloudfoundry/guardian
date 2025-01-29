@@ -5,15 +5,15 @@ go 1.22.6
 toolchain go1.23.3
 
 require (
-	code.cloudfoundry.org/commandrunner v0.25.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250108023745-eb5c1eb1fdec
-	code.cloudfoundry.org/lager/v3 v3.23.0
+	code.cloudfoundry.org/commandrunner v0.26.0
+	code.cloudfoundry.org/idmapper v0.0.0-20250122022041-8b886aaebab0
+	code.cloudfoundry.org/lager/v3 v3.24.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/sonde-go v0.0.0-20250120125159-edcf91eb21e5
+	github.com/cloudfoundry/sonde-go v0.0.0-20250127102140-78b0e7da13b3
 	github.com/containers/image/v5 v5.33.1
 	github.com/containers/storage v1.56.1
 	github.com/docker/distribution v2.8.3+incompatible
-	github.com/docker/docker v27.5.0+incompatible
+	github.com/docker/docker v27.5.1+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
@@ -25,7 +25,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.5
 	github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125
 	golang.org/x/sys v0.29.0
-	google.golang.org/protobuf v1.36.3
+	google.golang.org/protobuf v1.36.4
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -40,7 +40,7 @@ require (
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/pprof v0.0.0-20250121033306-997b0b79cac0 // indirect
+	github.com/google/pprof v0.0.0-20250128161936-077ca0a936bf // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/moby/sys/capability v0.4.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
@@ -51,7 +51,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8 // indirect
+	golang.org/x/exp v0.0.0-20250128182459-e0ece0dbea4c // indirect
 	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/tools v0.29.0 // indirect
