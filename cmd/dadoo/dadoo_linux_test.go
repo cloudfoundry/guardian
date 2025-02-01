@@ -617,6 +617,25 @@ var _ = Describe("Dadoo", func() {
 			})
 		})
 
+		Describe("exec", func() {
+			BeforeEach(func() {
+				mode = "exec"
+			})
+
+			JustBeforeEach(func() {
+				// hangs if GinkgoWriter is attached
+				cmd := exec.Command("runc", "create", "--no-new-keyring", "--bundle", bundlePath, filepath.Base(bundlePath))
+				Expect(cmd.Run()).To(Succeed())
+			})
+
+			AfterEach(func() {
+				cmd := exec.Command("runc", "delete", "-f", filepath.Base(bundlePath))
+				Expect(cmd.Run()).To(Succeed())
+			})
+
+			itRunsRunc()
+		})
+
 		Describe("run", func() {
 			BeforeEach(func() {
 				mode = "run"
