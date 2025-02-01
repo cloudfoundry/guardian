@@ -581,21 +581,12 @@ var _ = Describe("Dadoo", func() {
 					var err error
 					runcRoot, err = os.MkdirTemp("", "")
 					Expect(err).NotTo(HaveOccurred())
-				})
-
-				JustBeforeEach(func() {
-					//This Deletion is to clean up the pid namspace from the other tests
-					// hangs if GinkgoWriter is attached
-					cmdDelete := exec.Command("runc", "delete", "-f", filepath.Base(bundlePath))
-					Expect(cmdDelete.Run()).To(Succeed())
 
 					// hangs if GinkgoWriter is attached
 					runcCmd = exec.Command("runc", "--root", runcRoot, "create", "--no-new-keyring", "--bundle", bundlePath, filepath.Base(bundlePath))
 				})
 
 				AfterEach(func() {
-					cmd := exec.Command("runc", "--root", runcRoot, "delete", "-f", filepath.Base(bundlePath))
-					Expect(cmd.Run()).To(Succeed())
 					Expect(os.RemoveAll(runcRoot)).To(Succeed())
 				})
 
