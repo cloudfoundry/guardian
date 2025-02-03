@@ -1,17 +1,17 @@
 module code.cloudfoundry.org/grootfs
 
-go 1.22.6
+go 1.22.8
 
-toolchain go1.23.3
+toolchain go1.23.4
 
 require (
 	code.cloudfoundry.org/commandrunner v0.26.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250122022041-8b886aaebab0
+	code.cloudfoundry.org/idmapper v0.0.0-20250129022123-80cea2905ac0
 	code.cloudfoundry.org/lager/v3 v3.24.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20250127102140-78b0e7da13b3
-	github.com/containers/image/v5 v5.33.1
-	github.com/containers/storage v1.56.1
+	github.com/containers/image/v5 v5.34.0
+	github.com/containers/storage v1.57.1
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/docker/go-units v0.5.0
@@ -40,7 +40,7 @@ require (
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/pprof v0.0.0-20250128161936-077ca0a936bf // indirect
+	github.com/google/pprof v0.0.0-20250202011525-fc3143867406 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/moby/sys/capability v0.4.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
