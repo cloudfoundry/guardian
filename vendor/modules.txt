@@ -5,7 +5,7 @@ code.cloudfoundry.org/archiver/extractor/test_helper
 ## explicit; go 1.22.0
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
-# code.cloudfoundry.org/commandrunner v0.26.0
+# code.cloudfoundry.org/commandrunner v0.27.0
 ## explicit; go 1.22.0
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
@@ -30,7 +30,7 @@ code.cloudfoundry.org/garden/transport
 # code.cloudfoundry.org/grootfs v0.30.0 => ../grootfs
 ## explicit; go 1.22.8
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20250203211812-f8b8b26145cc => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20250204164708-dd14aea30dc4 => ../idmapper
 ## explicit; go 1.22.0
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.25.0
