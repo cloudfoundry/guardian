@@ -3,7 +3,7 @@
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20250204164708-dd14aea30dc4 => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20250212022334-ae0a1389958b => ../idmapper
 ## explicit; go 1.22.0
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.26.0
@@ -33,7 +33,7 @@ github.com/cloudfoundry/dropsonde/metric_sender
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/sonde-go v0.0.0-20250211080004-ff2843c4063b
+# github.com/cloudfoundry/sonde-go v0.0.0-20250217093333-7351ffed9384
 ## explicit; go 1.18
 github.com/cloudfoundry/sonde-go/events
 # github.com/containers/image/v5 v5.34.0
@@ -227,8 +227,8 @@ github.com/ventu-io/go-shortid
 # github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1
 ## explicit; go 1.15
 github.com/xrash/smetrics
-# golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac
-## explicit; go 1.22.0
+# golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa
+## explicit; go 1.23.0
 golang.org/x/exp/maps
 # golang.org/x/net v0.35.0
 ## explicit; go 1.18

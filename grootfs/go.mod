@@ -1,15 +1,15 @@
 module code.cloudfoundry.org/grootfs
 
-go 1.22.8
+go 1.23.0
 
-toolchain go1.23.4
+toolchain go1.23.6
 
 require (
 	code.cloudfoundry.org/commandrunner v0.28.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250204164708-dd14aea30dc4
+	code.cloudfoundry.org/idmapper v0.0.0-20250212022334-ae0a1389958b
 	code.cloudfoundry.org/lager/v3 v3.26.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/sonde-go v0.0.0-20250211080004-ff2843c4063b
+	github.com/cloudfoundry/sonde-go v0.0.0-20250217093333-7351ffed9384
 	github.com/containers/image/v5 v5.34.0
 	github.com/containers/storage v1.57.1
 	github.com/docker/distribution v2.8.3+incompatible
@@ -51,7 +51,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac // indirect
+	golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/tools v0.30.0 // indirect
