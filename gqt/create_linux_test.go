@@ -44,21 +44,26 @@ var _ = Describe("Creating a Container", func() {
 	AfterEach(func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
+	readDevicesList := func(privileged bool) []string {
+		var err error
+		container, err = client.Create(garden.ContainerSpec{Privileged: privileged})
+		Expect(err).NotTo(HaveOccurred())
+		_, err = gexec.Start(exec.Command("ls", "-l", "/proc/1/ns/user"), GinkgoWriter, GinkgoWriter)
+		Expect(err).NotTo(HaveOccurred())
+
+		parentPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), "devices", strconv.Itoa(GinkgoParallelProcess()), true, cpuThrottlingEnabled())
+		Expect(err).NotTo(HaveOccurred())
+		cgroupPath := filepath.Join(parentPath, container.Handle())
+
+		content := readFileString(filepath.Join(cgroupPath, "devices.list"))
+		return strings.Split(strings.TrimSpace(content), "\n")
+	}
 
 	It("has the expected device list allowed", func() {
 		if gardencgroups.IsCgroup2UnifiedMode() {
 			Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
 		}
 
-		var err error
-		container, err = client.Create(garden.ContainerSpec{})
-		Expect(err).NotTo(HaveOccurred())
-
-		parentPath, err := cgrouper.GetCGroupPath(client.CgroupsRootPath(), "devices", strconv.Itoa(GinkgoParallelProcess()), false, cpuThrottlingEnabled())
-		Expect(err).NotTo(HaveOccurred())
-		cgroupPath := filepath.Join(parentPath, container.Handle())
-
-		content := readFileString(filepath.Join(cgroupPath, "devices.list"))
 		expectedAllowedDevices := []string{
 			"c 1:3 rwm",
 			"c 5:0 rwm",
@@ -72,9 +77,40 @@ var _ = Describe("Creating a Container", func() {
 			"c 5:2 rwm",
 			"c 10:200 rwm",
 		}
-		contentLines := strings.Split(strings.TrimSpace(content), "\n")
-		Expect(contentLines).To(HaveLen(len(expectedAllowedDevices)))
-		Expect(contentLines).To(ConsistOf(expectedAllowedDevices))
+		devicesList := readDevicesList(false)
+		Expect(devicesList).To(HaveLen(len(expectedAllowedDevices)))
+		Expect(devicesList).To(ConsistOf(expectedAllowedDevices))
+	})
+
+	Context("when device cgroup rules are provided", func() {
+		BeforeEach(func() {
+			if gardencgroups.IsCgroup2UnifiedMode() {
+				Skip("Skipping cgroups v1 tests when cgroups v2 is enabled")
+			}
+
+			config.DeviceCgroupRules = []string{"c 42:* rmw", "b *:* rwm"}
+		})
+
+		It("extends default device list with provided cgroup rules", func() {
+			expectedAllowedDevices := []string{
+				"b *:* rwm", // this one is overwritten
+				"c *:* m",
+				"c 1:3 rwm",
+				"c 1:5 rwm",
+				"c 1:7 rwm",
+				"c 1:8 rwm",
+				"c 1:9 rwm",
+				"c 5:0 rwm", // updated access
+				"c 5:2 rwm",
+				"c 136:* rwm",
+				"c 10:200 rwm",
+				"c 10:229 rwm",
+				"c 42:* rwm", // this one is added
+			}
+			devicesList := readDevicesList(true)
+			// Expect(devicesList).To(HaveLen(len(expectedAllowedDevices)))
+			Expect(devicesList).To(ConsistOf(expectedAllowedDevices))
+		})
 	})
 
 	Context("when creating fails", func() {

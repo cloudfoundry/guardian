@@ -270,6 +270,26 @@ func (cmd *CommonCommand) getCgroupRootPath() string {
 	return "garden"
 }
 
+func (cmd *CommonCommand) applyDeviceCgroupRules(defaultCgroupRules []specs.LinuxDeviceCgroup) []specs.LinuxDeviceCgroup {
+	if len(cmd.Containers.DeviceCgroupRules) == 0 {
+		return defaultCgroupRules
+	}
+
+	cgroupRules := []specs.LinuxDeviceCgroup{}
+	for _, newCgroupRule := range cmd.Containers.DeviceCgroupRules {
+		cgroupRules = append(cgroupRules, newCgroupRule.LinuxDeviceCgroup())
+	}
+
+	// Add default cgroup rules that don't match provided rules
+	for _, defaultCgroupRule := range defaultCgroupRules {
+		if !findMatchingCgroup(defaultCgroupRule, cmd.Containers.DeviceCgroupRules) {
+			cgroupRules = append(cgroupRules, defaultCgroupRule)
+		}
+	}
+
+	return cgroupRules
+}
+
 func containerdRuncRoot() string {
 	if root := getRuntimeDir(); root != "" {
 		return root

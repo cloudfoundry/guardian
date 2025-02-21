@@ -102,11 +102,12 @@ type CommonCommand struct {
 	} `group:"Server Configuration"`
 
 	Containers struct {
-		Dir                        string `long:"depot" default:"/var/run/gdn/depot" description:"Directory in which to store container data."`
-		PropertiesPath             string `long:"properties-path" description:"Path in which to store properties."`
-		ConsoleSocketsPath         string `long:"console-sockets-path" description:"Path in which to store temporary sockets"`
-		CleanupProcessDirsOnWait   bool   `long:"cleanup-process-dirs-on-wait" description:"Clean up proccess dirs on first invocation of wait"`
-		DisablePrivilgedContainers bool   `long:"disable-privileged-containers" description:"Disable creation of privileged containers"`
+		Dir                        string                 `long:"depot" default:"/var/run/gdn/depot" description:"Directory in which to store container data."`
+		PropertiesPath             string                 `long:"properties-path" description:"Path in which to store properties."`
+		ConsoleSocketsPath         string                 `long:"console-sockets-path" description:"Path in which to store temporary sockets"`
+		CleanupProcessDirsOnWait   bool                   `long:"cleanup-process-dirs-on-wait" description:"Clean up proccess dirs on first invocation of wait"`
+		DisablePrivilgedContainers bool                   `long:"disable-privileged-containers" description:"Disable creation of privileged containers"`
+		DeviceCgroupRules          []DeviceCgroupRuleFlag `long:"device-cgroup-rule" description:"Device cgroup rules that will be applied to privileged containers"`
 
 		UIDMapStart  uint32 `long:"uid-map-start"  default:"1" description:"The lowest numerical subordinate user ID the user is allowed to map"`
 		UIDMapLength uint32 `long:"uid-map-length" description:"The number of numerical subordinate user IDs the user is allowed to map"`
@@ -536,7 +537,7 @@ func (cmd *CommonCommand) wireContainerizer(
 		WithCapabilities(privilegedMaxCaps...).
 		WithDeviceRestrictions(append(
 			[]specs.LinuxDeviceCgroup{{Allow: false, Access: "rwm"}},
-			allowedDevices...,
+			cmd.applyDeviceCgroupRules(allowedDevices)...,
 		))
 
 	log.Debug("base-bundles", lager.Data{
