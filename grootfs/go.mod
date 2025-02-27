@@ -6,14 +6,14 @@ toolchain go1.23.6
 
 require (
 	code.cloudfoundry.org/commandrunner v0.29.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250212022334-ae0a1389958b
+	code.cloudfoundry.org/idmapper v0.0.0-20250226022450-ebf7ae329a78
 	code.cloudfoundry.org/lager/v3 v3.27.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20250217093333-7351ffed9384
 	github.com/containers/image/v5 v5.34.0
 	github.com/containers/storage v1.57.1
 	github.com/docker/distribution v2.8.3+incompatible
-	github.com/docker/docker v28.0.0+incompatible
+	github.com/docker/docker v28.0.1+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
