@@ -1,8 +1,8 @@
 module code.cloudfoundry.org/guardian
 
-go 1.22.8
+go 1.23.0
 
-toolchain go1.23.4
+toolchain go1.23.6
 
 replace (
 	code.cloudfoundry.org/garden => ../garden
@@ -18,16 +18,16 @@ replace (
 require (
 	code.cloudfoundry.org/archiver v0.26.0
 	code.cloudfoundry.org/clock v1.28.0
-	code.cloudfoundry.org/commandrunner v0.28.0
-	code.cloudfoundry.org/debugserver v0.37.0
-	code.cloudfoundry.org/garden v0.0.0-20250204164024-2360009b9575
+	code.cloudfoundry.org/commandrunner v0.29.0
+	code.cloudfoundry.org/debugserver v0.39.0
+	code.cloudfoundry.org/garden v0.0.0-20250226022319-55aa098e43d0
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250204164708-dd14aea30dc4
-	code.cloudfoundry.org/lager/v3 v3.26.0
-	code.cloudfoundry.org/localip v0.30.0
+	code.cloudfoundry.org/idmapper v0.0.0-20250226022450-ebf7ae329a78
+	code.cloudfoundry.org/lager/v3 v3.27.0
+	code.cloudfoundry.org/localip v0.31.0
 	github.com/BurntSushi/toml v1.4.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.87
+	github.com/cloudfoundry/gosigar v1.3.88
 	github.com/containerd/cgroups/v3 v3.0.5
 	github.com/containerd/containerd/api v1.8.0
 	github.com/containerd/containerd/v2 v2.0.2
@@ -46,7 +46,7 @@ require (
 	github.com/onsi/gomega v1.36.2
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
-	github.com/opencontainers/runc v1.2.4
+	github.com/opencontainers/runc v1.2.5
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
@@ -66,8 +66,8 @@ require (
 	github.com/Microsoft/hcsshim v0.12.9 // indirect
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0 // indirect
-	github.com/cilium/ebpf v0.17.2 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20250211080004-ff2843c4063b // indirect
+	github.com/cilium/ebpf v0.17.3 // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20250217093333-7351ffed9384 // indirect
 	github.com/containerd/console v1.0.4 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -90,10 +90,10 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20250208200701-d0013a598941 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/klauspost/compress v1.17.11 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
@@ -122,11 +122,11 @@ require (
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/tools v0.30.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250207221924-e9438ea467c6 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250224174004-546df14abb99 // indirect
 	google.golang.org/grpc v1.70.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
-	tags.cncf.io/container-device-interface v0.8.0 // indirect
+	tags.cncf.io/container-device-interface v0.8.1 // indirect
 	tags.cncf.io/container-device-interface/specs-go v0.8.0 // indirect
 )
