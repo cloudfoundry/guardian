@@ -408,7 +408,11 @@ func mountCPUcgroup(cgroupRoot string) {
 
 func umountCgroups(cgroupRoot string) {
 	cpuCgroup := filepath.Join(cgroupRoot, "cpu")
-	Expect(os.RemoveAll(filepath.Join(cpuCgroup, gardencgroups.Garden))).To(Succeed())
+	gardenCgroupPath := filepath.Join(cpuCgroup, gardencgroups.Garden)
+	if cgroups.IsCgroup2UnifiedMode() {
+		Expect(cgroups.WriteFile(gardenCgroupPath, "cgroup.kill", "1")).To(Succeed())
+	}
+	Expect(os.RemoveAll(gardenCgroupPath)).To(Succeed())
 	Expect(syscall.Unmount(cpuCgroup, 0)).To(Succeed())
 	Expect(syscall.Unmount(cgroupRoot, 0)).To(Succeed())
 }
