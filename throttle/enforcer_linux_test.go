@@ -410,7 +410,7 @@ func umountCgroups(cgroupRoot string) {
 	cpuCgroup := filepath.Join(cgroupRoot, "cpu")
 	gardenCgroupPath := filepath.Join(cpuCgroup, gardencgroups.Garden)
 	if cgroups.IsCgroup2UnifiedMode() {
-		Expect(cgroups.WriteFile(gardenCgroupPath, "cgroup.kill", "1")).To(Succeed())
+		cgroups.WriteFile(gardenCgroupPath, "cgroup.kill", "1")
 	}
 	Expect(os.RemoveAll(gardenCgroupPath)).To(Succeed())
 	Expect(syscall.Unmount(cpuCgroup, 0)).To(Succeed())
