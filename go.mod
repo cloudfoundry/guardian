@@ -12,6 +12,7 @@ replace (
 	// is released
 	github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.3.6
 	github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
+	github.com/opencontainers/runc => github.com/opencontainers/runc v1.2.4
 )
 
 require (
