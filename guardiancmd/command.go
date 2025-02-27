@@ -765,6 +765,26 @@ func (cmd *CommonCommand) calculateDefaultMappingLengths(containerRootUID, conta
 	}
 }
 
+func (cmd *CommonCommand) applyDeviceCgroupRules(defaultCgroupRules []specs.LinuxDeviceCgroup) []specs.LinuxDeviceCgroup {
+	if len(cmd.Containers.DeviceCgroupRules) == 0 {
+		return defaultCgroupRules
+	}
+
+	cgroupRules := []specs.LinuxDeviceCgroup{}
+	for _, newCgroupRule := range cmd.Containers.DeviceCgroupRules {
+		cgroupRules = append(cgroupRules, newCgroupRule.LinuxDeviceCgroup())
+	}
+
+	// Add default cgroup rules that don't match provided rules
+	for _, defaultCgroupRule := range defaultCgroupRules {
+		if !findMatchingCgroup(defaultCgroupRule, cmd.Containers.DeviceCgroupRules) {
+			cgroupRules = append(cgroupRules, defaultCgroupRule)
+		}
+	}
+
+	return cgroupRules
+}
+
 func wireUIDGenerator() gardener.UidGeneratorFunc {
 	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
 }
