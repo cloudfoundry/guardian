@@ -5,9 +5,9 @@ go 1.23.0
 toolchain go1.23.6
 
 require (
-	code.cloudfoundry.org/commandrunner v0.29.0
+	code.cloudfoundry.org/commandrunner v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20250228215622-db002acd5ddc
-	code.cloudfoundry.org/lager/v3 v3.27.0
+	code.cloudfoundry.org/lager/v3 v3.28.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20250217093333-7351ffed9384
 	github.com/containers/image/v5 v5.34.1
@@ -18,7 +18,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
 	github.com/opencontainers/go-digest v1.0.0
-	github.com/opencontainers/image-spec v1.1.0
+	github.com/opencontainers/image-spec v1.1.1
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
@@ -35,12 +35,12 @@ require (
 	github.com/containers/ocicrypt v1.2.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/docker-credential-helpers v0.9.1 // indirect
+	github.com/docker/docker-credential-helpers v0.9.2 // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20250208200701-d0013a598941 // indirect
+	github.com/google/pprof v0.0.0-20250302191652-9094ed2288e7 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/moby/sys/capability v0.4.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
@@ -52,7 +52,7 @@ require (
 	github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	golang.org/x/exp v0.0.0-20250228200357-dead58393ab7 // indirect
-	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/tools v0.30.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
