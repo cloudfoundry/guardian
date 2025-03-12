@@ -5,26 +5,26 @@ go 1.23.0
 toolchain go1.23.6
 
 require (
-	code.cloudfoundry.org/commandrunner v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250228215622-db002acd5ddc
-	code.cloudfoundry.org/lager/v3 v3.28.0
+	code.cloudfoundry.org/commandrunner v0.31.0
+	code.cloudfoundry.org/idmapper v0.0.0-20250305022537-ddc80fe13e43
+	code.cloudfoundry.org/lager/v3 v3.29.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20250217093333-7351ffed9384
-	github.com/containers/image/v5 v5.34.1
-	github.com/containers/storage v1.57.1
+	github.com/containers/image/v5 v5.34.2
+	github.com/containers/storage v1.57.2
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/docker v28.0.1+incompatible
 	github.com/docker/go-units v0.5.0
-	github.com/onsi/ginkgo/v2 v2.22.2
+	github.com/onsi/ginkgo/v2 v2.23.0
 	github.com/onsi/gomega v1.36.2
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
-	github.com/urfave/cli/v2 v2.27.5
+	github.com/urfave/cli/v2 v2.27.6
 	github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125
-	golang.org/x/sys v0.30.0
+	golang.org/x/sys v0.31.0
 	google.golang.org/protobuf v1.36.5
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -51,10 +51,10 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	golang.org/x/exp v0.0.0-20250228200357-dead58393ab7 // indirect
-	golang.org/x/net v0.36.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
-	golang.org/x/tools v0.30.0 // indirect
+	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394 // indirect
+	golang.org/x/net v0.37.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/tools v0.31.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
