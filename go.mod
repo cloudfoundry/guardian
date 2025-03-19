@@ -12,21 +12,21 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.28.0
-	code.cloudfoundry.org/clock v1.30.0
+	code.cloudfoundry.org/archiver v0.29.0
+	code.cloudfoundry.org/clock v1.31.0
 	code.cloudfoundry.org/commandrunner v0.31.0
-	code.cloudfoundry.org/debugserver v0.41.0
+	code.cloudfoundry.org/debugserver v0.42.0
 	code.cloudfoundry.org/garden v0.0.0-20250312022458-1d757121fb8a
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250305022537-ddc80fe13e43
-	code.cloudfoundry.org/lager/v3 v3.29.0
-	code.cloudfoundry.org/localip v0.33.0
-	github.com/BurntSushi/toml v1.4.0
+	code.cloudfoundry.org/idmapper v0.0.0-20250312022717-3a0647dea23c
+	code.cloudfoundry.org/lager/v3 v3.30.0
+	code.cloudfoundry.org/localip v0.34.0
+	github.com/BurntSushi/toml v1.5.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.89
+	github.com/cloudfoundry/gosigar v1.3.90
 	github.com/containerd/cgroups/v3 v3.0.5
 	github.com/containerd/containerd/api v1.8.0
-	github.com/containerd/containerd/v2 v2.0.3
+	github.com/containerd/containerd/v2 v2.0.4
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/typeurl/v2 v2.2.3
 	github.com/eapache/go-resiliency v1.7.0
@@ -42,7 +42,7 @@ require (
 	github.com/onsi/gomega v1.36.2
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
-	github.com/opencontainers/runc v1.2.5
+	github.com/opencontainers/runc v1.2.6
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
@@ -63,7 +63,7 @@ require (
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0 // indirect
 	github.com/cilium/ebpf v0.17.3 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20250217093333-7351ffed9384 // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20250317104451-a50013ad58bc // indirect
 	github.com/containerd/console v1.0.4 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -87,7 +87,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20250302191652-9094ed2288e7 // indirect
+	github.com/google/pprof v0.0.0-20250317173921-a4b03ec1a45e // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
