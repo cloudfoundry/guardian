@@ -16,9 +16,9 @@ require (
 	code.cloudfoundry.org/clock v1.31.0
 	code.cloudfoundry.org/commandrunner v0.31.0
 	code.cloudfoundry.org/debugserver v0.42.0
-	code.cloudfoundry.org/garden v0.0.0-20250312022458-1d757121fb8a
+	code.cloudfoundry.org/garden v0.0.0-20250319022510-05a9be852e89
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250312022717-3a0647dea23c
+	code.cloudfoundry.org/idmapper v0.0.0-20250319022643-88730902c987
 	code.cloudfoundry.org/lager/v3 v3.30.0
 	code.cloudfoundry.org/localip v0.34.0
 	github.com/BurntSushi/toml v1.5.0
@@ -38,8 +38,8 @@ require (
 	github.com/moby/sys/reexec v0.1.0
 	github.com/moby/sys/user v0.3.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo/v2 v2.23.0
-	github.com/onsi/gomega v1.36.2
+	github.com/onsi/ginkgo/v2 v2.23.3
+	github.com/onsi/gomega v1.36.3
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/opencontainers/runc v1.2.6
@@ -63,7 +63,7 @@ require (
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0 // indirect
 	github.com/cilium/ebpf v0.17.3 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20250317104451-a50013ad58bc // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20250324121045-7c2c4152bc7b // indirect
 	github.com/containerd/console v1.0.4 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -97,7 +97,7 @@ require (
 	github.com/moby/sys/signal v0.7.1 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/mrunalp/fileutils v0.5.1 // indirect
-	github.com/opencontainers/selinux v1.11.1 // indirect
+	github.com/opencontainers/selinux v1.12.0 // indirect
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/seccomp/libseccomp-golang v0.10.0 // indirect
@@ -119,6 +119,6 @@ require (
 	golang.org/x/tools v0.31.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250313205543-e70fdf4c4cb4 // indirect
 	google.golang.org/grpc v1.71.0 // indirect
-	google.golang.org/protobuf v1.36.5 // indirect
+	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
