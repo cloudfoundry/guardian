@@ -9,6 +9,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/lager/v3"
 )
@@ -100,12 +101,22 @@ func (r *Statser) Stats(log lager.Logger, id string) (gardener.StatsContainerMet
 }
 
 func calculateTotalUsage(memoryStat garden.ContainerMemoryStat) uint64 {
-	totalMemoryUsage := memoryStat.TotalRss + memoryStat.TotalCache + memoryStat.TotalSwap
+	if cgroups.IsCgroup2UnifiedMode() {
+		totalMemoryUsage := memoryStat.File + memoryStat.Anon + memoryStat.SwapCached
 
-	if memoryStat.TotalInactiveFile > totalMemoryUsage {
-		return 0
+		if memoryStat.InactiveFile > totalMemoryUsage {
+			return 0
+		}
+		return totalMemoryUsage - memoryStat.InactiveFile
+
+	} else {
+		totalMemoryUsage := memoryStat.TotalRss + memoryStat.TotalCache + memoryStat.TotalSwap
+
+		if memoryStat.TotalInactiveFile > totalMemoryUsage {
+			return 0
+		}
+		return totalMemoryUsage - memoryStat.TotalInactiveFile
 	}
-	return totalMemoryUsage - memoryStat.TotalInactiveFile
 }
 
 func (r *Statser) getStats(log lager.Logger, id string) (runcStats, error) {
