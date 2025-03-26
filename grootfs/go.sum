@@ -1,7 +1,7 @@
-code.cloudfoundry.org/commandrunner v0.31.0 h1:JA9wSZId8Q+uAcybTvAJFQuFn61ecZLlLAp80pgO9+U=
-code.cloudfoundry.org/commandrunner v0.31.0/go.mod h1:2KvIascgOuA1aPHd1zcUND5QXEq8FTXWtkeIvK6OYRg=
-code.cloudfoundry.org/lager/v3 v3.30.0 h1:doVyqsEPz+SnM2DgOfKGcNXEvYbjKr6PrR88iv2JvUU=
-code.cloudfoundry.org/lager/v3 v3.30.0/go.mod h1:3nPT1LzO+fPChWArPw1gzHB2F7CY9snqMKNIKAnt+r4=
+code.cloudfoundry.org/commandrunner v0.32.0 h1:M7FZk53yUT3bGR9+5h9znSstV/0VHUxLMAQr6rN8bvQ=
+code.cloudfoundry.org/commandrunner v0.32.0/go.mod h1:hczeSINtqifIsytTdiJZKUCrIDk2BCt+ib46NlSqHiQ=
+code.cloudfoundry.org/lager/v3 v3.31.0 h1:9ZcDMEsxJtLGNI4wBQenioaT5/4XF9Oq49md2Za5eZ4=
+code.cloudfoundry.org/lager/v3 v3.31.0/go.mod h1:uwpwrDtyPgf2Yh63FKFibBvv4+ClsRBTxoP8LqYzza0=
 github.com/BurntSushi/toml v1.5.0 h1:W5quZX/G/csjUnuI8SUYlsHs9M38FC7znL0lIO+DvMg=
 github.com/BurntSushi/toml v1.5.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77 h1:afT88tB6u9JCKQZVAAaa9ICz/uGn5Uw9ekn6P22mYKM=
@@ -36,8 +36,8 @@ github.com/docker/cli v27.5.1+incompatible h1:JB9cieUT9YNiMITtIsguaN55PLOHhBSz3L
 github.com/docker/cli v27.5.1+incompatible/go.mod h1:JLrzqnKDaYBop7H2jaqPtU4hHvMKP+vjCwu2uszcLI8=
 github.com/docker/distribution v2.8.3+incompatible h1:AtKxIZ36LoNK51+Z6RpzLpddBirtxJnzDrHLEKxTAYk=
 github.com/docker/distribution v2.8.3+incompatible/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
-github.com/docker/docker v28.0.2+incompatible h1:9BILleFwug5FSSqWBgVevgL3ewDJfWWWyZVqlDMttE8=
-github.com/docker/docker v28.0.2+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+github.com/docker/docker v28.0.4+incompatible h1:JNNkBctYKurkw6FrHfKqY0nKIDf5nrbxjVBtS+cdcok=
+github.com/docker/docker v28.0.4+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/docker-credential-helpers v0.9.3 h1:gAm/VtF9wgqJMoxzT3Gj5p4AqIjCBS4wrsOh9yRqcz8=
 github.com/docker/docker-credential-helpers v0.9.3/go.mod h1:x+4Gbw9aGmChi3qTLZj8Dfn0TD20M/fuWy0E5+WDeCo=
 github.com/docker/go-connections v0.5.0 h1:USnMq7hx7gwdVZq1L49hLXaFtUdTADjXGp+uj1Br63c=
