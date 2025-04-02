@@ -12,15 +12,15 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.30.0
-	code.cloudfoundry.org/clock v1.32.0
-	code.cloudfoundry.org/commandrunner v0.32.0
-	code.cloudfoundry.org/debugserver v0.43.0
-	code.cloudfoundry.org/garden v0.0.0-20250324181912-7b68590a2b19
+	code.cloudfoundry.org/archiver v0.31.0
+	code.cloudfoundry.org/clock v1.33.0
+	code.cloudfoundry.org/commandrunner v0.33.0
+	code.cloudfoundry.org/debugserver v0.44.0
+	code.cloudfoundry.org/garden v0.0.0-20250402022550-6fe78a10209e
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20250324182130-24cb87edf5b9
-	code.cloudfoundry.org/lager/v3 v3.31.0
-	code.cloudfoundry.org/localip v0.34.0
+	code.cloudfoundry.org/lager/v3 v3.32.0
+	code.cloudfoundry.org/localip v0.35.0
 	github.com/BurntSushi/toml v1.5.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.91
@@ -63,7 +63,7 @@ require (
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0 // indirect
 	github.com/cilium/ebpf v0.17.3 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20250324121045-7c2c4152bc7b // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20250331174251-ed5dffef2bf1 // indirect
 	github.com/containerd/console v1.0.4 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -113,12 +113,12 @@ require (
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go.uber.org/goleak v1.3.0 // indirect
 	golang.org/x/mod v0.24.0 // indirect
-	golang.org/x/net v0.37.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/tools v0.31.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250324211829-b45e905df463 // indirect
-	google.golang.org/grpc v1.71.0 // indirect
+	google.golang.org/grpc v1.71.1 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
