@@ -307,6 +307,7 @@ func buildSeccomp() (*specs.LinuxSeccomp, error) {
 			AllowSyscall("splice"),
 			AllowSyscall("stat"),
 			AllowSyscall("stat64"),
+			AllowSyscall("statx"),
 			AllowSyscall("statfs"),
 			AllowSyscall("statfs64"),
 			AllowSyscall("symlink"),
