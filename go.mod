@@ -12,15 +12,15 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.31.0
-	code.cloudfoundry.org/clock v1.33.0
-	code.cloudfoundry.org/commandrunner v0.33.0
-	code.cloudfoundry.org/debugserver v0.44.0
-	code.cloudfoundry.org/garden v0.0.0-20250402022550-6fe78a10209e
+	code.cloudfoundry.org/archiver v0.32.0
+	code.cloudfoundry.org/clock v1.34.0
+	code.cloudfoundry.org/commandrunner v0.34.0
+	code.cloudfoundry.org/debugserver v0.45.0
+	code.cloudfoundry.org/garden v0.0.0-20250409022702-f497a0aaee4b
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250324182130-24cb87edf5b9
-	code.cloudfoundry.org/lager/v3 v3.32.0
-	code.cloudfoundry.org/localip v0.35.0
+	code.cloudfoundry.org/idmapper v0.0.0-20250402022726-c616ffb55a54
+	code.cloudfoundry.org/lager/v3 v3.33.0
+	code.cloudfoundry.org/localip v0.36.0
 	github.com/BurntSushi/toml v1.5.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.91
@@ -36,10 +36,10 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.8.1
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/moby/sys/reexec v0.1.0
-	github.com/moby/sys/user v0.3.0
+	github.com/moby/sys/user v0.4.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo/v2 v2.23.3
-	github.com/onsi/gomega v1.36.3
+	github.com/onsi/ginkgo/v2 v2.23.4
+	github.com/onsi/gomega v1.37.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/opencontainers/runc v1.2.6
@@ -51,7 +51,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.6
 	github.com/vishvananda/netlink v1.3.0
 	github.com/vishvananda/netns v0.0.5
-	golang.org/x/sys v0.31.0
+	golang.org/x/sys v0.32.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -62,8 +62,8 @@ require (
 	github.com/Microsoft/hcsshim v0.12.9 // indirect
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0 // indirect
-	github.com/cilium/ebpf v0.17.3 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20250331174251-ed5dffef2bf1 // indirect
+	github.com/cilium/ebpf v0.18.0 // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20250403123151-62edc04c2604 // indirect
 	github.com/containerd/console v1.0.4 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -87,7 +87,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20250317173921-a4b03ec1a45e // indirect
+	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
@@ -111,13 +111,14 @@ require (
 	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
+	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/goleak v1.3.0 // indirect
 	golang.org/x/mod v0.24.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sync v0.12.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
-	golang.org/x/tools v0.31.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250324211829-b45e905df463 // indirect
+	golang.org/x/net v0.39.0 // indirect
+	golang.org/x/sync v0.13.0 // indirect
+	golang.org/x/text v0.24.0 // indirect
+	golang.org/x/tools v0.32.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250407143221-ac9807e6c755 // indirect
 	google.golang.org/grpc v1.71.1 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
