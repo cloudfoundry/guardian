@@ -2,6 +2,7 @@ package iptables_test
 
 import (
 	"errors"
+	"net"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
@@ -107,7 +108,7 @@ var _ = Describe("FirewallOpenner", func() {
 		})
 
 		It("translates the rules", func() {
-			Expect(opener.BulkOpen(logger, "foo-bar-baz", "some-handle", rules)).To(Succeed())
+			Expect(opener.BulkOpen(logger, "foo-bar-baz", "some-handle", rules, []net.IP{})).To(Succeed())
 			allRules := []garden.NetOutRule{}
 			for i := 0; i < fakeRuleTranslator.TranslateRuleCallCount(); i++ {
 				handle, rule := fakeRuleTranslator.TranslateRuleArgsForCall(i)
@@ -123,7 +124,7 @@ var _ = Describe("FirewallOpenner", func() {
 			})
 
 			It("returns the error", func() {
-				Expect(opener.BulkOpen(logger, "foo-bar-baz", "some-handle", rules)).To(MatchError("failed to build rules"))
+				Expect(opener.BulkOpen(logger, "foo-bar-baz", "some-handle", rules, []net.IP{})).To(MatchError("failed to build rules"))
 			})
 		})
 
@@ -153,7 +154,7 @@ var _ = Describe("FirewallOpenner", func() {
 				return iptablesRules[i], nil
 			}
 
-			Expect(opener.BulkOpen(logger, "foo-bar-baz", "some-handle", rules)).To(Succeed())
+			Expect(opener.BulkOpen(logger, "foo-bar-baz", "some-handle", rules, []net.IP{})).To(Succeed())
 
 			Expect(fakeIPTablesController.BulkPrependRulesCallCount()).To(Equal(1))
 			_, appendedIPTablesRules := fakeIPTablesController.BulkPrependRulesArgsForCall(0)
@@ -165,7 +166,7 @@ var _ = Describe("FirewallOpenner", func() {
 		})
 
 		It("prepends to the correct chain name", func() {
-			Expect(opener.BulkOpen(logger, "foo-bar-baz", "some-handle", rules)).To(Succeed())
+			Expect(opener.BulkOpen(logger, "foo-bar-baz", "some-handle", rules, []net.IP{})).To(Succeed())
 			Expect(fakeIPTablesController.BulkPrependRulesCallCount()).To(Equal(1))
 			chainName, _ := fakeIPTablesController.BulkPrependRulesArgsForCall(0)
 			Expect(chainName).To(Equal("prefix-foo-bar-baz"))
@@ -177,7 +178,7 @@ var _ = Describe("FirewallOpenner", func() {
 			})
 
 			It("returns the error", func() {
-				Expect(opener.BulkOpen(logger, "foo-bar-baz", "some-handle", rules)).To(MatchError("i-lost-my-banana"))
+				Expect(opener.BulkOpen(logger, "foo-bar-baz", "some-handle", rules, []net.IP{})).To(MatchError("i-lost-my-banana"))
 			})
 		})
 	})

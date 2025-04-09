@@ -77,7 +77,7 @@ type PortForwarderSpec struct {
 //counterfeiter:generate . FirewallOpener
 type FirewallOpener interface {
 	Open(log lager.Logger, instance, handle string, rule garden.NetOutRule) error
-	BulkOpen(log lager.Logger, instance, handle string, rule []garden.NetOutRule) error
+	BulkOpen(log lager.Logger, instance, handle string, rule []garden.NetOutRule, dnsServers []net.IP) error
 }
 
 //counterfeiter:generate . NetworkDepot
@@ -236,7 +236,7 @@ func (n *Networker) BulkNetOut(log lager.Logger, handle string, rules []garden.N
 		return err
 	}
 
-	return n.firewallOpener.BulkOpen(log, cfg.IPTableInstance, handle, rules)
+	return n.firewallOpener.BulkOpen(log, cfg.IPTableInstance, handle, rules, cfg.OperatorNameservers)
 }
 
 func (n *Networker) Destroy(log lager.Logger, handle string) error {

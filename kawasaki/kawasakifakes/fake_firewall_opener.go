@@ -2,6 +2,7 @@
 package kawasakifakes
 
 import (
+	"net"
 	"sync"
 
 	"code.cloudfoundry.org/garden"
@@ -10,13 +11,14 @@ import (
 )
 
 type FakeFirewallOpener struct {
-	BulkOpenStub        func(lager.Logger, string, string, []garden.NetOutRule) error
+	BulkOpenStub        func(lager.Logger, string, string, []garden.NetOutRule, []net.IP) error
 	bulkOpenMutex       sync.RWMutex
 	bulkOpenArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 string
 		arg3 string
 		arg4 []garden.NetOutRule
+		arg5 []net.IP
 	}
 	bulkOpenReturns struct {
 		result1 error
@@ -42,11 +44,16 @@ type FakeFirewallOpener struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeFirewallOpener) BulkOpen(arg1 lager.Logger, arg2 string, arg3 string, arg4 []garden.NetOutRule) error {
+func (fake *FakeFirewallOpener) BulkOpen(arg1 lager.Logger, arg2 string, arg3 string, arg4 []garden.NetOutRule, arg5 []net.IP) error {
 	var arg4Copy []garden.NetOutRule
 	if arg4 != nil {
 		arg4Copy = make([]garden.NetOutRule, len(arg4))
 		copy(arg4Copy, arg4)
+	}
+	var arg5Copy []net.IP
+	if arg5 != nil {
+		arg5Copy = make([]net.IP, len(arg5))
+		copy(arg5Copy, arg5)
 	}
 	fake.bulkOpenMutex.Lock()
 	ret, specificReturn := fake.bulkOpenReturnsOnCall[len(fake.bulkOpenArgsForCall)]
@@ -55,13 +62,14 @@ func (fake *FakeFirewallOpener) BulkOpen(arg1 lager.Logger, arg2 string, arg3 st
 		arg2 string
 		arg3 string
 		arg4 []garden.NetOutRule
-	}{arg1, arg2, arg3, arg4Copy})
+		arg5 []net.IP
+	}{arg1, arg2, arg3, arg4Copy, arg5Copy})
 	stub := fake.BulkOpenStub
 	fakeReturns := fake.bulkOpenReturns
-	fake.recordInvocation("BulkOpen", []interface{}{arg1, arg2, arg3, arg4Copy})
+	fake.recordInvocation("BulkOpen", []interface{}{arg1, arg2, arg3, arg4Copy, arg5Copy})
 	fake.bulkOpenMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4)
+		return stub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
 		return ret.result1
@@ -75,17 +83,17 @@ func (fake *FakeFirewallOpener) BulkOpenCallCount() int {
 	return len(fake.bulkOpenArgsForCall)
 }
 
-func (fake *FakeFirewallOpener) BulkOpenCalls(stub func(lager.Logger, string, string, []garden.NetOutRule) error) {
+func (fake *FakeFirewallOpener) BulkOpenCalls(stub func(lager.Logger, string, string, []garden.NetOutRule, []net.IP) error) {
 	fake.bulkOpenMutex.Lock()
 	defer fake.bulkOpenMutex.Unlock()
 	fake.BulkOpenStub = stub
 }
 
-func (fake *FakeFirewallOpener) BulkOpenArgsForCall(i int) (lager.Logger, string, string, []garden.NetOutRule) {
+func (fake *FakeFirewallOpener) BulkOpenArgsForCall(i int) (lager.Logger, string, string, []garden.NetOutRule, []net.IP) {
 	fake.bulkOpenMutex.RLock()
 	defer fake.bulkOpenMutex.RUnlock()
 	argsForCall := fake.bulkOpenArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
 }
 
 func (fake *FakeFirewallOpener) BulkOpenReturns(result1 error) {

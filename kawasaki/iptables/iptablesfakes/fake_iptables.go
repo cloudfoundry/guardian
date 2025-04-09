@@ -8,6 +8,18 @@ import (
 )
 
 type FakeIPTables struct {
+	AccessDNSServersStub        func(string, string) error
+	accessDNSServersMutex       sync.RWMutex
+	accessDNSServersArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	accessDNSServersReturns struct {
+		result1 error
+	}
+	accessDNSServersReturnsOnCall map[int]struct {
+		result1 error
+	}
 	BulkPrependRulesStub        func(string, []iptables.Rule) error
 	bulkPrependRulesMutex       sync.RWMutex
 	bulkPrependRulesArgsForCall []struct {
@@ -96,6 +108,68 @@ type FakeIPTables struct {
 	invocationsMutex sync.RWMutex
 }
 
+func (fake *FakeIPTables) AccessDNSServers(arg1 string, arg2 string) error {
+	fake.accessDNSServersMutex.Lock()
+	ret, specificReturn := fake.accessDNSServersReturnsOnCall[len(fake.accessDNSServersArgsForCall)]
+	fake.accessDNSServersArgsForCall = append(fake.accessDNSServersArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.AccessDNSServersStub
+	fakeReturns := fake.accessDNSServersReturns
+	fake.recordInvocation("AccessDNSServers", []interface{}{arg1, arg2})
+	fake.accessDNSServersMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeIPTables) AccessDNSServersCallCount() int {
+	fake.accessDNSServersMutex.RLock()
+	defer fake.accessDNSServersMutex.RUnlock()
+	return len(fake.accessDNSServersArgsForCall)
+}
+
+func (fake *FakeIPTables) AccessDNSServersCalls(stub func(string, string) error) {
+	fake.accessDNSServersMutex.Lock()
+	defer fake.accessDNSServersMutex.Unlock()
+	fake.AccessDNSServersStub = stub
+}
+
+func (fake *FakeIPTables) AccessDNSServersArgsForCall(i int) (string, string) {
+	fake.accessDNSServersMutex.RLock()
+	defer fake.accessDNSServersMutex.RUnlock()
+	argsForCall := fake.accessDNSServersArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeIPTables) AccessDNSServersReturns(result1 error) {
+	fake.accessDNSServersMutex.Lock()
+	defer fake.accessDNSServersMutex.Unlock()
+	fake.AccessDNSServersStub = nil
+	fake.accessDNSServersReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeIPTables) AccessDNSServersReturnsOnCall(i int, result1 error) {
+	fake.accessDNSServersMutex.Lock()
+	defer fake.accessDNSServersMutex.Unlock()
+	fake.AccessDNSServersStub = nil
+	if fake.accessDNSServersReturnsOnCall == nil {
+		fake.accessDNSServersReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.accessDNSServersReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeIPTables) BulkPrependRules(arg1 string, arg2 []iptables.Rule) error {
 	var arg2Copy []iptables.Rule
 	if arg2 != nil {
@@ -108,15 +182,16 @@ func (fake *FakeIPTables) BulkPrependRules(arg1 string, arg2 []iptables.Rule) er
 		arg1 string
 		arg2 []iptables.Rule
 	}{arg1, arg2Copy})
+	stub := fake.BulkPrependRulesStub
+	fakeReturns := fake.bulkPrependRulesReturns
 	fake.recordInvocation("BulkPrependRules", []interface{}{arg1, arg2Copy})
 	fake.bulkPrependRulesMutex.Unlock()
-	if fake.BulkPrependRulesStub != nil {
-		return fake.BulkPrependRulesStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.bulkPrependRulesReturns
 	return fakeReturns.result1
 }
 
@@ -169,15 +244,16 @@ func (fake *FakeIPTables) CreateChain(arg1 string, arg2 string) error {
 		arg1 string
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.CreateChainStub
+	fakeReturns := fake.createChainReturns
 	fake.recordInvocation("CreateChain", []interface{}{arg1, arg2})
 	fake.createChainMutex.Unlock()
-	if fake.CreateChainStub != nil {
-		return fake.CreateChainStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.createChainReturns
 	return fakeReturns.result1
 }
 
@@ -230,15 +306,16 @@ func (fake *FakeIPTables) DeleteChain(arg1 string, arg2 string) error {
 		arg1 string
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DeleteChainStub
+	fakeReturns := fake.deleteChainReturns
 	fake.recordInvocation("DeleteChain", []interface{}{arg1, arg2})
 	fake.deleteChainMutex.Unlock()
-	if fake.DeleteChainStub != nil {
-		return fake.DeleteChainStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.deleteChainReturns
 	return fakeReturns.result1
 }
 
@@ -292,15 +369,16 @@ func (fake *FakeIPTables) DeleteChainReferences(arg1 string, arg2 string, arg3 s
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
+	stub := fake.DeleteChainReferencesStub
+	fakeReturns := fake.deleteChainReferencesReturns
 	fake.recordInvocation("DeleteChainReferences", []interface{}{arg1, arg2, arg3})
 	fake.deleteChainReferencesMutex.Unlock()
-	if fake.DeleteChainReferencesStub != nil {
-		return fake.DeleteChainReferencesStub(arg1, arg2, arg3)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.deleteChainReferencesReturns
 	return fakeReturns.result1
 }
 
@@ -353,15 +431,16 @@ func (fake *FakeIPTables) FlushChain(arg1 string, arg2 string) error {
 		arg1 string
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.FlushChainStub
+	fakeReturns := fake.flushChainReturns
 	fake.recordInvocation("FlushChain", []interface{}{arg1, arg2})
 	fake.flushChainMutex.Unlock()
-	if fake.FlushChainStub != nil {
-		return fake.FlushChainStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.flushChainReturns
 	return fakeReturns.result1
 }
 
@@ -413,15 +492,16 @@ func (fake *FakeIPTables) InstanceChain(arg1 string) string {
 	fake.instanceChainArgsForCall = append(fake.instanceChainArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.InstanceChainStub
+	fakeReturns := fake.instanceChainReturns
 	fake.recordInvocation("InstanceChain", []interface{}{arg1})
 	fake.instanceChainMutex.Unlock()
-	if fake.InstanceChainStub != nil {
-		return fake.InstanceChainStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.instanceChainReturns
 	return fakeReturns.result1
 }
 
@@ -474,15 +554,16 @@ func (fake *FakeIPTables) PrependRule(arg1 string, arg2 iptables.Rule) error {
 		arg1 string
 		arg2 iptables.Rule
 	}{arg1, arg2})
+	stub := fake.PrependRuleStub
+	fakeReturns := fake.prependRuleReturns
 	fake.recordInvocation("PrependRule", []interface{}{arg1, arg2})
 	fake.prependRuleMutex.Unlock()
-	if fake.PrependRuleStub != nil {
-		return fake.PrependRuleStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.prependRuleReturns
 	return fakeReturns.result1
 }
 
@@ -531,6 +612,8 @@ func (fake *FakeIPTables) PrependRuleReturnsOnCall(i int, result1 error) {
 func (fake *FakeIPTables) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.accessDNSServersMutex.RLock()
+	defer fake.accessDNSServersMutex.RUnlock()
 	fake.bulkPrependRulesMutex.RLock()
 	defer fake.bulkPrependRulesMutex.RUnlock()
 	fake.createChainMutex.RLock()
