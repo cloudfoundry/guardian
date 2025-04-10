@@ -6,7 +6,7 @@ toolchain go1.23.6
 
 require (
 	code.cloudfoundry.org/commandrunner v0.34.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250402022726-c616ffb55a54
+	code.cloudfoundry.org/idmapper v0.0.0-20250409022913-ae2d922a27b3
 	code.cloudfoundry.org/lager/v3 v3.33.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20250403123151-62edc04c2604
