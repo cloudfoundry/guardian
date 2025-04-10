@@ -1,6 +1,8 @@
 package iptables
 
 import (
+	"net"
+
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager/v3"
 )
@@ -46,7 +48,7 @@ func (f *FirewallOpener) Open(logger lager.Logger, instance, handle string, rule
 	return nil
 }
 
-func (f *FirewallOpener) BulkOpen(logger lager.Logger, instance, handle string, rules []garden.NetOutRule) error {
+func (f *FirewallOpener) BulkOpen(logger lager.Logger, instance, handle string, rules []garden.NetOutRule, dnsServers []net.IP) error {
 	chain := f.iptables.InstanceChain(instance)
 	logger = logger.Session("prepend-filter-rule", lager.Data{
 		"rules":    rules,
@@ -64,6 +66,11 @@ func (f *FirewallOpener) BulkOpen(logger lager.Logger, instance, handle string, 
 		}
 
 		collatedIPTablesRules = append(collatedIPTablesRules, iptablesRules...)
+	}
+
+	for _, ip := range dnsServers {
+		f.iptables.AccessDNSServers(chain, ip.String())
+
 	}
 
 	return f.iptables.BulkPrependRules(chain, collatedIPTablesRules)

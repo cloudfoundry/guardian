@@ -247,7 +247,7 @@ var _ = Describe("Networker", func() {
 
 		It("opens any NetOut rules provided on the firewall", func() {
 			Expect(networker.Network(logger, containerSpec, 42)).To(Succeed())
-			_, _, _, appliedRules := fakeFirewallOpener.BulkOpenArgsForCall(0)
+			_, _, _, appliedRules, _ := fakeFirewallOpener.BulkOpenArgsForCall(0)
 			Expect(appliedRules).To(Equal(containerSpec.NetOut))
 		})
 
@@ -439,7 +439,7 @@ var _ = Describe("Networker", func() {
 			fakeFirewallOpener.BulkOpenReturns(errors.New("potato"))
 			Expect(networker.BulkNetOut(lagertest.NewTestLogger(""), "some-handle", rules)).To(MatchError("potato"))
 
-			_, chainArg, handleArg, rulesArg := fakeFirewallOpener.BulkOpenArgsForCall(0)
+			_, chainArg, handleArg, rulesArg, _ := fakeFirewallOpener.BulkOpenArgsForCall(0)
 			Expect(chainArg).To(Equal(networkConfig.IPTableInstance))
 			Expect(handleArg).To(Equal("some-handle"))
 			Expect(rulesArg).To(Equal(rules))

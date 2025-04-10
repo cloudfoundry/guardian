@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 )
 
 type state struct {
@@ -32,5 +34,8 @@ func (r resolver) Resolve(name, subsystem string) (string, error) {
 		return "", err
 	}
 
+	if cgroups.IsCgroup2UnifiedMode() {
+		return s.CgroupPaths[""], nil
+	}
 	return s.CgroupPaths["devices"], nil
 }

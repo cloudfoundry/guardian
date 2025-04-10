@@ -29,6 +29,7 @@ type IPTables interface {
 	FlushChain(table, chain string) error
 	DeleteChainReferences(table, targetChain, referencedChain string) error
 	PrependRule(chain string, rule Rule) error
+	AccessDNSServers(chain string, ip string) error
 	BulkPrependRules(chain string, rules []Rule) error
 	InstanceChain(instanceId string) string
 }
@@ -91,6 +92,19 @@ func (iptables *IPTablesController) DeleteChainReferences(table, targetChain, re
 
 func (iptables *IPTablesController) PrependRule(chain string, rule Rule) error {
 	return iptables.run("prepend-rule", exec.Command(iptables.iptablesBinPath, append([]string{"-w", "-I", chain, "1"}, rule.Flags(chain)...)...))
+}
+
+func (iptables *IPTablesController) AccessDNSServers(chain string, ip string) error {
+	flags := []string{
+		"-d", ip,
+		"-j", "ACCEPT",
+	}
+	output, _ := exec.Command(iptables.iptablesBinPath, append([]string{"-w", "-C", "w--input"}, flags...)...).CombinedOutput()
+	if string(output) != "" {
+		return iptables.run("setup-rule", exec.Command(iptables.iptablesBinPath, append([]string{"-w", "-I", "w--input", "1"}, flags...)...))
+	}
+	return nil
+
 }
 
 func (iptables *IPTablesController) BulkPrependRules(chain string, rules []Rule) error {
