@@ -6,7 +6,7 @@ code.cloudfoundry.org/commandrunner/linux_command_runner
 # code.cloudfoundry.org/idmapper v0.0.0-20250409022913-ae2d922a27b3 => ../idmapper
 ## explicit; go 1.23.0
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.33.0
+# code.cloudfoundry.org/lager/v3 v3.34.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
