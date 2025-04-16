@@ -110,7 +110,10 @@ var _ = Describe("Stats", func() {
 								"writeback": 29,
 								"swap": 30,
 								"hierarchical_memsw_limit": 31,
-								"total_swap": 32
+								"total_swap": 32,
+								"file": 8,
+								"anon": 2,
+								"swapcached": 20
 							}
 						},
 						"pids": {
@@ -184,6 +187,9 @@ var _ = Describe("Stats", func() {
 				HierarchicalMemswLimit:  31,
 				TotalSwap:               32,
 				TotalUsageTowardLimit:   24,
+				File:                    8,
+				Anon:                    2,
+				SwapCached:              20,
 			}))
 		})
 
