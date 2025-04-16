@@ -11,7 +11,7 @@ require (
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20250403123151-62edc04c2604
 	github.com/containers/image/v5 v5.34.3
-	github.com/containers/storage v1.57.2
+	github.com/containers/storage v1.58.0
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/docker v28.0.4+incompatible
 	github.com/docker/go-units v0.5.0
