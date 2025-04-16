@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -39,11 +40,19 @@ var _ = Describe("Resolver", func() {
 			stateJson, err := os.Create(filepath.Join(fakeStateDir, "some-handle", "state.json"))
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(json.NewEncoder(stateJson).Encode(map[string]interface{}{
-				"cgroup_paths": map[string]string{
-					"devices": "i-am-the-devices-cgroup-path",
-				},
-			})).To(Succeed())
+			if cgroups.IsCgroup2UnifiedMode() {
+				Expect(json.NewEncoder(stateJson).Encode(map[string]interface{}{
+					"cgroup_paths": map[string]string{
+						"": "i-am-the-devices-cgroup-path",
+					},
+				})).To(Succeed())
+			} else {
+				Expect(json.NewEncoder(stateJson).Encode(map[string]interface{}{
+					"cgroup_paths": map[string]string{
+						"devices": "i-am-the-devices-cgroup-path",
+					},
+				})).To(Succeed())
+			}
 			Expect(stateJson.Close()).To(Succeed())
 		})
 

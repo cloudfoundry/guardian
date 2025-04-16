@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"syscall"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -316,8 +317,16 @@ var _ = Describe("Network plugin", func() {
 			BeforeEach(func() {
 				rootFSWithoutHostsAndResolv = createRootfs(func(root string) {
 					Expect(os.Chmod(filepath.Join(root, "tmp"), 0777)).To(Succeed())
-					Expect(os.Remove(filepath.Join(root, "etc", "hosts"))).To(Succeed())
-					Expect(os.Remove(filepath.Join(root, "etc", "resolv.conf"))).To(Succeed())
+					err := os.Remove(filepath.Join(root, "etc", "hosts"))
+					e, ok := err.(*os.PathError)
+					if !ok || e.Err != syscall.ENOENT {
+						Fail(fmt.Sprintf("unable to remove file %+v", err))
+					}
+					err = os.Remove(filepath.Join(root, "etc", "resolv.conf"))
+					e, ok = err.(*os.PathError)
+					if !ok || e.Err != syscall.ENOENT {
+						Fail(fmt.Sprintf("unable to remove file %+v", err))
+					}
 				}, 0755)
 
 				containerSpec.RootFSPath = fmt.Sprintf("raw://%s", rootFSWithoutHostsAndResolv)

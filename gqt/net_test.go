@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -46,8 +47,17 @@ var _ = Describe("Networking", func() {
 	BeforeEach(func() {
 		rootFSWithoutHostsAndResolv = createRootfs(func(root string) {
 			Expect(os.Chmod(filepath.Join(root, "tmp"), 0777)).To(Succeed())
-			Expect(os.Remove(filepath.Join(root, "etc", "hosts"))).To(Succeed())
-			Expect(os.Remove(filepath.Join(root, "etc", "resolv.conf"))).To(Succeed())
+			err := os.Remove(filepath.Join(root, "etc", "hosts"))
+			e, ok := err.(*os.PathError)
+			if !ok || e.Err != syscall.ENOENT {
+				Fail(fmt.Sprintf("unable to remove file %+v", err))
+			}
+			err = os.Remove(filepath.Join(root, "etc", "resolv.conf"))
+			e, ok = err.(*os.PathError)
+			if !ok || e.Err != syscall.ENOENT {
+				Fail(fmt.Sprintf("unable to remove file %+v", err))
+			}
+
 		}, 0755)
 
 		containerNetwork = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelProcess())

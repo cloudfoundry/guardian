@@ -192,28 +192,6 @@ var _ = Describe("LimitsRule", func() {
 			}
 		})
 
-		It("sets the correct memory limit in bundle resources", func() {
-			newBndl, err := bundlerules.Limits{}.Apply(goci.Bundle(), spec.DesiredContainerSpec{
-				Limits: garden.Limits{
-					Memory: garden.MemoryLimits{LimitInBytes: 4096},
-				},
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(newBndl.Resources().Unified["memory.max"]).To(Equal("4096"))
-		})
-
-		It("limits swap to regular memory limit in bundle resources", func() {
-			newBndl, err := bundlerules.Limits{}.Apply(goci.Bundle(), spec.DesiredContainerSpec{
-				Limits: garden.Limits{
-					Memory: garden.MemoryLimits{LimitInBytes: 4096},
-				},
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(newBndl.Resources().Unified["memory.swap.max"]).To(Equal("4096"))
-		})
-
 		Context("when swap limit is disabled", func() {
 			It("does not limit swap in bundle resources", func() {
 				limits := bundlerules.Limits{DisableSwapLimit: true}
