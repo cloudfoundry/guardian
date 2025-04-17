@@ -1,8 +1,8 @@
 module code.cloudfoundry.org/guardian
 
-go 1.23.0
+go 1.23.3
 
-toolchain go1.23.6
+toolchain go1.24.2
 
 replace (
 	code.cloudfoundry.org/garden => ../garden
@@ -87,7 +87,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
+	github.com/google/pprof v0.0.0-20250417170025-a87c506f3220 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
