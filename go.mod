@@ -16,9 +16,9 @@ require (
 	code.cloudfoundry.org/clock v1.35.0
 	code.cloudfoundry.org/commandrunner v0.34.0
 	code.cloudfoundry.org/debugserver v0.46.0
-	code.cloudfoundry.org/garden v0.0.0-20250416022737-187e9889c592
+	code.cloudfoundry.org/garden v0.0.0-20250417175132-3dcb20fef8fb
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250409022913-ae2d922a27b3
+	code.cloudfoundry.org/idmapper v0.0.0-20250417175353-708d2700db78
 	code.cloudfoundry.org/lager/v3 v3.34.0
 	code.cloudfoundry.org/localip v0.37.0
 	github.com/BurntSushi/toml v1.5.0
@@ -26,7 +26,7 @@ require (
 	github.com/cloudfoundry/gosigar v1.3.91
 	github.com/containerd/cgroups/v3 v3.0.5
 	github.com/containerd/containerd/api v1.8.0
-	github.com/containerd/containerd/v2 v2.0.4
+	github.com/containerd/containerd/v2 v2.0.5
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/typeurl/v2 v2.2.3
 	github.com/eapache/go-resiliency v1.7.0
@@ -87,7 +87,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20250417170025-a87c506f3220 // indirect
+	github.com/google/pprof v0.0.0-20250418163039-24c5476c6587 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
@@ -119,7 +119,7 @@ require (
 	golang.org/x/text v0.24.0 // indirect
 	golang.org/x/tools v0.32.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250414145226-207652e42e2e // indirect
-	google.golang.org/grpc v1.71.1 // indirect
+	google.golang.org/grpc v1.72.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
