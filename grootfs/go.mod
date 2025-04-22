@@ -6,8 +6,8 @@ toolchain go1.24.2
 
 require (
 	code.cloudfoundry.org/commandrunner v0.34.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250417175353-708d2700db78
-	code.cloudfoundry.org/lager/v3 v3.34.0
+	code.cloudfoundry.org/idmapper v0.0.0-20250421112453-b6751f73fc72
+	code.cloudfoundry.org/lager/v3 v3.35.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20250403123151-62edc04c2604
 	github.com/containers/image/v5 v5.35.0
@@ -40,7 +40,7 @@ require (
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20250418163039-24c5476c6587 // indirect
+	github.com/google/pprof v0.0.0-20250422154841-e1f9c1950416 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/moby/sys/capability v0.4.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
