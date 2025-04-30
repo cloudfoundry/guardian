@@ -5,7 +5,7 @@ import (
 	"syscall"
 
 	"code.cloudfoundry.org/lager/v3"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/cgroups"
 )
 
 func (stopper *CgroupStopper) StopAll(log lager.Logger, cgroupName string, exceptions []int, kill bool) error {

@@ -1,3 +1,5 @@
+//go:build !runc_nocriu
+
 package libcontainer
 
 import (
@@ -21,7 +23,7 @@ import (
 	"golang.org/x/sys/unix"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
@@ -186,7 +188,7 @@ func criuNsToKey(t configs.NamespaceType) string {
 
 func (c *Container) handleCheckpointingExternalNamespaces(rpcOpts *criurpc.CriuOpts, t configs.NamespaceType) error {
 	if !c.criuSupportsExtNS(t) {
-		return nil
+		return fmt.Errorf("criu lacks support for external %s namespace during checkpointing process (old criu version?)", configs.NsName(t))
 	}
 
 	nsPath := c.config.Namespaces.PathOf(t)
@@ -246,7 +248,7 @@ func (c *Container) handleRestoringNamespaces(rpcOpts *criurpc.CriuOpts, extraFi
 
 func (c *Container) handleRestoringExternalNamespaces(rpcOpts *criurpc.CriuOpts, extraFiles *[]*os.File, t configs.NamespaceType) error {
 	if !c.criuSupportsExtNS(t) {
-		return nil
+		return fmt.Errorf("criu lacks support for external %s namespace during the restoration process (old criu version?)", configs.NsName(t))
 	}
 
 	nsPath := c.config.Namespaces.PathOf(t)
@@ -295,6 +297,11 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 		return errors.New("invalid directory to save checkpoint")
 	}
 
+	cgMode, err := criuCgMode(criuOpts.ManageCgroupsMode)
+	if err != nil {
+		return err
+	}
+
 	// Since a container can be C/R'ed multiple times,
 	// the checkpoint directory may already exist.
 	if err := os.Mkdir(criuOpts.ImagesDirectory, 0o700); err != nil && !os.IsExist(err) {
@@ -309,22 +316,25 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 	defer imageDir.Close()
 
 	rpcOpts := criurpc.CriuOpts{
-		ImagesDirFd:     proto.Int32(int32(imageDir.Fd())),
-		LogLevel:        proto.Int32(4),
-		LogFile:         proto.String(logFile),
-		Root:            proto.String(c.config.Rootfs),
-		ManageCgroups:   proto.Bool(true),
-		NotifyScripts:   proto.Bool(true),
-		Pid:             proto.Int32(int32(c.initProcess.pid())),
-		ShellJob:        proto.Bool(criuOpts.ShellJob),
-		LeaveRunning:    proto.Bool(criuOpts.LeaveRunning),
-		TcpEstablished:  proto.Bool(criuOpts.TcpEstablished),
-		ExtUnixSk:       proto.Bool(criuOpts.ExternalUnixConnections),
-		FileLocks:       proto.Bool(criuOpts.FileLocks),
-		EmptyNs:         proto.Uint32(criuOpts.EmptyNs),
-		OrphanPtsMaster: proto.Bool(true),
-		AutoDedup:       proto.Bool(criuOpts.AutoDedup),
-		LazyPages:       proto.Bool(criuOpts.LazyPages),
+		ImagesDirFd:       proto.Int32(int32(imageDir.Fd())),
+		LogLevel:          proto.Int32(4),
+		LogFile:           proto.String(logFile),
+		Root:              proto.String(c.config.Rootfs),
+		ManageCgroups:     proto.Bool(true), // Obsoleted by ManageCgroupsMode.
+		ManageCgroupsMode: &cgMode,
+		NotifyScripts:     proto.Bool(true),
+		Pid:               proto.Int32(int32(c.initProcess.pid())),
+		ShellJob:          proto.Bool(criuOpts.ShellJob),
+		LeaveRunning:      proto.Bool(criuOpts.LeaveRunning),
+		TcpEstablished:    proto.Bool(criuOpts.TcpEstablished),
+		TcpSkipInFlight:   proto.Bool(criuOpts.TcpSkipInFlight),
+		LinkRemap:         proto.Bool(criuOpts.LinkRemap),
+		ExtUnixSk:         proto.Bool(criuOpts.ExternalUnixConnections),
+		FileLocks:         proto.Bool(criuOpts.FileLocks),
+		EmptyNs:           proto.Uint32(criuOpts.EmptyNs),
+		OrphanPtsMaster:   proto.Bool(true),
+		AutoDedup:         proto.Bool(criuOpts.AutoDedup),
+		LazyPages:         proto.Bool(criuOpts.LazyPages),
 	}
 
 	// if criuOpts.WorkDirectory is not set, criu default is used.
@@ -379,12 +389,6 @@ func (c *Container) Checkpoint(criuOpts *CriuOpts) error {
 	if criuOpts.ParentImage != "" {
 		rpcOpts.ParentImg = proto.String(criuOpts.ParentImage)
 		rpcOpts.TrackMem = proto.Bool(true)
-	}
-
-	// append optional manage cgroups mode
-	if criuOpts.ManageCgroupsMode != 0 {
-		mode := criuOpts.ManageCgroupsMode
-		rpcOpts.ManageCgroupsMode = &mode
 	}
 
 	var t criurpc.CriuReqType
@@ -634,6 +638,12 @@ func (c *Container) Restore(process *Process, criuOpts *CriuOpts) error {
 	if criuOpts.ImagesDirectory == "" {
 		return errors.New("invalid directory to restore checkpoint")
 	}
+
+	cgMode, err := criuCgMode(criuOpts.ManageCgroupsMode)
+	if err != nil {
+		return err
+	}
+
 	logDir := criuOpts.ImagesDirectory
 	imageDir, err := os.Open(criuOpts.ImagesDirectory)
 	if err != nil {
@@ -663,22 +673,23 @@ func (c *Container) Restore(process *Process, criuOpts *CriuOpts) error {
 	req := &criurpc.CriuReq{
 		Type: &t,
 		Opts: &criurpc.CriuOpts{
-			ImagesDirFd:     proto.Int32(int32(imageDir.Fd())),
-			EvasiveDevices:  proto.Bool(true),
-			LogLevel:        proto.Int32(4),
-			LogFile:         proto.String(logFile),
-			RstSibling:      proto.Bool(true),
-			Root:            proto.String(root),
-			ManageCgroups:   proto.Bool(true),
-			NotifyScripts:   proto.Bool(true),
-			ShellJob:        proto.Bool(criuOpts.ShellJob),
-			ExtUnixSk:       proto.Bool(criuOpts.ExternalUnixConnections),
-			TcpEstablished:  proto.Bool(criuOpts.TcpEstablished),
-			FileLocks:       proto.Bool(criuOpts.FileLocks),
-			EmptyNs:         proto.Uint32(criuOpts.EmptyNs),
-			OrphanPtsMaster: proto.Bool(true),
-			AutoDedup:       proto.Bool(criuOpts.AutoDedup),
-			LazyPages:       proto.Bool(criuOpts.LazyPages),
+			ImagesDirFd:       proto.Int32(int32(imageDir.Fd())),
+			EvasiveDevices:    proto.Bool(true),
+			LogLevel:          proto.Int32(4),
+			LogFile:           proto.String(logFile),
+			RstSibling:        proto.Bool(true),
+			Root:              proto.String(root),
+			ManageCgroups:     proto.Bool(true), // Obsoleted by ManageCgroupsMode.
+			ManageCgroupsMode: &cgMode,
+			NotifyScripts:     proto.Bool(true),
+			ShellJob:          proto.Bool(criuOpts.ShellJob),
+			ExtUnixSk:         proto.Bool(criuOpts.ExternalUnixConnections),
+			TcpEstablished:    proto.Bool(criuOpts.TcpEstablished),
+			FileLocks:         proto.Bool(criuOpts.FileLocks),
+			EmptyNs:           proto.Uint32(criuOpts.EmptyNs),
+			OrphanPtsMaster:   proto.Bool(true),
+			AutoDedup:         proto.Bool(criuOpts.AutoDedup),
+			LazyPages:         proto.Bool(criuOpts.LazyPages),
 		},
 	}
 
@@ -755,12 +766,6 @@ func (c *Container) Restore(process *Process, criuOpts *CriuOpts) error {
 
 	if criuOpts.EmptyNs&unix.CLONE_NEWNET == 0 {
 		c.restoreNetwork(req, criuOpts)
-	}
-
-	// append optional manage cgroups mode
-	if criuOpts.ManageCgroupsMode != 0 {
-		mode := criuOpts.ManageCgroupsMode
-		req.Opts.ManageCgroupsMode = &mode
 	}
 
 	var (
@@ -951,8 +956,8 @@ func (c *Container) criuSwrk(process *Process, req *criurpc.CriuReq, opts *CriuO
 	// available but empty. criurpc.CriuReqType_VERSION actually
 	// has no req.GetOpts().
 	if logrus.GetLevel() >= logrus.DebugLevel &&
-		!(req.GetType() == criurpc.CriuReqType_FEATURE_CHECK ||
-			req.GetType() == criurpc.CriuReqType_VERSION) {
+		(req.GetType() != criurpc.CriuReqType_FEATURE_CHECK &&
+			req.GetType() != criurpc.CriuReqType_VERSION) {
 
 		val := reflect.ValueOf(req.GetOpts())
 		v := reflect.Indirect(val)
@@ -1110,7 +1115,7 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 			return err
 		}
 	case "setup-namespaces":
-		if c.config.Hooks != nil {
+		if c.config.HasHook(configs.Prestart, configs.CreateRuntime) {
 			s, err := c.currentOCIState()
 			if err != nil {
 				return nil
@@ -1146,6 +1151,13 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 		}
 		// create a timestamp indicating when the restored checkpoint was started
 		c.created = time.Now().UTC()
+		if !c.config.Namespaces.Contains(configs.NEWTIME) &&
+			configs.IsNamespaceSupported(configs.NEWTIME) &&
+			c.checkCriuVersion(31400) == nil {
+			// CRIU restores processes into a time namespace.
+			c.config.Namespaces = append(c.config.Namespaces,
+				configs.Namespace{Type: configs.NEWTIME})
+		}
 		if _, err := c.updateState(r); err != nil {
 			return err
 		}
@@ -1183,4 +1195,21 @@ func (c *Container) criuNotifications(resp *criurpc.CriuResp, process *Process, 
 		}
 	}
 	return nil
+}
+
+func criuCgMode(mode string) (criurpc.CriuCgMode, error) {
+	switch mode {
+	case "":
+		return criurpc.CriuCgMode_DEFAULT, nil
+	case "soft":
+		return criurpc.CriuCgMode_SOFT, nil
+	case "full":
+		return criurpc.CriuCgMode_FULL, nil
+	case "strict":
+		return criurpc.CriuCgMode_STRICT, nil
+	case "ignore":
+		return criurpc.CriuCgMode_IGNORE, nil
+	default:
+		return 0, errors.New("invalid manage-cgroups-mode value")
+	}
 }

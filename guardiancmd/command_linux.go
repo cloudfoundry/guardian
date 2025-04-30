@@ -40,7 +40,7 @@ import (
 	"github.com/containerd/containerd/v2/core/leases"
 	"github.com/containerd/containerd/v2/pkg/namespaces"
 	"github.com/containerd/containerd/v2/plugins"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
@@ -264,7 +264,7 @@ func (cmd *CommonCommand) wireKernelParams() []rundmc.BundlerRule {
 func (cmd *CommonCommand) getCgroupRootPath() string {
 	if cgroups.IsCgroup2UnifiedMode() {
 		// For cgroups v2 runc will append extra slice if path is not absolute
-		// See github.com/opencontainers/runc/libcontainer/cgroups/fs2/fs2.go#NewManager
+		// See github.com/opencontainers/cgroups/fs2/fs2.go#NewManager
 		return "/garden"
 	}
 	return "garden"

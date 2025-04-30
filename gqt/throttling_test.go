@@ -213,6 +213,6 @@ func readCgroupV2CPUUsage(cgroupPath string) int64 {
 	usage, err := strconv.ParseInt(matches[1], 10, 64)
 	Expect(err).NotTo(HaveOccurred())
 
-	// usage_usec is ms, return value in ns, see opencontainers/runc/libcontainer/cgroups/fs2/cpu.go
+	// usage_usec is ms, return value in ns, see opencontainers/cgroups/fs2/cpu.go
 	return usage * 1000
 }
