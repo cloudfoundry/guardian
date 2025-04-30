@@ -592,8 +592,8 @@ cloud.google.com/go/workflows v1.7.0/go.mod h1:JhSrZuVZWuiDfKEFxU0/F1PQjmpnpcoIS
 cloud.google.com/go/workflows v1.8.0/go.mod h1:ysGhmEajwZxGn1OhGOGKsTXc5PyxOc0vfKf5Af+to4M=
 cloud.google.com/go/workflows v1.9.0/go.mod h1:ZGkj1aFIOd9c8Gerkjjq7OW7I5+l6cSvT3ujaO/WwSA=
 cloud.google.com/go/workflows v1.10.0/go.mod h1:fZ8LmRmZQWacon9UCX1r/g/DfAXx5VcPALq2CxzdePw=
-code.cloudfoundry.org/archiver v0.34.0 h1:O+O2Lj8i7fI9HmV0lkJrC8Yis6FlVwnQtj8qJaIUvOw=
-code.cloudfoundry.org/archiver v0.34.0/go.mod h1:qme+yeAzbqVjMrLt6LUCNWX4u06knX8DwVAzuUPRORM=
+code.cloudfoundry.org/archiver v0.35.0 h1:yY5OzMS9R8zvmbKXPlrR/CG8aBJpG5iucAi8xV3m38g=
+code.cloudfoundry.org/archiver v0.35.0/go.mod h1:7BS06mquG6yRp5yVL/hm/EDf9x+H5zxlS+7iKKLkecQ=
 code.cloudfoundry.org/clock v1.37.0 h1:7e/FmrQ8f3cJW1aR4jhKWaEimBp5Ub39dOeNXQHq8HM=
 code.cloudfoundry.org/clock v1.37.0/go.mod h1:9bvV2riUok6o34gOGGVIkX1v37wwsZbuSCBx8Y4laL0=
 code.cloudfoundry.org/commandrunner v0.36.0 h1:gqxpfzDYjvQWiLH1CIS/mX9fLD32RV2tb1urLdEBZJI=

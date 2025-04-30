@@ -12,13 +12,13 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.34.0
+	code.cloudfoundry.org/archiver v0.35.0
 	code.cloudfoundry.org/clock v1.37.0
 	code.cloudfoundry.org/commandrunner v0.36.0
 	code.cloudfoundry.org/debugserver v0.48.0
-	code.cloudfoundry.org/garden v0.0.0-20250422223445-75bc73b534cf
+	code.cloudfoundry.org/garden v0.0.0-20250430022909-7035411ab4cf
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250422223656-b294d7db4091
+	code.cloudfoundry.org/idmapper v0.0.0-20250430023048-83f6b3d76640
 	code.cloudfoundry.org/lager/v3 v3.36.0
 	code.cloudfoundry.org/localip v0.39.0
 	github.com/BurntSushi/toml v1.5.0
