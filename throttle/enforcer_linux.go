@@ -8,8 +8,8 @@ import (
 	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 
 	"code.cloudfoundry.org/lager/v3"
+	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/runc/libcontainer"
-	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 

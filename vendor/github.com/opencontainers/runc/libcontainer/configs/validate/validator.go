@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups"
+	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -406,5 +406,13 @@ func ioPriority(config *configs.Config) error {
 	if priority < 0 || priority > 7 {
 		return fmt.Errorf("invalid ioPriority.Priority: %d", priority)
 	}
+
+	switch class := config.IOPriority.Class; class {
+	case specs.IOPRIO_CLASS_RT, specs.IOPRIO_CLASS_BE, specs.IOPRIO_CLASS_IDLE:
+		// Valid class, do nothing.
+	default:
+		return fmt.Errorf("invalid ioPriority.Class: %q", class)
+	}
+
 	return nil
 }

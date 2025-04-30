@@ -21,10 +21,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
+	"github.com/opencontainers/cgroups"
+	devices "github.com/opencontainers/cgroups/devices/config"
+	"github.com/opencontainers/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
@@ -106,7 +106,7 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		root:            config.Rootfs,
 		label:           config.MountLabel,
 		cgroup2Path:     iConfig.Cgroup2Path,
-		rootlessCgroups: iConfig.RootlessCgroups,
+		rootlessCgroups: config.RootlessCgroups,
 		cgroupns:        config.Namespaces.Contains(configs.NEWCGROUP),
 	}
 	for _, m := range config.Mounts {
@@ -195,11 +195,12 @@ func prepareRootfs(pipe *syncSocket, iConfig *initConfig) (err error) {
 		return &os.PathError{Op: "chdir", Path: config.Rootfs, Err: err}
 	}
 
-	s := iConfig.SpecState
-	s.Pid = unix.Getpid()
-	s.Status = specs.StateCreating
-	if err := iConfig.Config.Hooks.Run(configs.CreateContainer, s); err != nil {
-		return err
+	if s := iConfig.SpecState; s != nil {
+		s.Pid = unix.Getpid()
+		s.Status = specs.StateCreating
+		if err := iConfig.Config.Hooks.Run(configs.CreateContainer, s); err != nil {
+			return err
+		}
 	}
 
 	if config.NoPivotRoot {
@@ -356,7 +357,7 @@ func mountCgroupV2(m *configs.Mount, c *mountConfig) error {
 	err := utils.WithProcfd(c.root, m.Destination, func(dstFd string) error {
 		return mountViaFds(m.Source, nil, m.Destination, dstFd, "cgroup2", uintptr(m.Flags), m.Data)
 	})
-	if err == nil || !(errors.Is(err, unix.EPERM) || errors.Is(err, unix.EBUSY)) {
+	if err == nil || (!errors.Is(err, unix.EPERM) && !errors.Is(err, unix.EBUSY)) {
 		return err
 	}
 
@@ -664,11 +665,17 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 					return err
 				}
 				srcFlags := statfsToMountFlags(*st)
+
+				logrus.Debugf(
+					"working around failure to set vfs flags on bind-mount %s: srcFlags=%s flagsSet=%s flagsClr=%s: %v",
+					m.Destination, stringifyMountFlags(srcFlags),
+					stringifyMountFlags(m.Flags), stringifyMountFlags(m.ClearedFlags), mountErr)
+
 				// If the user explicitly request one of the locked flags *not*
 				// be set, we need to return an error to avoid producing mounts
 				// that don't match the user's request.
-				if srcFlags&m.ClearedFlags&mntLockFlags != 0 {
-					return mountErr
+				if cannotClearFlags := srcFlags & m.ClearedFlags & mntLockFlags; cannotClearFlags != 0 {
+					return fmt.Errorf("cannot clear locked flags %s: %w", stringifyMountFlags(cannotClearFlags), mountErr)
 				}
 
 				// If an MS_*ATIME flag was requested, it must match the
@@ -689,17 +696,19 @@ func mountToRootfs(c *mountConfig, m mountEntry) error {
 				// MS_STRICTATIME mounts even if the user requested MS_RELATIME
 				// or MS_NOATIME.
 				if m.Flags&mntAtimeFlags != 0 && m.Flags&mntAtimeFlags != srcFlags&mntAtimeFlags {
-					return mountErr
+					return fmt.Errorf("cannot change locked atime flags %s: %w", stringifyMountFlags(srcFlags&mntAtimeFlags), mountErr)
 				}
 
 				// Retry the mount with the existing lockable mount flags
 				// applied.
 				flags |= srcFlags & mntLockFlags
 				mountErr = mountViaFds("", nil, m.Destination, dstFd, "", uintptr(flags), "")
-				logrus.Debugf("remount retry: srcFlags=0x%x flagsSet=0x%x flagsClr=0x%x: %v", srcFlags, m.Flags, m.ClearedFlags, mountErr)
+				if mountErr != nil {
+					mountErr = fmt.Errorf("remount with locked flags %s re-applied: %w", stringifyMountFlags(srcFlags&mntLockFlags), mountErr)
+				}
 				return mountErr
 			}); err != nil {
-				return err
+				return fmt.Errorf("failed to set user-requested vfs flags on bind-mount: %w", err)
 			}
 		}
 
@@ -1251,7 +1260,7 @@ func maskPath(path string, mountLabel string) error {
 // writeSystemProperty writes the value to a path under /proc/sys as determined from the key.
 // For e.g. net.ipv4.ip_forward translated to /proc/sys/net/ipv4/ip_forward.
 func writeSystemProperty(key, value string) error {
-	keyPath := strings.Replace(key, ".", "/", -1)
+	keyPath := strings.ReplaceAll(key, ".", "/")
 	return os.WriteFile(path.Join("/proc/sys", keyPath), []byte(value), 0o644)
 }
 

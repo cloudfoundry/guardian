@@ -19,8 +19,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/opencontainers/runc/libcontainer/cgroups/fs2"
+	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/internal/userns"
@@ -95,26 +95,27 @@ func (c *processComm) closeParent() {
 	// c.logPipeParent is kept alive for ForwardLogs
 }
 
-type setnsProcess struct {
-	cmd             *exec.Cmd
-	comm            *processComm
-	cgroupPaths     map[string]string
-	rootlessCgroups bool
-	manager         cgroups.Manager
-	intelRdtPath    string
-	config          *initConfig
-	fds             []string
-	process         *Process
-	bootstrapData   io.Reader
-	initProcessPid  int
+type containerProcess struct {
+	cmd           *exec.Cmd
+	comm          *processComm
+	config        *initConfig
+	manager       cgroups.Manager
+	fds           []string
+	process       *Process
+	bootstrapData io.Reader
+	container     *Container
 }
 
-func (p *setnsProcess) startTime() (uint64, error) {
+func (p *containerProcess) pid() int {
+	return p.cmd.Process.Pid
+}
+
+func (p *containerProcess) startTime() (uint64, error) {
 	stat, err := system.Stat(p.pid())
 	return stat.StartTime, err
 }
 
-func (p *setnsProcess) signal(sig os.Signal) error {
+func (p *containerProcess) signal(sig os.Signal) error {
 	s, ok := sig.(unix.Signal)
 	if !ok {
 		return errors.New("os: unsupported signal type")
@@ -122,19 +123,92 @@ func (p *setnsProcess) signal(sig os.Signal) error {
 	return unix.Kill(p.pid(), s)
 }
 
+func (p *containerProcess) externalDescriptors() []string {
+	return p.fds
+}
+
+func (p *containerProcess) setExternalDescriptors(newFds []string) {
+	p.fds = newFds
+}
+
+func (p *containerProcess) forwardChildLogs() chan error {
+	return logs.ForwardLogs(p.comm.logPipeParent)
+}
+
+// terminate sends a SIGKILL to the forked process for the setns routine then waits to
+// avoid the process becoming a zombie.
+func (p *containerProcess) terminate() error {
+	if p.cmd.Process == nil {
+		return nil
+	}
+	err := p.cmd.Process.Kill()
+	if _, werr := p.wait(); err == nil {
+		err = werr
+	}
+	return err
+}
+
+func (p *containerProcess) wait() (*os.ProcessState, error) { //nolint:unparam
+	err := p.cmd.Wait()
+
+	// Return actual ProcessState even on Wait error
+	return p.cmd.ProcessState, err
+}
+
+type setnsProcess struct {
+	containerProcess
+	cgroupPaths     map[string]string
+	rootlessCgroups bool
+	intelRdtPath    string
+	initProcessPid  int
+}
+
+// Starts setns process with specified initial CPU affinity.
+func (p *setnsProcess) startWithCPUAffinity() error {
+	aff := p.config.CPUAffinity
+	if aff == nil || aff.Initial == nil {
+		return p.cmd.Start()
+	}
+	errCh := make(chan error)
+	defer close(errCh)
+
+	// Use a goroutine to dedicate an OS thread.
+	go func() {
+		runtime.LockOSThread()
+		// Command inherits the CPU affinity.
+		if err := unix.SchedSetaffinity(unix.Gettid(), aff.Initial); err != nil {
+			errCh <- fmt.Errorf("error setting initial CPU affinity: %w", err)
+			return
+		}
+
+		errCh <- p.cmd.Start()
+		// Deliberately omit runtime.UnlockOSThread here.
+		// https://pkg.go.dev/runtime#LockOSThread says:
+		// "If the calling goroutine exits without unlocking the
+		// thread, the thread will be terminated".
+	}()
+
+	return <-errCh
+}
+
+func (p *setnsProcess) setFinalCPUAffinity() error {
+	aff := p.config.CPUAffinity
+	if aff == nil || aff.Final == nil {
+		return nil
+	}
+	if err := unix.SchedSetaffinity(p.pid(), aff.Final); err != nil {
+		return fmt.Errorf("error setting final CPU affinity: %w", err)
+	}
+	return nil
+}
+
 func (p *setnsProcess) start() (retErr error) {
 	defer p.comm.closeParent()
 
-	if p.process.IOPriority != nil {
-		if err := setIOPriority(p.process.IOPriority); err != nil {
-			return err
-		}
-	}
-
-	// get the "before" value of oom kill count
+	// Get the "before" value of oom kill count.
 	oom, _ := p.manager.OOMKillCount()
-	err := p.cmd.Start()
-	// close the child-side of the pipes (controlled by child)
+	err := p.startWithCPUAffinity()
+	// Close the child-side of the pipes (controlled by child).
 	p.comm.closeChild()
 	if err != nil {
 		return fmt.Errorf("error starting setns process: %w", err)
@@ -183,6 +257,10 @@ func (p *setnsProcess) start() (retErr error) {
 				return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
 			}
 		}
+	}
+	// Set final CPU affinity right after the process is moved into container's cgroup.
+	if err := p.setFinalCPUAffinity(); err != nil {
+		return err
 	}
 	if p.intelRdtPath != "" {
 		// if Intel RDT "resource control" filesystem path exists
@@ -318,60 +396,9 @@ func (p *setnsProcess) execSetns() error {
 	return nil
 }
 
-// terminate sends a SIGKILL to the forked process for the setns routine then waits to
-// avoid the process becoming a zombie.
-func (p *setnsProcess) terminate() error {
-	if p.cmd.Process == nil {
-		return nil
-	}
-	err := p.cmd.Process.Kill()
-	if _, werr := p.wait(); err == nil {
-		err = werr
-	}
-	return err
-}
-
-func (p *setnsProcess) wait() (*os.ProcessState, error) {
-	err := p.cmd.Wait()
-
-	// Return actual ProcessState even on Wait error
-	return p.cmd.ProcessState, err
-}
-
-func (p *setnsProcess) pid() int {
-	return p.cmd.Process.Pid
-}
-
-func (p *setnsProcess) externalDescriptors() []string {
-	return p.fds
-}
-
-func (p *setnsProcess) setExternalDescriptors(newFds []string) {
-	p.fds = newFds
-}
-
-func (p *setnsProcess) forwardChildLogs() chan error {
-	return logs.ForwardLogs(p.comm.logPipeParent)
-}
-
 type initProcess struct {
-	cmd             *exec.Cmd
-	comm            *processComm
-	config          *initConfig
-	manager         cgroups.Manager
+	containerProcess
 	intelRdtManager *intelrdt.Manager
-	container       *Container
-	fds             []string
-	process         *Process
-	bootstrapData   io.Reader
-}
-
-func (p *initProcess) pid() int {
-	return p.cmd.Process.Pid
-}
-
-func (p *initProcess) externalDescriptors() []string {
-	return p.fds
 }
 
 // getChildPid receives the final child's pid over the provided pipe.
@@ -625,9 +652,16 @@ func (p *initProcess) start() (retErr error) {
 	if err := p.createNetworkInterfaces(); err != nil {
 		return fmt.Errorf("error creating network interfaces: %w", err)
 	}
-	if err := p.updateSpecState(); err != nil {
-		return fmt.Errorf("error updating spec state: %w", err)
+
+	// initConfig.SpecState is only needed to run hooks that are executed
+	// inside a container, i.e. CreateContainer and StartContainer.
+	if p.config.Config.HasHook(configs.CreateContainer, configs.StartContainer) {
+		p.config.SpecState, err = p.container.currentOCIState()
+		if err != nil {
+			return fmt.Errorf("error getting current state: %w", err)
+		}
 	}
+
 	if err := utils.WriteJSON(p.comm.initSockParent, p.config); err != nil {
 		return fmt.Errorf("error sending config to init process: %w", err)
 	}
@@ -750,7 +784,7 @@ func (p *initProcess) start() (retErr error) {
 					return fmt.Errorf("error setting Intel RDT config for procHooks process: %w", err)
 				}
 			}
-			if len(p.config.Config.Hooks) != 0 {
+			if p.config.Config.HasHook(configs.Prestart, configs.CreateRuntime) {
 				s, err := p.container.currentOCIState()
 				if err != nil {
 					return err
@@ -789,37 +823,6 @@ func (p *initProcess) start() (retErr error) {
 	return nil
 }
 
-func (p *initProcess) wait() (*os.ProcessState, error) {
-	err := p.cmd.Wait()
-	return p.cmd.ProcessState, err
-}
-
-func (p *initProcess) terminate() error {
-	if p.cmd.Process == nil {
-		return nil
-	}
-	err := p.cmd.Process.Kill()
-	if _, werr := p.wait(); err == nil {
-		err = werr
-	}
-	return err
-}
-
-func (p *initProcess) startTime() (uint64, error) {
-	stat, err := system.Stat(p.pid())
-	return stat.StartTime, err
-}
-
-func (p *initProcess) updateSpecState() error {
-	s, err := p.container.currentOCIState()
-	if err != nil {
-		return err
-	}
-
-	p.config.SpecState = s
-	return nil
-}
-
 func (p *initProcess) createNetworkInterfaces() error {
 	for _, config := range p.config.Config.Networks {
 		strategy, err := getStrategy(config.Type)
@@ -835,22 +838,6 @@ func (p *initProcess) createNetworkInterfaces() error {
 		p.config.Networks = append(p.config.Networks, n)
 	}
 	return nil
-}
-
-func (p *initProcess) signal(sig os.Signal) error {
-	s, ok := sig.(unix.Signal)
-	if !ok {
-		return errors.New("os: unsupported signal type")
-	}
-	return unix.Kill(p.pid(), s)
-}
-
-func (p *initProcess) setExternalDescriptors(newFds []string) {
-	p.fds = newFds
-}
-
-func (p *initProcess) forwardChildLogs() chan error {
-	return logs.ForwardLogs(p.comm.logPipeParent)
 }
 
 func pidGetFd(pid, srcFd int) (*os.File, error) {
@@ -954,22 +941,4 @@ func (p *Process) InitializeIO(rootuid, rootgid int) (i *IO, err error) {
 		}
 	}
 	return i, nil
-}
-
-func setIOPriority(ioprio *configs.IOPriority) error {
-	const ioprioWhoPgrp = 1
-
-	class, ok := configs.IOPrioClassMapping[ioprio.Class]
-	if !ok {
-		return fmt.Errorf("invalid io priority class: %s", ioprio.Class)
-	}
-
-	// Combine class and priority into a single value
-	// https://github.com/torvalds/linux/blob/v5.18/include/uapi/linux/ioprio.h#L5-L17
-	iop := (class << 13) | ioprio.Priority
-	_, _, errno := unix.RawSyscall(unix.SYS_IOPRIO_SET, ioprioWhoPgrp, 0, uintptr(iop))
-	if errno != 0 {
-		return fmt.Errorf("failed to set io priority: %w", errno)
-	}
-	return nil
 }

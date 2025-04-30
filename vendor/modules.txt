@@ -1,18 +1,18 @@
 # code.cloudfoundry.org/archiver v0.34.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/archiver/extractor/test_helper
-# code.cloudfoundry.org/clock v1.36.0
+# code.cloudfoundry.org/clock v1.37.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
-# code.cloudfoundry.org/commandrunner v0.35.0
+# code.cloudfoundry.org/commandrunner v0.36.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.47.0
+# code.cloudfoundry.org/debugserver v0.48.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/debugserver
 # code.cloudfoundry.org/garden v0.0.0-20250422223445-75bc73b534cf => ../garden
@@ -33,14 +33,14 @@ code.cloudfoundry.org/grootfs/commands/config
 # code.cloudfoundry.org/idmapper v0.0.0-20250422223656-b294d7db4091 => ../idmapper
 ## explicit; go 1.23.0
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.35.0
+# code.cloudfoundry.org/lager/v3 v3.36.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
 code.cloudfoundry.org/lager/v3/internal/truncate
 code.cloudfoundry.org/lager/v3/lagerctx
 code.cloudfoundry.org/lager/v3/lagertest
-# code.cloudfoundry.org/localip v0.38.0
+# code.cloudfoundry.org/localip v0.39.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/localip
 # github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6
@@ -277,7 +277,7 @@ github.com/containerd/typeurl/v2
 ## explicit; go 1.12
 github.com/coreos/go-systemd/v22/activation
 github.com/coreos/go-systemd/v22/dbus
-# github.com/cpuguy83/go-md2man/v2 v2.0.6
+# github.com/cpuguy83/go-md2man/v2 v2.0.7
 ## explicit; go 1.12
 github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/cyphar/filepath-securejoin v0.4.1
@@ -323,7 +323,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20250422154841-e1f9c1950416
+# github.com/google/pprof v0.0.0-20250423184734-337e5dd93bb4
 ## explicit; go 1.23.0
 github.com/google/pprof/profile
 # github.com/hashicorp/errwrap v1.1.0
@@ -363,6 +363,9 @@ github.com/mitchellh/reflectwalk
 # github.com/moby/locker v1.0.1
 ## explicit; go 1.13
 github.com/moby/locker
+# github.com/moby/sys/capability v0.4.0
+## explicit; go 1.21
+github.com/moby/sys/capability
 # github.com/moby/sys/mountinfo v0.7.2
 ## explicit; go 1.17
 github.com/moby/sys/mountinfo
@@ -428,6 +431,17 @@ github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
+# github.com/opencontainers/cgroups v0.0.2
+## explicit; go 1.23.0
+github.com/opencontainers/cgroups
+github.com/opencontainers/cgroups/devices
+github.com/opencontainers/cgroups/devices/config
+github.com/opencontainers/cgroups/fs
+github.com/opencontainers/cgroups/fs2
+github.com/opencontainers/cgroups/fscommon
+github.com/opencontainers/cgroups/internal/path
+github.com/opencontainers/cgroups/manager
+github.com/opencontainers/cgroups/systemd
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit; go 1.13
 github.com/opencontainers/go-digest
@@ -436,23 +450,15 @@ github.com/opencontainers/go-digest
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.2.6
-## explicit; go 1.22
+# github.com/opencontainers/runc v1.3.0
+## explicit; go 1.23.0
 github.com/opencontainers/runc
 github.com/opencontainers/runc/libcontainer
 github.com/opencontainers/runc/libcontainer/apparmor
 github.com/opencontainers/runc/libcontainer/capabilities
-github.com/opencontainers/runc/libcontainer/cgroups
-github.com/opencontainers/runc/libcontainer/cgroups/devices
-github.com/opencontainers/runc/libcontainer/cgroups/fs
-github.com/opencontainers/runc/libcontainer/cgroups/fs2
-github.com/opencontainers/runc/libcontainer/cgroups/fscommon
-github.com/opencontainers/runc/libcontainer/cgroups/manager
-github.com/opencontainers/runc/libcontainer/cgroups/systemd
 github.com/opencontainers/runc/libcontainer/configs
 github.com/opencontainers/runc/libcontainer/configs/validate
-github.com/opencontainers/runc/libcontainer/devices
-github.com/opencontainers/runc/libcontainer/dmz
+github.com/opencontainers/runc/libcontainer/exeseal
 github.com/opencontainers/runc/libcontainer/intelrdt
 github.com/opencontainers/runc/libcontainer/internal/userns
 github.com/opencontainers/runc/libcontainer/keys
@@ -485,8 +491,8 @@ github.com/pkg/errors
 # github.com/russross/blackfriday/v2 v2.1.0
 ## explicit
 github.com/russross/blackfriday/v2
-# github.com/seccomp/libseccomp-golang v0.10.0
-## explicit; go 1.14
+# github.com/seccomp/libseccomp-golang v0.11.0
+## explicit; go 1.19
 github.com/seccomp/libseccomp-golang
 # github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
@@ -496,7 +502,6 @@ github.com/sirupsen/logrus
 github.com/spf13/pflag
 # github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 ## explicit
-github.com/syndtr/gocapability/capability
 # github.com/tedsuo/ifrit v0.0.0-20230516164442-7862c310ad26
 ## explicit; go 1.16
 github.com/tedsuo/ifrit
@@ -650,7 +655,7 @@ golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20250422160041-2d3770c4ea7f
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20250428153025-10db94c68c34
 ## explicit; go 1.23.0
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.72.0
