@@ -5,9 +5,9 @@ go 1.23.3
 toolchain go1.24.2
 
 require (
-	code.cloudfoundry.org/commandrunner v0.35.0
+	code.cloudfoundry.org/commandrunner v0.36.0
 	code.cloudfoundry.org/idmapper v0.0.0-20250422223656-b294d7db4091
-	code.cloudfoundry.org/lager/v3 v3.35.0
+	code.cloudfoundry.org/lager/v3 v3.36.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20250403123151-62edc04c2604
 	github.com/containers/image/v5 v5.35.0
@@ -33,14 +33,14 @@ require (
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/containers/ocicrypt v1.2.1 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20250422154841-e1f9c1950416 // indirect
+	github.com/google/pprof v0.0.0-20250423184734-337e5dd93bb4 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/moby/sys/capability v0.4.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
