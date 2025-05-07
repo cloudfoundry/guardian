@@ -12,15 +12,15 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.35.0
-	code.cloudfoundry.org/clock v1.37.0
-	code.cloudfoundry.org/commandrunner v0.36.0
-	code.cloudfoundry.org/debugserver v0.48.0
-	code.cloudfoundry.org/garden v0.0.0-20250430022909-7035411ab4cf
+	code.cloudfoundry.org/archiver v0.36.0
+	code.cloudfoundry.org/clock v1.38.0
+	code.cloudfoundry.org/commandrunner v0.37.0
+	code.cloudfoundry.org/debugserver v0.49.0
+	code.cloudfoundry.org/garden v0.0.0-20250502134244-ecba9e3ce67c
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20250430023048-83f6b3d76640
-	code.cloudfoundry.org/lager/v3 v3.36.0
-	code.cloudfoundry.org/localip v0.39.0
+	code.cloudfoundry.org/lager/v3 v3.37.0
+	code.cloudfoundry.org/localip v0.40.0
 	github.com/BurntSushi/toml v1.5.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.91
@@ -52,7 +52,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.6
 	github.com/vishvananda/netlink v1.3.0
 	github.com/vishvananda/netns v0.0.5
-	golang.org/x/sys v0.32.0
+	golang.org/x/sys v0.33.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -64,7 +64,7 @@ require (
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0 // indirect
 	github.com/cilium/ebpf v0.18.0 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20250403123151-62edc04c2604 // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20250505082611-517434ece96d // indirect
 	github.com/containerd/console v1.0.4 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -88,7 +88,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20250423184734-337e5dd93bb4 // indirect
+	github.com/google/pprof v0.0.0-20250501235452-c0086092b71a // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
@@ -115,11 +115,11 @@ require (
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/goleak v1.3.0 // indirect
 	golang.org/x/mod v0.24.0 // indirect
-	golang.org/x/net v0.39.0 // indirect
-	golang.org/x/sync v0.13.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
-	golang.org/x/tools v0.32.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250428153025-10db94c68c34 // indirect
+	golang.org/x/net v0.40.0 // indirect
+	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
+	golang.org/x/tools v0.33.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250505200425-f936aa4a68b2 // indirect
 	google.golang.org/grpc v1.72.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
