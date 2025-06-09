@@ -12,16 +12,11 @@ const (
 	LogLevelInfo  = "info"
 	LogLevelError = "error"
 	LogLevelFatal = "fatal"
-
-	FormatUnixEpoch = "unix-epoch"
-	FormatRFC3339   = "rfc3339"
 )
 
 type LagerFlag struct {
 	//lint:ignore SA5008 github.com/jesse-vdk/go-flag requires duplicate struct tags for 'choice'
 	LogLevel string `long:"log-level" default:"info" choice:"debug" choice:"info" choice:"error" choice:"fatal" description:"Minimum level of logs to see."`
-	//lint:ignore SA5008 github.com/jesse-vdk/go-flag requires duplicate struct tags for 'choice'
-	TimeFormat string `long:"time-format" default:"unix-epoch" choice:"unix-epoch" choice:"rfc3339" description:"format of log timestamps."`
 }
 
 func (f LagerFlag) Logger(component string) (lager.Logger, *lager.ReconfigurableSink) {
@@ -40,12 +35,7 @@ func (f LagerFlag) Logger(component string) (lager.Logger, *lager.Reconfigurable
 	}
 
 	var internalSink lager.Sink
-	switch f.TimeFormat {
-	case FormatRFC3339:
-		internalSink = lager.NewPrettySink(os.Stdout, lager.DEBUG)
-	default:
-		internalSink = lager.NewWriterSink(os.Stdout, lager.DEBUG)
-	}
+	internalSink = lager.NewPrettySink(os.Stdout, lager.DEBUG)
 
 	logger := lager.NewLogger(component)
 
