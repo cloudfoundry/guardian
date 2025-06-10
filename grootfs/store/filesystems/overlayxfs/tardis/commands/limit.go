@@ -30,8 +30,8 @@ var LimitCommand = cli.Command{
 
 	Action: func(ctx *cli.Context) error {
 		logger := lager.NewLogger("tardis")
-		logger.RegisterSink(createLoggingSink(os.Stdout, lager.DEBUG, ctx.String("log-timestamp-format")))
-		logger.RegisterSink(createLoggingSink(os.Stderr, lager.ERROR, ctx.String("log-timestamp-format")))
+		logger.RegisterSink(lager.NewPrettySink(os.Stdout, lager.DEBUG))
+		logger.RegisterSink(lager.NewPrettySink(os.Stderr, lager.ERROR))
 		logger.Info("starting")
 		defer logger.Info("ending")
 

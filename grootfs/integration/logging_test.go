@@ -48,30 +48,8 @@ var _ = Describe("GrootFS logging", func() {
 			Runner.Create(spec)
 		})
 
-		Context("when format is rfc3339", func() {
-			BeforeEach(func() {
-				Runner = Runner.WithLogTimestampFormat("rfc3339")
-			})
-
-			It("logs timestamps with rfc3339 format", func() {
-				Expect(buffer).To(gbytes.Say(`"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{9}Z"`))
-			})
-		})
-
-		Context("when format is unix-epoch", func() {
-			BeforeEach(func() {
-				Runner = Runner.WithLogTimestampFormat("unix-epoch")
-			})
-
-			It("logs timestamps with seconds since 1970 format", func() {
-				Expect(buffer).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
-			})
-		})
-
-		Context("when format is not passed", func() {
-			It("defaults to unix epoch", func() {
-				Expect(buffer).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
-			})
+		It("logs timestamps with rfc3339 format", func() {
+			Expect(buffer).To(gbytes.Say(`"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{9}Z"`))
 		})
 	})
 
@@ -132,7 +110,7 @@ var _ = Describe("GrootFS logging", func() {
 
 					allTheLogs, err := getAllTheLogs()
 					Expect(err).NotTo(HaveOccurred())
-					Expect(string(allTheLogs)).To(ContainSubstring("\"log_level\":0"))
+					Expect(string(allTheLogs)).To(ContainSubstring("\"level\":\"debug\""))
 				})
 			})
 
@@ -143,8 +121,9 @@ var _ = Describe("GrootFS logging", func() {
 
 					allTheLogs, err := getAllTheLogs()
 					Expect(err).NotTo(HaveOccurred())
-					Expect(string(allTheLogs)).NotTo(ContainSubstring("\"log_level\":0"))
-					Expect(string(allTheLogs)).To(ContainSubstring("\"log_level\":1"))
+
+					Expect(string(allTheLogs)).NotTo(ContainSubstring("\"level\":\"debug\""))
+					Expect(string(allTheLogs)).To(ContainSubstring("\"level\":\"info\""))
 				})
 			})
 
@@ -247,28 +226,8 @@ var _ = Describe("Tardis logging", func() {
 			cmd.Args = []string{TardisBin, "stats", "--volume-path", "/tmp"}
 		})
 
-		It("logs using unix timestamps", func() {
-			Expect(stderr).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
-		})
-
-		When("the specified logging timestamp format is anything else", func() {
-			BeforeEach(func() {
-				cmd.Args = []string{TardisBin, "--log-timestamp-format", "rfc3339", "stats", "--volume-path", "/tmp"}
-			})
-
-			It("logs using RFC3339 timestamps", func() {
-				Expect(stderr).To(gbytes.Say(`"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{9}Z"`))
-			})
-		})
-
-		When("the specified logging timestamp format is anything else", func() {
-			BeforeEach(func() {
-				cmd.Args = []string{TardisBin, "--log-timestamp-format", "invalidlog", "stats", "--volume-path", "/tmp"}
-			})
-
-			It("logs using unix timestamps", func() {
-				Expect(stderr).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
-			})
+		It("logs using RFC3339 timestamps", func() {
+			Expect(stderr).To(gbytes.Say(`"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{9}Z"`))
 		})
 	})
 
@@ -277,43 +236,9 @@ var _ = Describe("Tardis logging", func() {
 			cmd.Args = []string{TardisBin, "limit", "--disk-limit-bytes", "102400", "--image-path", "/tmp"}
 		})
 
-		It("logs using unix timestamps", func() {
-			Expect(stdout).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
-			Expect(stderr).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
-		})
-
-		When("the specified logging timestamp format is anything else", func() {
-			BeforeEach(func() {
-				cmd.Args = []string{
-					TardisBin,
-					"--log-timestamp-format", "rfc3339",
-					"limit",
-					"--disk-limit-bytes", "102400",
-					"--image-path", "/tmp",
-				}
-			})
-
-			It("logs using RFC3339 timestamps", func() {
-				Expect(stdout).To(gbytes.Say(`"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{9}Z"`))
-				Expect(stderr).To(gbytes.Say(`"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{9}Z"`))
-			})
-		})
-
-		When("the specified logging timestamp format is anything else", func() {
-			BeforeEach(func() {
-				cmd.Args = []string{
-					TardisBin,
-					"--log-timestamp-format", "invalidlog",
-					"limit",
-					"--disk-limit-bytes", "102400",
-					"--image-path", "/tmp",
-				}
-			})
-
-			It("logs using unix timestamps", func() {
-				Expect(stdout).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
-				Expect(stderr).To(gbytes.Say(`"timestamp":"\d{10}.\d{9}"`))
-			})
+		It("logs using RFC3339 timestamps", func() {
+			Expect(stdout).To(gbytes.Say(`"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{9}Z"`))
+			Expect(stderr).To(gbytes.Say(`"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{9}Z"`))
 		})
 	})
 })

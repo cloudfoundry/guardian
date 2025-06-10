@@ -9,17 +9,16 @@ import (
 )
 
 type Config struct {
-	StorePath          string `yaml:"store"`
-	TardisBin          string `yaml:"tardis_bin"`
-	NewuidmapBin       string `yaml:"newuidmap_bin"`
-	NewgidmapBin       string `yaml:"newgidmap_bin"`
-	MetronEndpoint     string `yaml:"metron_endpoint"`
-	LogLevel           string `yaml:"log_level"`
-	LogFile            string `yaml:"log_file"`
-	LogTimestampFormat string `yaml:"log_timestamp_format"`
-	Create             Create `yaml:"create"`
-	Clean              Clean  `yaml:"clean"`
-	Init               Init   `yaml:"init"`
+	StorePath      string `yaml:"store"`
+	TardisBin      string `yaml:"tardis_bin"`
+	NewuidmapBin   string `yaml:"newuidmap_bin"`
+	NewgidmapBin   string `yaml:"newgidmap_bin"`
+	MetronEndpoint string `yaml:"metron_endpoint"`
+	LogLevel       string `yaml:"log_level"`
+	LogFile        string `yaml:"log_file"`
+	Create         Create `yaml:"create"`
+	Clean          Clean  `yaml:"clean"`
+	Init           Init   `yaml:"init"`
 }
 
 type Create struct {
@@ -163,13 +162,6 @@ func (b *Builder) WithLogLevel(level string, isSet bool) *Builder {
 func (b *Builder) WithLogFile(filepath string) *Builder {
 	if filepath != "" {
 		b.config.LogFile = filepath
-	}
-	return b
-}
-
-func (b *Builder) WithLogTimestampFormat(logTimestampFormat string) *Builder {
-	if logTimestampFormat != "" {
-		b.config.LogTimestampFormat = logTimestampFormat
 	}
 	return b
 }

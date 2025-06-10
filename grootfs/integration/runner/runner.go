@@ -31,11 +31,10 @@ type Runner struct {
 	MetronHost net.IP
 	MetronPort uint16
 	// Logging
-	LogLevelSet        bool
-	LogLevel           lager.LogLevel
-	LogFile            string
-	CleanLogFile       string
-	LogTimestampFormat string
+	LogLevelSet  bool
+	LogLevel     lager.LogLevel
+	LogFile      string
+	CleanLogFile string
 	// Streams
 	Stdout io.Writer
 	Stderr io.Writer
@@ -134,9 +133,6 @@ func (r Runner) makeCmd(subcommand string, args []string) *exec.Cmd {
 	}
 	if r.LogFile != "" {
 		allArgs = append(allArgs, "--log-file", r.LogFile)
-	}
-	if r.LogTimestampFormat != "" {
-		allArgs = append(allArgs, "--log-timestamp-format", r.LogTimestampFormat)
 	}
 	if r.StorePath != "" {
 		allArgs = append(allArgs, "--store", r.StorePath)
