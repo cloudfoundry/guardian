@@ -3,7 +3,7 @@
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20250604020441-dc852fc1be82 => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20250611020431-c7a18aed77ee => ../idmapper
 ## explicit; go 1.23.0
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.39.0
@@ -217,7 +217,7 @@ github.com/russross/blackfriday/v2
 github.com/sirupsen/logrus
 # github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125
 ## explicit
-# github.com/urfave/cli/v2 v2.27.6
+# github.com/urfave/cli/v2 v2.27.7
 ## explicit; go 1.18
 github.com/urfave/cli/v2
 # github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125

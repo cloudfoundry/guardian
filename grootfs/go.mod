@@ -6,7 +6,7 @@ toolchain go1.24.2
 
 require (
 	code.cloudfoundry.org/commandrunner v0.39.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250604020441-dc852fc1be82
+	code.cloudfoundry.org/idmapper v0.0.0-20250611020431-c7a18aed77ee
 	code.cloudfoundry.org/lager/v3 v3.39.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20250505082611-517434ece96d
@@ -22,7 +22,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
-	github.com/urfave/cli/v2 v2.27.6
+	github.com/urfave/cli/v2 v2.27.7
 	github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125
 	golang.org/x/sys v0.33.0
 	google.golang.org/protobuf v1.36.6
