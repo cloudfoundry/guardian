@@ -15,18 +15,18 @@ require (
 	code.cloudfoundry.org/archiver v0.38.0
 	code.cloudfoundry.org/clock v1.40.0
 	code.cloudfoundry.org/commandrunner v0.39.0
-	code.cloudfoundry.org/debugserver v0.52.0
-	code.cloudfoundry.org/garden v0.0.0-20250604020255-2f07acb6e208
+	code.cloudfoundry.org/debugserver v0.53.0
+	code.cloudfoundry.org/garden v0.0.0-20250611020234-e214b0859579
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250604020441-dc852fc1be82
+	code.cloudfoundry.org/idmapper v0.0.0-20250611020431-c7a18aed77ee
 	code.cloudfoundry.org/lager/v3 v3.39.0
 	code.cloudfoundry.org/localip v0.42.0
 	github.com/BurntSushi/toml v1.5.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.93
+	github.com/cloudfoundry/gosigar v1.3.94
 	github.com/containerd/cgroups/v3 v3.0.5
 	github.com/containerd/containerd/api v1.9.0
-	github.com/containerd/containerd/v2 v2.1.1
+	github.com/containerd/containerd/v2 v2.1.2
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/typeurl/v2 v2.2.3
 	github.com/eapache/go-resiliency v1.7.0
@@ -49,7 +49,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.6
 	github.com/tedsuo/ifrit v0.0.0-20230516164442-7862c310ad26
-	github.com/urfave/cli/v2 v2.27.6
+	github.com/urfave/cli/v2 v2.27.7
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
 	golang.org/x/sys v0.33.0
