@@ -34,8 +34,7 @@ func (f LagerFlag) Logger(component string) (lager.Logger, *lager.Reconfigurable
 		panic(fmt.Sprintf("unknown log level: %s", f.LogLevel))
 	}
 
-	var internalSink lager.Sink
-	internalSink = lager.NewPrettySink(os.Stdout, lager.DEBUG)
+	internalSink := lager.NewPrettySink(os.Stdout, lager.DEBUG)
 
 	logger := lager.NewLogger(component)
 
