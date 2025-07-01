@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -210,8 +211,8 @@ func CORERelocate(relos []*CORERelocation, targets []*Spec, bo binary.ByteOrder,
 	resolveTargetTypeID := targets[0].TypeID
 
 	for _, target := range targets {
-		if bo != target.byteOrder {
-			return nil, fmt.Errorf("can't relocate %s against %s", bo, target.byteOrder)
+		if bo != target.imm.byteOrder {
+			return nil, fmt.Errorf("can't relocate %s against %s", bo, target.imm.byteOrder)
 		}
 	}
 
@@ -264,14 +265,16 @@ func CORERelocate(relos []*CORERelocation, targets []*Spec, bo binary.ByteOrder,
 
 		var targetTypes []Type
 		for _, target := range targets {
-			namedTypes, err := target.TypesByName(essentialName)
-			if errors.Is(err, ErrNotFound) {
-				continue
-			} else if err != nil {
-				return nil, err
-			}
+			namedTypeIDs := target.imm.namedTypes[essentialName]
+			targetTypes = slices.Grow(targetTypes, len(namedTypeIDs))
+			for _, id := range namedTypeIDs {
+				typ, err := target.TypeByID(id)
+				if err != nil {
+					return nil, err
+				}
 
-			targetTypes = append(targetTypes, namedTypes...)
+				targetTypes = append(targetTypes, typ)
+			}
 		}
 
 		fixups, err := coreCalculateFixups(group.relos, targetTypes, bo, resolveTargetTypeID)
