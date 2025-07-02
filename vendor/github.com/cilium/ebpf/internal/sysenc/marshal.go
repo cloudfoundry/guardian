@@ -51,7 +51,11 @@ func Marshal(data any, size int) (Buffer, error) {
 			return newBuffer(buf), nil
 		}
 
-		buf, err = binary.Append(nil, internal.NativeEndian, value)
+		wr := internal.NewBuffer(make([]byte, 0, size))
+		defer internal.PutBuffer(wr)
+
+		err = binary.Write(wr, internal.NativeEndian, value)
+		buf = wr.Bytes()
 	}
 	if err != nil {
 		return Buffer{}, err

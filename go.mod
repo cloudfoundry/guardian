@@ -8,7 +8,9 @@ replace (
 	code.cloudfoundry.org/garden => ../garden
 	code.cloudfoundry.org/grootfs => ../grootfs
 	code.cloudfoundry.org/idmapper => ../idmapper
+	github.com/cilium/ebpf v0.19.0 => github.com/cilium/ebpf v0.18.0
 	github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
+	github.com/opencontainers/cgroups v0.0.3 => github.com/opencontainers/cgroups v0.0.2
 )
 
 require (
