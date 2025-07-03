@@ -84,7 +84,7 @@ var _ = Describe("garden server Logging", func() {
 			_, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(client, "1s").Should(gbytes.Say(`"log_level":0`))
+			Eventually(client, "1s").Should(gbytes.Say(`"level":"debug"`))
 		})
 
 		It("doesn't log spurious messages on start", func() {
@@ -105,11 +105,11 @@ var _ = Describe("garden server Logging", func() {
 		})
 
 		It("logs at info level", func() {
-			Eventually(client, "1s").Should(gbytes.Say(`"log_level":1`))
+			Eventually(client, "1s").Should(gbytes.Say(`"level":"info"`))
 		})
 
 		It("does not log at debug level", func() {
-			Consistently(client, "1s").ShouldNot(gbytes.Say(`"log_level":0`))
+			Consistently(client, "1s").ShouldNot(gbytes.Say(`"level":"debug"`))
 		})
 	})
 
