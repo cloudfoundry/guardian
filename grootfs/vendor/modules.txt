@@ -223,7 +223,7 @@ github.com/urfave/cli/v2
 # github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125
 ## explicit
 github.com/ventu-io/go-shortid
-# github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1
+# github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342
 ## explicit; go 1.15
 github.com/xrash/smetrics
 # go.uber.org/automaxprocs v1.6.0
