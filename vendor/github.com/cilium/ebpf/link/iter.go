@@ -1,5 +1,3 @@
-//go:build !windows
-
 package link
 
 import (
@@ -44,7 +42,7 @@ func AttachIter(opts IterOptions) (*Iter, error) {
 	attr := sys.LinkCreateIterAttr{
 		ProgFd:      uint32(progFd),
 		AttachType:  sys.AttachType(ebpf.AttachTraceIter),
-		IterInfo:    sys.UnsafePointer(unsafe.Pointer(&info)),
+		IterInfo:    sys.NewPointer(unsafe.Pointer(&info)),
 		IterInfoLen: uint32(unsafe.Sizeof(info)),
 	}
 
@@ -77,7 +75,7 @@ func (it *Iter) Open() (io.ReadCloser, error) {
 		return nil, fmt.Errorf("can't create iterator: %w", err)
 	}
 
-	return fd.File("bpf_iter")
+	return fd.File("bpf_iter"), nil
 }
 
 // union bpf_iter_link_info.map
