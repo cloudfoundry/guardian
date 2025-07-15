@@ -116,8 +116,10 @@ var _ = Describe("SharesBalancer", func() {
 			// negative -1 converted to uint becomes large value and shares are set to max value
 			// in cgroups v1 this number automatically converts to 262144
 			// in cgroups v2 we set it max cpu weight 10000
+			fmt.Println("v2 **")
 			if cgroups.IsCgroup2UnifiedMode() {
 				Expect(readCPUShares(goodCgroupPath)).To(Equal(10000))
+				fmt.Println("shares **", readCPUShares(badCgroupPath))
 				Expect(readCPUShares(badCgroupPath)).To(BeNumerically("~", int(cgroups.ConvertCPUSharesToCgroupV2Value(1000)), 1))
 			} else {
 				Expect(readCPUShares(goodCgroupPath)).To(Equal(262144))
