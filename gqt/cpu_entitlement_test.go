@@ -64,7 +64,7 @@ var _ = Describe("CPU entitlement", func() {
 
 	Context("when CPU entitlement per share is set", func() {
 		BeforeEach(func() {
-			config.CPUEntitlementPerShare = float64ptr(3.45)
+			config.CPUEntitlementPerShare = float64ptr(15)
 		})
 
 		It("uses it", func() {
