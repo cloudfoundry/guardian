@@ -118,6 +118,7 @@ var _ = Describe("SharesBalancer", func() {
 			// in cgroups v2 we set it max cpu weight 10000
 			fmt.Println("v2 **")
 			if cgroups.IsCgroup2UnifiedMode() {
+				fmt.Println("good shares **", readCPUShares(badCgroupPath))
 				Expect(readCPUShares(goodCgroupPath)).To(Equal(10000))
 				fmt.Println("shares **", readCPUShares(badCgroupPath))
 				Expect(readCPUShares(badCgroupPath)).To(BeNumerically("~", int(cgroups.ConvertCPUSharesToCgroupV2Value(1000)), 1))
@@ -167,6 +168,8 @@ var _ = Describe("SharesBalancer", func() {
 				if cgroups.IsCgroup2UnifiedMode() {
 					expectedGoodCPUShares = int(cgroups.ConvertCPUSharesToCgroupV2Value(9500))
 					expectedBadCPUShares = int(cgroups.ConvertCPUSharesToCgroupV2Value(500))
+					fmt.Println("expectedGoodCPUShares ** ", expectedGoodCPUShares)
+					fmt.Println("expectedBadCPUShares ** ", expectedBadCPUShares)
 				}
 
 				Expect(readCPUShares(goodCgroupPath)).To(Equal(expectedGoodCPUShares))
