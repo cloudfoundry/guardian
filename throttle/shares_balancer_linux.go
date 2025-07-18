@@ -48,6 +48,7 @@ func (b SharesBalancer) Run(logger lager.Logger) error {
 	}
 
 	badShares = uint64(float64(badShares) * b.multiplier)
+	fmt.Println("bad :", badShares)
 
 	if badShares == 0 {
 		badShares = 2
@@ -90,7 +91,7 @@ func (b SharesBalancer) countShares(cgroupPath string) (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-
+		fmt.Println("child  :", child, shares)
 		totalShares += shares
 		fmt.Println("totalShares  :", totalShares)
 	}
