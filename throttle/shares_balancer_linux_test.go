@@ -90,7 +90,7 @@ var _ = Describe("SharesBalancer", func() {
 
 		BeforeEach(func() {
 			memoryProvider.TotalMemoryReturns(999*throttle.MB, nil)
-
+			fmt.Println("writing badcgroup :")
 			createCgroup(badCgroupPath, "container1", 1000)
 			createCgroup(badCgroupPath, "container2", 1000)
 
@@ -118,7 +118,7 @@ var _ = Describe("SharesBalancer", func() {
 			// in cgroups v2 we set it max cpu weight 10000
 			fmt.Println("v2 **")
 			if cgroups.IsCgroup2UnifiedMode() {
-				fmt.Println("good shares **", readCPUShares(badCgroupPath))
+				fmt.Println("good shares **", readCPUShares(goodCgroupPath))
 				Expect(readCPUShares(goodCgroupPath)).To(Equal(10000))
 				fmt.Println("shares **", readCPUShares(badCgroupPath))
 				Expect(readCPUShares(badCgroupPath)).To(BeNumerically("~", int(cgroups.ConvertCPUSharesToCgroupV2Value(1000)), 1))
@@ -169,7 +169,7 @@ var _ = Describe("SharesBalancer", func() {
 					expectedGoodCPUShares = int(cgroups.ConvertCPUSharesToCgroupV2Value(9500))
 					expectedBadCPUShares = int(cgroups.ConvertCPUSharesToCgroupV2Value(500))
 					fmt.Println("expectedGoodCPUShares ** ", expectedGoodCPUShares)
-					fmt.Println("expectedBadCPUShares ** ", expectedBadCPUShares)
+					fmt.Println("expectedBadCPUShares ** ", expectedGoodCPUShares)
 				}
 
 				Expect(readCPUShares(goodCgroupPath)).To(Equal(expectedGoodCPUShares))
