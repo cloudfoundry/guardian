@@ -2,7 +2,6 @@ package throttle_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -423,7 +422,6 @@ func writeShares(path string, shares int) {
 	if cgroups.IsCgroup2UnifiedMode() {
 		cpuSharesFile = "cpu.weight"
 		shares = int(cgroups.ConvertCPUSharesToCgroupV2Value(uint64(shares)))
-		fmt.Println("converted shares :", shares)
 	}
 	Expect(os.WriteFile(filepath.Join(path, cpuSharesFile), []byte(strconv.Itoa(shares)), 0644)).To(Succeed())
 }

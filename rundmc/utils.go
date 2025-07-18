@@ -1,13 +1,11 @@
 package rundmc
 
 import (
-	"fmt"
 	"math"
 )
 
 // reverse of runc cgroups.ConvertCPUSharesToCgroupV2Value
 func ConvertCgroupV2ValueToCPUShares(cpuWeight uint64) uint64 {
-	fmt.Println("cpu Weight ", cpuWeight)
 	if cpuWeight == 0 {
 		return 0
 	}
@@ -26,7 +24,6 @@ func ConvertCgroupV2ValueToCPUShares(cpuWeight uint64) uint64 {
 	constant := 612.0 * (exponent + 7.0/34.0)
 	discriminant := 125.0*125.0 + 4.0*constant
 	l := (-125.0 + math.Sqrt(discriminant)) / 2.0
-	fmt.Println("SHARES :", uint64(math.Round(math.Pow(2, l))))
 	// Now convert back to shares
 	return uint64(math.Round(math.Pow(2, l)))
 

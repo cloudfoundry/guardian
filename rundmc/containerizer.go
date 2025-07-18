@@ -450,7 +450,6 @@ func calculateCPUEntitlement(shares uint64, entitlementPerShare float64, contain
 }
 
 func getShares(bundle goci.Bndl) uint64 {
-	fmt.Println("BUNDLE :")
 	resources := bundle.Resources()
 	if resources == nil {
 		return 0
@@ -462,7 +461,6 @@ func getShares(bundle goci.Bndl) uint64 {
 			if err != nil {
 				return 0
 			}
-			fmt.Println("BUNDLE SHARES :", ConvertCgroupV2ValueToCPUShares(cpuWeightUint))
 			return ConvertCgroupV2ValueToCPUShares(cpuWeightUint)
 		}
 

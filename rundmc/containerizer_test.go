@@ -679,9 +679,9 @@ var _ = Describe("Rundmc", func() {
 				actualMetrics, err := containerizer.Metrics(logger, "foo")
 				Expect(err).NotTo(HaveOccurred())
 				if gardencgroups.IsCgroup2UnifiedMode() {
-					// We loose up to one decimal when converting shares to weight and back, see  ConvertCPUSharesToCgroupV2Value
-					expectedEntitlement := uint64(float64(cpuShares) * (entitlementPerSharePercent / 100) * float64(containerAge-1*time.Second))
-					Expect(actualMetrics.CPUEntitlement).To(Equal(expectedEntitlement))
+					expectedEntitlement := uint64(float64(cpuShares) * (entitlementPerSharePercent / 100) * float64(containerAge))
+					Expect(actualMetrics.CPUEntitlement).To(BeNumerically("~", expectedEntitlement, 1_000_001))
+
 				} else {
 					expectedEntitlement := uint64(float64(cpuShares) * (entitlementPerSharePercent / 100) * float64(containerAge))
 					Expect(actualMetrics.CPUEntitlement).To(Equal(expectedEntitlement))

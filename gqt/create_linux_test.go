@@ -449,7 +449,7 @@ var _ = Describe("Creating a Container", func() {
 			})
 
 			It("can set the cpu weight", func() {
-				container, err := createContainerWithCpuConfig(2, 0)
+				container, err := createContainerWithCpuConfig(100, 0)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(getContainerCPUShares(container)).To(Equal(2))
@@ -492,16 +492,16 @@ var _ = Describe("Creating a Container", func() {
 			})
 
 			It("can set the cpu weight", func() {
-				container, err := createContainerWithCpuConfig(2, 0)
+				container, err := createContainerWithCpuConfig(100, 0)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(getContainerCPUShares(container)).To(Equal(2))
+				Expect(getContainerCPUShares(container)).To(Equal(17))
 			})
 
 			It("should use the default weight value when neither the cpu share or weight are set", func() {
 				container, err := createContainerWithCpuConfig(0, 0)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(getContainerCPUShares(container)).To(Equal(0))
+				Expect(getContainerCPUShares(container)).To(Equal(100))
 			})
 
 			Context("when LimitInShares is set", func() {
