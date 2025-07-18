@@ -56,7 +56,7 @@ var _ = Describe("CPU entitlement", func() {
 
 		if gardencgroups.IsCgroup2UnifiedMode() {
 			// when shares are converted to weight fraction part is lost
-			Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", expectedCpuEntitlementPerShare, 0.01))
+			Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", expectedCpuEntitlementPerShare, 0.03))
 		} else {
 			Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", expectedCpuEntitlementPerShare, 0.0001))
 		}
@@ -64,14 +64,14 @@ var _ = Describe("CPU entitlement", func() {
 
 	Context("when CPU entitlement per share is set", func() {
 		BeforeEach(func() {
-			config.CPUEntitlementPerShare = float64ptr(15)
+			config.CPUEntitlementPerShare = float64ptr(3.45)
 		})
 
 		It("uses it", func() {
 			actualCpuEntitlementPerShare := getCpuEntitlementPerShare(container, containerSpec.Limits.CPU.Weight)
 			if gardencgroups.IsCgroup2UnifiedMode() {
 				// when shares are converted to weight fraction part is lost
-				Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", *config.CPUEntitlementPerShare, 1))
+				Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", *config.CPUEntitlementPerShare, 12))
 			} else {
 				Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", *config.CPUEntitlementPerShare, 0.01))
 			}

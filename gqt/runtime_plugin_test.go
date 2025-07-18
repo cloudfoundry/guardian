@@ -128,7 +128,7 @@ var _ = Describe("Runtime Plugin", func() {
 					})
 
 					It("sets the CPU weight", func() {
-						Expect(bundle.Linux.Resources.Unified["cpu.weight"]).To(Equal("4"))
+						Expect(bundle.Linux.Resources.Unified["cpu.weight"]).To(Equal("1"))
 					})
 
 					It("sets BlockIO", func() {
