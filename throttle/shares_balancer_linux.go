@@ -1,6 +1,7 @@
 package throttle
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -39,6 +40,7 @@ func (b SharesBalancer) Run(logger lager.Logger) error {
 	defer logger.Info("finished")
 
 	totalMemoryInBytes, _ := b.memoryProvider.TotalMemory()
+	fmt.Println("totalMemoryInBytes ****", totalMemoryInBytes)
 
 	badShares, err := b.countShares(b.badCgroupPath)
 	if err != nil {
@@ -46,6 +48,7 @@ func (b SharesBalancer) Run(logger lager.Logger) error {
 	}
 
 	badShares = uint64(float64(badShares) * b.multiplier)
+	fmt.Println("bad :", badShares)
 
 	if badShares == 0 {
 		badShares = 2
@@ -73,6 +76,7 @@ func (b SharesBalancer) countShares(cgroupPath string) (uint64, error) {
 
 	var totalShares uint64
 	for _, child := range children {
+		fmt.Println("reading child *** ", child)
 		if !child.IsDir() {
 			continue
 		}
@@ -87,8 +91,9 @@ func (b SharesBalancer) countShares(cgroupPath string) (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-
+		fmt.Println("child  :", child, shares)
 		totalShares += shares
+		fmt.Println("totalShares  :", totalShares)
 	}
 
 	return totalShares, nil

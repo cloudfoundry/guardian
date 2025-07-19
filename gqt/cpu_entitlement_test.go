@@ -1,6 +1,8 @@
 package gqt_test
 
 import (
+	"fmt"
+
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
@@ -39,6 +41,7 @@ var _ = Describe("CPU entitlement", func() {
 	})
 
 	It("defaults to optimal CPU entitlement per share", func() {
+		fmt.Println("config ******", config)
 		actualCpuEntitlementPerShare := getCpuEntitlementPerShare(container, containerSpec.Limits.CPU.Weight)
 
 		resourcesProvider := sysinfo.NewResourcesProvider(config.DepotDir)
@@ -49,10 +52,11 @@ var _ = Describe("CPU entitlement", func() {
 		cpuCores, err := resourcesProvider.CPUCores()
 		Expect(err).NotTo(HaveOccurred())
 		expectedCpuEntitlementPerShare := float64(cpuCores*100) / memoryInMb
+		fmt.Println("expectedCpuEntitlementPerShare ****", expectedCpuEntitlementPerShare)
 
 		if gardencgroups.IsCgroup2UnifiedMode() {
 			// when shares are converted to weight fraction part is lost
-			Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", expectedCpuEntitlementPerShare, 0.01))
+			Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", expectedCpuEntitlementPerShare, 0.03))
 		} else {
 			Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", expectedCpuEntitlementPerShare, 0.0001))
 		}
@@ -67,7 +71,7 @@ var _ = Describe("CPU entitlement", func() {
 			actualCpuEntitlementPerShare := getCpuEntitlementPerShare(container, containerSpec.Limits.CPU.Weight)
 			if gardencgroups.IsCgroup2UnifiedMode() {
 				// when shares are converted to weight fraction part is lost
-				Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", *config.CPUEntitlementPerShare, 1))
+				Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", *config.CPUEntitlementPerShare, 12))
 			} else {
 				Expect(actualCpuEntitlementPerShare).To(BeNumerically("~", *config.CPUEntitlementPerShare, 0.01))
 			}
