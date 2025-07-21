@@ -452,7 +452,7 @@ var _ = Describe("Creating a Container", func() {
 				container, err := createContainerWithCpuConfig(100, 0)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(getContainerCPUShares(container)).To(Equal(2))
+				Expect(getContainerCPUShares(container)).To(Equal(100))
 			})
 
 			It("should return an error when the cpu shares is invalid", func() {
