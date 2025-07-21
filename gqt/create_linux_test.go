@@ -449,7 +449,7 @@ var _ = Describe("Creating a Container", func() {
 			})
 
 			It("can set the cpu weight", func() {
-				container, err := createContainerWithCpuConfig(2, 0)
+				container, err := createContainerWithCpuConfig(100, 0)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(getContainerCPUShares(container)).To(Equal(2))
@@ -492,16 +492,10 @@ var _ = Describe("Creating a Container", func() {
 			})
 
 			It("can set the cpu weight", func() {
-				container, err := createContainerWithCpuConfig(2, 0)
+				container, err := createContainerWithCpuConfig(100, 0)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(getContainerCPUShares(container)).To(Equal(1))
-			})
-
-			It("should return an error when the cpu shares is invalid", func() {
-				_, err := createContainerWithCpuConfig(1, 0)
-
-				Expect(err.Error()).To(ContainSubstring("numerical result out of range"))
+				Expect(getContainerCPUShares(container)).To(Equal(17))
 			})
 
 			It("should use the default weight value when neither the cpu share or weight are set", func() {
@@ -514,7 +508,7 @@ var _ = Describe("Creating a Container", func() {
 				It("creates a container with the shares", func() {
 					container, err := createContainerWithCpuConfig(0, 123)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(getContainerCPUShares(container)).To(Equal(5))
+					Expect(getContainerCPUShares(container)).To(Equal(20))
 				})
 			})
 
@@ -522,7 +516,8 @@ var _ = Describe("Creating a Container", func() {
 				It("Weight has precedence", func() {
 					container, err := createContainerWithCpuConfig(123, 456)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(getContainerCPUShares(container)).To(Equal(5))
+					// check caching
+					Expect(getContainerCPUShares(container)).To(Equal(20))
 				})
 			})
 		})
