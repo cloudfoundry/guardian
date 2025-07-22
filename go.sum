@@ -598,8 +598,8 @@ code.cloudfoundry.org/clock v1.42.0 h1:JL+Ohg9utnhfDA8LdIcrIbgf5rNRjS/3zMPZir4Af
 code.cloudfoundry.org/clock v1.42.0/go.mod h1:UlIDLU307RSzykenI4wGnE3G/3fB1MiQjgFtIl5HrNU=
 code.cloudfoundry.org/commandrunner v0.41.0 h1:02+dBLDxJ0AboA3t4Vb1jaBezNyix10wtNyapOVcxUM=
 code.cloudfoundry.org/commandrunner v0.41.0/go.mod h1:xqF8oOv/OTlJjhjby0sraGVc+qRqfAoV/y9lJ47s7Vo=
-code.cloudfoundry.org/debugserver v0.58.0 h1:vcefncUz2EuQS/I36Jl1MjqB9LoUhrEJLfxqx7XarkU=
-code.cloudfoundry.org/debugserver v0.58.0/go.mod h1:TC2Mxl1JU06IhIU5TH86ALD980j+wJN3XuwQ9cZyhJk=
+code.cloudfoundry.org/debugserver v0.59.0 h1:LMOWKRD4ikT70BYCqu29yBdwkD7Aw2AL7c6GZAbRpl8=
+code.cloudfoundry.org/debugserver v0.59.0/go.mod h1:SDk5ARHhVke0dPJuVQt19emjlTgnXC9oI60k1Pwo6zw=
 code.cloudfoundry.org/lager/v3 v3.41.0 h1:VCnZVVmFNTQgslxiY9UH363H4+jXZyredvFCino6kRA=
 code.cloudfoundry.org/lager/v3 v3.41.0/go.mod h1:T3TdJR+5s7mct3jChCxUV/ctAyeio4T3p10hP75BZaA=
 code.cloudfoundry.org/localip v0.44.0 h1:P2dBIQlrIV0erlDNDqTJ702d8vd3SGsE4JpaeT0VaeU=
