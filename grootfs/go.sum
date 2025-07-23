@@ -1,5 +1,5 @@
-code.cloudfoundry.org/commandrunner v0.41.0 h1:02+dBLDxJ0AboA3t4Vb1jaBezNyix10wtNyapOVcxUM=
-code.cloudfoundry.org/commandrunner v0.41.0/go.mod h1:xqF8oOv/OTlJjhjby0sraGVc+qRqfAoV/y9lJ47s7Vo=
+code.cloudfoundry.org/commandrunner v0.42.0 h1:j/15h4rg7IkfJm8a75inBXj8KDJk+9g/sQT1GFx/0dk=
+code.cloudfoundry.org/commandrunner v0.42.0/go.mod h1:HySnGIhLOYsLiSWNdzURsZuskCEsLs/4VztnXCXhluY=
 code.cloudfoundry.org/lager/v3 v3.41.0 h1:VCnZVVmFNTQgslxiY9UH363H4+jXZyredvFCino6kRA=
 code.cloudfoundry.org/lager/v3 v3.41.0/go.mod h1:T3TdJR+5s7mct3jChCxUV/ctAyeio4T3p10hP75BZaA=
 github.com/BurntSushi/toml v1.5.0 h1:W5quZX/G/csjUnuI8SUYlsHs9M38FC7znL0lIO+DvMg=
@@ -90,8 +90,8 @@ github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d h1:VhgPp6v9qf9Agr/
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d/go.mod h1:YUTz3bUH2ZwIWBy3CJBeOBEugqcmXREj14T+iG/4k4U=
 github.com/onsi/ginkgo/v2 v2.23.4 h1:ktYTpKJAVZnDT4VjxSbiBenUjmlL/5QkBEocaWXiQus=
 github.com/onsi/ginkgo/v2 v2.23.4/go.mod h1:Bt66ApGPBFzHyR+JO10Zbt0Gsp4uWxu5mIOTusL46e8=
-github.com/onsi/gomega v1.37.0 h1:CdEG8g0S133B4OswTDC/5XPSzE1OeP29QOioj2PID2Y=
-github.com/onsi/gomega v1.37.0/go.mod h1:8D9+Txp43QWKhM24yyOBEdpkzN8FvJyAwecBgsU4KU0=
+github.com/onsi/gomega v1.38.0 h1:c/WX+w8SLAinvuKKQFh77WEucCnPk4j2OTUr7lt7BeY=
+github.com/onsi/gomega v1.38.0/go.mod h1:OcXcwId0b9QsE7Y49u+BTrL4IdKOBOKnD6VQNTJEB6o=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.1 h1:y0fUlFfIZhPF1W537XOLg0/fcx6zcHCJwooC2xJA040=
