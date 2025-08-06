@@ -16,8 +16,8 @@ require (
 	code.cloudfoundry.org/archiver v0.41.0
 	code.cloudfoundry.org/clock v1.43.0
 	code.cloudfoundry.org/commandrunner v0.42.0
-	code.cloudfoundry.org/debugserver v0.60.0
-	code.cloudfoundry.org/garden v0.0.0-20250723020637-e97ef1c64f2b
+	code.cloudfoundry.org/debugserver v0.61.0
+	code.cloudfoundry.org/garden v0.0.0-20250730020702-3c607f063fc6
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20250723020823-6e881dd1f684
 	code.cloudfoundry.org/lager/v3 v3.42.0
@@ -27,7 +27,7 @@ require (
 	github.com/cloudfoundry/gosigar v1.3.96
 	github.com/containerd/cgroups/v3 v3.0.5
 	github.com/containerd/containerd/api v1.9.0
-	github.com/containerd/containerd/v2 v2.1.3
+	github.com/containerd/containerd/v2 v2.1.4
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/typeurl/v2 v2.2.3
 	github.com/eapache/go-resiliency v1.7.0
@@ -100,7 +100,7 @@ require (
 	github.com/opencontainers/selinux v1.12.0 // indirect
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/seccomp/libseccomp-golang v0.11.0 // indirect
+	github.com/seccomp/libseccomp-golang v0.11.1 // indirect
 	github.com/tedsuo/rata v1.0.0 // indirect
 	github.com/urfave/cli v1.22.16 // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
@@ -117,7 +117,7 @@ require (
 	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/tools v0.35.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250728155136-f173205681a0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250804133106-a7a43d27e69b // indirect
 	google.golang.org/grpc v1.74.2 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
