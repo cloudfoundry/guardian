@@ -312,7 +312,7 @@ var _ = Describe("Network plugin", func() {
 
 				Expect(containerProperties["foo"]).To(Equal("bar"))
 				Expect(containerProperties["garden.network.container-ip"]).To(Equal("10.255.10.10"))
-				Expect(containerProperties["garden.network.container-ip"]).To(Equal("2001:db8::1"))
+				Expect(containerProperties["garden.network.container-ipv6"]).To(Equal("2001:db8::1"))
 				Expect(containerProperties["garden.network.host-ip"]).To(Equal("255.255.255.255"))
 			})
 		})
