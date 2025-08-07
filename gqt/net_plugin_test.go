@@ -291,6 +291,31 @@ var _ = Describe("Network plugin", func() {
 			Expect(containerProperties["garden.network.container-ip"]).To(Equal("10.255.10.10"))
 			Expect(containerProperties["garden.network.host-ip"]).To(Equal("255.255.255.255"))
 		})
+
+		Context("and the properties contain ipv6 address", func() {
+			BeforeEach(func() {
+				pluginReturn = `{
+					"properties":{
+						"foo":"bar",
+						"garden.network.container-ip":"10.255.10.10",
+						"garden.network.container-ipv6":"2001:db8::1",
+						"garden.network.host-ip":"255.255.255.255"
+					}
+			  }`
+			})
+
+			It("persists the returned properties to the container's properties", func() {
+				info, err := container.Info()
+				Expect(err).NotTo(HaveOccurred())
+
+				containerProperties := info.Properties
+
+				Expect(containerProperties["foo"]).To(Equal("bar"))
+				Expect(containerProperties["garden.network.container-ip"]).To(Equal("10.255.10.10"))
+				Expect(containerProperties["garden.network.container-ip"]).To(Equal("2001:db8::1"))
+				Expect(containerProperties["garden.network.host-ip"]).To(Equal("255.255.255.255"))
+			})
+		})
 	})
 
 	Context("when the network plugin returns dns_servers", func() {

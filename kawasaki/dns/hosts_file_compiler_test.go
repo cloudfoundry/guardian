@@ -28,13 +28,37 @@ var _ = Describe("HostsFileCompiler", func() {
 
 	Describe("Compile", func() {
 		It("should configure the ipv4 localhost mapping", func() {
-			contents, err := compiler.Compile(log, ip, "myhandle", []string{})
+			contents, err := compiler.Compile(log, ip, nil, "myhandle", []string{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(ContainSubstring("127.0.0.1 localhost"))
 		})
 
+		It("should not configure the ipv6 localhost mapping", func() {
+			contents, err := compiler.Compile(log, ip, nil, "myhandle", []string{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(contents)).NotTo(ContainSubstring("::1 localhost"))
+		})
+
+		Context("when ipv6 is enabled", func() {
+			var ipv6 = net.ParseIP("2001:db8::68")
+
+			It("should append the ipv6 localhost mapping", func() {
+				contents, err := compiler.Compile(log, ip, ipv6, "myhandle", []string{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(ContainSubstring("127.0.0.1 localhost"))
+				Expect(string(contents)).To(ContainSubstring("::1 localhost"))
+			})
+
+			It("should append the ipv6 hostname mapping", func() {
+				contents, err := compiler.Compile(log, ip, ipv6, "my-handle", []string{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(ContainSubstring("123.124.126.128 my-handle"))
+				Expect(string(contents)).To(ContainSubstring("2001:db8::68 my-handle"))
+			})
+		})
+
 		It("should configure the hostname mapping", func() {
-			contents, err := compiler.Compile(log, ip, "my-handle", []string{})
+			contents, err := compiler.Compile(log, ip, nil, "my-handle", []string{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(ContainSubstring("123.124.126.128 my-handle"))
 		})
@@ -44,7 +68,7 @@ var _ = Describe("HostsFileCompiler", func() {
 				"1.2.3.4 foo",
 				"2.3.4.5 bar"}
 
-			contents, err := compiler.Compile(log, ip, "myhandle", additionalHosts)
+			contents, err := compiler.Compile(log, ip, nil, "myhandle", additionalHosts)
 			Expect(err).NotTo(HaveOccurred())
 			hosts := strings.Split(string(contents), "\n")
 			hosts = hosts[:len(hosts)-1]
@@ -55,7 +79,7 @@ var _ = Describe("HostsFileCompiler", func() {
 
 		Context("when handle is longer than 49 characters", func() {
 			It("should use the last 49 characters of it", func() {
-				contents, err := compiler.Compile(log, ip, "too-looooong-haaaaaaaaaaaaaannnnnndddle-1234456787889", []string{})
+				contents, err := compiler.Compile(log, ip, nil, "too-looooong-haaaaaaaaaaaaaannnnnndddle-1234456787889", []string{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(contents)).To(ContainSubstring("123.124.126.128 looooong-haaaaaaaaaaaaaannnnnndddle-1234456787889"))
 			})
