@@ -105,15 +105,11 @@ func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 		NetIn:      containerSpec.NetIn,
 	}
 
-	log.Debug("external-binary-inputs", lager.Data{"inputs": inputs})
-
 	outputs := UpOutputs{}
 	err := p.exec(log, "up", containerSpec.Handle, inputs, &outputs)
 	if err != nil {
 		return err
 	}
-
-	log.Debug("external-binary-outputs", lager.Data{"outputs": outputs})
 
 	for k, v := range outputs.Properties {
 		p.configStore.Set(containerSpec.Handle, k, v)
