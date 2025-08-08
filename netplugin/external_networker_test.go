@@ -480,6 +480,18 @@ var _ = Describe("ExternalNetworker", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
+
+		Context("when the external network plugin returns ipv6 address", func() {
+			It("persists the returned ipv6 address in the container's properties", func() {
+				pluginOutput = `{"properties":{"foo":"bar","ping":"pong","garden.network.container-ip":"10.255.1.2", "garden.network.container-ipv6":"2006:db8::1"}}`
+
+				err := plugin.Network(logger, containerSpec, 42)
+				Expect(err).NotTo(HaveOccurred())
+
+				persistedPropertyValue, _ := configStore.Get("some-handle", "garden.network.container-ipv6")
+				Expect(persistedPropertyValue).To(Equal("2006:db8::1"))
+			})
+		})
 	})
 
 	Describe("Destroy", func() {

@@ -30,6 +30,7 @@ type NetworkConfig struct {
 	BridgeName            string
 	BridgeIP              net.IP
 	ContainerIP           net.IP
+	ContainerIPv6         net.IP
 	ExternalIP            net.IP
 	Subnet                *net.IPNet
 	Mtu                   int

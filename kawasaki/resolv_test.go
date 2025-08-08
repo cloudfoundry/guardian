@@ -62,7 +62,7 @@ var _ = Describe("ResolvConfigurer", func() {
 		}
 
 		Expect(dnsResolv.Configure(log, networkConfig, 42)).To(Succeed())
-		_, _, _, additionalHostEntries := fakeHostsFileCompiler.CompileArgsForCall(0)
+		_, _, _, _, additionalHostEntries := fakeHostsFileCompiler.CompileArgsForCall(0)
 		Expect(additionalHostEntries).To(Equal([]string{
 			"1.2.3.4 foo",
 			"2.3.4.5 bar",
@@ -76,7 +76,7 @@ var _ = Describe("ResolvConfigurer", func() {
 		}
 
 		Expect(dnsResolv.Configure(log, networkConfig, 42)).To(Succeed())
-		_, ip, handle, _ := fakeHostsFileCompiler.CompileArgsForCall(0)
+		_, ip, _, handle, _ := fakeHostsFileCompiler.CompileArgsForCall(0)
 		Expect(ip).To(Equal(networkConfig.ContainerIP))
 		Expect(handle).To(Equal(networkConfig.ContainerHandle))
 	})
@@ -147,6 +147,23 @@ var _ = Describe("ResolvConfigurer", func() {
 			It("should return an error", func() {
 				Expect(dnsResolv.Configure(log, kawasaki.NetworkConfig{ContainerHandle: handle}, 42)).To(BeAssignableToTypeOf(&os.PathError{}))
 			})
+		})
+	})
+
+	Context("when ipv6 is provided", func() {
+		var networkConfig kawasaki.NetworkConfig
+		BeforeEach(func() {
+			networkConfig = kawasaki.NetworkConfig{
+				ContainerHandle: handle,
+				ContainerIPv6:   net.ParseIP("2001:db8::1"),
+			}
+		})
+
+		It("passes ip and handle to the hosts compiler", func() {
+			Expect(dnsResolv.Configure(log, networkConfig, 42)).To(Succeed())
+			_, _, ipv6, handle, _ := fakeHostsFileCompiler.CompileArgsForCall(0)
+			Expect(ipv6).To(Equal(networkConfig.ContainerIPv6))
+			Expect(handle).To(Equal(networkConfig.ContainerHandle))
 		})
 	})
 })
