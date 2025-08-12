@@ -16,15 +16,13 @@ import (
 
 var _ = Describe("Setup", func() {
 	var (
-		fakeRunner                 *fake_command_runner.FakeCommandRunner
-		denyNetworks               []string
-		destroyContainersOnStartup bool
-		starter                    *iptables.Starter
+		fakeRunner   *fake_command_runner.FakeCommandRunner
+		denyNetworks []string
+		starter      *iptables.Starter
 	)
 
 	BeforeEach(func() {
 		fakeRunner = fake_command_runner.New()
-		destroyContainersOnStartup = false
 	})
 
 	JustBeforeEach(func() {
@@ -34,7 +32,6 @@ var _ = Describe("Setup", func() {
 			true,
 			"the-nic-prefix",
 			denyNetworks,
-			destroyContainersOnStartup,
 			lagertest.NewTestLogger("global_chains_test"),
 		)
 	})
@@ -58,13 +55,6 @@ var _ = Describe("Setup", func() {
 				"GARDEN_NETWORK_INTERFACE_PREFIX=the-nic-prefix",
 				"GARDEN_IPTABLES_ALLOW_HOST_ACCESS=true",
 			},
-		}))
-	}
-
-	itDoesNotSetUpGlobalChains := func() {
-		Expect(fakeRunner).NotTo(HaveExecutedSerially(fake_command_runner.CommandSpec{
-			Path: "bash",
-			Args: []string{"-c", iptables.SetupScript},
 		}))
 	}
 
@@ -152,22 +142,16 @@ var _ = Describe("Setup", func() {
 					It("does not try to apply the rest of the deny rules", func() {
 						starter.Start()
 
-						Expect(fakeRunner.ExecutedCommands()).To(HaveLen(5))
+						Expect(fakeRunner.ExecutedCommands()).To(HaveLen(4))
 					})
 				})
 			})
 		})
 
-		Context("when destroy_containers_on_startup is set to true", func() {
-			BeforeEach(func() {
-				destroyContainersOnStartup = true
-			})
+		It("runs the setup script, passing the environment variables", func() {
+			Expect(starter.Start()).To(Succeed())
 
-			It("runs the setup script, passing the environment variables", func() {
-				Expect(starter.Start()).To(Succeed())
-
-				itSetsUpGlobalChains()
-			})
+			itSetsUpGlobalChains()
 		})
 
 		Context("when the input chain exists", func() {
@@ -178,12 +162,6 @@ var _ = Describe("Setup", func() {
 				}, func(_ *exec.Cmd) error {
 					return nil
 				})
-			})
-
-			It("does not run the setup script", func() {
-				Expect(starter.Start()).To(Succeed())
-
-				itDoesNotSetUpGlobalChains()
 			})
 		})
 
