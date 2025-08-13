@@ -6,7 +6,7 @@ code.cloudfoundry.org/commandrunner/linux_command_runner
 # code.cloudfoundry.org/idmapper v0.0.0-20250723020823-6e881dd1f684 => ../idmapper
 ## explicit; go 1.23.0
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.42.0
+# code.cloudfoundry.org/lager/v3 v3.43.0
 ## explicit; go 1.23.0
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
@@ -33,7 +33,7 @@ github.com/cloudfoundry/dropsonde/metric_sender
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/sonde-go v0.0.0-20250505082611-517434ece96d
+# github.com/cloudfoundry/sonde-go v0.0.0-20250811070242-4f9472e98427
 ## explicit; go 1.22
 github.com/cloudfoundry/sonde-go/events
 # github.com/containers/image/v5 v5.36.1
@@ -115,7 +115,7 @@ github.com/docker/docker/pkg/system
 ## explicit; go 1.21
 github.com/docker/docker-credential-helpers/client
 github.com/docker/docker-credential-helpers/credentials
-# github.com/docker/go-connections v0.5.0
+# github.com/docker/go-connections v0.6.0
 ## explicit; go 1.18
 github.com/docker/go-connections/tlsconfig
 # github.com/docker/go-units v0.5.0
@@ -233,16 +233,16 @@ go.uber.org/automaxprocs
 go.uber.org/automaxprocs/internal/cgroups
 go.uber.org/automaxprocs/internal/runtime
 go.uber.org/automaxprocs/maxprocs
-# golang.org/x/net v0.42.0
+# golang.org/x/net v0.43.0
 ## explicit; go 1.23.0
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
-# golang.org/x/sys v0.34.0
+# golang.org/x/sys v0.35.0
 ## explicit; go 1.23.0
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.27.0
+# golang.org/x/text v0.28.0
 ## explicit; go 1.23.0
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
@@ -261,12 +261,12 @@ golang.org/x/text/internal/utf8internal
 golang.org/x/text/language
 golang.org/x/text/runes
 golang.org/x/text/transform
-# golang.org/x/tools v0.35.0
+# golang.org/x/tools v0.36.0
 ## explicit; go 1.23.0
 golang.org/x/tools/cover
 golang.org/x/tools/go/ast/edge
 golang.org/x/tools/go/ast/inspector
-# google.golang.org/protobuf v1.36.6
+# google.golang.org/protobuf v1.36.7
 ## explicit; go 1.22
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
