@@ -5,17 +5,17 @@ go 1.23.3
 toolchain go1.24.2
 
 require (
-	code.cloudfoundry.org/commandrunner v0.42.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250723020823-6e881dd1f684
-	code.cloudfoundry.org/lager/v3 v3.43.0
+	code.cloudfoundry.org/commandrunner v0.43.0
+	code.cloudfoundry.org/idmapper v0.0.0-20250813021105-1d6b35a402e3
+	code.cloudfoundry.org/lager/v3 v3.44.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/sonde-go v0.0.0-20250811070242-4f9472e98427
+	github.com/cloudfoundry/sonde-go v0.0.0-20250818115817-5d1eaa4214d2
 	github.com/containers/image/v5 v5.36.1
 	github.com/containers/storage v1.59.1
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/docker/go-units v0.5.0
-	github.com/onsi/ginkgo/v2 v2.23.4
+	github.com/onsi/ginkgo/v2 v2.24.0
 	github.com/onsi/gomega v1.38.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
@@ -31,6 +31,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.5.0 // indirect
+	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/containers/ocicrypt v1.2.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
