@@ -15,16 +15,16 @@ replace (
 require (
 	code.cloudfoundry.org/archiver v0.41.0
 	code.cloudfoundry.org/clock v1.43.0
-	code.cloudfoundry.org/commandrunner v0.42.0
-	code.cloudfoundry.org/debugserver v0.62.0
-	code.cloudfoundry.org/garden v0.0.0-20250730020702-3c607f063fc6
+	code.cloudfoundry.org/commandrunner v0.43.0
+	code.cloudfoundry.org/debugserver v0.63.0
+	code.cloudfoundry.org/garden v0.0.0-20250813020845-616be2b2878a
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250723020823-6e881dd1f684
-	code.cloudfoundry.org/lager/v3 v3.43.0
+	code.cloudfoundry.org/idmapper v0.0.0-20250813021105-1d6b35a402e3
+	code.cloudfoundry.org/lager/v3 v3.44.0
 	code.cloudfoundry.org/localip v0.45.0
 	github.com/BurntSushi/toml v1.5.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.97
+	github.com/cloudfoundry/gosigar v1.3.98
 	github.com/containerd/cgroups/v3 v3.0.5
 	github.com/containerd/containerd/api v1.9.0
 	github.com/containerd/containerd/v2 v2.1.4
@@ -39,7 +39,7 @@ require (
 	github.com/moby/sys/reexec v0.1.0
 	github.com/moby/sys/user v0.4.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo/v2 v2.23.4
+	github.com/onsi/ginkgo/v2 v2.24.0
 	github.com/onsi/gomega v1.38.0
 	github.com/opencontainers/cgroups v0.0.4
 	github.com/opencontainers/go-digest v1.0.0
@@ -58,12 +58,13 @@ require (
 )
 
 require (
+	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.13.0 // indirect
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0 // indirect
 	github.com/cilium/ebpf v0.19.0 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20250811070242-4f9472e98427 // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20250818115817-5d1eaa4214d2 // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -117,8 +118,8 @@ require (
 	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/tools v0.36.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250811230008-5f3141c8851a // indirect
-	google.golang.org/grpc v1.74.2 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250818200422-3122310a409c // indirect
+	google.golang.org/grpc v1.75.0 // indirect
 	google.golang.org/protobuf v1.36.7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
