@@ -3,7 +3,7 @@
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20250827021202-c749ab663e24 => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20250903021407-d544a964e9f1 => ../idmapper
 ## explicit; go 1.24.0
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.46.0
@@ -110,7 +110,7 @@ github.com/distribution/reference
 ## explicit
 github.com/docker/distribution/registry/api/errcode
 github.com/docker/distribution/registry/api/v2
-# github.com/docker/docker v28.3.3+incompatible
+# github.com/docker/docker v28.4.0+incompatible
 ## explicit
 github.com/docker/docker/api/types/versions
 github.com/docker/docker/pkg/system
@@ -138,7 +138,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20250902232947-5eec23c92c42
+# github.com/google/pprof v0.0.0-20250903194437-c28834ac2320
 ## explicit; go 1.24.0
 github.com/google/pprof/profile
 # github.com/gorilla/mux v1.8.1
@@ -158,7 +158,7 @@ github.com/moby/sys/user
 # github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 ## explicit
 github.com/nu7hatch/gouuid
-# github.com/onsi/ginkgo/v2 v2.25.2
+# github.com/onsi/ginkgo/v2 v2.25.3
 ## explicit; go 1.23.0
 github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config
