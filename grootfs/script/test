@@ -107,10 +107,8 @@ test_path=""
 RECURSIVE=0
 if [ -z "$DOCKER_REGISTRY_PASSWORD" ]
 then
-  export DOCKER_REGISTRY_USERNAME
-  DOCKER_REGISTRY_USERNAME="$(gcloud secrets versions access latest --secret=dockerhub-tasruntime | grep user | cut -d\  -f 2)"
-  export DOCKER_REGISTRY_PASSWORD
-  DOCKER_REGISTRY_PASSWORD="$(gcloud secrets versions access latest --secret=dockerhub-tasruntime | grep pass| cut -d\  -f 2)"
+  export DOCKER_REGISTRY_USERNAME="$(gimme-secret-value-only dockerhub-appruntimeplatform-username)"
+  export DOCKER_REGISTRY_PASSWORD="$(gimme-secret-value-only dockerhub-appruntimeplatform-password)"
 fi
 
 while getopts "uia" OPTION
