@@ -13,18 +13,18 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.44.0
-	code.cloudfoundry.org/clock v1.46.0
+	code.cloudfoundry.org/archiver v0.45.0
+	code.cloudfoundry.org/clock v1.47.0
 	code.cloudfoundry.org/commandrunner v0.45.0
-	code.cloudfoundry.org/debugserver v0.65.0
-	code.cloudfoundry.org/garden v0.0.0-20250904195342-2bb9f69d6881
+	code.cloudfoundry.org/debugserver v0.66.0
+	code.cloudfoundry.org/garden v0.0.0-20250904200541-47838cd97b9c
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250903021407-d544a964e9f1
-	code.cloudfoundry.org/lager/v3 v3.46.0
-	code.cloudfoundry.org/localip v0.48.0
+	code.cloudfoundry.org/idmapper v0.0.0-20250904200737-184074976b3e
+	code.cloudfoundry.org/lager/v3 v3.47.0
+	code.cloudfoundry.org/localip v0.49.0
 	github.com/BurntSushi/toml v1.5.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.99
+	github.com/cloudfoundry/gosigar v1.3.100
 	github.com/containerd/cgroups/v3 v3.0.5
 	github.com/containerd/containerd/api v1.9.0
 	github.com/containerd/containerd/v2 v2.1.4
@@ -41,7 +41,7 @@ require (
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/onsi/ginkgo/v2 v2.25.3
 	github.com/onsi/gomega v1.38.2
-	github.com/opencontainers/cgroups v0.0.4
+	github.com/opencontainers/cgroups v0.0.5
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/opencontainers/runc v1.3.1
@@ -53,7 +53,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
-	golang.org/x/sys v0.35.0
+	golang.org/x/sys v0.36.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -64,7 +64,7 @@ require (
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0 // indirect
 	github.com/cilium/ebpf v0.19.0 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20250826064732-542f5d3e37ff // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20250909082137-fc1b731b62ac // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -115,11 +115,11 @@ require (
 	go.uber.org/goleak v1.3.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/mod v0.27.0 // indirect
-	golang.org/x/net v0.43.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/net v0.44.0 // indirect
+	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/tools v0.36.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250826171959-ef028d996bc1 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250908214217-97024824d090 // indirect
 	google.golang.org/grpc v1.75.0 // indirect
-	google.golang.org/protobuf v1.36.8 // indirect
+	google.golang.org/protobuf v1.36.9 // indirect
 )
