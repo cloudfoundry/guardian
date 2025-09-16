@@ -6,10 +6,10 @@ toolchain go1.24.2
 
 require (
 	code.cloudfoundry.org/commandrunner v0.45.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250904200737-184074976b3e
-	code.cloudfoundry.org/lager/v3 v3.47.0
+	code.cloudfoundry.org/idmapper v0.0.0-20250910021436-4548bc1991c2
+	code.cloudfoundry.org/lager/v3 v3.48.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/sonde-go v0.0.0-20250909082137-fc1b731b62ac
+	github.com/cloudfoundry/sonde-go v0.0.0-20250915135239-ebea5d8dc26e
 	github.com/containers/image/v5 v5.36.2
 	github.com/containers/storage v1.59.1
 	github.com/docker/distribution v2.8.3+incompatible
@@ -56,7 +56,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/net v0.44.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
-	golang.org/x/tools v0.36.0 // indirect
+	golang.org/x/tools v0.37.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
