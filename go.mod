@@ -17,9 +17,9 @@ require (
 	code.cloudfoundry.org/clock v1.48.0
 	code.cloudfoundry.org/commandrunner v0.45.0
 	code.cloudfoundry.org/debugserver v0.67.0
-	code.cloudfoundry.org/garden v0.0.0-20250910021241-ba9233db87fe
+	code.cloudfoundry.org/garden v0.0.0-20250916215733-c693739b5ca4
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250910021436-4548bc1991c2
+	code.cloudfoundry.org/idmapper v0.0.0-20250916220018-be32af24b3d1
 	code.cloudfoundry.org/lager/v3 v3.48.0
 	code.cloudfoundry.org/localip v0.50.0
 	github.com/BurntSushi/toml v1.5.0
