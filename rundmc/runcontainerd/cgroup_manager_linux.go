@@ -7,7 +7,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/cgroups/fs2"
-	"github.com/opencontainers/runc/libcontainer/configs"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -22,11 +21,11 @@ func (m cgroupManager) setUnifiedResources(bundle goci.Bndl) error {
 
 		resources := convertSpecResourcesToCgroupResources(bundle.Spec.Linux.Resources)
 		if resources != nil {
-			cgroupManager, err := fs2.NewManager(&configs.Cgroup{}, cgroupPath)
+			cgroupManager, err := fs2.NewManager(&cgroups.Cgroup{}, cgroupPath)
 			if err != nil {
 				return err
 			}
-			err = fs2.CreateCgroupPath(cgroupPath, &configs.Cgroup{})
+			err = fs2.CreateCgroupPath(cgroupPath, &cgroups.Cgroup{})
 			if err != nil {
 				return err
 			}
@@ -42,12 +41,12 @@ func (m cgroupManager) setUnifiedResources(bundle goci.Bndl) error {
 	return nil
 }
 
-func convertSpecResourcesToCgroupResources(specResources *specs.LinuxResources) *configs.Resources {
+func convertSpecResourcesToCgroupResources(specResources *specs.LinuxResources) *cgroups.Resources {
 	if specResources == nil {
 		return nil
 	}
 
-	resources := &configs.Resources{}
+	resources := &cgroups.Resources{}
 	resources.Unified = specResources.Unified
 
 	if specResources.CPU != nil {
