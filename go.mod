@@ -15,7 +15,7 @@ replace (
 require (
 	code.cloudfoundry.org/archiver v0.46.0
 	code.cloudfoundry.org/clock v1.48.0
-	code.cloudfoundry.org/commandrunner v0.45.0
+	code.cloudfoundry.org/commandrunner v0.46.0
 	code.cloudfoundry.org/debugserver v0.67.0
 	code.cloudfoundry.org/garden v0.0.0-20250916215733-c693739b5ca4
 	code.cloudfoundry.org/grootfs v0.30.0

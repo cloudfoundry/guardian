@@ -596,8 +596,8 @@ code.cloudfoundry.org/archiver v0.46.0 h1:qIZy0PGIlyv3i0oaXrdyXz+N+lL23itLDN9VQh
 code.cloudfoundry.org/archiver v0.46.0/go.mod h1:haf7t9aEA+f8pgunHa2mo8YWVf1NJx7sfAb+GkOz6Vo=
 code.cloudfoundry.org/clock v1.48.0 h1:yHgkgmMEBrIF4Ntw3pdrgWbPk4FZ5M6BAllqPpoOTbQ=
 code.cloudfoundry.org/clock v1.48.0/go.mod h1:dPS9Awh8bPzZU5iZ3A87PL9tFvTAwEnUfSH1l3V/9YA=
-code.cloudfoundry.org/commandrunner v0.45.0 h1:G41cjB87iq3KXMmnD7gMVWZ5uwBmrgwDDbxCRn/8y6c=
-code.cloudfoundry.org/commandrunner v0.45.0/go.mod h1:V06gnc1SojsAd3AphYUnKS5PoSpucJKrIxTxx7/v07w=
+code.cloudfoundry.org/commandrunner v0.46.0 h1:+jtXBLR4W+Naf/8p1F3OJh5zv/I9L1FG/mjLKVnWMWA=
+code.cloudfoundry.org/commandrunner v0.46.0/go.mod h1:erGN1vzu4FWaxprIOF7cxwQnMBo2gej3KPp3MHcp0ak=
 code.cloudfoundry.org/debugserver v0.67.0 h1:mgHE69/7k6Nuyvm38aJ9tw+BWK1AQg3wX4jZnR5P+eU=
 code.cloudfoundry.org/debugserver v0.67.0/go.mod h1:jlHN2z4INNAJLwB6tCiqwONm6VkPv/+iVb5WBaWXd1g=
 code.cloudfoundry.org/lager/v3 v3.48.0 h1:ZU+34SLjZcbXgMu6tWVARHuG09h7zLTy+Y8Q56xKd3A=
