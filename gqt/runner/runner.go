@@ -84,7 +84,6 @@ type GdnRunnerConfig struct {
 	PortPoolSize                   *int     `flag:"port-pool-size"`
 	PortPoolStart                  *int     `flag:"port-pool-start"`
 	PortPoolPropertiesPath         string   `flag:"port-pool-properties-path"`
-	DestroyContainersOnStartup     *bool    `flag:"destroy-containers-on-startup"`
 	DockerRegistry                 string   `flag:"docker-registry"`
 	InsecureDockerRegistry         string   `flag:"insecure-docker-registry"`
 	AllowHostAccess                *bool    `flag:"allow-host-access"`
