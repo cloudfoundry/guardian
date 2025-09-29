@@ -144,25 +144,21 @@ var _ = Describe("Filesystem", func() {
 			sharedLocksmith = locksmith.NewSharedFileSystem(path)
 		})
 
-		It("blocks when locking the same key twice", func() {
-			lockFd, err := sharedLocksmith.Lock("key")
-			Expect(err).NotTo(HaveOccurred())
-
-			wentThrough := make(chan struct{})
-			go func() {
-				defer GinkgoRecover()
-
-				_, err := sharedLocksmith.Lock("key")
+		Describe("Lock", func() {
+			It("does not block when locking the same key twice", func() {
+				lockFd1, err := sharedLocksmith.Lock("key")
 				Expect(err).NotTo(HaveOccurred())
 
-				close(wentThrough)
-			}()
+				lockFd2, err := sharedLocksmith.Lock("key")
+				Expect(err).NotTo(HaveOccurred())
 
-			Eventually(wentThrough).Should(BeClosed())
-			Expect(sharedLocksmith.Unlock(lockFd)).To(Succeed())
-		})
+				err = sharedLocksmith.Unlock(lockFd1)
+				Expect(err).NotTo(HaveOccurred())
 
-		Describe("Lock", func() {
+				err = sharedLocksmith.Unlock(lockFd2)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
 			It("creates the lock file in the lock path when it does not exist", func() {
 				lockFile := filepath.Join(path, "key.lock")
 
