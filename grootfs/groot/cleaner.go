@@ -19,24 +19,54 @@ type cleaner struct {
 	locksmith        Locksmith
 	metricsEmitter   MetricsEmitter
 	getLockTimeout   time.Duration
+	cleaningTimeout  time.Duration
 }
 
 func IamCleaner(locksmith Locksmith, sm StoreMeasurer,
 	gc GarbageCollector, metricsEmitter MetricsEmitter,
-	getLockTimeout time.Duration) *cleaner {
+	getLockTimeout time.Duration, cleaningTimeout time.Duration) *cleaner {
 	return &cleaner{
 		locksmith:        locksmith,
 		storeMeasurer:    sm,
 		garbageCollector: gc,
 		metricsEmitter:   metricsEmitter,
 		getLockTimeout:   getLockTimeout,
+		cleaningTimeout:  cleaningTimeout,
 	}
+}
+
+type CleaningTimeoutError struct {
+	Timeout time.Duration
+}
+
+func (e CleaningTimeoutError) Error() string {
+	displayTimeout := fmt.Sprintf("%vs", e.Timeout.Seconds())
+	return fmt.Sprintf("timed out cleaning after '%s'", displayTimeout)
 }
 
 func (c *cleaner) Clean(logger lager.Logger, threshold int64) (bool, error) {
 	logger = logger.Session("groot-cleaning")
-	logger.Info("starting")
+	cleaningTimeoutForLogs := fmt.Sprintf("%vs", c.cleaningTimeout.Seconds())
+	logger.Info("starting", lager.Data{"cleaning_timeout": cleaningTimeoutForLogs})
 
+	finishedCleaning := make(chan string, 1)
+	var noop bool
+	var err error
+
+	go func() {
+		noop, err = c.run(logger, threshold)
+		finishedCleaning <- "all done cleaning!"
+	}()
+
+	select {
+	case <-finishedCleaning:
+		return noop, err
+	case <-time.After(c.cleaningTimeout):
+		return false, CleaningTimeoutError{Timeout: c.cleaningTimeout}
+	}
+}
+
+func (c *cleaner) run(logger lager.Logger, threshold int64) (bool, error) {
 	defer c.metricsEmitter.TryEmitDurationFrom(logger, MetricImageCleanTime, time.Now())
 	defer logger.Info("ending")
 

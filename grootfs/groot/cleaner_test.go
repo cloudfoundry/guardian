@@ -22,6 +22,7 @@ var _ = Describe("Cleaner", func() {
 		fakeMetricsEmitter   *grootfakes.FakeMetricsEmitter
 		lockFile             *os.File
 		getLockTimeout       time.Duration
+		cleaningTimeout      time.Duration
 
 		cleaner groot.Cleaner
 		logger  lager.Logger
@@ -38,8 +39,9 @@ var _ = Describe("Cleaner", func() {
 		fakeGarbageCollector = new(grootfakes.FakeGarbageCollector)
 		fakeMetricsEmitter = new(grootfakes.FakeMetricsEmitter)
 		getLockTimeout = 3 * time.Second
+		cleaningTimeout = 500 * time.Millisecond
 		cleaner = groot.IamCleaner(fakeLocksmith, fakeStoreMeasurer,
-			fakeGarbageCollector, fakeMetricsEmitter, getLockTimeout)
+			fakeGarbageCollector, fakeMetricsEmitter, getLockTimeout, cleaningTimeout)
 		logger = lagertest.NewTestLogger("cleaner")
 	})
 
@@ -244,6 +246,22 @@ var _ = Describe("Cleaner", func() {
 					Expect(err).To(MatchError(ContainSubstring("failed to calculate total volumes size")))
 				})
 			})
+		})
+
+		Context("when cleaning takes longer than the cleaning timeout", func() {
+			BeforeEach(func() {
+				fakeGarbageCollector.MarkUnusedStub = func(_ lager.Logger, _ []string) error {
+					time.Sleep(cleaningTimeout + 10*time.Second)
+					return nil
+				}
+			})
+
+			It("returns an error", func() {
+				_, err := cleaner.Clean(logger, 0)
+				Expect(err).To(MatchError(ContainSubstring("timed out cleaning after '0.5s'")))
+				Expect(errors.As(err, &groot.CleaningTimeoutError{})).To(BeTrue())
+			})
+
 		})
 	})
 })

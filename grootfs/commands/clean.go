@@ -1,6 +1,7 @@
 package commands // import "code.cloudfoundry.org/grootfs/commands"
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,6 +26,7 @@ import (
 )
 
 const GET_LOCK_TIMEOUT = 3 * time.Second
+const CLEANING_TIMEOUT = 10 * time.Minute
 
 var CleanCommand = cli.Command{
 	Name:        "clean",
@@ -62,14 +64,18 @@ var CleanCommand = cli.Command{
 		locksDir := filepath.Join(cfg.StorePath, storepkg.LocksDirName)
 		locksmith := locksmithpkg.NewExclusiveFileSystem(locksDir).WithMetrics(metricsEmitter)
 		lockFile, err := locksmith.LockWithTimeout(groot.GCLockKey, GET_LOCK_TIMEOUT)
+		timedOut := false
 		if err != nil {
+			logger.Error("failed-to-acquire-lock", err)
 			fmt.Fprintf(os.Stderr, "failed to acquire lock %s: %v", groot.GCLockKey, err)
 			return cli.Exit(err.Error(), 1)
 		}
 		defer func() {
-			if err := locksmith.Unlock(lockFile); err != nil {
-				logger.Error("release-lock-failed", err, nil)
-				exitError = cli.Exit(err.Error(), 1)
+			if !timedOut {
+				if err := locksmith.Unlock(lockFile); err != nil {
+					logger.Error("release-lock-failed", err, nil)
+					exitError = cli.Exit(err.Error(), 1)
+				}
 			}
 		}()
 
@@ -91,24 +97,29 @@ var CleanCommand = cli.Command{
 		gc := garbage_collector.NewGC(nsFsDriver, imageManager, dependencyManager)
 		sm := storepkg.NewStoreMeasurer(cfg.StorePath, fsDriver, gc)
 
-		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter, GET_LOCK_TIMEOUT)
+		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter, GET_LOCK_TIMEOUT, CLEANING_TIMEOUT)
 
 		defer func() {
-			unusedVolumesSize, err := sm.UnusedVolumesSize(logger)
-			if err != nil {
-				logger.Error("getting-unused-volumes-size", err)
-			}
-			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", unusedVolumesSize, "bytes")
+			if !timedOut {
+				unusedVolumesSize, err := sm.UnusedVolumesSize(logger)
+				if err != nil {
+					logger.Error("getting-unused-volumes-size", err)
+				}
+				metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", unusedVolumesSize, "bytes")
 
-			usedVolumesSize, err := sm.UsedVolumesSize(logger)
-			if err != nil {
-				logger.Error("getting-used-volumes-size", err)
+				usedVolumesSize, err := sm.UsedVolumesSize(logger)
+				if err != nil {
+					logger.Error("getting-used-volumes-size", err)
+				}
+				metricsEmitter.TryEmitUsage(logger, "UsedLayersSize", usedVolumesSize, "bytes")
 			}
-			metricsEmitter.TryEmitUsage(logger, "UsedLayersSize", usedVolumesSize, "bytes")
 		}()
 
 		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes)
 		if err != nil {
+			if errors.As(err, &groot.CleaningTimeoutError{}) {
+				timedOut = true
+			}
 			logger.Error("cleaning-up-unused-resources", err)
 			return cli.Exit(err.Error(), 1)
 		}
