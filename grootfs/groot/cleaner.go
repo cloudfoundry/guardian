@@ -18,16 +18,18 @@ type cleaner struct {
 	garbageCollector GarbageCollector
 	locksmith        Locksmith
 	metricsEmitter   MetricsEmitter
+	getLockTimeout   time.Duration
 }
 
 func IamCleaner(locksmith Locksmith, sm StoreMeasurer,
 	gc GarbageCollector, metricsEmitter MetricsEmitter,
-) *cleaner {
+	getLockTimeout time.Duration) *cleaner {
 	return &cleaner{
 		locksmith:        locksmith,
 		storeMeasurer:    sm,
 		garbageCollector: gc,
 		metricsEmitter:   metricsEmitter,
+		getLockTimeout:   getLockTimeout,
 	}
 }
 
@@ -63,7 +65,7 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64) (bool, error) {
 }
 
 func (c *cleaner) collectGarbage(logger lager.Logger) error {
-	lockFile, err := c.locksmith.Lock(GlobalLockKey)
+	lockFile, err := c.locksmith.LockWithTimeout(GlobalLockKey, c.getLockTimeout)
 	if err != nil {
 		return errorspkg.Wrap(err, "garbage collector acquiring lock")
 	}

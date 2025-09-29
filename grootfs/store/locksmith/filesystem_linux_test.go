@@ -38,26 +38,69 @@ var _ = Describe("Filesystem", func() {
 			exclusiveLocksmith = locksmith.NewExclusiveFileSystem(path)
 		})
 
-		It("blocks when locking the same key twice", func() {
-			lockFd, err := exclusiveLocksmith.Lock("key")
-			Expect(err).NotTo(HaveOccurred())
+		Describe("LockWithTimeout", func() {
+			var timeout = 1 * time.Second
+			Context("when the lock is not claimed", func() {
+				It("claims the lock", func() {
+					_, err := exclusiveLocksmith.LockWithTimeout("key", timeout)
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
 
-			wentThrough := make(chan struct{})
-			go func() {
-				defer GinkgoRecover()
+			Context("when the lock is claimed", func() {
+				It("returns a timeout error", func() {
+					// Initial claim
+					_, err := exclusiveLocksmith.LockWithTimeout("key", timeout)
+					Expect(err).NotTo(HaveOccurred())
 
-				_, err := exclusiveLocksmith.Lock("key")
-				Expect(err).NotTo(HaveOccurred())
+					// Failed 2nd claim
+					_, err = exclusiveLocksmith.LockWithTimeout("key", timeout)
+					Expect(err).To(MatchError("timed out waiting for the 'key' file lock"))
+				})
+			})
 
-				close(wentThrough)
-			}()
+			Context("when the lock is unclaimed within the timeout", func() {
+				It("claims the lock", func() {
+					lockFd, err := exclusiveLocksmith.LockWithTimeout("key", timeout)
+					Expect(err).NotTo(HaveOccurred())
 
-			Consistently(wentThrough).ShouldNot(BeClosed())
-			Expect(exclusiveLocksmith.Unlock(lockFd)).To(Succeed())
-			Eventually(wentThrough).Should(BeClosed())
+					wentThrough := make(chan struct{})
+					go func() {
+						defer GinkgoRecover()
+
+						_, err := exclusiveLocksmith.LockWithTimeout("key", timeout)
+						Expect(err).NotTo(HaveOccurred())
+
+						close(wentThrough)
+					}()
+
+					Consistently(wentThrough).ShouldNot(BeClosed())
+					Expect(exclusiveLocksmith.Unlock(lockFd)).To(Succeed())
+					Eventually(wentThrough).Should(BeClosed())
+				})
+			})
 		})
 
 		Describe("Lock", func() {
+			It("blocks when locking the same key twice", func() {
+				lockFd, err := exclusiveLocksmith.Lock("key")
+				Expect(err).NotTo(HaveOccurred())
+
+				wentThrough := make(chan struct{})
+				go func() {
+					defer GinkgoRecover()
+
+					_, err := exclusiveLocksmith.Lock("key")
+					Expect(err).NotTo(HaveOccurred())
+
+					close(wentThrough)
+				}()
+
+				Consistently(wentThrough).ShouldNot(BeClosed())
+				Expect(exclusiveLocksmith.Unlock(lockFd)).To(Succeed())
+				Eventually(wentThrough).Should(BeClosed())
+			})
+
 			It("creates the lock path when it does not exist", func() {
 				Expect(os.RemoveAll(path)).To(Succeed())
 				Expect(path).ToNot(BeAnExistingFile())
@@ -142,6 +185,28 @@ var _ = Describe("Filesystem", func() {
 		var sharedLocksmith *locksmith.FileSystem
 		JustBeforeEach(func() {
 			sharedLocksmith = locksmith.NewSharedFileSystem(path)
+		})
+
+		Describe("LockWithTimeout", func() {
+			var timeout = 1 * time.Second
+			Context("when the lock is not claimed", func() {
+				It("claims the lock", func() {
+					_, err := sharedLocksmith.LockWithTimeout("key", timeout)
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("when the lock is claimed", func() {
+				It("doesn't return an error because this is a shared lock", func() {
+					// This one claims the lock successfully
+					_, err := sharedLocksmith.LockWithTimeout("key", timeout)
+					Expect(err).NotTo(HaveOccurred())
+
+					// This one tries to claim the inuse lock
+					_, err = sharedLocksmith.LockWithTimeout("key", timeout)
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
 		})
 
 		Describe("Lock", func() {

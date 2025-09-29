@@ -4,6 +4,7 @@ package grootfakes
 import (
 	"os"
 	"sync"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 )
@@ -19,6 +20,20 @@ type FakeLocksmith struct {
 		result2 error
 	}
 	lockReturnsOnCall map[int]struct {
+		result1 *os.File
+		result2 error
+	}
+	LockWithTimeoutStub        func(string, time.Duration) (*os.File, error)
+	lockWithTimeoutMutex       sync.RWMutex
+	lockWithTimeoutArgsForCall []struct {
+		arg1 string
+		arg2 time.Duration
+	}
+	lockWithTimeoutReturns struct {
+		result1 *os.File
+		result2 error
+	}
+	lockWithTimeoutReturnsOnCall map[int]struct {
 		result1 *os.File
 		result2 error
 	}
@@ -101,6 +116,71 @@ func (fake *FakeLocksmith) LockReturnsOnCall(i int, result1 *os.File, result2 er
 	}{result1, result2}
 }
 
+func (fake *FakeLocksmith) LockWithTimeout(arg1 string, arg2 time.Duration) (*os.File, error) {
+	fake.lockWithTimeoutMutex.Lock()
+	ret, specificReturn := fake.lockWithTimeoutReturnsOnCall[len(fake.lockWithTimeoutArgsForCall)]
+	fake.lockWithTimeoutArgsForCall = append(fake.lockWithTimeoutArgsForCall, struct {
+		arg1 string
+		arg2 time.Duration
+	}{arg1, arg2})
+	stub := fake.LockWithTimeoutStub
+	fakeReturns := fake.lockWithTimeoutReturns
+	fake.recordInvocation("LockWithTimeout", []interface{}{arg1, arg2})
+	fake.lockWithTimeoutMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeLocksmith) LockWithTimeoutCallCount() int {
+	fake.lockWithTimeoutMutex.RLock()
+	defer fake.lockWithTimeoutMutex.RUnlock()
+	return len(fake.lockWithTimeoutArgsForCall)
+}
+
+func (fake *FakeLocksmith) LockWithTimeoutCalls(stub func(string, time.Duration) (*os.File, error)) {
+	fake.lockWithTimeoutMutex.Lock()
+	defer fake.lockWithTimeoutMutex.Unlock()
+	fake.LockWithTimeoutStub = stub
+}
+
+func (fake *FakeLocksmith) LockWithTimeoutArgsForCall(i int) (string, time.Duration) {
+	fake.lockWithTimeoutMutex.RLock()
+	defer fake.lockWithTimeoutMutex.RUnlock()
+	argsForCall := fake.lockWithTimeoutArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeLocksmith) LockWithTimeoutReturns(result1 *os.File, result2 error) {
+	fake.lockWithTimeoutMutex.Lock()
+	defer fake.lockWithTimeoutMutex.Unlock()
+	fake.LockWithTimeoutStub = nil
+	fake.lockWithTimeoutReturns = struct {
+		result1 *os.File
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeLocksmith) LockWithTimeoutReturnsOnCall(i int, result1 *os.File, result2 error) {
+	fake.lockWithTimeoutMutex.Lock()
+	defer fake.lockWithTimeoutMutex.Unlock()
+	fake.LockWithTimeoutStub = nil
+	if fake.lockWithTimeoutReturnsOnCall == nil {
+		fake.lockWithTimeoutReturnsOnCall = make(map[int]struct {
+			result1 *os.File
+			result2 error
+		})
+	}
+	fake.lockWithTimeoutReturnsOnCall[i] = struct {
+		result1 *os.File
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeLocksmith) Unlock(arg1 *os.File) error {
 	fake.unlockMutex.Lock()
 	ret, specificReturn := fake.unlockReturnsOnCall[len(fake.unlockArgsForCall)]
@@ -167,6 +247,8 @@ func (fake *FakeLocksmith) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.lockMutex.RLock()
 	defer fake.lockMutex.RUnlock()
+	fake.lockWithTimeoutMutex.RLock()
+	defer fake.lockWithTimeoutMutex.RUnlock()
 	fake.unlockMutex.RLock()
 	defer fake.unlockMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

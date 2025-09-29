@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"code.cloudfoundry.org/lager/v3"
 
@@ -22,6 +23,8 @@ import (
 
 	"github.com/urfave/cli/v2"
 )
+
+const GET_LOCK_TIMEOUT = 3 * time.Second
 
 var CleanCommand = cli.Command{
 	Name:        "clean",
@@ -58,7 +61,7 @@ var CleanCommand = cli.Command{
 		metricsEmitter := metrics.NewEmitter(logger, cfg.MetronEndpoint)
 		locksDir := filepath.Join(cfg.StorePath, storepkg.LocksDirName)
 		locksmith := locksmithpkg.NewExclusiveFileSystem(locksDir).WithMetrics(metricsEmitter)
-		lockFile, err := locksmith.Lock(groot.GCLockKey)
+		lockFile, err := locksmith.LockWithTimeout(groot.GCLockKey, GET_LOCK_TIMEOUT)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to acquire lock %s: %v", groot.GCLockKey, err)
 			return cli.Exit(err.Error(), 1)
@@ -88,7 +91,7 @@ var CleanCommand = cli.Command{
 		gc := garbage_collector.NewGC(nsFsDriver, imageManager, dependencyManager)
 		sm := storepkg.NewStoreMeasurer(cfg.StorePath, fsDriver, gc)
 
-		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
+		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter, GET_LOCK_TIMEOUT)
 
 		defer func() {
 			unusedVolumesSize, err := sm.UnusedVolumesSize(logger)
