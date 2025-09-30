@@ -71,6 +71,8 @@ var CleanCommand = cli.Command{
 			return cli.Exit(err.Error(), 1)
 		}
 		defer func() {
+			// This is a file lock. When a process with the lock exits then the
+			// lock is always released.
 			if !timedOut {
 				if err := locksmith.Unlock(lockFile); err != nil {
 					logger.Error("release-lock-failed", err, nil)
@@ -118,6 +120,10 @@ var CleanCommand = cli.Command{
 		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes)
 		if err != nil {
 			if errors.As(err, &groot.CleaningTimeoutError{}) {
+				// There was a bug where cleaner hung forever, likely on disk
+				// io actions. We added a timeout to protect against this.
+				// When there is a timeout the cleaner should not do any other
+				// disk actions and should just exit.
 				timedOut = true
 			}
 			logger.Error("cleaning-up-unused-resources", err)
