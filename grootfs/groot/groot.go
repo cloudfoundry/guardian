@@ -126,6 +126,7 @@ type StoreMeasurer interface {
 
 type Locksmith interface {
 	Lock(key string) (*os.File, error)
+	LockWithTimeout(key string, timeout time.Duration) (*os.File, error)
 	Unlock(lockFile *os.File) error
 }
 

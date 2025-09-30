@@ -21,6 +21,8 @@ var _ = Describe("Cleaner", func() {
 		fakeGarbageCollector *grootfakes.FakeGarbageCollector
 		fakeMetricsEmitter   *grootfakes.FakeMetricsEmitter
 		lockFile             *os.File
+		getLockTimeout       time.Duration
+		cleaningTimeout      time.Duration
 
 		cleaner groot.Cleaner
 		logger  lager.Logger
@@ -31,14 +33,15 @@ var _ = Describe("Cleaner", func() {
 		fakeLocksmith = new(grootfakes.FakeLocksmith)
 		lockFile, err = os.CreateTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
-		fakeLocksmith.LockReturns(lockFile, nil)
+		fakeLocksmith.LockWithTimeoutReturns(lockFile, nil)
 
 		fakeStoreMeasurer = new(grootfakes.FakeStoreMeasurer)
 		fakeGarbageCollector = new(grootfakes.FakeGarbageCollector)
 		fakeMetricsEmitter = new(grootfakes.FakeMetricsEmitter)
-
+		getLockTimeout = 3 * time.Second
+		cleaningTimeout = 500 * time.Millisecond
 		cleaner = groot.IamCleaner(fakeLocksmith, fakeStoreMeasurer,
-			fakeGarbageCollector, fakeMetricsEmitter)
+			fakeGarbageCollector, fakeMetricsEmitter, getLockTimeout, cleaningTimeout)
 		logger = lagertest.NewTestLogger("cleaner")
 	})
 
@@ -90,8 +93,10 @@ var _ = Describe("Cleaner", func() {
 			_, err := cleaner.Clean(logger, 0)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
-			Expect(fakeLocksmith.LockArgsForCall(0)).To(Equal(groot.GlobalLockKey))
+			Expect(fakeLocksmith.LockWithTimeoutCallCount()).To(Equal(1))
+			key, timeout := fakeLocksmith.LockWithTimeoutArgsForCall(0)
+			Expect(key).To(Equal(groot.GlobalLockKey))
+			Expect(timeout).To(Equal(getLockTimeout))
 		})
 
 		It("releases the global lock", func() {
@@ -147,7 +152,7 @@ var _ = Describe("Cleaner", func() {
 
 		Context("when acquiring the lock fails", func() {
 			BeforeEach(func() {
-				fakeLocksmith.LockReturns(nil, errors.New("failed to acquire lock"))
+				fakeLocksmith.LockWithTimeoutReturns(nil, errors.New("failed to acquire lock"))
 			})
 
 			It("returns the error", func() {
@@ -185,7 +190,7 @@ var _ = Describe("Cleaner", func() {
 				It("does not acquire the lock", func() {
 					_, err := cleaner.Clean(logger, threshold)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(fakeLocksmith.LockCallCount()).To(Equal(0))
+					Expect(fakeLocksmith.LockWithTimeoutCallCount()).To(Equal(0))
 				})
 
 				It("sets noop to `true`", func() {
@@ -241,6 +246,22 @@ var _ = Describe("Cleaner", func() {
 					Expect(err).To(MatchError(ContainSubstring("failed to calculate total volumes size")))
 				})
 			})
+		})
+
+		Context("when cleaning takes longer than the cleaning timeout", func() {
+			BeforeEach(func() {
+				fakeGarbageCollector.MarkUnusedStub = func(_ lager.Logger, _ []string) error {
+					time.Sleep(cleaningTimeout + 10*time.Second)
+					return nil
+				}
+			})
+
+			It("returns an error", func() {
+				_, err := cleaner.Clean(logger, 0)
+				Expect(err).To(MatchError(ContainSubstring("timed out cleaning after '0.5s'")))
+				Expect(errors.As(err, &groot.CleaningTimeoutError{})).To(BeTrue())
+			})
+
 		})
 	})
 })

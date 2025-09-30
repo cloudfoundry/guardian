@@ -1,6 +1,7 @@
 package locksmith // import "code.cloudfoundry.org/grootfs/store/locksmith"
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,6 +47,24 @@ func (l *FileSystem) WithMetrics(e groot.MetricsEmitter) *FileSystem {
 }
 
 var FlockSyscall = unix.Flock
+
+func (l *FileSystem) LockWithTimeout(key string, timeout time.Duration) (*os.File, error) {
+	gotLock := make(chan string, 1)
+	var file *os.File
+	var err error
+
+	go func() {
+		file, err = l.Lock(key)
+		gotLock <- "got the lock!"
+	}()
+
+	select {
+	case <-gotLock:
+		return file, err
+	case <-time.After(timeout):
+		return nil, fmt.Errorf("timed out waiting for the '%s' file lock after '%vs'", key, timeout.Seconds())
+	}
+}
 
 func (l *FileSystem) Lock(key string) (*os.File, error) {
 	if l.metricsEmitter != nil {
