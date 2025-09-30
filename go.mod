@@ -13,15 +13,15 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.47.0
-	code.cloudfoundry.org/clock v1.49.0
+	code.cloudfoundry.org/archiver v0.48.0
+	code.cloudfoundry.org/clock v1.50.0
 	code.cloudfoundry.org/commandrunner v0.47.0
-	code.cloudfoundry.org/debugserver v0.68.0
-	code.cloudfoundry.org/garden v0.0.0-20250916215733-c693739b5ca4
+	code.cloudfoundry.org/debugserver v0.69.0
+	code.cloudfoundry.org/garden v0.0.0-20250924021457-81a82acd3d4b
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20250916220018-be32af24b3d1
-	code.cloudfoundry.org/lager/v3 v3.49.0
-	code.cloudfoundry.org/localip v0.51.0
+	code.cloudfoundry.org/idmapper v0.0.0-20250924021644-470da58754b2
+	code.cloudfoundry.org/lager/v3 v3.50.0
+	code.cloudfoundry.org/localip v0.52.0
 	github.com/BurntSushi/toml v1.5.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.101
@@ -76,7 +76,7 @@ require (
 	github.com/containerd/ttrpc v1.2.7 // indirect
 	github.com/coreos/go-systemd/v22 v22.6.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
-	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
+	github.com/cyphar/filepath-securejoin v0.5.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
@@ -119,7 +119,7 @@ require (
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/tools v0.37.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250922171735-9219d122eba9 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250929231259-57b25ae835d4 // indirect
 	google.golang.org/grpc v1.75.1 // indirect
 	google.golang.org/protobuf v1.36.9 // indirect
 )
