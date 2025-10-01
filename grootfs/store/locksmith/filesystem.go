@@ -23,21 +23,24 @@ type FileSystem struct {
 	metricsEmitter groot.MetricsEmitter
 	lockType       int
 	metricName     string
+	FlockSyscall   func(fd int, how int) (err error)
 }
 
 func NewExclusiveFileSystem(locksDir string) *FileSystem {
 	return &FileSystem{
-		locksDir:   locksDir,
-		lockType:   unix.LOCK_EX,
-		metricName: ExclusiveMetricsLockingTime,
+		locksDir:     locksDir,
+		lockType:     unix.LOCK_EX,
+		metricName:   ExclusiveMetricsLockingTime,
+		FlockSyscall: unix.Flock,
 	}
 }
 
 func NewSharedFileSystem(locksDir string) *FileSystem {
 	return &FileSystem{
-		locksDir:   locksDir,
-		lockType:   unix.LOCK_SH,
-		metricName: SharedMetricsLockingTime,
+		locksDir:     locksDir,
+		lockType:     unix.LOCK_SH,
+		metricName:   SharedMetricsLockingTime,
+		FlockSyscall: unix.Flock,
 	}
 }
 
@@ -45,8 +48,6 @@ func (l *FileSystem) WithMetrics(e groot.MetricsEmitter) *FileSystem {
 	l.metricsEmitter = e
 	return l
 }
-
-var FlockSyscall = unix.Flock
 
 func (l *FileSystem) LockWithTimeout(key string, timeout time.Duration) (*os.File, error) {
 	gotLock := make(chan string, 1)
@@ -81,7 +82,7 @@ func (l *FileSystem) Lock(key string) (*os.File, error) {
 	}
 
 	fd := int(lockFile.Fd())
-	if err := FlockSyscall(fd, l.lockType); err != nil {
+	if err := l.FlockSyscall(fd, l.lockType); err != nil { // read here, goroutine 18
 		return nil, err
 	}
 
@@ -91,7 +92,7 @@ func (l *FileSystem) Lock(key string) (*os.File, error) {
 func (l *FileSystem) Unlock(lockFile *os.File) error {
 	defer lockFile.Close()
 	fd := int(lockFile.Fd())
-	return FlockSyscall(fd, unix.LOCK_UN)
+	return l.FlockSyscall(fd, unix.LOCK_UN)
 }
 
 func (l *FileSystem) path(key string) string {

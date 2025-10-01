@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
@@ -28,7 +27,6 @@ var _ = Describe("Filesystem", func() {
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(path)).To(Succeed())
-		locksmith.FlockSyscall = syscall.Flock
 	})
 
 	Context("ExclusiveLocksmith", func() {
@@ -148,8 +146,8 @@ var _ = Describe("Filesystem", func() {
 			})
 
 			Context("when locking the file fails", func() {
-				BeforeEach(func() {
-					locksmith.FlockSyscall = func(_ int, _ int) error {
+				JustBeforeEach(func() {
+					exclusiveLocksmith.FlockSyscall = func(_ int, _ int) error {
 						return errors.New("failed to lock file")
 					}
 				})
@@ -165,9 +163,9 @@ var _ = Describe("Filesystem", func() {
 			Context("when unlocking a file descriptor fails", func() {
 				var lockFile *os.File
 
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					lockFile = os.NewFile(uintptr(12), "lockFile")
-					locksmith.FlockSyscall = func(_ int, _ int) error {
+					exclusiveLocksmith.FlockSyscall = func(_ int, _ int) error {
 						return errors.New("failed to unlock file")
 					}
 				})
@@ -263,8 +261,8 @@ var _ = Describe("Filesystem", func() {
 			})
 
 			Context("when locking the file fails", func() {
-				BeforeEach(func() {
-					locksmith.FlockSyscall = func(_ int, _ int) error {
+				JustBeforeEach(func() {
+					sharedLocksmith.FlockSyscall = func(_ int, _ int) error {
 						return errors.New("failed to lock file")
 					}
 				})
@@ -280,9 +278,9 @@ var _ = Describe("Filesystem", func() {
 			Context("when unlocking a file descriptor fails", func() {
 				var lockFile *os.File
 
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					lockFile = os.NewFile(uintptr(12), "lockFile")
-					locksmith.FlockSyscall = func(_ int, _ int) error {
+					sharedLocksmith.FlockSyscall = func(_ int, _ int) error {
 						return errors.New("failed to unlock file")
 					}
 				})
