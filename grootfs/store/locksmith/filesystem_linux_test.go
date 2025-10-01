@@ -55,7 +55,7 @@ var _ = Describe("Filesystem", func() {
 
 					// Failed 2nd claim
 					_, err = exclusiveLocksmith.LockWithTimeout("key", timeout)
-					Expect(err).To(MatchError("timed out waiting for the 'key' file lock"))
+					Expect(err).To(MatchError("timed out waiting for the 'key' file lock after '1s'"))
 				})
 			})
 
