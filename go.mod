@@ -16,15 +16,15 @@ require (
 	code.cloudfoundry.org/archiver v0.50.0
 	code.cloudfoundry.org/clock v1.52.0
 	code.cloudfoundry.org/commandrunner v0.49.0
-	code.cloudfoundry.org/debugserver v0.71.0
-	code.cloudfoundry.org/garden v0.0.0-20251008021559-4bd09d2c5600
+	code.cloudfoundry.org/debugserver v0.72.0
+	code.cloudfoundry.org/garden v0.0.0-20251015021552-f8762a7eb1ea
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20251008022351-02e2d016d981
+	code.cloudfoundry.org/idmapper v0.0.0-20251015021756-bb27d42a895a
 	code.cloudfoundry.org/lager/v3 v3.52.0
 	code.cloudfoundry.org/localip v0.54.0
 	github.com/BurntSushi/toml v1.5.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.102
+	github.com/cloudfoundry/gosigar v1.3.103
 	github.com/containerd/cgroups/v3 v3.0.5
 	github.com/containerd/containerd/api v1.9.0
 	github.com/containerd/containerd/v2 v2.1.4
@@ -89,7 +89,7 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20251007162407-5df77e3f7d1d // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/klauspost/compress v1.18.1 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/sys/capability v0.4.0 // indirect
@@ -119,7 +119,7 @@ require (
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
 	golang.org/x/tools v0.38.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251014184007-4626949a642f // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251020155222-88f65dc88635 // indirect
 	google.golang.org/grpc v1.76.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 )
