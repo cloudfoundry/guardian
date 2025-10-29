@@ -13,19 +13,19 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.50.0
-	code.cloudfoundry.org/clock v1.52.0
+	code.cloudfoundry.org/archiver v0.51.0
+	code.cloudfoundry.org/clock v1.53.0
 	code.cloudfoundry.org/commandrunner v0.49.0
-	code.cloudfoundry.org/debugserver v0.72.0
+	code.cloudfoundry.org/debugserver v0.73.0
 	code.cloudfoundry.org/garden v0.0.0-20251015021552-f8762a7eb1ea
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20251015021756-bb27d42a895a
-	code.cloudfoundry.org/lager/v3 v3.52.0
-	code.cloudfoundry.org/localip v0.54.0
+	code.cloudfoundry.org/lager/v3 v3.53.0
+	code.cloudfoundry.org/localip v0.55.0
 	github.com/BurntSushi/toml v1.5.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.103
-	github.com/containerd/cgroups/v3 v3.0.5
+	github.com/cloudfoundry/gosigar v1.3.104
+	github.com/containerd/cgroups/v3 v3.1.0
 	github.com/containerd/containerd/api v1.9.0
 	github.com/containerd/containerd/v2 v2.1.4
 	github.com/containerd/errdefs v1.0.0
@@ -39,7 +39,7 @@ require (
 	github.com/moby/sys/reexec v0.1.0
 	github.com/moby/sys/user v0.4.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo/v2 v2.26.0
+	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
 	github.com/opencontainers/cgroups v0.0.5
 	github.com/opencontainers/go-digest v1.0.0
@@ -111,7 +111,6 @@ require (
 	go.opentelemetry.io/otel v1.38.0 // indirect
 	go.opentelemetry.io/otel/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
-	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/goleak v1.3.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/mod v0.29.0 // indirect
@@ -119,7 +118,7 @@ require (
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
 	golang.org/x/tools v0.38.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251020155222-88f65dc88635 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8 // indirect
 	google.golang.org/grpc v1.76.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 )

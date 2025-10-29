@@ -1,7 +1,7 @@
-# code.cloudfoundry.org/archiver v0.50.0
+# code.cloudfoundry.org/archiver v0.51.0
 ## explicit; go 1.24.0
 code.cloudfoundry.org/archiver/extractor/test_helper
-# code.cloudfoundry.org/clock v1.52.0
+# code.cloudfoundry.org/clock v1.53.0
 ## explicit; go 1.24.0
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
@@ -12,7 +12,7 @@ code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.72.0
+# code.cloudfoundry.org/debugserver v0.73.0
 ## explicit; go 1.24.0
 code.cloudfoundry.org/debugserver
 # code.cloudfoundry.org/garden v0.0.0-20251015021552-f8762a7eb1ea => ../garden
@@ -33,14 +33,14 @@ code.cloudfoundry.org/grootfs/commands/config
 # code.cloudfoundry.org/idmapper v0.0.0-20251015021756-bb27d42a895a => ../idmapper
 ## explicit; go 1.24.0
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.52.0
+# code.cloudfoundry.org/lager/v3 v3.53.0
 ## explicit; go 1.24.0
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
 code.cloudfoundry.org/lager/v3/internal/truncate
 code.cloudfoundry.org/lager/v3/lagerctx
 code.cloudfoundry.org/lager/v3/lagertest
-# code.cloudfoundry.org/localip v0.54.0
+# code.cloudfoundry.org/localip v0.55.0
 ## explicit; go 1.24.0
 code.cloudfoundry.org/localip
 # github.com/BurntSushi/toml v1.5.0
@@ -126,14 +126,14 @@ github.com/cloudfoundry/dropsonde/metric_sender/fake
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/gosigar v1.3.103
+# github.com/cloudfoundry/gosigar v1.3.104
 ## explicit; go 1.23.0
 github.com/cloudfoundry/gosigar
 github.com/cloudfoundry/gosigar/sys/windows
 # github.com/cloudfoundry/sonde-go v0.0.0-20251008062332-ece9fc2bedb4
 ## explicit; go 1.23
 github.com/cloudfoundry/sonde-go/events
-# github.com/containerd/cgroups/v3 v3.0.5
+# github.com/containerd/cgroups/v3 v3.1.0
 ## explicit; go 1.22.0
 github.com/containerd/cgroups/v3/cgroup1/stats
 github.com/containerd/cgroups/v3/cgroup2
@@ -385,12 +385,13 @@ github.com/mrunalp/fileutils
 # github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 ## explicit
 github.com/nu7hatch/gouuid
-# github.com/onsi/ginkgo/v2 v2.26.0
+# github.com/onsi/ginkgo/v2 v2.27.2
 ## explicit; go 1.23.0
 github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config
 github.com/onsi/ginkgo/v2/formatter
 github.com/onsi/ginkgo/v2/ginkgo
+github.com/onsi/ginkgo/v2/ginkgo/automaxprocs
 github.com/onsi/ginkgo/v2/ginkgo/build
 github.com/onsi/ginkgo/v2/ginkgo/command
 github.com/onsi/ginkgo/v2/ginkgo/generators
@@ -561,12 +562,6 @@ go.opentelemetry.io/otel/trace
 go.opentelemetry.io/otel/trace/embedded
 go.opentelemetry.io/otel/trace/internal/telemetry
 go.opentelemetry.io/otel/trace/noop
-# go.uber.org/automaxprocs v1.6.0
-## explicit; go 1.20
-go.uber.org/automaxprocs
-go.uber.org/automaxprocs/internal/cgroups
-go.uber.org/automaxprocs/internal/runtime
-go.uber.org/automaxprocs/maxprocs
 # go.uber.org/goleak v1.3.0
 ## explicit; go 1.20
 # go.yaml.in/yaml/v3 v3.0.4
@@ -650,7 +645,7 @@ golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20251020155222-88f65dc88635
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8
 ## explicit; go 1.24.0
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.76.0
