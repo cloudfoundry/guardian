@@ -1,9 +1,8 @@
-//go:build !windows
-
 package link
 
 import (
 	"fmt"
+	"unsafe"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/internal/sys"
@@ -85,13 +84,13 @@ func QueryPrograms(opts QueryOptions) (*QueryResult, error) {
 		AttachType:        sys.AttachType(opts.Attach),
 		QueryFlags:        opts.QueryFlags,
 		Count:             count,
-		ProgIds:           sys.SlicePointer(progIds),
+		ProgIds:           sys.NewPointer(unsafe.Pointer(&progIds[0])),
 	}
 
 	var linkIds []ID
 	if haveLinkIDs {
 		linkIds = make([]ID, count)
-		attr.LinkIds = sys.SlicePointer(linkIds)
+		attr.LinkIds = sys.NewPointer(unsafe.Pointer(&linkIds[0]))
 	}
 
 	if err := sys.ProgQuery(&attr); err != nil {

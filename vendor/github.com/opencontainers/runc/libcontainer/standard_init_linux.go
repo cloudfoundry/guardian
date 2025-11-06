@@ -11,8 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
-	"github.com/opencontainers/runc/internal/pathrs"
-	"github.com/opencontainers/runc/internal/sys"
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/keys"
@@ -132,17 +130,20 @@ func (l *linuxStandardInit) Init() error {
 		return fmt.Errorf("unable to apply apparmor profile: %w", err)
 	}
 
-	if err := sys.WriteSysctls(l.config.Config.Sysctl); err != nil {
-		return err
+	for key, value := range l.config.Config.Sysctl {
+		if err := writeSystemProperty(key, value); err != nil {
+			return err
+		}
 	}
 	for _, path := range l.config.Config.ReadonlyPaths {
 		if err := readonlyPath(path); err != nil {
 			return fmt.Errorf("can't make %q read-only: %w", path, err)
 		}
 	}
-
-	if err := maskPaths(l.config.Config.MaskPaths, l.config.Config.MountLabel); err != nil {
-		return err
+	for _, path := range l.config.Config.MaskPaths {
+		if err := maskPath(path, l.config.Config.MountLabel); err != nil {
+			return fmt.Errorf("can't mask path %s: %w", path, err)
+		}
 	}
 	pdeath, err := system.GetParentDeathSignal()
 	if err != nil {
@@ -251,17 +252,19 @@ func (l *linuxStandardInit) Init() error {
 		return fmt.Errorf("close log pipe: %w", err)
 	}
 
+	fifoPath, closer := utils.ProcThreadSelfFd(l.fifoFile.Fd())
+	defer closer()
+
 	// Wait for the FIFO to be opened on the other side before exec-ing the
 	// user process. We open it through /proc/self/fd/$fd, because the fd that
 	// was given to us was an O_PATH fd to the fifo itself. Linux allows us to
 	// re-open an O_PATH fd through /proc.
-	fifoFile, err := pathrs.Reopen(l.fifoFile, unix.O_WRONLY|unix.O_CLOEXEC)
+	fd, err := unix.Open(fifoPath, unix.O_WRONLY|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return fmt.Errorf("reopen exec fifo: %w", err)
+		return &os.PathError{Op: "open exec fifo", Path: fifoPath, Err: err}
 	}
-	defer fifoFile.Close()
-	if _, err := fifoFile.Write([]byte("0")); err != nil {
-		return &os.PathError{Op: "write exec fifo", Path: fifoFile.Name(), Err: err}
+	if _, err := unix.Write(fd, []byte("0")); err != nil {
+		return &os.PathError{Op: "write exec fifo", Path: fifoPath, Err: err}
 	}
 
 	// Close the O_PATH fifofd fd before exec because the kernel resets
@@ -270,7 +273,6 @@ func (l *linuxStandardInit) Init() error {
 	// N.B. the core issue itself (passing dirfds to the host filesystem) has
 	// since been resolved.
 	// https://github.com/torvalds/linux/blob/v4.9/fs/exec.c#L1290-L1318
-	_ = fifoFile.Close()
 	_ = l.fifoFile.Close()
 
 	if s := l.config.SpecState; s != nil {

@@ -1,11 +1,10 @@
-//go:build !windows
-
 package link
 
 import (
 	"errors"
 	"fmt"
 	"os"
+	"unsafe"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/asm"
@@ -85,10 +84,10 @@ func kprobeMulti(prog *ebpf.Program, opts KprobeMultiOptions, flags uint32) (Lin
 		return nil, fmt.Errorf("one of Symbols or Addresses is required: %w", errInvalidInput)
 	}
 	if syms != 0 && addrs != 0 {
-		return nil, fmt.Errorf("fields Symbols and Addresses are mutually exclusive: %w", errInvalidInput)
+		return nil, fmt.Errorf("Symbols and Addresses are mutually exclusive: %w", errInvalidInput)
 	}
 	if cookies > 0 && cookies != syms && cookies != addrs {
-		return nil, fmt.Errorf("field Cookies must be exactly Symbols or Addresses in length: %w", errInvalidInput)
+		return nil, fmt.Errorf("Cookies must be exactly Symbols or Addresses in length: %w", errInvalidInput)
 	}
 
 	attachType := sys.BPF_TRACE_KPROBE_MULTI
@@ -109,11 +108,11 @@ func kprobeMulti(prog *ebpf.Program, opts KprobeMultiOptions, flags uint32) (Lin
 
 	case addrs != 0:
 		attr.Count = addrs
-		attr.Addrs = sys.SlicePointer(opts.Addresses)
+		attr.Addrs = sys.NewPointer(unsafe.Pointer(&opts.Addresses[0]))
 	}
 
 	if cookies != 0 {
-		attr.Cookies = sys.SlicePointer(opts.Cookies)
+		attr.Cookies = sys.NewPointer(unsafe.Pointer(&opts.Cookies[0]))
 	}
 
 	fd, err := sys.LinkCreateKprobeMulti(attr)

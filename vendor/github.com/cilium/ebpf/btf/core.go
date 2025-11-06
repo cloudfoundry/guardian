@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/cilium/ebpf/asm"
-	"github.com/cilium/ebpf/internal"
-	"github.com/cilium/ebpf/internal/platform"
 )
 
 // Code in this file is derived from libbpf, which is available under a BSD
@@ -47,10 +46,6 @@ func (f *COREFixup) String() string {
 }
 
 func (f *COREFixup) Apply(ins *asm.Instruction) error {
-	if !platform.IsLinux {
-		return fmt.Errorf("CO-RE fixup: %w", internal.ErrNotSupportedOnOS)
-	}
-
 	if f.poison {
 		// Relocation is poisoned, replace the instruction with an invalid one.
 		if ins.OpCode.IsDWordLoad() {
@@ -210,8 +205,8 @@ func CORERelocate(relos []*CORERelocation, targets []*Spec, bo binary.ByteOrder,
 	resolveTargetTypeID := targets[0].TypeID
 
 	for _, target := range targets {
-		if bo != target.byteOrder {
-			return nil, fmt.Errorf("can't relocate %s against %s", bo, target.byteOrder)
+		if bo != target.imm.byteOrder {
+			return nil, fmt.Errorf("can't relocate %s against %s", bo, target.imm.byteOrder)
 		}
 	}
 
@@ -264,14 +259,16 @@ func CORERelocate(relos []*CORERelocation, targets []*Spec, bo binary.ByteOrder,
 
 		var targetTypes []Type
 		for _, target := range targets {
-			namedTypes, err := target.TypesByName(essentialName)
-			if errors.Is(err, ErrNotFound) {
-				continue
-			} else if err != nil {
-				return nil, err
-			}
+			namedTypeIDs := target.imm.namedTypes[essentialName]
+			targetTypes = slices.Grow(targetTypes, len(namedTypeIDs))
+			for _, id := range namedTypeIDs {
+				typ, err := target.TypeByID(id)
+				if err != nil {
+					return nil, err
+				}
 
-			targetTypes = append(targetTypes, namedTypes...)
+				targetTypes = append(targetTypes, typ)
+			}
 		}
 
 		fixups, err := coreCalculateFixups(group.relos, targetTypes, bo, resolveTargetTypeID)

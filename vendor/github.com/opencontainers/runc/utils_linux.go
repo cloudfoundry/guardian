@@ -16,7 +16,6 @@ import (
 	"github.com/urfave/cli"
 	"golang.org/x/sys/unix"
 
-	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/specconv"
@@ -241,14 +240,10 @@ func (r *runner) run(config *specs.Process) (int, error) {
 		process.ExtraFiles = append(process.ExtraFiles, r.listenFDs...)
 	}
 	baseFd := 3 + len(process.ExtraFiles)
-	procSelfFd, closer, err := pathrs.ProcThreadSelfOpen("fd/", unix.O_DIRECTORY|unix.O_CLOEXEC)
-	if err != nil {
-		return -1, err
-	}
+	procSelfFd, closer := utils.ProcThreadSelf("fd/")
 	defer closer()
-	defer procSelfFd.Close()
 	for i := baseFd; i < baseFd+r.preserveFDs; i++ {
-		err := unix.Faccessat(int(procSelfFd.Fd()), strconv.Itoa(i), unix.F_OK, 0)
+		_, err = os.Stat(filepath.Join(procSelfFd, strconv.Itoa(i)))
 		if err != nil {
 			return -1, fmt.Errorf("unable to stat preserved-fd %d (of %d): %w", i-baseFd, r.preserveFDs, err)
 		}

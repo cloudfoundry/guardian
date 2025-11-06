@@ -13,7 +13,11 @@ replace (
 replace (
 	// pinned back until https://github.com/containerd/containerd/issues/12493 is resolved and containerd/containerd handles the new runtime spec.
 	// after that we will need to decide how to adapt rundmc's pidlimit logic to handle the change from int64 to *int64.
+	github.com/cilium/ebpf => github.com/cilium/ebpf v0.17.3
 	github.com/containerd/cgroups/v3 => github.com/containerd/cgroups/v3 v3.1.0
+	github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.5.0
+	github.com/opencontainers/cgroups => github.com/opencontainers/cgroups v0.0.5
+	github.com/opencontainers/runc => github.com/opencontainers/runc v1.3.2
 	github.com/opencontainers/runtime-spec => github.com/opencontainers/runtime-spec v1.2.1
 )
 
@@ -49,7 +53,7 @@ require (
 	github.com/opencontainers/cgroups v0.0.6
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
-	github.com/opencontainers/runc v1.3.3
+	github.com/opencontainers/runc v1.2.3
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
@@ -63,7 +67,6 @@ require (
 )
 
 require (
-	cyphar.com/go-pathrs v0.2.1 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.14.0-rc.1 // indirect
