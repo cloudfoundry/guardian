@@ -3,7 +3,7 @@
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20251029022054-ced288fdecfb => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20251105022118-a99f055e6424 => ../idmapper
 ## explicit; go 1.24.0
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.53.0
@@ -110,7 +110,7 @@ github.com/distribution/reference
 ## explicit
 github.com/docker/distribution/registry/api/errcode
 github.com/docker/distribution/registry/api/v2
-# github.com/docker/docker v28.5.1+incompatible
+# github.com/docker/docker v28.5.2+incompatible
 ## explicit
 github.com/docker/docker/api/types/versions
 github.com/docker/docker/pkg/system
