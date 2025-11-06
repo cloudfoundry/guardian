@@ -133,7 +133,7 @@ github.com/cloudfoundry/gosigar/sys/windows
 # github.com/cloudfoundry/sonde-go v0.0.0-20251008062332-ece9fc2bedb4
 ## explicit; go 1.23
 github.com/cloudfoundry/sonde-go/events
-# github.com/containerd/cgroups/v3 v3.1.0
+# github.com/containerd/cgroups/v3 v3.1.0 => github.com/containerd/cgroups/v3 v3.1.0
 ## explicit; go 1.22.0
 github.com/containerd/cgroups/v3/cgroup1/stats
 github.com/containerd/cgroups/v3/cgroup2
@@ -469,7 +469,7 @@ github.com/opencontainers/runc/libcontainer/system/kernelversion
 github.com/opencontainers/runc/libcontainer/utils
 github.com/opencontainers/runc/types
 github.com/opencontainers/runc/types/features
-# github.com/opencontainers/runtime-spec v1.2.1
+# github.com/opencontainers/runtime-spec v1.2.1 => github.com/opencontainers/runtime-spec v1.2.1
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
 github.com/opencontainers/runtime-spec/specs-go/features
@@ -756,3 +756,5 @@ gopkg.in/yaml.v2
 # code.cloudfoundry.org/grootfs => ../grootfs
 # code.cloudfoundry.org/idmapper => ../idmapper
 # github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
+# github.com/containerd/cgroups/v3 => github.com/containerd/cgroups/v3 v3.1.0
+# github.com/opencontainers/runtime-spec => github.com/opencontainers/runtime-spec v1.2.1

@@ -12,6 +12,13 @@ replace (
 	github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
 )
 
+replace (
+	// pinned back until https://github.com/containerd/containerd/issues/12493 is resolved and containerd/containerd handles the new runtime spec.
+	// after that we will need to decide how to adapt rundmc's pidlimit logic to handle the change from int64 to *int64.
+	github.com/containerd/cgroups/v3 => github.com/containerd/cgroups/v3 v3.1.0
+	github.com/opencontainers/runtime-spec => github.com/opencontainers/runtime-spec v1.2.1
+)
+
 require (
 	code.cloudfoundry.org/archiver v0.51.0
 	code.cloudfoundry.org/clock v1.53.0
