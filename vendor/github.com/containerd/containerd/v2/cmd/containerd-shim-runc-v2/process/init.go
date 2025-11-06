@@ -214,8 +214,13 @@ func (p *Init) createCheckpointedState(r *CreateConfig, pidFile *pidFile) error 
 }
 
 // Wait for the process to exit
-func (p *Init) Wait() {
-	<-p.waitBlock
+func (p *Init) Wait(ctx context.Context) error {
+	select {
+	case <-p.waitBlock:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // ID of the process
@@ -293,7 +298,9 @@ func (p *Init) Delete(ctx context.Context) error {
 }
 
 func (p *Init) delete(ctx context.Context) error {
-	waitTimeout(ctx, &p.wg, 2*time.Second)
+	if err := waitTimeout(ctx, &p.wg, 10*time.Second); err != nil {
+		log.G(ctx).WithError(err).Errorf("failed to drain init process %s io", p.id)
+	}
 	err := p.runtime.Delete(ctx, p.id, nil)
 	// ignore errors if a runtime has already deleted the process
 	// but we still hold metadata and pipes

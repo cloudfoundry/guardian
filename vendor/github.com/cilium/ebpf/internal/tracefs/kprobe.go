@@ -13,6 +13,7 @@ import (
 
 	"github.com/cilium/ebpf/internal"
 	"github.com/cilium/ebpf/internal/linux"
+	"github.com/cilium/ebpf/internal/platform"
 	"github.com/cilium/ebpf/internal/unix"
 )
 
@@ -22,7 +23,7 @@ var (
 	ErrInvalidMaxActive = errors.New("can only set maxactive on kretprobes")
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer@latest -type=ProbeType -linecomment
+//go:generate go tool stringer -type=ProbeType -linecomment
 
 type ProbeType uint8
 
@@ -71,11 +72,11 @@ func RandomGroup(prefix string) (string, error) {
 }
 
 // validIdentifier implements the equivalent of a regex match
-// against "^[a-zA-Z_][0-9a-zA-Z_]*$".
+// against "^[a-zA-Z_][0-9a-zA-Z_-]*$".
 //
-// Trace event groups, names and kernel symbols must adhere to this set
-// of characters. Non-empty, first character must not be a number, all
-// characters must be alphanumeric or underscore.
+// Trace event groups, names and kernel symbols must adhere to this set of
+// characters. Non-empty, first character must not be a number or hyphen, all
+// characters must be alphanumeric, underscore or hyphen.
 func validIdentifier(s string) bool {
 	if len(s) < 1 {
 		return false
@@ -85,7 +86,7 @@ func validIdentifier(s string) bool {
 		case c >= 'a' && c <= 'z':
 		case c >= 'A' && c <= 'Z':
 		case c == '_':
-		case i > 0 && c >= '0' && c <= '9':
+		case i > 0 && (c == '-' || c >= '0' && c <= '9'):
 
 		default:
 			return false
@@ -113,7 +114,7 @@ func sanitizeTracefsPath(path ...string) (string, error) {
 // but may be also be available at /sys/kernel/debug/tracing if debugfs is mounted.
 // The available tracefs paths will depends on distribution choices.
 var getTracefsPath = sync.OnceValues(func() (string, error) {
-	if !internal.OnLinux {
+	if !platform.IsLinux {
 		return "", fmt.Errorf("tracefs: %w", internal.ErrNotSupportedOnOS)
 	}
 
@@ -199,6 +200,8 @@ type Event struct {
 	group, name string
 	// event id allocated by the kernel. 0 if the event has already been removed.
 	id uint64
+
+	cleanup runtime.Cleanup
 }
 
 // NewEvent creates a new ephemeral trace event.
@@ -305,14 +308,21 @@ func NewEvent(args ProbeArgs) (*Event, error) {
 		if err := removeEvent(args.Type, event); err != nil {
 			return nil, fmt.Errorf("failed to remove spurious maxactive event: %s", err)
 		}
-		return nil, fmt.Errorf("create trace event with non-default maxactive: %w", internal.ErrNotSupported)
+
+		return nil, &internal.UnsupportedFeatureError{
+			MinimumVersion: internal.Version{4, 12},
+			Name:           "trace event with non-default maxactive",
+		}
 	}
 	if err != nil {
 		return nil, fmt.Errorf("get trace event id: %w", err)
 	}
 
-	evt := &Event{args.Type, args.Group, eventName, tid}
-	runtime.SetFinalizer(evt, (*Event).Close)
+	evt := &Event{typ: args.Type, group: args.Group, name: eventName, id: tid}
+	evt.cleanup = runtime.AddCleanup(evt, func(*byte) {
+		_ = removeEvent(args.Type, fmt.Sprintf("%s/%s", args.Group, eventName))
+	}, nil)
+
 	return evt, nil
 }
 
@@ -325,7 +335,7 @@ func (evt *Event) Close() error {
 	}
 
 	evt.id = 0
-	runtime.SetFinalizer(evt, nil)
+	evt.cleanup.Stop()
 	pe := fmt.Sprintf("%s/%s", evt.group, evt.name)
 	return removeEvent(evt.typ, pe)
 }
