@@ -7,7 +7,6 @@ type CleanupCommand struct {
 func (cmd *CleanupCommand) Execute(args []string) error {
 	log, _ := cmd.Logger.Logger("guardian-cleanup")
 	metricsProvider := cmd.wireMetricsProvider(log)
-	cmd.Containers.DestroyContainersOnStartup = true
 
 	wiring, err := cmd.createWiring(log, metricsProvider)
 	if err != nil {

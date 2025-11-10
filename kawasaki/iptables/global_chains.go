@@ -218,50 +218,44 @@ const SetupScript = `
 `
 
 type Starter struct {
-	iptables                   *IPTablesController
-	allowHostAccess            bool
-	destroyContainersOnStartup bool
-	nicPrefix                  string
-	denyNetworks               []string
-	logger                     lager.Logger
+	iptables        *IPTablesController
+	allowHostAccess bool
+	nicPrefix       string
+	denyNetworks    []string
+	logger          lager.Logger
 }
 
-func NewStarter(iptables *IPTablesController, allowHostAccess bool, nicPrefix string, denyNetworks []string, destroyContainersOnStartup bool, logger lager.Logger) *Starter {
+func NewStarter(iptables *IPTablesController, allowHostAccess bool, nicPrefix string, denyNetworks []string, logger lager.Logger) *Starter {
 	return &Starter{
-		iptables:                   iptables,
-		allowHostAccess:            allowHostAccess,
-		destroyContainersOnStartup: destroyContainersOnStartup,
-		nicPrefix:                  nicPrefix,
-		denyNetworks:               denyNetworks,
-		logger:                     logger.Session("create-global-iptables-chains"),
+		iptables:        iptables,
+		allowHostAccess: allowHostAccess,
+		nicPrefix:       nicPrefix,
+		denyNetworks:    denyNetworks,
+		logger:          logger.Session("create-global-iptables-chains"),
 	}
 }
 
 func (s Starter) Start() error {
 	s.logger.Info("started")
-	if s.destroyContainersOnStartup || !s.chainExists(s.iptables.inputChain) {
-		s.logger.Info("create-started")
-		cmd := exec.Command("bash", "-c", SetupScript)
-		cmd.Env = []string{
-			fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
-			"ACTION=setup",
-			fmt.Sprintf("GARDEN_IPTABLES_BIN=%s", s.iptables.iptablesBinPath),
-			fmt.Sprintf("GARDEN_IPTABLES_FILTER_INPUT_CHAIN=%s", s.iptables.inputChain),
-			fmt.Sprintf("GARDEN_IPTABLES_FILTER_FORWARD_CHAIN=%s", s.iptables.forwardChain),
-			fmt.Sprintf("GARDEN_IPTABLES_FILTER_DEFAULT_CHAIN=%s", s.iptables.defaultChain),
-			fmt.Sprintf("GARDEN_IPTABLES_FILTER_INSTANCE_PREFIX=%s", s.iptables.instanceChainPrefix),
-			fmt.Sprintf("GARDEN_IPTABLES_NAT_PREROUTING_CHAIN=%s", s.iptables.preroutingChain),
-			fmt.Sprintf("GARDEN_IPTABLES_NAT_POSTROUTING_CHAIN=%s", s.iptables.postroutingChain),
-			fmt.Sprintf("GARDEN_IPTABLES_NAT_INSTANCE_PREFIX=%s", s.iptables.instanceChainPrefix),
-			fmt.Sprintf("GARDEN_NETWORK_INTERFACE_PREFIX=%s", s.nicPrefix),
-			fmt.Sprintf("GARDEN_IPTABLES_ALLOW_HOST_ACCESS=%t", s.allowHostAccess),
-		}
+	s.logger.Info("create-started")
+	cmd := exec.Command("bash", "-c", SetupScript)
+	cmd.Env = []string{
+		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
+		"ACTION=setup",
+		fmt.Sprintf("GARDEN_IPTABLES_BIN=%s", s.iptables.iptablesBinPath),
+		fmt.Sprintf("GARDEN_IPTABLES_FILTER_INPUT_CHAIN=%s", s.iptables.inputChain),
+		fmt.Sprintf("GARDEN_IPTABLES_FILTER_FORWARD_CHAIN=%s", s.iptables.forwardChain),
+		fmt.Sprintf("GARDEN_IPTABLES_FILTER_DEFAULT_CHAIN=%s", s.iptables.defaultChain),
+		fmt.Sprintf("GARDEN_IPTABLES_FILTER_INSTANCE_PREFIX=%s", s.iptables.instanceChainPrefix),
+		fmt.Sprintf("GARDEN_IPTABLES_NAT_PREROUTING_CHAIN=%s", s.iptables.preroutingChain),
+		fmt.Sprintf("GARDEN_IPTABLES_NAT_POSTROUTING_CHAIN=%s", s.iptables.postroutingChain),
+		fmt.Sprintf("GARDEN_IPTABLES_NAT_INSTANCE_PREFIX=%s", s.iptables.instanceChainPrefix),
+		fmt.Sprintf("GARDEN_NETWORK_INTERFACE_PREFIX=%s", s.nicPrefix),
+		fmt.Sprintf("GARDEN_IPTABLES_ALLOW_HOST_ACCESS=%t", s.allowHostAccess),
+	}
 
-		if err := s.iptables.run("setup-global-chains", cmd); err != nil {
-			return fmt.Errorf("setting up default chains: %s", err)
-		}
-	} else {
-		s.logger.Info("create-skipped")
+	if err := s.iptables.run("setup-global-chains", cmd); err != nil {
+		return fmt.Errorf("setting up default chains: %s", err)
 	}
 
 	if err := s.resetDenyNetworks(); err != nil {
@@ -276,12 +270,6 @@ func (s Starter) Start() error {
 
 	s.logger.Info("finished")
 	return nil
-}
-
-func (s Starter) chainExists(chainName string) bool {
-	cmd := exec.Command(s.iptables.iptablesBinPath, "-w", "-n", "-L", chainName)
-	cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", os.Getenv("PATH")))
-	return s.iptables.run("checking-chain-exists", cmd) == nil
 }
 
 func (s Starter) resetDenyNetworks() error {

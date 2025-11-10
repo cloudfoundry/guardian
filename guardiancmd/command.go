@@ -114,10 +114,9 @@ type CommonCommand struct {
 		GIDMapStart  uint32 `long:"gid-map-start"  default:"1" description:"The lowest numerical subordinate group ID the user is allowed to map"`
 		GIDMapLength uint32 `long:"gid-map-length" description:"The number of numerical subordinate group IDs the user is allowed to map"`
 
-		DefaultRootFS              string        `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
-		DefaultGraceTime           time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`
-		DestroyContainersOnStartup bool          `long:"destroy-containers-on-startup" description:"Clean up all the existing containers on startup."`
-		ApparmorProfile            string        `long:"apparmor" description:"Apparmor profile to use for unprivileged container processes"`
+		DefaultRootFS    string        `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
+		DefaultGraceTime time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`
+		ApparmorProfile  string        `long:"apparmor" description:"Apparmor profile to use for unprivileged container processes"`
 	} `group:"Container Lifecycle"`
 
 	Bin struct {
@@ -266,10 +265,7 @@ func (cmd *CommonCommand) createWiring(logger lager.Logger, metricsProvider *met
 		return nil, err
 	}
 
-	restorer := gardener.NewRestorer(networker)
-	if cmd.Containers.DestroyContainersOnStartup {
-		restorer = &gardener.NoopRestorer{}
-	}
+	restorer := &gardener.NoopRestorer{}
 
 	volumizer := factory.WireVolumizer(logger)
 
@@ -442,7 +438,7 @@ func (cmd *CommonCommand) wireNetworker(log lager.Logger, factory GardenFactory,
 		denyNetworksList = append(denyNetworksList, network.String())
 	}
 	nonLoggingIPTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), factory.CommandRunner(), locksmith, chainPrefix)
-	ipTablesStarter := iptables.NewStarter(nonLoggingIPTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup, log)
+	ipTablesStarter := iptables.NewStarter(nonLoggingIPTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, log)
 	return networker, ipTablesStarter, nil
 }
 
