@@ -1,7 +1,7 @@
-# code.cloudfoundry.org/archiver v0.52.0
+# code.cloudfoundry.org/archiver v0.53.0
 ## explicit; go 1.24.0
 code.cloudfoundry.org/archiver/extractor/test_helper
-# code.cloudfoundry.org/clock v1.53.0
+# code.cloudfoundry.org/clock v1.54.0
 ## explicit; go 1.24.0
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
@@ -12,7 +12,7 @@ code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.74.0
+# code.cloudfoundry.org/debugserver v0.75.0
 ## explicit; go 1.24.0
 code.cloudfoundry.org/debugserver
 # code.cloudfoundry.org/garden v0.0.0-20251110153920-e22a5d6234cc => ../garden
@@ -33,14 +33,14 @@ code.cloudfoundry.org/grootfs/commands/config
 # code.cloudfoundry.org/idmapper v0.0.0-20251110154208-1f8b5294540b => ../idmapper
 ## explicit; go 1.24.0
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.53.0
+# code.cloudfoundry.org/lager/v3 v3.54.0
 ## explicit; go 1.24.0
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
 code.cloudfoundry.org/lager/v3/internal/truncate
 code.cloudfoundry.org/lager/v3/lagerctx
 code.cloudfoundry.org/lager/v3/lagertest
-# code.cloudfoundry.org/localip v0.55.0
+# code.cloudfoundry.org/localip v0.56.0
 ## explicit; go 1.24.0
 code.cloudfoundry.org/localip
 # github.com/BurntSushi/toml v1.5.0
@@ -449,9 +449,12 @@ github.com/opencontainers/go-digest
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.3.3 => github.com/opencontainers/runc v1.3.2
+# github.com/opencontainers/runc v1.3.3 => github.com/opencontainers/runc v1.3.3
 ## explicit; go 1.23.0
 github.com/opencontainers/runc
+github.com/opencontainers/runc/internal/linux
+github.com/opencontainers/runc/internal/pathrs
+github.com/opencontainers/runc/internal/sys
 github.com/opencontainers/runc/libcontainer
 github.com/opencontainers/runc/libcontainer/apparmor
 github.com/opencontainers/runc/libcontainer/capabilities
@@ -761,5 +764,5 @@ gopkg.in/yaml.v2
 # github.com/containerd/cgroups/v3 => github.com/containerd/cgroups/v3 v3.1.0
 # github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.5.0
 # github.com/opencontainers/cgroups => github.com/opencontainers/cgroups v0.0.5
-# github.com/opencontainers/runc => github.com/opencontainers/runc v1.3.2
+# github.com/opencontainers/runc => github.com/opencontainers/runc v1.3.3
 # github.com/opencontainers/runtime-spec => github.com/opencontainers/runtime-spec v1.2.1
