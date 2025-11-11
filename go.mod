@@ -26,7 +26,7 @@ require (
 	code.cloudfoundry.org/clock v1.54.0
 	code.cloudfoundry.org/commandrunner v0.50.0
 	code.cloudfoundry.org/debugserver v0.75.0
-	code.cloudfoundry.org/garden v0.0.0-20251110153920-e22a5d6234cc
+	code.cloudfoundry.org/garden v0.0.0-20251111152658-dfcf4927986e
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20251110154208-1f8b5294540b
 	code.cloudfoundry.org/lager/v3 v3.54.0
@@ -121,12 +121,12 @@ require (
 	go.opentelemetry.io/otel/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/mod v0.29.0 // indirect
-	golang.org/x/net v0.46.0 // indirect
+	golang.org/x/mod v0.30.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
-	golang.org/x/text v0.30.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/tools v0.38.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251110190251-83f479183930 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251111163417-95abcf5c77ba // indirect
 	google.golang.org/grpc v1.76.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 )
