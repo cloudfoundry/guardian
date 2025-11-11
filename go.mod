@@ -17,7 +17,7 @@ replace (
 	github.com/containerd/cgroups/v3 => github.com/containerd/cgroups/v3 v3.1.0
 	github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.5.0
 	github.com/opencontainers/cgroups => github.com/opencontainers/cgroups v0.0.5
-	github.com/opencontainers/runc => github.com/opencontainers/runc v1.3.2
+	github.com/opencontainers/runc => github.com/opencontainers/runc v1.3.3
 	github.com/opencontainers/runtime-spec => github.com/opencontainers/runtime-spec v1.2.1
 )
 
