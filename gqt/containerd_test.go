@@ -652,7 +652,10 @@ func getContainerPids(ctr, socket, containerID string) []string {
 	var pids []string
 	// Here we exclude the first header line
 	for _, processesOutputLine := range processesOutputLines[1:] {
-		pids = append(pids, strings.Split(processesOutputLine, " ")[0])
+		pid := strings.Split(processesOutputLine, " ")[0]
+		if pid != "PID" {
+			pids = append(pids, pid)
+		}
 	}
 
 	return pids
