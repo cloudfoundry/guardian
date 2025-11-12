@@ -24,11 +24,11 @@ replace (
 require (
 	code.cloudfoundry.org/archiver v0.53.0
 	code.cloudfoundry.org/clock v1.54.0
-	code.cloudfoundry.org/commandrunner v0.50.0
+	code.cloudfoundry.org/commandrunner v0.51.0
 	code.cloudfoundry.org/debugserver v0.75.0
-	code.cloudfoundry.org/garden v0.0.0-20251111152658-dfcf4927986e
+	code.cloudfoundry.org/garden v0.0.0-20251111213046-f97291dc465f
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20251110154208-1f8b5294540b
+	code.cloudfoundry.org/idmapper v0.0.0-20251111213239-94821aa947e8
 	code.cloudfoundry.org/lager/v3 v3.54.0
 	code.cloudfoundry.org/localip v0.56.0
 	github.com/BurntSushi/toml v1.5.0
