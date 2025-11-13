@@ -28,7 +28,11 @@ var _ = Describe("gdn cleanup", func() {
 		config.PropertiesPath = path.Join(tmpDir, "props.json")
 		client := runner.Start(config)
 		container, err := client.Create(garden.ContainerSpec{
-			Network: fmt.Sprintf("177.100.%d.0/24", GinkgoParallelProcess()),
+			Privileged: false,
+			Network:    fmt.Sprintf("177.100.%d.0/24", GinkgoParallelProcess()),
+			Image: garden.ImageRef{
+				URI: "docker://cloudfoundry/garden-rootfs",
+			},
 		})
 		Expect(err).NotTo(HaveOccurred())
 
