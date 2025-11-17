@@ -180,6 +180,7 @@ func buildSeccomp() (*specs.LinuxSeccomp, error) {
 			AllowSyscall("_newselect"),
 			AllowSyscall("open"),
 			AllowSyscall("openat"),
+			AllowSyscall("openat2"),
 			AllowSyscall("pause"),
 			AllowSyscall("personality",
 				specs.LinuxSeccompArg{
