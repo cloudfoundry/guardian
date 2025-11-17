@@ -25,9 +25,9 @@ require (
 	code.cloudfoundry.org/clock v1.54.0
 	code.cloudfoundry.org/commandrunner v0.51.0
 	code.cloudfoundry.org/debugserver v0.75.0
-	code.cloudfoundry.org/garden v0.0.0-20251113173918-a0cba07e5269
+	code.cloudfoundry.org/garden v0.0.0-20251117183014-1c6cc747dfab
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20251113174220-2d0824d7da49
+	code.cloudfoundry.org/idmapper v0.0.0-20251117183200-8364670e5d92
 	code.cloudfoundry.org/lager/v3 v3.54.0
 	code.cloudfoundry.org/localip v0.56.0
 	github.com/BurntSushi/toml v1.5.0
@@ -73,7 +73,7 @@ require (
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0 // indirect
 	github.com/cilium/ebpf v0.20.0 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20251008062332-ece9fc2bedb4 // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20251117143420-d83918042e9c // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -92,11 +92,11 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
-	github.com/godbus/dbus/v5 v5.1.0 // indirect
+	github.com/godbus/dbus/v5 v5.2.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20251007162407-5df77e3f7d1d // indirect
+	github.com/google/pprof v0.0.0-20251114195745-4902fdda35c8 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.18.1 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
@@ -107,7 +107,7 @@ require (
 	github.com/moby/sys/signal v0.7.1 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/mrunalp/fileutils v0.5.1 // indirect
-	github.com/opencontainers/selinux v1.13.0 // indirect
+	github.com/opencontainers/selinux v1.13.1 // indirect
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/seccomp/libseccomp-golang v0.11.1 // indirect
