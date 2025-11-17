@@ -153,7 +153,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 			Context("which is invalid", func() {
 				It("the container is not created successfully", func() {
-					_, err := client.Create(garden.ContainerSpec{RootFSPath: "docker://xindex.docker.io/busybox"})
+					_, err := client.Create(garden.ContainerSpec{RootFSPath: "docker://thisisnotahost.notatld/busybox"})
 					Expect(err).To(MatchError(ContainSubstring("no such host")))
 				})
 			})
