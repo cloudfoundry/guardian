@@ -1,12 +1,12 @@
-# code.cloudfoundry.org/commandrunner v0.51.0
+# code.cloudfoundry.org/commandrunner v0.52.0
 ## explicit; go 1.24.0
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20251113174220-2d0824d7da49 => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20251117183200-8364670e5d92 => ../idmapper
 ## explicit; go 1.24.0
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.54.0
+# code.cloudfoundry.org/lager/v3 v3.55.0
 ## explicit; go 1.24.0
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
