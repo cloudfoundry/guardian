@@ -3,6 +3,7 @@ package guardiancmd
 import (
 	"code.cloudfoundry.org/guardian/rundmc/sysctl"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
 )
 
 func MinPtraceKernelVersion() (uint16, uint16, uint16) {
@@ -10,6 +11,8 @@ func MinPtraceKernelVersion() (uint16, uint16, uint16) {
 }
 
 func buildSeccomp() (*specs.LinuxSeccomp, error) {
+	nosys := uint(unix.ENOSYS)
+
 	seccomp := &specs.LinuxSeccomp{
 		DefaultAction: specs.ActErrno,
 		Architectures: []specs.Arch{
@@ -359,6 +362,13 @@ func buildSeccomp() (*specs.LinuxSeccomp, error) {
 					Op:       specs.OpMaskedEqual,
 				},
 			),
+			specs.LinuxSyscall{
+				Names: []string{
+					"clone3",
+				},
+				Action:   specs.ActErrno,
+				ErrnoRet: &nosys,
+			},
 		},
 	}
 
