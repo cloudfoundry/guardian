@@ -9,7 +9,7 @@ require (
 	code.cloudfoundry.org/idmapper v0.0.0-20251117183200-8364670e5d92
 	code.cloudfoundry.org/lager/v3 v3.55.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/sonde-go v0.0.0-20251117143420-d83918042e9c
+	github.com/cloudfoundry/sonde-go v0.0.0-20251124090431-33e3494ff82b
 	github.com/containers/image/v5 v5.36.2
 	github.com/containers/storage v1.59.1
 	github.com/docker/distribution v2.8.3+incompatible

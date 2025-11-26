@@ -36,7 +36,7 @@ github.com/cloudfoundry/dropsonde/metric_sender
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/sonde-go v0.0.0-20251117143420-d83918042e9c
+# github.com/cloudfoundry/sonde-go v0.0.0-20251124090431-33e3494ff82b
 ## explicit; go 1.23
 github.com/cloudfoundry/sonde-go/events
 # github.com/containers/image/v5 v5.36.2
