@@ -21,10 +21,10 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.54.0
+	code.cloudfoundry.org/archiver v0.55.0
 	code.cloudfoundry.org/clock v1.55.0
 	code.cloudfoundry.org/commandrunner v0.52.0
-	code.cloudfoundry.org/debugserver v0.76.0
+	code.cloudfoundry.org/debugserver v0.77.0
 	code.cloudfoundry.org/garden v0.0.0-20251119022154-f0775181931d
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20251117183200-8364670e5d92
@@ -32,7 +32,7 @@ require (
 	code.cloudfoundry.org/localip v0.57.0
 	github.com/BurntSushi/toml v1.5.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.111
+	github.com/cloudfoundry/gosigar v1.3.112
 	github.com/containerd/cgroups/v3 v3.1.1
 	github.com/containerd/containerd/api v1.10.0
 	github.com/containerd/containerd/v2 v2.2.0
@@ -66,14 +66,14 @@ require (
 )
 
 require (
-	cyphar.com/go-pathrs v0.2.1 // indirect
+	cyphar.com/go-pathrs v0.2.2 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.14.0-rc.1 // indirect
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
 	github.com/checkpoint-restore/go-criu/v6 v6.3.0 // indirect
 	github.com/cilium/ebpf v0.20.0 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20251117143420-d83918042e9c // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20251124090431-33e3494ff82b // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -126,7 +126,7 @@ require (
 	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/tools v0.39.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251111163417-95abcf5c77ba // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251124214823-79d6a2a48846 // indirect
 	google.golang.org/grpc v1.77.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 )

@@ -1,4 +1,4 @@
-# code.cloudfoundry.org/archiver v0.54.0
+# code.cloudfoundry.org/archiver v0.55.0
 ## explicit; go 1.24.0
 code.cloudfoundry.org/archiver/extractor/test_helper
 # code.cloudfoundry.org/clock v1.55.0
@@ -12,7 +12,7 @@ code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.76.0
+# code.cloudfoundry.org/debugserver v0.77.0
 ## explicit; go 1.24.0
 code.cloudfoundry.org/debugserver
 # code.cloudfoundry.org/garden v0.0.0-20251119022154-f0775181931d => ../garden
@@ -43,7 +43,7 @@ code.cloudfoundry.org/lager/v3/lagertest
 # code.cloudfoundry.org/localip v0.57.0
 ## explicit; go 1.24.0
 code.cloudfoundry.org/localip
-# cyphar.com/go-pathrs v0.2.1
+# cyphar.com/go-pathrs v0.2.2
 ## explicit; go 1.18
 cyphar.com/go-pathrs
 cyphar.com/go-pathrs/internal/fdutils
@@ -132,11 +132,11 @@ github.com/cloudfoundry/dropsonde/metric_sender/fake
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/gosigar v1.3.111
+# github.com/cloudfoundry/gosigar v1.3.112
 ## explicit; go 1.23.0
 github.com/cloudfoundry/gosigar
 github.com/cloudfoundry/gosigar/sys/windows
-# github.com/cloudfoundry/sonde-go v0.0.0-20251117143420-d83918042e9c
+# github.com/cloudfoundry/sonde-go v0.0.0-20251124090431-33e3494ff82b
 ## explicit; go 1.23
 github.com/cloudfoundry/sonde-go/events
 # github.com/containerd/cgroups/v3 v3.1.1 => github.com/containerd/cgroups/v3 v3.1.0
@@ -655,7 +655,7 @@ golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20251111163417-95abcf5c77ba
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20251124214823-79d6a2a48846
 ## explicit; go 1.24.0
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.77.0
