@@ -139,7 +139,7 @@ github.com/cloudfoundry/gosigar/sys/windows
 # github.com/cloudfoundry/sonde-go v0.0.0-20251124090431-33e3494ff82b
 ## explicit; go 1.23
 github.com/cloudfoundry/sonde-go/events
-# github.com/containerd/cgroups/v3 v3.1.1 => github.com/containerd/cgroups/v3 v3.1.0
+# github.com/containerd/cgroups/v3 v3.1.2 => github.com/containerd/cgroups/v3 v3.1.0
 ## explicit; go 1.22.0
 github.com/containerd/cgroups/v3/cgroup1/stats
 github.com/containerd/cgroups/v3/cgroup2
@@ -342,7 +342,7 @@ github.com/jessevdk/go-flags
 # github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 ## explicit
 github.com/kardianos/osext
-# github.com/klauspost/compress v1.18.1
+# github.com/klauspost/compress v1.18.2
 ## explicit; go 1.23
 github.com/klauspost/compress
 github.com/klauspost/compress/fse
@@ -456,7 +456,7 @@ github.com/opencontainers/go-digest
 github.com/opencontainers/image-spec/identity
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.3.3 => github.com/opencontainers/runc v1.3.3
+# github.com/opencontainers/runc v1.4.0 => github.com/opencontainers/runc v1.3.3
 ## explicit; go 1.23.0
 github.com/opencontainers/runc
 github.com/opencontainers/runc/internal/linux
@@ -655,7 +655,7 @@ golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20251124214823-79d6a2a48846
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217
 ## explicit; go 1.24.0
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.77.0
