@@ -3,9 +3,9 @@ module code.cloudfoundry.org/grootfs
 go 1.24.9
 
 require (
-	code.cloudfoundry.org/commandrunner v0.52.0
-	code.cloudfoundry.org/idmapper v0.0.0-20251117183200-8364670e5d92
-	code.cloudfoundry.org/lager/v3 v3.55.0
+	code.cloudfoundry.org/commandrunner v0.53.0
+	code.cloudfoundry.org/idmapper v0.0.0-20251217022935-d223132936ea
+	code.cloudfoundry.org/lager/v3 v3.56.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20251124090431-33e3494ff82b
 	github.com/containers/image/v5 v5.36.2
@@ -23,7 +23,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125
 	golang.org/x/sys v0.39.0
-	google.golang.org/protobuf v1.36.10
+	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -39,7 +39,7 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20251208000136-3d256cb9ff16 // indirect
+	github.com/google/pprof v0.0.0-20251213031049-b05bdaca462f // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/moby/sys/capability v0.4.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
