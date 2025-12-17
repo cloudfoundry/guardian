@@ -1,21 +1,21 @@
-# code.cloudfoundry.org/archiver v0.55.0
-## explicit; go 1.24.0
+# code.cloudfoundry.org/archiver v0.56.0
+## explicit; go 1.24.9
 code.cloudfoundry.org/archiver/extractor/test_helper
-# code.cloudfoundry.org/clock v1.55.0
-## explicit; go 1.24.0
+# code.cloudfoundry.org/clock v1.56.0
+## explicit; go 1.24.9
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
-# code.cloudfoundry.org/commandrunner v0.52.0
-## explicit; go 1.24.0
+# code.cloudfoundry.org/commandrunner v0.53.0
+## explicit; go 1.24.9
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.77.0
-## explicit; go 1.24.0
+# code.cloudfoundry.org/debugserver v0.78.0
+## explicit; go 1.24.9
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20251119022154-f0775181931d => ../garden
+# code.cloudfoundry.org/garden v0.0.0-20251210022550-6e36fe55e273 => ../garden
 ## explicit; go 1.24.9
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
@@ -30,18 +30,18 @@ code.cloudfoundry.org/garden/transport
 # code.cloudfoundry.org/grootfs v0.30.0 => ../grootfs
 ## explicit; go 1.24.9
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20251117183200-8364670e5d92 => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20251217022935-d223132936ea => ../idmapper
 ## explicit; go 1.24.9
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.55.0
-## explicit; go 1.24.0
+# code.cloudfoundry.org/lager/v3 v3.56.0
+## explicit; go 1.24.9
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
 code.cloudfoundry.org/lager/v3/internal/truncate
 code.cloudfoundry.org/lager/v3/lagerctx
 code.cloudfoundry.org/lager/v3/lagertest
-# code.cloudfoundry.org/localip v0.57.0
-## explicit; go 1.24.0
+# code.cloudfoundry.org/localip v0.58.0
+## explicit; go 1.24.9
 code.cloudfoundry.org/localip
 # cyphar.com/go-pathrs v0.2.2
 ## explicit; go 1.18
@@ -330,7 +330,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20251208000136-3d256cb9ff16
+# github.com/google/pprof v0.0.0-20251213031049-b05bdaca462f
 ## explicit; go 1.24.9
 github.com/google/pprof/profile
 # github.com/hashicorp/errwrap v1.1.0
@@ -659,7 +659,7 @@ golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20251213004720-97cd9d5aeac2
 ## explicit; go 1.24.0
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.77.0
@@ -725,7 +725,7 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-# google.golang.org/protobuf v1.36.10
+# google.golang.org/protobuf v1.36.11
 ## explicit; go 1.23
 google.golang.org/protobuf/encoding/protojson
 google.golang.org/protobuf/encoding/prototext
