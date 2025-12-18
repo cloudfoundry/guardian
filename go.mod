@@ -6,7 +6,7 @@ replace (
 	code.cloudfoundry.org/garden => ../garden
 	code.cloudfoundry.org/grootfs => ../grootfs
 	code.cloudfoundry.org/idmapper => ../idmapper
-	github.com/cilium/ebpf v0.19.0 => github.com/cilium/ebpf v0.17.3
+	github.com/cilium/ebpf => github.com/cilium/ebpf v0.17.3
 	github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
 )
 
