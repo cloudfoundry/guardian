@@ -15,7 +15,7 @@ require (
 	code.cloudfoundry.org/clock v1.56.0
 	code.cloudfoundry.org/commandrunner v0.53.0
 	code.cloudfoundry.org/debugserver v0.78.0
-	code.cloudfoundry.org/garden v0.0.0-20251210022550-6e36fe55e273
+	code.cloudfoundry.org/garden v0.0.0-20251217022801-f5e0d83c4fa9
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20251217022935-d223132936ea
 	code.cloudfoundry.org/lager/v3 v3.56.0
