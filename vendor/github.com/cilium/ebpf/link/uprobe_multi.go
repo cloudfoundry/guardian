@@ -1,11 +1,10 @@
-//go:build !windows
-
 package link
 
 import (
 	"errors"
 	"fmt"
 	"os"
+	"unsafe"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/asm"
@@ -70,13 +69,13 @@ func (ex *Executable) uprobeMulti(symbols []string, prog *ebpf.Program, opts *Up
 	refCtrOffsets := len(opts.RefCtrOffsets)
 
 	if addrs == 0 {
-		return nil, fmt.Errorf("field Addresses is required: %w", errInvalidInput)
+		return nil, fmt.Errorf("Addresses are required: %w", errInvalidInput)
 	}
 	if refCtrOffsets > 0 && refCtrOffsets != addrs {
-		return nil, fmt.Errorf("field RefCtrOffsets must be exactly Addresses in length: %w", errInvalidInput)
+		return nil, fmt.Errorf("RefCtrOffsets must be exactly Addresses in length: %w", errInvalidInput)
 	}
 	if cookies > 0 && cookies != addrs {
-		return nil, fmt.Errorf("field Cookies must be exactly Addresses in length: %w", errInvalidInput)
+		return nil, fmt.Errorf("Cookies must be exactly Addresses in length: %w", errInvalidInput)
 	}
 
 	attr := &sys.LinkCreateUprobeMultiAttr{
@@ -85,15 +84,15 @@ func (ex *Executable) uprobeMulti(symbols []string, prog *ebpf.Program, opts *Up
 		AttachType:       sys.BPF_TRACE_UPROBE_MULTI,
 		UprobeMultiFlags: flags,
 		Count:            uint32(addrs),
-		Offsets:          sys.SlicePointer(addresses),
+		Offsets:          sys.NewPointer(unsafe.Pointer(&addresses[0])),
 		Pid:              opts.PID,
 	}
 
 	if refCtrOffsets != 0 {
-		attr.RefCtrOffsets = sys.SlicePointer(opts.RefCtrOffsets)
+		attr.RefCtrOffsets = sys.NewPointer(unsafe.Pointer(&opts.RefCtrOffsets[0]))
 	}
 	if cookies != 0 {
-		attr.Cookies = sys.SlicePointer(opts.Cookies)
+		attr.Cookies = sys.NewPointer(unsafe.Pointer(&opts.Cookies[0]))
 	}
 
 	fd, err := sys.LinkCreateUprobeMulti(attr)
@@ -202,7 +201,7 @@ var haveBPFLinkUprobeMulti = internal.NewFeatureTest("bpf_link_uprobe_multi", fu
 		ProgFd:     uint32(prog.FD()),
 		AttachType: sys.BPF_TRACE_UPROBE_MULTI,
 		Path:       sys.NewStringPointer("/"),
-		Offsets:    sys.SlicePointer([]uint64{0}),
+		Offsets:    sys.NewPointer(unsafe.Pointer(&[]uint64{0})),
 		Count:      1,
 	})
 	switch {

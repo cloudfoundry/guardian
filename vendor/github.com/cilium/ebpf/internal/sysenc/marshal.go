@@ -1,12 +1,14 @@
 package sysenc
 
 import (
+	"bytes"
 	"encoding"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"reflect"
 	"slices"
+	"sync"
 	"unsafe"
 
 	"github.com/cilium/ebpf/internal"
@@ -51,7 +53,11 @@ func Marshal(data any, size int) (Buffer, error) {
 			return newBuffer(buf), nil
 		}
 
-		buf, err = binary.Append(nil, internal.NativeEndian, value)
+		wr := internal.NewBuffer(make([]byte, 0, size))
+		defer internal.PutBuffer(wr)
+
+		err = binary.Write(wr, internal.NativeEndian, value)
+		buf = wr.Bytes()
 	}
 	if err != nil {
 		return Buffer{}, err
@@ -64,10 +70,16 @@ func Marshal(data any, size int) (Buffer, error) {
 	return newBuffer(buf), nil
 }
 
+var bytesReaderPool = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Reader)
+	},
+}
+
 // Unmarshal a byte slice in the system's native endianness into data.
 //
 // Returns an error if buf can't be unmarshalled according to the behaviour
-// of [binary.Decode].
+// of [binary.Read].
 func Unmarshal(data interface{}, buf []byte) error {
 	switch value := data.(type) {
 	case encoding.BinaryUnmarshaler:
@@ -88,12 +100,16 @@ func Unmarshal(data interface{}, buf []byte) error {
 			return nil
 		}
 
-		n, err := binary.Decode(buf, internal.NativeEndian, value)
-		if err != nil {
+		rd := bytesReaderPool.Get().(*bytes.Reader)
+		defer bytesReaderPool.Put(rd)
+
+		rd.Reset(buf)
+
+		if err := binary.Read(rd, internal.NativeEndian, value); err != nil {
 			return err
 		}
 
-		if n != len(buf) {
+		if rd.Len() != 0 {
 			return fmt.Errorf("unmarshaling %T doesn't consume all data", data)
 		}
 

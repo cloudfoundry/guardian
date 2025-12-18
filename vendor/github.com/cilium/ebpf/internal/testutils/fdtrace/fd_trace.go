@@ -1,4 +1,4 @@
-package testmain
+package fdtrace
 
 import (
 	"bytes"
