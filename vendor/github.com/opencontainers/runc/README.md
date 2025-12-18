@@ -26,7 +26,7 @@ A third party security audit was performed by Cure53, you can see the full repor
 
 ## Building
 
-`runc` only supports Linux. See the header of [`go.mod`](./go.mod) for the required Go version.
+`runc` only supports Linux. See the header of [`go.mod`](./go.mod) for the minimally required Go version.
 
 ### Pre-Requisites
 
@@ -352,6 +352,7 @@ WantedBy=multi-user.target
 * [systemd cgroup driver](./docs/systemd.md)
 * [Terminals and standard IO](./docs/terminals.md)
 * [Experimental features](./docs/experimental.md)
+* [Deprecated features](./docs/deprecated.md)
 
 ## License
 

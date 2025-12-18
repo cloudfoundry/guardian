@@ -10,16 +10,6 @@ replace (
 	github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
 )
 
-replace (
-	// pinned back until https://github.com/containerd/containerd/issues/12493 is resolved and containerd/containerd handles the new runtime spec.
-	// after that we will need to decide how to adapt rundmc's pidlimit logic to handle the change from int64 to *int64.
-	github.com/cilium/ebpf => github.com/cilium/ebpf v0.17.3
-	github.com/containerd/cgroups/v3 => github.com/containerd/cgroups/v3 v3.1.0
-	github.com/opencontainers/cgroups => github.com/opencontainers/cgroups v0.0.5
-	github.com/opencontainers/runc => github.com/opencontainers/runc v1.3.3
-	github.com/opencontainers/runtime-spec => github.com/opencontainers/runtime-spec v1.2.1
-)
-
 require (
 	code.cloudfoundry.org/archiver v0.56.0
 	code.cloudfoundry.org/clock v1.56.0
@@ -30,12 +20,12 @@ require (
 	code.cloudfoundry.org/idmapper v0.0.0-20251217022935-d223132936ea
 	code.cloudfoundry.org/lager/v3 v3.56.0
 	code.cloudfoundry.org/localip v0.58.0
-	github.com/BurntSushi/toml v1.5.0
+	github.com/BurntSushi/toml v1.6.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.112
 	github.com/containerd/cgroups/v3 v3.1.2
 	github.com/containerd/containerd/api v1.10.0
-	github.com/containerd/containerd/v2 v2.2.0
+	github.com/containerd/containerd/v2 v2.2.1
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/typeurl/v2 v2.2.3
 	github.com/eapache/go-resiliency v1.7.0
@@ -72,9 +62,9 @@ require (
 	github.com/Microsoft/hcsshim v0.14.0-rc.1 // indirect
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/checkpoint-restore/go-criu/v6 v6.3.0 // indirect
+	github.com/checkpoint-restore/go-criu/v7 v7.2.0 // indirect
 	github.com/cilium/ebpf v0.20.0 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20251124090431-33e3494ff82b // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20251217143644-d1670a435f2a // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -113,7 +103,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/seccomp/libseccomp-golang v0.11.1 // indirect
 	github.com/tedsuo/rata v1.0.0 // indirect
-	github.com/urfave/cli v1.22.16 // indirect
+	github.com/urfave/cli v1.22.17 // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect

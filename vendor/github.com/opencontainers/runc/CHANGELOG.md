@@ -4,11 +4,53 @@ This file documents all notable changes made to this project since runc 1.0.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased 1.3.z]
+## [Unreleased 1.4.z]
 
-## [1.3.3] - 2025-11-05
+## [1.4.0] - 2025-11-27
 
-> 奴らに支配されていた恐怖を
+> 路漫漫其修远兮，吾将上下而求索！
+
+### Deprecated ###
+- Deprecate cgroup v1. (#4956)
+- Deprecate `CleanPath`, `StripRoot`, `WithProcfd`, and `WithProcfdFile` from
+  `libcontainer/utils`. (#4985)
+
+### Breaking ###
+- The handling of `pids.limit` has been updated to match the newer guidance
+  from the OCI runtime specification. In particular, now a maximum limit value
+  of `0` will be treated as an actual limit (due to limitations with systemd,
+  it will be treated the same as a limit value of `1`). We only expect users
+  that explicitly set `pids.limit` to `0` will see a behaviour change.
+  (opencontainers/cgroups#48, #4949)
+
+### Fixed ###
+- cgroups: provide iocost statistics for cgroupv2. (opencontainers/cgroups#43)
+- cgroups: retry DBus connection when it fails with EAGAIN.
+  (opencontainers/cgroups#45)
+- cgroups: improve `cpuacct.usage_all` resilience when parsing data from
+  patched kernels (such as the Tencent kernels). (opencontainers/cgroups#46,
+  opencontainers/cgroups#50)
+- libct: close child fds on `prepareCgroupFD` error. (#4936)
+- libct: fix mips compilation. (#4962, #4967)
+- When configuring a `tmpfs` mount, only set the `mode=` argument if the target
+  path already existed. This fixes a regression introduced in our
+  [CVE-2025-52881][] mitigation patches. (#4971, #4976)
+- Fix various file descriptor leaks and add additional tests to detect them as
+  comprehensively as possible. (#5007, #5021, #5034)
+- The "hallucination" helpers added as part of the [CVE-2025-52881][]
+  mitigation have been made more generic and now apply to all of our `pathrs`
+  helper functions, which should ensure we will not regress dangling symlink
+  users. (#4985)
+
+### Changed
+- libct: switch to `(*CPUSet).Fill`. (#4927)
+- docs/spec-conformance.md: update for spec v1.3.0. (#4948)
+
+[CVE-2025-52881]: https://github.com/opencontainers/runc/security/advisories/GHSA-cgrx-mc8f-2prm
+
+## [1.4.0-rc.3] - 2025-11-05
+
+> その日、人類は思い出した。
 
 ### Security
 
@@ -35,31 +77,142 @@ This release includes fixes for the following high-severity security issues:
   runc to verify that when we write LSM labels that those labels are actual
   procfs files. This issue affects all known runc versions.
 
-### Added
-
-* `runc update` now supports configuring per-device weights and iops. (#4775,
-  #4807, #4825, #4931)
+### Fixed
+ * Switched to `(*CPUSet).Fill` rather than our hacky optimisation when
+   resetting the CPU affinity of runc. (#4926, #4927)
+ * Correctly close child fds during `(*setns).start` if an error occurs.
+   (#4930, #4936)
 
 [CVE-2019-19921]: https://github.com/opencontainers/runc/security/advisories/GHSA-fh74-hm69-rqjw
 [CVE-2025-31133]: https://github.com/opencontainers/runc/security/advisories/GHSA-9493-h29p-rfm2
 [CVE-2025-52565]: https://github.com/opencontainers/runc/security/advisories/GHSA-qw9x-cqr3-wc7r
 [CVE-2025-52881]: https://github.com/opencontainers/runc/security/advisories/GHSA-cgrx-mc8f-2prm
 
-## [1.3.2] - 2025-10-02
+## [1.4.0-rc.2] - 2025-10-10
 
-> Ночь, улица, фонарь, аптека...
+> 私の役目は信じるかどうかではない。行うかどうかだ。
 
-### Changed
- * The conversion from cgroup v1 CPU shares to cgroup v2 CPU weight is
-   improved to better fit default v1 and v2 values. (#4772, #4785, #4897)
- * Dependency github.com/opencontainers/cgroups updated from v0.0.1 to
-   v0.0.4. (#4897)
+### libcontainer API
+ * The deprecated `libcontainer/userns` package has been removed; use
+   `github.com/moby/sys/userns` instead. (#4910, #4911)
+
+### Added
+ * Allow setting `user.*` sysctls for user-namespaced containers, as they are
+   namespaced and thus safe to configure. (#4889, #4892)
+ * Add support for using `clone3(2)`'s `CLONE_INTO_CGROUP` flag when
+   configuring the `runc exec` process. This also included some internal
+   changes to how we add processes to containers. (#4822, #4812, #4920)
+ * Add support for configuring the NUMA pmemory policy for a container with
+   `set_mempolicy(2)`. (opencontainers/runtime-spec#1282, #4726, #4915)
+ * Add support for `intelRdt.schemata` to allow for configuration of all
+   schemas in `resctrl`. (opencontainers/runtime-spec#1230, #4830, #4915)
+ * Add support for `intelRdt.enableMonitoring` to allow for per-container
+   `resctrl` monitoring. This replaces the old `intelRdt.enableCMT` and
+   `intelRdt.enableMBM` options which were never implemented by runc and have
+   been removed from the runtime-spec. (opencontainers/runtime-spec#1287,
+   #4832, #4921)
 
 ### Fixed
- * runc state: fix occasional "cgroup.freeze: no such device" error.
-   (#4798, #4808, #4897)
+ * Configure `personality(2)` before applying seccomp profiles. (#4900, #4903)
  * Fixed integration test failure on ppc64, caused by 64K page size so the
    kernel was rounding memory limit to 64K. (#4841, #4895, #4893)
+ * seccompagent: fix fd close loop to prevent closing stdio in the error path.
+   (#4913, #4923)
+
+## [1.4.0-rc.1] - 2025-09-05
+
+> おめェもボスになったんだろぉ？
+
+This version of runc requires Go 1.24 to build.
+
+### libcontainer API
+- The deprecated `libcontainer/user` package has been removed; use
+  `github.com/moby/sys/user` instead. (#3999, #4617)
+- `libcontainer/apparmor` variables containing public functions have been
+  switched to wrapper functions. (#4725)
+
+### Breaking
+- runc update no longer allows `--l3-cache-schema` or `--mem-bw-schema` if
+  `linux.intelRdt` was not present in the container’s original `config.json`.
+
+  Without `linux.intelRdt` no CLOS (resctrl group) is created at container
+  creation, so it is not possible to apply the updated options with `runc
+  update`.
+
+  Previously, this scenario did not work as expected. The `runc update` would
+  create a new CLOS but fail to apply the schema, move only the init process
+  (omitting children) to the new group, and leave the CLOS orphaned after
+  container exit. (#4827)
+- The deprecated `--criu` flag has been removed entirely, instead the `criu`
+  binary in `$PATH` will be used. (#4722)
+
+### Added
+ * runc now supports the `linux.netDevices` field to allow for devices to be
+   moved into container network namespaces seamlessly. (#4538)
+ * `runc update` now supports per-device weight and iops cgroup limits. (#4775)
+ * intel rdt: allow explicit assignment to root CLOS. (#4854)
+
+### Fixed
+ * Container processes will no longer inherit the CPU affinity of runc by
+   default. Instead, the default CPU affinity of container processes will be
+   the largest set of CPUs permitted by the container's cpuset cgroup and any
+   other system restrictions (such as isolated CPUs). (#4041, #4815, #4858)
+ * Use `chown(uid, -1)` when configuring the console inode, to avoid issues
+   with unmapped GIDs. (#4679)
+ * Add logging for the cases where failed keyring operations are ignored during
+   setup. (#4676)
+ * Optimise `runc exec` by avoiding calling into SELinux's `Set.*Label` when
+   `processLabel` is not set. (#4354)
+ * Fix mips64 builds for remap-rootfs. (#4723)
+ * Setting `linux.rootfsPropagation` to `shared` or `unbindable` now functions
+   properly. (#1755, #1815, #4724)
+ * runc delete and runc stop can now correctly handle cases where runc
+   create was killed during setup. Previously it was possible for the
+   container to be in such a state that neither runc stop nor runc
+   delete would be unable to kill or delete the container. (#4534,
+   #4645, #4757)
+ * Close seccomp agent connection to prevent resource leaks. (#4796)
+ * `runc update` will no longer clear intelRdt state information. (#4828)
+ * runc will now error out earlier if intelRdt is not enabled. (#4829)
+ * Improve filesystem operations within intelRdt manager. (#4840, #4831)
+ * Resolve a certain race between `runc create` and `runc delete` that would
+   previously result in spurious errors. (#4735)
+ * CI: skip bpf tests on misbehaving udev systems. (#4825)
+
+### Changed
+ * Use Go's built-in `pidfd_send_signal(2)` support when available. (#4666)
+ * Make `state.json` 25% smaller. (#4685)
+ * Migrate to Go 1.22+ features. (#4687, #4703)
+ * Provide private wrappers around common syscalls to make `-EINTR` handling
+   less cumbersome for the rest of runc. (#4697)
+ * Ignore the dmem controller in our cgroup tests, as systemd does not
+   yet support it. (#4806)
+ * `/proc/net/dev` is no longer included in the permitted procfs overmount
+   list. Its inclusion was almost certainly an error, and because
+   `/proc/net` is a symlink to `/proc/self/net`, overmounting this was
+   almost certainly never useful (and will be blocked by future kernel
+   versions). (#4817)
+ * Simplify the prepareCriuRestoreMounts logic for checkpoint-restore.
+   (#4765)
+ * The conversion from cgroup v1 CPU shares to cgroup v2 CPU weight is
+   improved to better fit default v1 and v2 values. (#4772, #4785)
+ * Bump minimum Go version to 1.24. (#4851)
+ * CI: migrate virtualised Fedora tests from Vagrant + Cirrus to Lima + GHA. We
+   still use Cirrus for the AlmaLinux tests, since they can be run without
+   virtualisation. (#4664)
+ * CI: install fewer dependencies (#4671), bump shellcheck and bats versions
+   (#4670).
+ * CI: remove `toolchain` from `go.mod` and add a CI check to make sure it's
+   never added accidentally. (#4717, #4721)
+ * CI: do not allow `exclude` or `replace` directives in `go.mod`, to make sure
+   that `go install` doesn't get accidentally broken. (#4750)
+ * CI: fix exclusion rules and allow us to run jobs manually. (#4760)
+ * CI: Switch to GitHub-hosted ARM runners. Thanks again to @alexellis
+   for supporting runc's ARM CI up until now. (#4844, #4856)
+ * Various dependency updates. (#4659, #4658, #4662, #4663, #4689, #4694,
+   #4702, #4701, #4707, #4710, #4746, #4756, #4751, #4758, #4764, #4768, #4779,
+   #4783, #4785, #4801, #4808, #4803, #4839, #4846, #4847, #4845, #4850, #4861,
+   #4860)
 
 ## [1.3.1] - 2025-09-05
 
@@ -102,7 +255,7 @@ This release includes fixes for the following high-severity security issues:
 > Mr. President, we must not allow a mine shaft gap!
 
 ### Fixed
- * Removed pre-emptive "full access to cgroups" warning when calling `runc
+ * Removed preemptive "full access to cgroups" warning when calling `runc
    pause` or `runc unpause` as an unprivileged user without
    `--systemd-cgroups`. Now the warning is only emitted if an actual permission
    error was encountered. (#4709)
@@ -195,6 +348,47 @@ This release includes fixes for the following high-severity security issues:
    (#4045)
  * Support `skip-in-flight` and `link-remap` options for CRIU. (#4627)
  * Support cgroup v1 mounted with `noprefix`. (#4513)
+
+## [1.2.7] - 2025-09-05
+
+> さんをつけろよデコ助野郎！
+
+### Fixed
+ * Removed preemptive "full access to cgroups" warning when calling `runc
+   pause` or `runc unpause` as an unprivileged user without
+   `--systemd-cgroups`. Now the warning is only emitted if an actual permission
+   error was encountered. (#4709, #4720)
+ * Add time namespace to container config after checkpoint/restore. CRIU since
+   version 3.14 uses a time namespace for checkpoint/restore, however it was
+   not joining the time namespace in runc. (#4696, #4714)
+ * Container processes will no longer inherit the CPU affinity of runc by
+   default. Instead, the default CPU affinity of container processes will be
+   the largest set of CPUs permitted by the container's cpuset cgroup and any
+   other system restrictions (such as isolated CPUs). (#4041, #4815, #4858)
+ * Close seccomp agent connection to prevent resource leaks. (#4796, #4800)
+ * Several fixes to our CI, mainly related to AlmaLinux and CRIU. (#4670,
+   #4728, #4736, #4742)
+ * Setting `linux.rootfsPropagation` to `shared` or `unbindable` now functions
+   properly. (#1755, #1815, #4724, #4791)
+ * `runc update` will no longer clear intelRdt state information. (#4828,
+   #4834)
+
+### Changed
+ * In runc 1.2, we changed our mount behaviour to correctly handle clearing
+   flags. However, the error messages we returned did not provide as much
+   information to users about what clearing flags were conflicting with locked
+   mount flags. We now provide more diagnostic information if there is an error
+   when in the fallback path to handle locked mount flags. (#4734, #4740)
+ * Ignore the dmem controller in our cgroup tests, as systemd does not yet
+   support it. (#4806, #4811)
+ * `/proc/net/dev` is no longer included in the permitted procfs overmount
+   list. Its inclusion was almost certainly an error, and because `/proc/net`
+   is a symlink to `/proc/self/net`, overmounting this was almost certainly
+   never useful (and will be blocked by future kernel versions). (#4817, #4820)
+ * CI: Switch to GitHub-hosted ARM runners. Thanks again to @alexellis for
+   supporting runc's ARM CI up until now. (#4844, #4856, #4867)
+ * Simplify the `prepareCriuRestoreMounts` logic for checkpoint-restore.
+   (#4765, #4872)
 
 ## [1.2.6] - 2025-03-17
 
@@ -1173,7 +1367,7 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.1...HEAD
 [1.3.0]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...v1.3.0
 [1.2.0]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.1...v1.2.0
 [1.1.0]: https://github.com/opencontainers/runc/compare/v1.1.0-rc.1...v1.1.0
@@ -1205,7 +1399,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
 
 <!-- 1.2.z patch releases -->
-[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.6...release-1.2
+[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.7...release-1.2
+[1.2.7]: https://github.com/opencontainers/runc/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/opencontainers/runc/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/opencontainers/runc/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/opencontainers/runc/compare/v1.2.3...v1.2.4
@@ -1217,9 +1412,14 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
 
 <!-- 1.3.z patch releases -->
-[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.3...release-1.3
-[1.3.3]: https://github.com/opencontainers/runc/compare/v1.3.2...v1.3.3
-[1.3.2]: https://github.com/opencontainers/runc/compare/v1.3.1...v1.3.2
+[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.1...release-1.3
 [1.3.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.3.1
 [1.3.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.1...v1.3.0-rc.2
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
+
+<!-- 1.4.z patch releases -->
+[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.0...release-1.4
+[1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
+[1.4.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.2...v1.4.0-rc.3
+[1.4.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.1...v1.4.0-rc.2
+[1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1

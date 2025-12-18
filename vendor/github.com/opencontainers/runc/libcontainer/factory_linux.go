@@ -11,10 +11,10 @@ import (
 
 	"github.com/opencontainers/cgroups"
 	"github.com/opencontainers/cgroups/manager"
+	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/configs/validate"
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
-	"github.com/opencontainers/runc/libcontainer/utils"
 )
 
 const (
@@ -195,7 +195,7 @@ func validateID(id string) error {
 	}
 
 	// Allowed characters: 0-9 A-Z a-z _ + - .
-	for i := 0; i < len(id); i++ {
+	for i := range len(id) {
 		c := id[i]
 		switch {
 		case c >= 'a' && c <= 'z':
@@ -211,7 +211,7 @@ func validateID(id string) error {
 
 	}
 
-	if string(os.PathSeparator)+id != utils.CleanPath(string(os.PathSeparator)+id) {
+	if string(os.PathSeparator)+id != pathrs.LexicallyCleanPath(string(os.PathSeparator)+id) {
 		return ErrInvalidID
 	}
 

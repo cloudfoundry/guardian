@@ -113,11 +113,6 @@ func main() {
 			Value: root,
 			Usage: "root directory for storage of container state (this should be located in tmpfs)",
 		},
-		cli.StringFlag{
-			Name:   "criu",
-			Usage:  "(obsoleted; do not use)",
-			Hidden: true,
-		},
 		cli.BoolFlag{
 			Name:  "systemd-cgroup",
 			Usage: "enable systemd cgroup support, expects cgroupsPath to be of form \"slice:prefix:name\" for e.g. \"system.slice:runc:434234\"",
@@ -163,10 +158,6 @@ func main() {
 		}
 		if err := reviseRootDir(context); err != nil {
 			return err
-		}
-		// TODO: remove this in runc 1.3.0.
-		if context.IsSet("criu") {
-			fmt.Fprintln(os.Stderr, "WARNING: --criu ignored (criu binary from $PATH is used); do not use")
 		}
 
 		return configLogrus(context)
