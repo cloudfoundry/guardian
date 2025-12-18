@@ -21,6 +21,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/cgroups"
+	"github.com/opencontainers/runc/internal/linux"
 	"github.com/opencontainers/runc/internal/pathrs"
 	"github.com/opencontainers/runc/libcontainer/capabilities"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -276,10 +277,10 @@ func verifyCwd() error {
 	// details, and CVE-2024-21626 for the security issue that motivated this
 	// check.
 	//
-	// We have to use unix.Getwd() here because os.Getwd() has a workaround for
+	// We do not use os.Getwd() here because it has a workaround for
 	// $PWD which involves doing stat(.), which can fail if the current
 	// directory is inaccessible to the container process.
-	if wd, err := unix.Getwd(); errors.Is(err, unix.ENOENT) {
+	if wd, err := linux.Getwd(); errors.Is(err, unix.ENOENT) {
 		return errors.New("current working directory is outside of container mount namespace root -- possible container breakout detected")
 	} else if err != nil {
 		return fmt.Errorf("failed to verify if current working directory is safe: %w", err)
@@ -531,16 +532,17 @@ func fixStdioPermissions(uid int) error {
 		// that users expect to be able to actually use their console. Without
 		// this code, you couldn't effectively run as a non-root user inside a
 		// container and also have a console set up.
-		if err := file.Chown(uid, int(s.Gid)); err != nil {
-			// If we've hit an EINVAL then s.Gid isn't mapped in the user
-			// namespace. If we've hit an EPERM then the inode's current owner
+		if err := file.Chown(uid, -1); err != nil {
+			// If we've hit an EPERM then the inode's current owner
 			// is not mapped in our user namespace (in particular,
 			// privileged_wrt_inode_uidgid() has failed). Read-only
 			// /dev can result in EROFS error. In any case, it's
 			// better for us to just not touch the stdio rather
 			// than bail at this point.
-
-			if errors.Is(err, unix.EINVAL) || errors.Is(err, unix.EPERM) || errors.Is(err, unix.EROFS) {
+			// EINVAL should never happen, as it would mean the uid
+			// is not mapped, we expect this function to be called
+			// with a mapped uid.
+			if errors.Is(err, unix.EPERM) || errors.Is(err, unix.EROFS) {
 				continue
 			}
 			return err
@@ -660,6 +662,14 @@ func setupIOPriority(config *initConfig) error {
 		return fmt.Errorf("failed to set io priority: %w", errno)
 	}
 	return nil
+}
+
+func setupMemoryPolicy(config *configs.Config) error {
+	mpol := config.MemoryPolicy
+	if mpol == nil {
+		return nil
+	}
+	return linux.SetMempolicy(mpol.Mode|mpol.Flags, config.MemoryPolicy.Nodes)
 }
 
 func setupPersonality(config *configs.Config) error {

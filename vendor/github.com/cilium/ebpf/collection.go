@@ -4,7 +4,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"reflect"
+	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/cilium/ebpf/asm"
@@ -13,6 +16,7 @@ import (
 	"github.com/cilium/ebpf/internal/kallsyms"
 	"github.com/cilium/ebpf/internal/kconfig"
 	"github.com/cilium/ebpf/internal/linux"
+	"github.com/cilium/ebpf/internal/platform"
 	"github.com/cilium/ebpf/internal/sys"
 )
 
@@ -61,26 +65,34 @@ func (cs *CollectionSpec) Copy() *CollectionSpec {
 	}
 
 	cpy := CollectionSpec{
-		Maps:      make(map[string]*MapSpec, len(cs.Maps)),
-		Programs:  make(map[string]*ProgramSpec, len(cs.Programs)),
+		Maps:      copyMapOfSpecs(cs.Maps),
+		Programs:  copyMapOfSpecs(cs.Programs),
 		Variables: make(map[string]*VariableSpec, len(cs.Variables)),
 		ByteOrder: cs.ByteOrder,
 		Types:     cs.Types.Copy(),
 	}
 
-	for name, spec := range cs.Maps {
-		cpy.Maps[name] = spec.Copy()
-	}
-
-	for name, spec := range cs.Programs {
-		cpy.Programs[name] = spec.Copy()
-	}
-
 	for name, spec := range cs.Variables {
 		cpy.Variables[name] = spec.copy(&cpy)
 	}
+	if cs.Variables == nil {
+		cpy.Variables = nil
+	}
 
 	return &cpy
+}
+
+func copyMapOfSpecs[T interface{ Copy() T }](m map[string]T) map[string]T {
+	if m == nil {
+		return nil
+	}
+
+	cpy := make(map[string]T, len(m))
+	for k, v := range m {
+		cpy[k] = v.Copy()
+	}
+
+	return cpy
 }
 
 // RewriteMaps replaces all references to specific maps.
@@ -295,8 +307,7 @@ func (cs *CollectionSpec) LoadAndAssign(to interface{}, opts *CollectionOptions)
 
 	// Evaluate the loader's objects after all (lazy)loading has taken place.
 	for n, m := range loader.maps {
-		switch m.typ {
-		case ProgramArray:
+		if m.typ.canStoreProgram() {
 			// Require all lazy-loaded ProgramArrays to be assigned to the given object.
 			// The kernel empties a ProgramArray once the last user space reference
 			// to it closes, which leads to failed tail calls. Combined with the library
@@ -403,6 +414,7 @@ type collectionLoader struct {
 	maps     map[string]*Map
 	programs map[string]*Program
 	vars     map[string]*Variable
+	types    *btf.Cache
 }
 
 func newCollectionLoader(coll *CollectionSpec, opts *CollectionOptions) (*collectionLoader, error) {
@@ -427,6 +439,7 @@ func newCollectionLoader(coll *CollectionSpec, opts *CollectionOptions) (*collec
 		make(map[string]*Map),
 		make(map[string]*Program),
 		make(map[string]*Variable),
+		btf.NewCache(),
 	}, nil
 }
 
@@ -434,20 +447,6 @@ func newCollectionLoader(coll *CollectionSpec, opts *CollectionOptions) (*collec
 // during individual program loading. Since we have less context available
 // at those stages, we batch the lookups here instead to avoid redundant work.
 func populateKallsyms(progs map[string]*ProgramSpec) error {
-	// Look up associated kernel modules for all symbols referenced by
-	// ProgramSpec.AttachTo for program types that support attaching to kmods.
-	mods := make(map[string]string)
-	for _, p := range progs {
-		if p.AttachTo != "" && p.targetsKernelModule() {
-			mods[p.AttachTo] = ""
-		}
-	}
-	if len(mods) != 0 {
-		if err := kallsyms.AssignModules(mods); err != nil {
-			return fmt.Errorf("getting modules from kallsyms: %w", err)
-		}
-	}
-
 	// Look up addresses of all kernel symbols referenced by all programs.
 	addrs := make(map[string]uint64)
 	for _, p := range progs {
@@ -515,7 +514,7 @@ func (cl *collectionLoader) loadMap(mapName string) (*Map, error) {
 		return m, nil
 	}
 
-	m, err := newMapWithOptions(mapSpec, cl.opts.Maps)
+	m, err := newMapWithOptions(mapSpec, cl.opts.Maps, cl.types)
 	if err != nil {
 		return nil, fmt.Errorf("map %s: %w", mapName, err)
 	}
@@ -525,6 +524,7 @@ func (cl *collectionLoader) loadMap(mapName string) (*Map, error) {
 	// that need to be finalized before invoking the verifier.
 	if !mapSpec.Type.canStoreMapOrProgram() {
 		if err := m.finalize(mapSpec); err != nil {
+			_ = m.Close()
 			return nil, fmt.Errorf("finalizing map %s: %w", mapName, err)
 		}
 	}
@@ -577,12 +577,13 @@ func (cl *collectionLoader) loadProgram(progName string) (*Program, error) {
 		}
 	}
 
-	prog, err := newProgramWithOptions(progSpec, cl.opts.Programs)
+	prog, err := newProgramWithOptions(progSpec, cl.opts.Programs, cl.types)
 	if err != nil {
 		return nil, fmt.Errorf("program %s: %w", progName, err)
 	}
 
 	cl.programs[progName] = prog
+
 	return prog, nil
 }
 
@@ -618,7 +619,12 @@ func (cl *collectionLoader) loadVariable(varName string) (*Variable, error) {
 	// emit a Variable with a nil Memory. This keeps Collection{Spec}.Variables
 	// consistent across systems with different feature sets without breaking
 	// LoadAndAssign.
-	mm, err := m.Memory()
+	var mm *Memory
+	if unsafeMemory {
+		mm, err = m.unsafeMemory()
+	} else {
+		mm, err = m.Memory()
+	}
 	if err != nil && !errors.Is(err, ErrNotSupported) {
 		return nil, fmt.Errorf("variable %s: getting memory for map %s: %w", varName, mapName, err)
 	}
@@ -685,11 +691,109 @@ func (cl *collectionLoader) populateDeferredMaps() error {
 			}
 		}
 
+		if mapSpec.Type == StructOpsMap {
+			// populate StructOps data into `kernVData`
+			if err := cl.populateStructOps(m, mapSpec); err != nil {
+				return err
+			}
+		}
+
 		// Populate and freeze the map if specified.
 		if err := m.finalize(mapSpec); err != nil {
 			return fmt.Errorf("populating map %s: %w", mapName, err)
 		}
 	}
+
+	return nil
+}
+
+// populateStructOps translates the user struct bytes into the kernel value struct
+// layout for a struct_ops map and writes the result back to mapSpec.Contents[0].
+func (cl *collectionLoader) populateStructOps(m *Map, mapSpec *MapSpec) error {
+	userType, ok := btf.As[*btf.Struct](mapSpec.Value)
+	if !ok {
+		return fmt.Errorf("value should be a *Struct")
+	}
+
+	userData, ok := mapSpec.Contents[0].Value.([]byte)
+	if !ok {
+		return fmt.Errorf("value should be an array of byte")
+	}
+	if len(userData) < int(userType.Size) {
+		return fmt.Errorf("user data too short: have %d, need at least %d", len(userData), userType.Size)
+	}
+
+	vType, _, module, err := structOpsFindTarget(userType, cl.types)
+	if err != nil {
+		return fmt.Errorf("struct_ops value type %q: %w", userType.Name, err)
+	}
+	defer module.Close()
+
+	// Find the inner ops struct embedded in the value struct.
+	kType, kTypeOff, err := structOpsFindInnerType(vType)
+	if err != nil {
+		return err
+	}
+
+	kernVData := make([]byte, int(vType.Size))
+	for _, m := range userType.Members {
+		i := slices.IndexFunc(kType.Members, func(km btf.Member) bool {
+			return km.Name == m.Name
+		})
+
+		// Allow field to not exist in target as long as the source is zero.
+		if i == -1 {
+			mSize, err := btf.Sizeof(m.Type)
+			if err != nil {
+				return fmt.Errorf("sizeof(user.%s): %w", m.Name, err)
+			}
+			srcOff := int(m.Offset.Bytes())
+			if srcOff < 0 || srcOff+mSize > len(userData) {
+				return fmt.Errorf("member %q: userdata is too small", m.Name)
+			}
+
+			// let fail if the field in type user type is missing in type kern type
+			if !structOpsIsMemZeroed(userData[srcOff : srcOff+mSize]) {
+				return fmt.Errorf("%s doesn't exist in %s, but it has non-zero value", m.Name, kType.Name)
+			}
+
+			continue
+		}
+
+		km := kType.Members[i]
+
+		switch btf.UnderlyingType(m.Type).(type) {
+		case *btf.Pointer:
+			// If this is a pointer → resolve struct_ops program.
+			psKey := kType.Name + ":" + m.Name
+			for k, ps := range cl.coll.Programs {
+				if ps.AttachTo == psKey {
+					p, ok := cl.programs[k]
+					if !ok || p == nil {
+						return nil
+					}
+					if err := structOpsPopulateValue(km, kernVData[kTypeOff:], p); err != nil {
+						return err
+					}
+				}
+			}
+
+		default:
+			// Otherwise → memcpy the field contents.
+			if err := structOpsCopyMember(m, km, userData, kernVData[kTypeOff:]); err != nil {
+				return fmt.Errorf("field %s: %w", kType.Name, err)
+			}
+		}
+	}
+
+	// Populate the map explicitly and keep a reference on cl.programs.
+	// This is necessary because we may inline fds into kernVData which
+	// may become invalid if the GC frees them.
+	if err := m.Put(uint32(0), kernVData); err != nil {
+		return err
+	}
+	mapSpec.Contents = nil
+	runtime.KeepAlive(cl.programs)
 
 	return nil
 }
@@ -700,6 +804,10 @@ func resolveKconfig(m *MapSpec) error {
 	ds, ok := m.Value.(*btf.Datasec)
 	if !ok {
 		return errors.New("map value is not a Datasec")
+	}
+
+	if platform.IsWindows {
+		return fmt.Errorf(".kconfig: %w", internal.ErrNotSupportedOnOS)
 	}
 
 	type configInfo struct {
@@ -794,6 +902,13 @@ func resolveKconfig(m *MapSpec) error {
 // Omitting Collection.Close() during application shutdown is an error.
 // See the package documentation for details around Map and Program lifecycle.
 func LoadCollection(file string) (*Collection, error) {
+	if platform.IsWindows {
+		// This mirrors a check in efW.
+		if ext := filepath.Ext(file); ext == ".sys" {
+			return loadCollectionFromNativeImage(file)
+		}
+	}
+
 	spec, err := LoadCollectionSpec(file)
 	if err != nil {
 		return nil, err

@@ -56,12 +56,21 @@ var featuresCommand = cli.Command{
 					Enabled: &t,
 				},
 				IntelRdt: &features.IntelRdt{
-					Enabled: &t,
+					Enabled:    &t,
+					Schemata:   &t,
+					Monitoring: &t,
+				},
+				MemoryPolicy: &features.MemoryPolicy{
+					Modes: specconv.KnownMemoryPolicyModes(),
+					Flags: specconv.KnownMemoryPolicyFlags(),
 				},
 				MountExtensions: &features.MountExtensions{
 					IDMap: &features.IDMap{
 						Enabled: &t,
 					},
+				},
+				NetDevices: &features.NetDevices{
+					Enabled: &t,
 				},
 			},
 			PotentiallyUnsafeConfigAnnotations: []string{

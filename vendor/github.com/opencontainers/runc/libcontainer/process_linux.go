@@ -6,13 +6,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -116,11 +120,7 @@ func (p *containerProcess) startTime() (uint64, error) {
 }
 
 func (p *containerProcess) signal(sig os.Signal) error {
-	s, ok := sig.(unix.Signal)
-	if !ok {
-		return errors.New("os: unsupported signal type")
-	}
-	return unix.Kill(p.pid(), s)
+	return p.cmd.Process.Signal(sig)
 }
 
 func (p *containerProcess) externalDescriptors() []string {
@@ -157,7 +157,6 @@ func (p *containerProcess) wait() (*os.ProcessState, error) { //nolint:unparam
 
 type setnsProcess struct {
 	containerProcess
-	cgroupPaths     map[string]string
 	rootlessCgroups bool
 	intelRdtPath    string
 	initProcessPid  int
@@ -186,16 +185,8 @@ func tryResetCPUAffinity(pid int) {
 	//
 	// So we can just pass a very large array of set cpumask bits and the
 	// kernel will silently convert that to the correct value very cheaply.
-
-	// Ideally, we would just set the array to 0xFF...FF. Unfortunately, the
-	// size depends on the architecture. It is also a private newtype, so we
-	// can't use (^0) or generics since those require us to be able to name the
-	// type. However, we can just underflow the zero value instead.
-	// TODO: Once <https://golang.org/cl/698015> is merged, switch to that.
-	cpuset := unix.CPUSet{}
-	for i := range cpuset {
-		cpuset[i]-- // underflow to 0xFF..FF
-	}
+	var cpuset unix.CPUSet
+	cpuset.Fill() // set all bits
 	if err := unix.SchedSetaffinity(pid, &cpuset); err != nil {
 		logrus.WithError(
 			os.NewSyscallError("sched_setaffinity", err),
@@ -248,15 +239,152 @@ func (p *setnsProcess) setFinalCPUAffinity() error {
 	return nil
 }
 
+func (p *setnsProcess) addIntoCgroupV1() error {
+	if sub, ok := p.process.SubCgroupPaths[""]; ok || len(p.process.SubCgroupPaths) == 0 {
+		// Either same sub-cgroup for all paths, or no sub-cgroup.
+		err := p.manager.AddPid(sub, p.pid())
+		if err != nil && !p.rootlessCgroups {
+			return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
+		}
+		return nil
+	}
+
+	// Per-controller sub-cgroup paths. Not supported by AddPid (or systemd),
+	// so we have to calculate and check all sub-cgroup paths, and write
+	// directly to cgroupfs.
+	paths := maps.Clone(p.manager.GetPaths())
+	for ctrl, sub := range p.process.SubCgroupPaths {
+		base, ok := paths[ctrl]
+		if !ok {
+			return fmt.Errorf("unknown controller %s in SubCgroupPaths", ctrl)
+		}
+		cgPath := path.Join(base, sub)
+		if !strings.HasPrefix(cgPath, base) {
+			return fmt.Errorf("bad sub cgroup path: %s", sub)
+		}
+		paths[ctrl] = cgPath
+	}
+
+	for _, path := range paths {
+		if err := cgroups.WriteCgroupProc(path, p.pid()); err != nil && !p.rootlessCgroups {
+			return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
+		}
+	}
+
+	return nil
+}
+
+func (p *setnsProcess) addIntoCgroupV2() error {
+	sub := p.process.SubCgroupPaths[""]
+	err := p.manager.AddPid(sub, p.pid())
+	if err != nil && !p.rootlessCgroups {
+		// On cgroup v2 + nesting + domain controllers, adding to initial cgroup may fail with EBUSY.
+		// https://github.com/opencontainers/runc/issues/2356#issuecomment-621277643
+		// Try to join the cgroup of InitProcessPid, unless sub-cgroup is explicitly set.
+		if p.initProcessPid != 0 && sub == "" {
+			initProcCgroupFile := fmt.Sprintf("/proc/%d/cgroup", p.initProcessPid)
+			initCg, initCgErr := cgroups.ParseCgroupFile(initProcCgroupFile)
+			if initCgErr == nil {
+				if initCgPath, ok := initCg[""]; ok {
+					initCgDirpath := filepath.Join(fs2.UnifiedMountpoint, initCgPath)
+					logrus.Debugf("adding pid %d to cgroup failed (%v), attempting to join %s",
+						p.pid(), err, initCgDirpath)
+					// NOTE: initCgDirPath is not guaranteed to exist because we didn't pause the container.
+					err = cgroups.WriteCgroupProc(initCgDirpath, p.pid())
+				}
+			}
+		}
+		if err != nil {
+			return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
+		}
+	}
+
+	return nil
+}
+
+func (p *setnsProcess) addIntoCgroup() error {
+	if p.cmd.SysProcAttr.UseCgroupFD {
+		// We've used cgroupfd successfully, so the process is
+		// already in the proper cgroup, nothing to do here.
+		return nil
+	}
+	if cgroups.IsCgroup2UnifiedMode() {
+		return p.addIntoCgroupV2()
+	}
+	return p.addIntoCgroupV1()
+}
+
+// prepareCgroupFD sets up p.cmd to use clone3 with CLONE_INTO_CGROUP
+// to join cgroup early, in p.cmd.Start. Returns an *os.File which
+// must be closed by the caller after p.Cmd.Start return.
+func (p *setnsProcess) prepareCgroupFD() (*os.File, error) {
+	if !cgroups.IsCgroup2UnifiedMode() {
+		return nil, nil
+	}
+
+	base := p.manager.Path("")
+	if base == "" { // No cgroup to join.
+		return nil, nil
+	}
+	sub := ""
+	if p.process.SubCgroupPaths != nil {
+		sub = p.process.SubCgroupPaths[""]
+	}
+	cgroup := path.Join(base, sub)
+	if !strings.HasPrefix(cgroup, base) {
+		return nil, fmt.Errorf("bad sub cgroup path: %s", sub)
+	}
+
+	fd, err := cgroups.OpenFile(base, sub, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC)
+	if err != nil {
+		if p.rootlessCgroups {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("can't open cgroup: %w", err)
+	}
+
+	logrus.Debugf("using CLONE_INTO_CGROUP %q", cgroup)
+	if p.cmd.SysProcAttr == nil {
+		p.cmd.SysProcAttr = &syscall.SysProcAttr{}
+	}
+	p.cmd.SysProcAttr.UseCgroupFD = true
+	p.cmd.SysProcAttr.CgroupFD = int(fd.Fd())
+
+	return fd, nil
+}
+
+// startWithCgroupFD starts a process via clone3 with CLONE_INTO_CGROUP,
+// with a fallback if it fails (e.g. not available).
+func (p *setnsProcess) startWithCgroupFD() error {
+	// Close the child side of the pipes.
+	defer p.comm.closeChild()
+
+	fd, err := p.prepareCgroupFD()
+	if err != nil {
+		return err
+	}
+	if fd != nil {
+		defer fd.Close()
+	}
+
+	err = p.startWithCPUAffinity()
+	if err != nil && p.cmd.SysProcAttr.UseCgroupFD {
+		logrus.Debugf("exec with CLONE_INTO_CGROUP failed: %v; retrying without", err)
+		// SysProcAttr.CgroupFD is never used when UseCgroupFD is unset.
+		p.cmd.SysProcAttr.UseCgroupFD = false
+		err = p.startWithCPUAffinity()
+	}
+
+	return err
+}
+
 func (p *setnsProcess) start() (retErr error) {
 	defer p.comm.closeParent()
 
 	// Get the "before" value of oom kill count.
 	oom, _ := p.manager.OOMKillCount()
-	err := p.startWithCPUAffinity()
-	// Close the child-side of the pipes (controlled by child).
-	p.comm.closeChild()
-	if err != nil {
+
+	if err := p.startWithCgroupFD(); err != nil {
 		return fmt.Errorf("error starting setns process: %w", err)
 	}
 
@@ -281,28 +409,8 @@ func (p *setnsProcess) start() (retErr error) {
 	if err := p.execSetns(); err != nil {
 		return fmt.Errorf("error executing setns process: %w", err)
 	}
-	for _, path := range p.cgroupPaths {
-		if err := cgroups.WriteCgroupProc(path, p.pid()); err != nil && !p.rootlessCgroups {
-			// On cgroup v2 + nesting + domain controllers, WriteCgroupProc may fail with EBUSY.
-			// https://github.com/opencontainers/runc/issues/2356#issuecomment-621277643
-			// Try to join the cgroup of InitProcessPid.
-			if cgroups.IsCgroup2UnifiedMode() && p.initProcessPid != 0 {
-				initProcCgroupFile := fmt.Sprintf("/proc/%d/cgroup", p.initProcessPid)
-				initCg, initCgErr := cgroups.ParseCgroupFile(initProcCgroupFile)
-				if initCgErr == nil {
-					if initCgPath, ok := initCg[""]; ok {
-						initCgDirpath := filepath.Join(fs2.UnifiedMountpoint, initCgPath)
-						logrus.Debugf("adding pid %d to cgroups %v failed (%v), attempting to join %q (obtained from %s)",
-							p.pid(), p.cgroupPaths, err, initCg, initCgDirpath)
-						// NOTE: initCgDirPath is not guaranteed to exist because we didn't pause the container.
-						err = cgroups.WriteCgroupProc(initCgDirpath, p.pid())
-					}
-				}
-			}
-			if err != nil {
-				return fmt.Errorf("error adding pid %d to cgroups: %w", p.pid(), err)
-			}
-		}
+	if err := p.addIntoCgroup(); err != nil {
+		return err
 	}
 	// Set final CPU affinity right after the process is moved into container's cgroup.
 	if err := p.setFinalCPUAffinity(); err != nil {
@@ -716,6 +824,10 @@ func (p *initProcess) start() (retErr error) {
 		return fmt.Errorf("error creating network interfaces: %w", err)
 	}
 
+	if err := p.setupNetworkDevices(); err != nil {
+		return fmt.Errorf("error creating network interfaces: %w", err)
+	}
+
 	// initConfig.SpecState is only needed to run hooks that are executed
 	// inside a container, i.e. CreateContainer and StartContainer.
 	if p.config.Config.HasHook(configs.CreateContainer, configs.StartContainer) {
@@ -903,6 +1015,30 @@ func (p *initProcess) createNetworkInterfaces() error {
 	return nil
 }
 
+// setupNetworkDevices sets up and initializes any defined network interface inside the container.
+func (p *initProcess) setupNetworkDevices() error {
+	// host network pods does not move network devices.
+	if !p.config.Config.Namespaces.Contains(configs.NEWNET) {
+		return nil
+	}
+	// the container init process has already joined the provided net namespace,
+	// so we can use the process's net ns path directly.
+	nsPath := fmt.Sprintf("/proc/%d/ns/net", p.pid())
+
+	// If moving any of the network devices fails, we return an error immediately.
+	// The runtime spec requires that the kernel handles moving back any devices
+	// that were successfully moved before the failure occurred.
+	// See: https://github.com/opencontainers/runtime-spec/blob/27cb0027fd92ef81eda1ea3a8153b8337f56d94a/config-linux.md#namespace-lifecycle-and-container-termination
+	for name, netDevice := range p.config.Config.NetDevices {
+		err := devChangeNetNamespace(name, nsPath, *netDevice)
+		if err != nil {
+			return fmt.Errorf("move netDevice %s to namespace %s: %w", name, nsPath, err)
+		}
+	}
+
+	return nil
+}
+
 func pidGetFd(pid, srcFd int) (*os.File, error) {
 	pidFd, err := unix.PidfdOpen(pid, 0)
 	if err != nil {
@@ -945,7 +1081,7 @@ func getPipeFds(pid int) ([]string, error) {
 	fds := make([]string, 3)
 
 	dirPath := filepath.Join("/proc", strconv.Itoa(pid), "/fd")
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		// XXX: This breaks if the path is not a valid symlink (which can
 		//      happen in certain particularly unlucky mount namespace setups).
 		f := filepath.Join(dirPath, strconv.Itoa(i))

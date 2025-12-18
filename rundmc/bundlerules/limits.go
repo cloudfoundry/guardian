@@ -61,7 +61,14 @@ func (l Limits) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec) (goci.Bndl
 		// #nosec G115 - any values over maxint64 are capped above, so no overflow
 		pids = int64(spec.Limits.Pid.Max)
 	}
-	return bndl.WithPidLimit(specs.LinuxPids{Limit: pids}), nil
+
+	// runc-specs now use a pointer to an int, and treat 0 as a valid limit. Previously this was "no limit"
+	// so convert a 0 value to nil, since we will always want at least one process in our containers
+	var pidPtr *int64
+	if pids != 0 {
+		pidPtr = &pids
+	}
+	return bndl.WithPidLimit(specs.LinuxPids{Limit: pidPtr}), nil
 }
 
 func int64PtrVal(n uint64) *int64 {
