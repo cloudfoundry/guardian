@@ -132,11 +132,11 @@ var _ = Describe("Runtime Plugin", func() {
 					})
 
 					It("sets BlockIO", func() {
-						Expect(bundle.Linux.Resources.BlockIO.Weight).To(PointTo(Equal(uint16(200))))
+						Expect(bundle.Linux.Resources.BlockIO.Weight).To(PointTo(Equal(ptrToInt64(200))))
 					})
 
 					It("sets pid limits", func() {
-						Expect(bundle.Linux.Resources.Pids.Limit).To(Equal(int64(300)))
+						Expect(bundle.Linux.Resources.Pids.Limit).To(Equal(ptrToInt64(300)))
 					})
 				})
 
@@ -507,4 +507,8 @@ func onlyOn(goos string) {
 	if runtime.GOOS != goos {
 		Skip(goos + " only")
 	}
+}
+
+func ptrToInt64(i int64) *int64 {
+	return &i
 }
