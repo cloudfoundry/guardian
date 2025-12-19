@@ -13,6 +13,10 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
+func ptrToInt64(i int64) *int64 {
+	return &i
+}
+
 var _ = Describe("LimitsRule", func() {
 	It("sets the provided BlockIOWeight in the bundle resources", func() {
 		limits := bundlerules.Limits{
@@ -32,7 +36,7 @@ var _ = Describe("LimitsRule", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(newBndl.Resources().Pids.Limit).To(BeNumerically("==", 1))
+		Expect(newBndl.Resources().Pids.Limit).To(Equal(ptrToInt64(1)))
 	})
 
 	Context("cgroup v1", func() {
