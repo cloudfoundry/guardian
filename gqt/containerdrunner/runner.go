@@ -78,6 +78,7 @@ func ContainerdConfig(containerdDataDir string) Config {
 			Level:   "debug",
 		},
 		DisabledPlugins: []string{
+			"io.containerd.snapshotter.v1.btrfs",
 			"io.containerd.snapshotter.v1.aufs",
 			"io.containerd.snapshotter.v1.devmapper",
 			"io.containerd.snapshotter.v1.overlayfs",
