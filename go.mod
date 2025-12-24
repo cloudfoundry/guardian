@@ -14,7 +14,7 @@ require (
 	code.cloudfoundry.org/archiver v0.56.0
 	code.cloudfoundry.org/clock v1.56.0
 	code.cloudfoundry.org/commandrunner v0.53.0
-	code.cloudfoundry.org/debugserver v0.78.0
+	code.cloudfoundry.org/debugserver v0.79.0
 	code.cloudfoundry.org/garden v0.0.0-20251217022801-f5e0d83c4fa9
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20251217022935-d223132936ea
@@ -117,7 +117,7 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/tools v0.40.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251213004720-97cd9d5aeac2 // indirect
-	google.golang.org/grpc v1.77.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251222181119-0a764e51fe1b // indirect
+	google.golang.org/grpc v1.78.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
