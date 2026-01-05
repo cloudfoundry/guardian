@@ -5,6 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 
 	"code.cloudfoundry.org/garden"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
@@ -12,10 +13,6 @@ import (
 	gardencgroups "code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
-
-func ptrToInt64(i int64) *int64 {
-	return &i
-}
 
 var _ = Describe("LimitsRule", func() {
 	It("sets the provided BlockIOWeight in the bundle resources", func() {
@@ -36,7 +33,7 @@ var _ = Describe("LimitsRule", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(newBndl.Resources().Pids.Limit).To(Equal(ptrToInt64(1)))
+		Expect(newBndl.Resources().Pids.Limit).To(PointTo(Equal(int64(1))))
 	})
 
 	Context("cgroup v1", func() {
