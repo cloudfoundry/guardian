@@ -178,6 +178,7 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 		log.Error("bundle-generate-failed", err)
 		return err
 	}
+	log.Debug("generated-bundle", lager.Data{"bundle": bundle})
 
 	if err := c.cpuCgrouper.PrepareCgroups(spec.Handle); err != nil {
 		log.Error("prepare-cgroups-failed", err)
