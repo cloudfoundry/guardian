@@ -11,15 +11,15 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.56.0
-	code.cloudfoundry.org/clock v1.56.0
+	code.cloudfoundry.org/archiver v0.58.0
+	code.cloudfoundry.org/clock v1.57.0
 	code.cloudfoundry.org/commandrunner v0.53.0
-	code.cloudfoundry.org/debugserver v0.79.0
+	code.cloudfoundry.org/debugserver v0.80.0
 	code.cloudfoundry.org/garden v0.0.0-20251217022801-f5e0d83c4fa9
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20251217022935-d223132936ea
-	code.cloudfoundry.org/lager/v3 v3.56.0
-	code.cloudfoundry.org/localip v0.58.0
+	code.cloudfoundry.org/idmapper v0.0.0-20260107023157-ab2fdcb33dbd
+	code.cloudfoundry.org/lager/v3 v3.57.0
+	code.cloudfoundry.org/localip v0.59.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.112
@@ -87,7 +87,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20251213031049-b05bdaca462f // indirect
+	github.com/google/pprof v0.0.0-20260106004452-d7df1bf2cac7 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect

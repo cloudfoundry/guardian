@@ -1,7 +1,7 @@
-# code.cloudfoundry.org/archiver v0.56.0
+# code.cloudfoundry.org/archiver v0.58.0
 ## explicit; go 1.24.9
 code.cloudfoundry.org/archiver/extractor/test_helper
-# code.cloudfoundry.org/clock v1.56.0
+# code.cloudfoundry.org/clock v1.57.0
 ## explicit; go 1.24.9
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
@@ -12,7 +12,7 @@ code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.79.0
+# code.cloudfoundry.org/debugserver v0.80.0
 ## explicit; go 1.24.9
 code.cloudfoundry.org/debugserver
 # code.cloudfoundry.org/garden v0.0.0-20251217022801-f5e0d83c4fa9 => ../garden
@@ -30,17 +30,17 @@ code.cloudfoundry.org/garden/transport
 # code.cloudfoundry.org/grootfs v0.30.0 => ../grootfs
 ## explicit; go 1.24.9
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20251217022935-d223132936ea => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20260107023157-ab2fdcb33dbd => ../idmapper
 ## explicit; go 1.24.9
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.56.0
+# code.cloudfoundry.org/lager/v3 v3.57.0
 ## explicit; go 1.24.9
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
 code.cloudfoundry.org/lager/v3/internal/truncate
 code.cloudfoundry.org/lager/v3/lagerctx
 code.cloudfoundry.org/lager/v3/lagertest
-# code.cloudfoundry.org/localip v0.58.0
+# code.cloudfoundry.org/localip v0.59.0
 ## explicit; go 1.24.9
 code.cloudfoundry.org/localip
 # cyphar.com/go-pathrs v0.2.2
@@ -330,7 +330,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20251213031049-b05bdaca462f
+# github.com/google/pprof v0.0.0-20260106004452-d7df1bf2cac7
 ## explicit; go 1.24.9
 github.com/google/pprof/profile
 # github.com/hashicorp/errwrap v1.1.0
