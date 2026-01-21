@@ -3,10 +3,10 @@
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20260114023453-35ad543ce6ab => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20260121023614-f48c419cc545 => ../idmapper
 ## explicit; go 1.24.9
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.58.0
+# code.cloudfoundry.org/lager/v3 v3.59.0
 ## explicit; go 1.24.9
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
@@ -138,7 +138,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/pprof v0.0.0-20260111202518-71be6bfdd440
+# github.com/google/pprof v0.0.0-20260115054156-294ebfa9ad83
 ## explicit; go 1.24.0
 github.com/google/pprof/profile
 # github.com/gorilla/mux v1.8.1
@@ -218,8 +218,8 @@ github.com/pkg/errors
 # github.com/russross/blackfriday/v2 v2.1.0
 ## explicit
 github.com/russross/blackfriday/v2
-# github.com/sirupsen/logrus v1.9.3
-## explicit; go 1.13
+# github.com/sirupsen/logrus v1.9.4
+## explicit; go 1.17
 github.com/sirupsen/logrus
 # github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125
 ## explicit
