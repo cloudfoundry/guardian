@@ -11,15 +11,15 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.59.0
-	code.cloudfoundry.org/clock v1.58.0
+	code.cloudfoundry.org/archiver v0.60.0
+	code.cloudfoundry.org/clock v1.59.0
 	code.cloudfoundry.org/commandrunner v0.55.0
-	code.cloudfoundry.org/debugserver v0.81.0
-	code.cloudfoundry.org/garden v0.0.0-20260109212838-f52ef7bce587
+	code.cloudfoundry.org/debugserver v0.82.0
+	code.cloudfoundry.org/garden v0.0.0-20260114023242-b0c72d3d55e3
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20260114023453-35ad543ce6ab
-	code.cloudfoundry.org/lager/v3 v3.58.0
-	code.cloudfoundry.org/localip v0.60.0
+	code.cloudfoundry.org/idmapper v0.0.0-20260121023614-f48c419cc545
+	code.cloudfoundry.org/lager/v3 v3.59.0
+	code.cloudfoundry.org/localip v0.61.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.112
@@ -45,7 +45,7 @@ require (
 	github.com/opencontainers/runc v1.4.0
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/pflag v1.0.10
 	github.com/tedsuo/ifrit v0.0.0-20230516164442-7862c310ad26
 	github.com/urfave/cli/v2 v2.27.7
@@ -87,9 +87,9 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20260111202518-71be6bfdd440 // indirect
+	github.com/google/pprof v0.0.0-20260115054156-294ebfa9ad83 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/klauspost/compress v1.18.2 // indirect
+	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/sys/capability v0.4.0 // indirect
@@ -117,7 +117,7 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/tools v0.41.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260112192933-99fd39fd28a9 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516 // indirect
 	google.golang.org/grpc v1.78.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
