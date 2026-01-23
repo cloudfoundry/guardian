@@ -1,6 +1,9 @@
 package processes
 
 import (
+	"os"
+	"path/filepath"
+
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/users"
@@ -45,7 +48,7 @@ func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, user
 			AdditionalGids: additionalGIDs,
 			Username:       spec.User,
 		},
-		Cwd:             spec.Dir,
+		Cwd:             getRootDir(bndl.RootFS(), spec.Dir, user.Home),
 		Capabilities:    p.capabilities(bndl, user.Gid),
 		Rlimits:         toRlimits(spec.Limits),
 		Terminal:        spec.TTY != nil,
@@ -102,4 +105,18 @@ func toUint32Slice(slice []int) []uint32 {
 		result = append(result, uint32(i))
 	}
 	return result
+}
+
+func getRootDir(rootFS, specDir, homeDir string) string {
+	dir := specDir
+	if dir == "" {
+		dir = homeDir
+	}
+
+	fullPath := filepath.Join(rootFS, dir)
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		return "/"
+	}
+
+	return dir
 }
