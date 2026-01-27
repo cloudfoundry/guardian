@@ -107,10 +107,14 @@ func toUint32Slice(slice []int) []uint32 {
 	return result
 }
 
-func getRootDir(rootFS, specDir, homeDir string) string {
+func getRootDir(rootFS, specDir, home string) string {
 	dir := specDir
 	if dir == "" {
-		dir = homeDir
+		dir = home
+	}
+
+	if dir == "" {
+		return "/"
 	}
 
 	fullPath := filepath.Join(rootFS, dir)
