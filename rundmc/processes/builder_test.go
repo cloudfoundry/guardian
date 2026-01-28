@@ -1,6 +1,9 @@
 package processes_test
 
 import (
+	"os"
+	"path/filepath"
+
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/processes"
@@ -204,6 +207,86 @@ var _ = Describe("ProcBuilder", func() {
 					Expect(actualContainerUID).To(Equal(user.Uid))
 					Expect(preparedProc.Env).To(ConsistOf("ENV"))
 				})
+			})
+		})
+	})
+
+	Describe("working directory resolution", func() {
+		var (
+			preparedProc *specs.Process
+			tmpRootFS    string
+		)
+
+		BeforeEach(func() {
+			var err error
+			tmpRootFS, err = os.MkdirTemp("", "rootfs")
+			Expect(err).NotTo(HaveOccurred())
+
+			bndl = bndl.WithRootFS(tmpRootFS)
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(tmpRootFS)).To(Succeed())
+		})
+
+		JustBeforeEach(func() {
+			procBuilder = processes.NewBuilder(envDeterminer, nonRootMaxCaps)
+			preparedProc = procBuilder.BuildProcess(bndl, processSpec, user)
+		})
+
+		Context("when spec.Dir is set", func() {
+			BeforeEach(func() {
+				processSpec.Dir = "/app"
+			})
+
+			Context("and the directory exists", func() {
+				BeforeEach(func() {
+					Expect(os.MkdirAll(filepath.Join(tmpRootFS, "app"), 0755)).To(Succeed())
+				})
+
+				It("uses spec.Dir as Cwd", func() {
+					Expect(preparedProc.Cwd).To(Equal("/app"))
+				})
+			})
+
+			Context("and the directory does not exist", func() {
+				It("falls back to '/'", func() {
+					Expect(preparedProc.Cwd).To(Equal("/"))
+				})
+			})
+		})
+
+		Context("when spec.Dir is empty", func() {
+			BeforeEach(func() {
+				processSpec.Dir = ""
+				user.Home = "/home/robot"
+			})
+
+			Context("and the home directory exists", func() {
+				BeforeEach(func() {
+					Expect(os.MkdirAll(filepath.Join(tmpRootFS, "home", "robot"), 0755)).To(Succeed())
+				})
+
+				It("uses home directory as Cwd", func() {
+					Expect(preparedProc.Cwd).To(Equal("/home/robot"))
+				})
+			})
+
+			Context("and the home directory does not exist", func() {
+				It("falls back to '/'", func() {
+					Expect(preparedProc.Cwd).To(Equal("/"))
+				})
+			})
+		})
+
+		Context("when both spec.Dir and home are empty", func() {
+			BeforeEach(func() {
+				processSpec.Dir = ""
+				user.Home = ""
+			})
+
+			It("falls back to '/'", func() {
+				Expect(preparedProc.Cwd).To(Equal("/"))
 			})
 		})
 	})
