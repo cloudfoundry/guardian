@@ -14,8 +14,8 @@ require (
 	code.cloudfoundry.org/archiver v0.60.0
 	code.cloudfoundry.org/clock v1.59.0
 	code.cloudfoundry.org/commandrunner v0.55.0
-	code.cloudfoundry.org/debugserver v0.82.0
-	code.cloudfoundry.org/garden v0.0.0-20260114023242-b0c72d3d55e3
+	code.cloudfoundry.org/debugserver v0.83.0
+	code.cloudfoundry.org/garden v0.0.0-20260121023424-879cfc366958
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20260121023614-f48c419cc545
 	code.cloudfoundry.org/lager/v3 v3.59.0
@@ -74,7 +74,7 @@ require (
 	github.com/containerd/platforms v1.0.0-rc.2 // indirect
 	github.com/containerd/plugin v1.0.0 // indirect
 	github.com/containerd/ttrpc v1.2.7 // indirect
-	github.com/coreos/go-systemd/v22 v22.6.0 // indirect
+	github.com/coreos/go-systemd/v22 v22.7.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
@@ -117,7 +117,7 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/tools v0.41.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/grpc v1.78.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )

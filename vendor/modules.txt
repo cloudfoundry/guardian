@@ -12,10 +12,10 @@ code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.82.0
+# code.cloudfoundry.org/debugserver v0.83.0
 ## explicit; go 1.24.9
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20260114023242-b0c72d3d55e3 => ../garden
+# code.cloudfoundry.org/garden v0.0.0-20260121023424-879cfc366958 => ../garden
 ## explicit; go 1.24.9
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
@@ -271,7 +271,7 @@ github.com/containerd/ttrpc
 # github.com/containerd/typeurl/v2 v2.2.3
 ## explicit; go 1.21
 github.com/containerd/typeurl/v2
-# github.com/coreos/go-systemd/v22 v22.6.0
+# github.com/coreos/go-systemd/v22 v22.7.0
 ## explicit; go 1.23
 github.com/coreos/go-systemd/v22/activation
 github.com/coreos/go-systemd/v22/dbus
@@ -658,7 +658,7 @@ golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409
 ## explicit; go 1.24.0
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.78.0
