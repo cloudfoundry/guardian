@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -352,6 +353,23 @@ func copyFile(srcPath, dstPath string) error {
 	reader.Close()
 
 	return os.Chmod(writer.Name(), 0777)
+}
+
+func copyDir(src, dst string) error {
+	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		destPath := filepath.Join(dst, rel)
+		if d.IsDir() {
+			return os.MkdirAll(destPath, 0755)
+		}
+		return copyFile(path, destPath)
+	})
 }
 
 func createPeaRootfs() string {

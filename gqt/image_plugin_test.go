@@ -74,7 +74,7 @@ var _ = Describe("Image Plugin", func() {
 
 				containerSpec = garden.ContainerSpec{
 					BindMounts: []garden.BindMount{
-						garden.BindMount{
+						{
 							SrcPath: tmpMountDir,
 							DstPath: "/user-provided-bind-mount",
 							Mode:    garden.BindMountModeRO,
@@ -136,6 +136,8 @@ var _ = Describe("Image Plugin", func() {
 					rootfs := createRootfs(func(string) {}, 0755)
 					Expect(copyFile(filepath.Join(rootfs, "bin", "env"),
 						filepath.Join(tmpDir, "env"))).To(Succeed())
+					Expect(copyDir(filepath.Join(rootfs, "lib"),
+						filepath.Join(tmpDir, "lib"))).To(Succeed())
 					Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				})
 
@@ -185,6 +187,8 @@ var _ = Describe("Image Plugin", func() {
 					rootfs := createRootfs(func(string) {}, 0755)
 					Expect(copyFile(filepath.Join(rootfs, "bin", "cat"),
 						filepath.Join(tmpDir, "cat"))).To(Succeed())
+					Expect(copyDir(filepath.Join(rootfs, "lib"),
+						filepath.Join(tmpDir, "lib"))).To(Succeed())
 					Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				})
 
@@ -383,6 +387,8 @@ var _ = Describe("Image Plugin", func() {
 					source := filepath.Join(rootfs, "bin", "env")
 					destination := filepath.Join(tmpDir, "env")
 					Expect(copyFile(source, destination)).To(Succeed())
+					Expect(copyDir(filepath.Join(rootfs, "lib"),
+						filepath.Join(tmpDir, "lib"))).To(Succeed())
 					Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				})
 
@@ -670,6 +676,8 @@ var _ = Describe("Image Plugin", func() {
 					rootfs := createRootfs(func(string) {}, 0755)
 					Expect(copyFile(filepath.Join(rootfs, "bin", "env"),
 						filepath.Join(tmpDir, "env"))).To(Succeed())
+					Expect(copyDir(filepath.Join(rootfs, "lib"),
+						filepath.Join(tmpDir, "lib"))).To(Succeed())
 					Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				})
 
