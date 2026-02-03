@@ -11,15 +11,15 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.60.0
-	code.cloudfoundry.org/clock v1.59.0
+	code.cloudfoundry.org/archiver v0.61.0
+	code.cloudfoundry.org/clock v1.60.0
 	code.cloudfoundry.org/commandrunner v0.55.0
-	code.cloudfoundry.org/debugserver v0.83.0
-	code.cloudfoundry.org/garden v0.0.0-20260121023424-879cfc366958
+	code.cloudfoundry.org/debugserver v0.84.0
+	code.cloudfoundry.org/garden v0.0.0-20260202221647-967ed235c6cc
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20260202221834-0f579adb397c
-	code.cloudfoundry.org/lager/v3 v3.59.0
-	code.cloudfoundry.org/localip v0.61.0
+	code.cloudfoundry.org/lager/v3 v3.60.0
+	code.cloudfoundry.org/localip v0.62.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.112
@@ -117,7 +117,7 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/tools v0.41.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260202165425-ce8ad4cf556b // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260203192932-546029d2fa20 // indirect
 	google.golang.org/grpc v1.78.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
