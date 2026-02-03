@@ -5,7 +5,7 @@ go 1.24.9
 require (
 	code.cloudfoundry.org/commandrunner v0.55.0
 	code.cloudfoundry.org/idmapper v0.0.0-20260202221834-0f579adb397c
-	code.cloudfoundry.org/lager/v3 v3.59.0
+	code.cloudfoundry.org/lager/v3 v3.60.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20251217143644-d1670a435f2a
 	github.com/containers/image/v5 v5.36.2
