@@ -138,6 +138,8 @@ var _ = Describe("Image Plugin", func() {
 						filepath.Join(tmpDir, "env"))).To(Succeed())
 					Expect(copyDir(filepath.Join(rootfs, "lib"),
 						filepath.Join(tmpDir, "lib"))).To(Succeed())
+					Expect(copyDir(filepath.Join(rootfs, "lib64"),
+						filepath.Join(tmpDir, "lib64"))).To(Succeed())
 					Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				})
 
@@ -189,6 +191,8 @@ var _ = Describe("Image Plugin", func() {
 						filepath.Join(tmpDir, "cat"))).To(Succeed())
 					Expect(copyDir(filepath.Join(rootfs, "lib"),
 						filepath.Join(tmpDir, "lib"))).To(Succeed())
+					Expect(copyDir(filepath.Join(rootfs, "lib64"),
+						filepath.Join(tmpDir, "lib64"))).To(Succeed())
 					Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				})
 
@@ -389,6 +393,8 @@ var _ = Describe("Image Plugin", func() {
 					Expect(copyFile(source, destination)).To(Succeed())
 					Expect(copyDir(filepath.Join(rootfs, "lib"),
 						filepath.Join(tmpDir, "lib"))).To(Succeed())
+					Expect(copyDir(filepath.Join(rootfs, "lib64"),
+						filepath.Join(tmpDir, "lib64"))).To(Succeed())
 					Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				})
 
@@ -678,6 +684,8 @@ var _ = Describe("Image Plugin", func() {
 						filepath.Join(tmpDir, "env"))).To(Succeed())
 					Expect(copyDir(filepath.Join(rootfs, "lib"),
 						filepath.Join(tmpDir, "lib"))).To(Succeed())
+					Expect(copyDir(filepath.Join(rootfs, "lib64"),
+						filepath.Join(tmpDir, "lib64"))).To(Succeed())
 					Expect(os.RemoveAll(filepath.Dir(rootfs))).To(Succeed())
 				})
 

@@ -368,6 +368,13 @@ func copyDir(src, dst string) error {
 		if d.IsDir() {
 			return os.MkdirAll(destPath, 0755)
 		}
+		if d.Type()&os.ModeSymlink != 0 {
+			target, err := os.Readlink(path)
+			if err != nil {
+				return err
+			}
+			return os.Symlink(target, destPath)
+		}
 		return copyFile(path, destPath)
 	})
 }
