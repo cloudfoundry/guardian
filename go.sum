@@ -596,8 +596,8 @@ code.cloudfoundry.org/archiver v0.61.0 h1:n7QBOFUgkl5N/Xonwlk5YkyBhovGP4PmmHLhGO
 code.cloudfoundry.org/archiver v0.61.0/go.mod h1:uMyIXRz7Mv/fLTobTg3n99MLKv7w1IsnhPFDIvl2pVk=
 code.cloudfoundry.org/clock v1.60.0 h1:X47eUg0qVXhzGnGSo6TTQtWKfT1vjMfomP7a3sXi2lo=
 code.cloudfoundry.org/clock v1.60.0/go.mod h1:aIq+ZIUPz32B/Mr8QQlPtEksMKRDKnWOxy+b9d9D7i8=
-code.cloudfoundry.org/commandrunner v0.55.0 h1:TQwL9R9TARBjS+7hK9bB+lvE/F/0xseaPpg0vs7aBYo=
-code.cloudfoundry.org/commandrunner v0.55.0/go.mod h1:0lvOUphxi00MDJxl6lLz7Ny2vUPfwKws+0kO8pPRT2E=
+code.cloudfoundry.org/commandrunner v0.56.0 h1:TgszAgMt61KvZYDqInlVkxqsKSZvKhfFfpX791Tu+XM=
+code.cloudfoundry.org/commandrunner v0.56.0/go.mod h1:Zmv9Xv5l7U6/qeZvAmMe6GbHy0sDJWdQadsDDv5vH90=
 code.cloudfoundry.org/debugserver v0.84.0 h1:OT0VWZ749lAnQF6jz+eBzB1EHvWqG9D5oUAYrmK8GSQ=
 code.cloudfoundry.org/debugserver v0.84.0/go.mod h1:MoJMwvmJ8ym25MDIh+Nvg1zg9c61v3BlpH5sh3pM3z8=
 code.cloudfoundry.org/lager/v3 v3.60.0 h1:Xtc1orbWeRaHA7HQR5zmerldvzAuvIQsodThGBC0C4k=
@@ -657,8 +657,8 @@ github.com/cilium/ebpf v0.17.3/go.mod h1:G5EDHij8yiLzaqn0WjyfJHvRa+3aDlReIaLVRMv
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cloudfoundry/dropsonde v1.1.0 h1:nerhj8K0heOsv/U/Ddou5Esw56YlNeHHJH6MP9QlACQ=
 github.com/cloudfoundry/dropsonde v1.1.0/go.mod h1:OrkxsBrAvM8X0Ve9vaSNKLR+/Jeohu3+J0M4JEaTmnM=
-github.com/cloudfoundry/gosigar v1.3.112 h1:cGGZ2sj1GKyiwSxzouIR7ATNbgAkC4zqwWDxYQ2ObPc=
-github.com/cloudfoundry/gosigar v1.3.112/go.mod h1:Ldc+tVw3dfqPwasZ9om1LT2aRwpjC1eFfbWKfv2WbDI=
+github.com/cloudfoundry/gosigar v1.3.115 h1:cfBWN+5Q7u2p9AFxe/Qy78lWvl6jbnF2u5xI1h4wATQ=
+github.com/cloudfoundry/gosigar v1.3.115/go.mod h1:qQzL9po6C4oiEf/MQ3PS4JmMORK9DISSlJDNTIASLro=
 github.com/cloudfoundry/sonde-go v0.0.0-20251217143644-d1670a435f2a h1:sdb/rlGNOaPbB7vYmYXnO6ePuHyxxaXwuKmgu87kSx0=
 github.com/cloudfoundry/sonde-go v0.0.0-20251217143644-d1670a435f2a/go.mod h1:rR3cyMIEfcaknKHjUDMf7Cuq5gn9Aiqvzz/gqsnsQBI=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=

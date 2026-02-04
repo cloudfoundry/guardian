@@ -13,16 +13,16 @@ replace (
 require (
 	code.cloudfoundry.org/archiver v0.61.0
 	code.cloudfoundry.org/clock v1.60.0
-	code.cloudfoundry.org/commandrunner v0.55.0
+	code.cloudfoundry.org/commandrunner v0.56.0
 	code.cloudfoundry.org/debugserver v0.84.0
-	code.cloudfoundry.org/garden v0.0.0-20260202221647-967ed235c6cc
+	code.cloudfoundry.org/garden v0.0.0-20260203210302-095611563a47
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20260202221834-0f579adb397c
 	code.cloudfoundry.org/lager/v3 v3.60.0
 	code.cloudfoundry.org/localip v0.62.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.112
+	github.com/cloudfoundry/gosigar v1.3.115
 	github.com/containerd/cgroups/v3 v3.1.2
 	github.com/containerd/containerd/api v1.10.0
 	github.com/containerd/containerd/v2 v2.2.1
