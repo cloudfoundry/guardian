@@ -215,14 +215,10 @@ func privilegedMounts() []specs.Mount {
 }
 
 func unprivilegedMounts() []specs.Mount {
-	mounts := []specs.Mount{
+	return []specs.Mount{
 		{Destination: "/proc", Type: "proc", Source: "proc", Options: []string{"nosuid", "noexec", "nodev"}},
+		{Destination: "/sys/fs/cgroup", Type: "cgroup", Source: "cgroup", Options: []string{"ro", "nosuid", "noexec", "nodev"}},
 	}
-
-	if !cgroups.IsCgroup2UnifiedMode() {
-		mounts = append(mounts, specs.Mount{Destination: "/sys/fs/cgroup", Type: "cgroup", Source: "cgroup", Options: []string{"ro", "nosuid", "noexec", "nodev"}})
-	}
-	return mounts
 }
 
 func getPrivilegedDevices() []specs.LinuxDevice {
