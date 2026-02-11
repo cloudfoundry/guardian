@@ -6,7 +6,7 @@ code.cloudfoundry.org/commandrunner/linux_command_runner
 # code.cloudfoundry.org/idmapper v0.0.0-20260202221834-0f579adb397c => ../idmapper
 ## explicit; go 1.24.9
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.60.0
+# code.cloudfoundry.org/lager/v3 v3.61.0
 ## explicit; go 1.24.9
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
@@ -235,10 +235,10 @@ github.com/xrash/smetrics
 # go.yaml.in/yaml/v3 v3.0.4
 ## explicit; go 1.16
 go.yaml.in/yaml/v3
-# golang.org/x/mod v0.32.0
+# golang.org/x/mod v0.33.0
 ## explicit; go 1.24.0
 golang.org/x/mod/semver
-# golang.org/x/net v0.49.0
+# golang.org/x/net v0.50.0
 ## explicit; go 1.24.0
 golang.org/x/net/html
 golang.org/x/net/html/atom
@@ -246,11 +246,11 @@ golang.org/x/net/html/charset
 # golang.org/x/sync v0.19.0
 ## explicit; go 1.24.0
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.40.0
+# golang.org/x/sys v0.41.0
 ## explicit; go 1.24.0
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.33.0
+# golang.org/x/text v0.34.0
 ## explicit; go 1.24.0
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
@@ -269,7 +269,7 @@ golang.org/x/text/internal/utf8internal
 golang.org/x/text/language
 golang.org/x/text/runes
 golang.org/x/text/transform
-# golang.org/x/tools v0.41.0
+# golang.org/x/tools v0.42.0
 ## explicit; go 1.24.0
 golang.org/x/tools/cover
 golang.org/x/tools/go/ast/edge
