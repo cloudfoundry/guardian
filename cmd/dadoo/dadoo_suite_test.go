@@ -74,14 +74,14 @@ func TestDadoo(t *testing.T) {
 
 			fields := strings.Fields(line)
 			if fields[2] == "cgroup" {
-				Expect(syscall.Unmount(fields[1], 0)).To(Succeed())
+				Expect(syscall.Unmount(fields[1], unix.MNT_DETACH)).To(Succeed())
 			}
 		}
 
 		if gardencgroups.IsCgroup2UnifiedMode() {
 			Expect(syscall.Unmount(filepath.Join(cgroupsRoot, gardencgroups.Unified), unix.MNT_DETACH)).To(Succeed())
 		}
-		Expect(syscall.Unmount(cgroupsRoot, 0)).To(Succeed())
+		Expect(syscall.Unmount(cgroupsRoot, unix.MNT_DETACH)).To(Succeed())
 		Expect(os.Remove(cgroupsRoot)).To(Succeed())
 	})
 
