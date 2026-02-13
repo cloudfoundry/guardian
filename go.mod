@@ -1,6 +1,6 @@
 module code.cloudfoundry.org/guardian
 
-go 1.24.9
+go 1.25.0
 
 replace (
 	code.cloudfoundry.org/garden => ../garden
@@ -13,16 +13,16 @@ replace (
 require (
 	code.cloudfoundry.org/archiver v0.62.0
 	code.cloudfoundry.org/clock v1.61.0
-	code.cloudfoundry.org/commandrunner v0.56.0
+	code.cloudfoundry.org/commandrunner v0.57.0
 	code.cloudfoundry.org/debugserver v0.85.0
 	code.cloudfoundry.org/garden v0.0.0-20260211023825-fb202bdd1b27
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20260202221834-0f579adb397c
+	code.cloudfoundry.org/idmapper v0.0.0-20260211024012-40002b8ede47
 	code.cloudfoundry.org/lager/v3 v3.61.0
 	code.cloudfoundry.org/localip v0.63.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.115
+	github.com/cloudfoundry/gosigar v1.3.116
 	github.com/containerd/cgroups/v3 v3.1.2
 	github.com/containerd/containerd/api v1.10.0
 	github.com/containerd/containerd/v2 v2.2.1
@@ -118,6 +118,6 @@ require (
 	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/tools v0.42.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260209200024-4cfbd4190f57 // indirect
-	google.golang.org/grpc v1.78.0 // indirect
+	google.golang.org/grpc v1.79.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
