@@ -266,6 +266,10 @@ func (cmd *CommonCommand) getCgroupRootPath() string {
 	return "garden"
 }
 
+func isCgroup2UnifiedMode() bool {
+	return cgroups.IsCgroup2UnifiedMode()
+}
+
 func containerdRuncRoot() string {
 	if root := getRuntimeDir(); root != "" {
 		return root
