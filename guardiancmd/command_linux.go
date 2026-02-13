@@ -215,10 +215,14 @@ func privilegedMounts() []specs.Mount {
 }
 
 func unprivilegedMounts() []specs.Mount {
-	return []specs.Mount{
+	mounts := []specs.Mount{
 		{Destination: "/proc", Type: "proc", Source: "proc", Options: []string{"nosuid", "noexec", "nodev"}},
-		{Destination: "/sys/fs/cgroup", Type: "cgroup", Source: "cgroup", Options: []string{"ro", "nosuid", "noexec", "nodev"}},
 	}
+
+	if !cgroups.IsCgroup2UnifiedMode() {
+		mounts = append(mounts, specs.Mount{Destination: "/sys/fs/cgroup", Type: "cgroup", Source: "cgroup", Options: []string{"ro", "nosuid", "noexec", "nodev"}})
+	}
+	return mounts
 }
 
 func getPrivilegedDevices() []specs.LinuxDevice {
@@ -264,10 +268,6 @@ func (cmd *CommonCommand) getCgroupRootPath() string {
 		return "/garden"
 	}
 	return "garden"
-}
-
-func isCgroup2UnifiedMode() bool {
-	return cgroups.IsCgroup2UnifiedMode()
 }
 
 func containerdRuncRoot() string {

@@ -46,6 +46,7 @@ import (
 	"code.cloudfoundry.org/localip"
 	"github.com/eapache/go-resiliency/retrier"
 	uuid "github.com/nu7hatch/gouuid"
+
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -512,10 +513,6 @@ func (cmd *CommonCommand) wireContainerizer(
 		WithRootFS(cmd.Containers.DefaultRootFS).
 		WithProcess(baseProcess).
 		WithRootFSPropagation("private")
-
-	if isCgroup2UnifiedMode() {
-		baseBundle = baseBundle.WithNamespace(goci.CgroupNamespace)
-	}
 
 	uidMappings, gidMappings := cmd.idMappings()
 	unprivilegedBundle := baseBundle.
