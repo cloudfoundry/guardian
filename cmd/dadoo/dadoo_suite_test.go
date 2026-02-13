@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"golang.org/x/sys/unix"
 )
 
 var (
@@ -78,7 +79,7 @@ func TestDadoo(t *testing.T) {
 		}
 
 		if gardencgroups.IsCgroup2UnifiedMode() {
-			Expect(syscall.Unmount(filepath.Join(cgroupsRoot, gardencgroups.Unified), 0)).To(Succeed())
+			Expect(syscall.Unmount(filepath.Join(cgroupsRoot, gardencgroups.Unified), unix.MNT_DETACH)).To(Succeed())
 		}
 		Expect(syscall.Unmount(cgroupsRoot, 0)).To(Succeed())
 		Expect(os.Remove(cgroupsRoot)).To(Succeed())

@@ -145,7 +145,7 @@ func teardownCgroups(cgroupsRoot string) {
 
 		fields := strings.Fields(line)
 		if fields[2] == "cgroup" {
-			Expect(unix.Unmount(fields[1], 0)).To(Succeed())
+			Expect(unix.Unmount(fields[1], unix.MNT_DETACH)).To(Succeed())
 		}
 	}
 
