@@ -164,6 +164,10 @@ func (cmd *CommonCommand) wireKernelParams() []rundmc.BundlerRule {
 	return []rundmc.BundlerRule{}
 }
 
+func isCgroup2UnifiedMode() bool {
+	return false
+}
+
 func (cmd *CommonCommand) getCgroupRootPath() string {
 	return "garden"
 }
