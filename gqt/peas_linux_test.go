@@ -196,9 +196,9 @@ var _ = Describe("Partially shared containers (peas)", func() {
 
 				JustBeforeEach(func() {
 					stdout := gbytes.NewBuffer()
-					_, err := ctr.Run(garden.ProcessSpec{
+					proc, err := ctr.Run(garden.ProcessSpec{
 						Path:  "sh",
-						Args:  []string{"-c", "cat /proc/self/cgroup && echo done && sleep 3600"},
+						Args:  []string{"-c", "echo done && sleep 3600"},
 						Image: garden.ImageRef{URI: "raw://" + peaRootfs},
 						OverrideContainerLimits: &garden.ProcessLimits{
 							CPU: garden.CPULimits{LimitInShares: 128},
@@ -209,12 +209,10 @@ var _ = Describe("Partially shared containers (peas)", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 					Eventually(stdout).Should(gbytes.Say("done"))
-					cgroupProcLines := strings.Split(string(stdout.Contents()), "\n")
-					var cgroupRelativePath string
-					Expect(cgroupProcLines).To(HaveLen(3))
-					procLineSections := strings.Split(cgroupProcLines[0], ":")
-					cgroupRelativePath = procLineSections[2]
-					cgroupPath = filepath.Join(gardencgroups.Root, cgroupRelativePath)
+
+					// In cgroups v2, with OverrideContainerLimits != nil, the process is put in its own cgroup with a name like
+					// /sys/fs/cgroup/garden/<process-id>
+					cgroupPath = filepath.Join(gardencgroups.Root, gardencgroups.Garden, proc.ID())
 				})
 
 				Context("when started with low cpu limit turned on", func() {
