@@ -21,6 +21,7 @@ import (
 	_ "github.com/containers/image/v5/oci/layout"
 	"github.com/containers/image/v5/pkg/blobinfocache/none"
 	"github.com/containers/image/v5/types"
+	"github.com/klauspost/compress/zstd"
 	digestpkg "github.com/opencontainers/go-digest"
 	errorspkg "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -143,14 +144,22 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 	blobIDHash := sha256.New()
 	digestReader := io.NopCloser(io.TeeReader(countingBlobReader, blobIDHash))
 	if layerInfo.MediaType == "" || strings.Contains(layerInfo.MediaType, "gzip") {
-		logger.Debug("uncompressing-blob")
+		logger.Debug("uncompressing-gzip-blob")
 
 		digestReader, err = gzip.NewReader(digestReader)
 		if err != nil {
 			return "", 0, errorspkg.Wrapf(err, "expected blob to be of type %s", layerInfo.MediaType)
 		}
 		defer digestReader.Close()
+	} else if strings.Contains(layerInfo.MediaType, "zstd") {
+		logger.Debug("uncompressing-zstd-blob")
 
+		zstdReader, err := zstd.NewReader(digestReader)
+		if err != nil {
+			return "", 0, errorspkg.Wrapf(err, "expected blob to be of type %s", layerInfo.MediaType)
+		}
+		defer zstdReader.Close()
+		digestReader = io.NopCloser(zstdReader)
 	}
 
 	if s.shouldEnforceImageQuotaValidation() {

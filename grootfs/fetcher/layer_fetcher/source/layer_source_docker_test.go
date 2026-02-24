@@ -1,8 +1,12 @@
 package source_test
 
 import (
+	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,6 +24,7 @@ import (
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	"github.com/containers/image/v5/types"
+	"github.com/klauspost/compress/zstd"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -513,6 +518,89 @@ var _ = Describe("Layer source: Docker", func() {
 
 			Eventually(sess.Out).Should(gbytes.Say("hello"))
 			Eventually(sess).Should(gexec.Exit(0))
+		})
+
+		Context("when the blob is zstd-compressed", func() {
+			var fakeRegistry *testhelpers.FakeRegistry
+
+			BeforeEach(func() {
+				dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
+				Expect(err).NotTo(HaveOccurred())
+				fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+
+				// Create a tar archive with a "hello" file
+				var tarBuf bytes.Buffer
+				tw := tar.NewWriter(&tarBuf)
+				helloContent := []byte("hello-zstd-content\n")
+				hdr := &tar.Header{
+					Name: "hello-zstd",
+					Mode: 0644,
+					Size: int64(len(helloContent)),
+				}
+				Expect(tw.WriteHeader(hdr)).To(Succeed())
+				_, err = tw.Write(helloContent)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(tw.Close()).To(Succeed())
+
+				tarContent := tarBuf.Bytes()
+
+				// Compute the diffID (sha256 of uncompressed tar)
+				diffIDHash := sha256.Sum256(tarContent)
+				diffID := hex.EncodeToString(diffIDHash[:])
+
+				// Compress with zstd
+				var zstdBuf bytes.Buffer
+				zstdWriter, err := zstd.NewWriter(&zstdBuf)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = zstdWriter.Write(tarContent)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(zstdWriter.Close()).To(Succeed())
+
+				zstdContent := zstdBuf.Bytes()
+
+				// Compute the blobID (sha256 of compressed content)
+				blobIDHash := sha256.Sum256(zstdContent)
+				blobID := "sha256:" + hex.EncodeToString(blobIDHash[:])
+
+				fakeRegistry.WhenGettingBlob(blobID, 0, func(rw http.ResponseWriter, req *http.Request) {
+					rw.Write(zstdContent)
+				})
+
+				fakeRegistry.Start()
+
+				baseImageURL, err = url.Parse(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
+				Expect(err).NotTo(HaveOccurred())
+
+				systemContext.DockerInsecureSkipTLSVerify = types.OptionalBoolTrue
+				skipOCILayerValidation = true
+
+				layerInfo = groot.LayerInfo{
+					BlobID:    blobID,
+					DiffID:    diffID,
+					MediaType: "application/vnd.oci.image.layer.v1.tar+zstd",
+					Size:      int64(len(zstdContent)),
+				}
+			})
+
+			AfterEach(func() {
+				fakeRegistry.Stop()
+			})
+
+			It("downloads and decompresses the zstd blob", func() {
+				Expect(blobErr).NotTo(HaveOccurred())
+
+				blobReader, err := os.Open(blobPath)
+				Expect(err).NotTo(HaveOccurred())
+				defer blobReader.Close()
+
+				cmd := exec.Command("tar", "tv")
+				cmd.Stdin = blobReader
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(sess.Out).Should(gbytes.Say("hello-zstd"))
+				Eventually(sess).Should(gexec.Exit(0))
+			})
 		})
 
 		Context("when the media type doesn't match the blob", func() {
