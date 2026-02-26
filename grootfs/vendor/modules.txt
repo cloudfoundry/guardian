@@ -3,8 +3,8 @@
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20260211024012-40002b8ede47 => ../idmapper
-## explicit; go 1.24.9
+# code.cloudfoundry.org/idmapper v0.0.0-20260226175926-21269ea66b58 => ../idmapper
+## explicit; go 1.25.0
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.61.0
 ## explicit; go 1.24.9
@@ -238,8 +238,8 @@ go.yaml.in/yaml/v3
 # golang.org/x/mod v0.33.0
 ## explicit; go 1.24.0
 golang.org/x/mod/semver
-# golang.org/x/net v0.50.0
-## explicit; go 1.24.0
+# golang.org/x/net v0.51.0
+## explicit; go 1.25.0
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
