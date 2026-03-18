@@ -156,7 +156,7 @@ type Manager struct {
 // NewManager returns a new instance of Manager, or nil if the Intel RDT
 // functionality is not specified in the config, available from hardware or
 // enabled in the kernel.
-func NewManager(config *configs.Config, id string, path string) *Manager {
+func NewManager(config *configs.Config, id, path string) *Manager {
 	if config.IntelRdt == nil {
 		return nil
 	}
@@ -184,7 +184,7 @@ func NewManager(config *configs.Config, id string, path string) *Manager {
 
 // newManager is the same as NewManager, except it does not check if the feature
 // is actually available. Used by unit tests that mock intelrdt paths.
-func newManager(config *configs.Config, id string, path string) *Manager {
+func newManager(config *configs.Config, id, path string) *Manager {
 	return &Manager{
 		config: config,
 		id:     id,
@@ -460,7 +460,7 @@ func (m *Manager) Apply(pid int) (err error) {
 		}
 	}
 
-	if err := os.Mkdir(path, 0o755); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(path, 0o755); err != nil && !errors.Is(err, os.ErrExist) {
 		return newLastCmdError(err)
 	}
 
@@ -470,7 +470,7 @@ func (m *Manager) Apply(pid int) (err error) {
 
 	// Create MON group
 	if monPath := m.GetMonPath(); monPath != "" {
-		if err := os.Mkdir(monPath, 0o755); err != nil && !os.IsExist(err) {
+		if err := os.Mkdir(monPath, 0o755); err != nil && !errors.Is(err, os.ErrExist) {
 			return newLastCmdError(err)
 		}
 		if err := WriteIntelRdtTasks(monPath, pid); err != nil {
@@ -493,14 +493,14 @@ func (m *Manager) Destroy() error {
 	if m.config.IntelRdt.ClosID == "" {
 		m.mu.Lock()
 		defer m.mu.Unlock()
-		if err := os.Remove(m.GetPath()); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(m.GetPath()); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
 		m.path = ""
 	} else if monPath := m.GetMonPath(); monPath != "" {
 		// If ClosID is not specified the possible monintoring group was
 		// removed with the CLOS above.
-		if err := os.Remove(monPath); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(monPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
 	}

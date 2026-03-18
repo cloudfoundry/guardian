@@ -31,7 +31,7 @@ TRIMPATH := -trimpath
 
 GO_BUILDMODE :=
 # Enable dynamic PIE executables on supported platforms.
-ifneq (,$(filter $(GOARCH),386 amd64 arm arm64 ppc64le riscv64 s390x))
+ifneq (,$(filter $(GOARCH),386 amd64 arm arm64 loong64 ppc64le riscv64 s390x))
 	ifeq (,$(findstring -race,$(EXTRA_FLAGS)))
 		GO_BUILDMODE := "-buildmode=pie"
 	endif
@@ -56,7 +56,7 @@ GO_BUILD_STATIC := $(GO) build $(TRIMPATH) $(GO_BUILDMODE_STATIC) \
 	$(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS_STATIC) $(EXTRA_LDFLAGS)"
 
-GPG_KEYID ?= asarai@suse.de
+GPG_KEYID ?= cyphar@cyphar.com
 
 # Some targets need cgo, which is disabled by default when cross compiling.
 # Enable cgo explicitly for those.

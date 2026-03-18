@@ -142,7 +142,7 @@ func security(config *configs.Config) error {
 
 func namespaces(config *configs.Config) error {
 	if config.Namespaces.Contains(configs.NEWUSER) {
-		if _, err := os.Stat("/proc/self/ns/user"); os.IsNotExist(err) {
+		if _, err := os.Stat("/proc/self/ns/user"); errors.Is(err, os.ErrNotExist) {
 			return errors.New("user namespaces aren't enabled in the kernel")
 		}
 		hasPath := config.Namespaces.PathOf(configs.NEWUSER) != ""
@@ -160,13 +160,13 @@ func namespaces(config *configs.Config) error {
 	}
 
 	if config.Namespaces.Contains(configs.NEWCGROUP) {
-		if _, err := os.Stat("/proc/self/ns/cgroup"); os.IsNotExist(err) {
+		if _, err := os.Stat("/proc/self/ns/cgroup"); errors.Is(err, os.ErrNotExist) {
 			return errors.New("cgroup namespaces aren't enabled in the kernel")
 		}
 	}
 
 	if config.Namespaces.Contains(configs.NEWTIME) {
-		if _, err := os.Stat("/proc/self/timens_offsets"); os.IsNotExist(err) {
+		if _, err := os.Stat("/proc/self/timens_offsets"); errors.Is(err, os.ErrNotExist) {
 			return errors.New("time namespaces aren't enabled in the kernel")
 		}
 		hasPath := config.Namespaces.PathOf(configs.NEWTIME) != ""
@@ -490,16 +490,16 @@ func memoryPolicy(config *configs.Config) error {
 		return nil
 	}
 	switch mpol.Mode {
-	case configs.MPOL_DEFAULT, configs.MPOL_LOCAL:
+	case unix.MPOL_DEFAULT, unix.MPOL_LOCAL:
 		if mpol.Nodes != nil && mpol.Nodes.Count() != 0 {
 			return fmt.Errorf("memory policy mode requires 0 nodes but got %d", mpol.Nodes.Count())
 		}
-	case configs.MPOL_BIND, configs.MPOL_INTERLEAVE,
-		configs.MPOL_PREFERRED_MANY, configs.MPOL_WEIGHTED_INTERLEAVE:
+	case unix.MPOL_BIND, unix.MPOL_INTERLEAVE,
+		unix.MPOL_PREFERRED_MANY, unix.MPOL_WEIGHTED_INTERLEAVE:
 		if mpol.Nodes == nil || mpol.Nodes.Count() == 0 {
 			return fmt.Errorf("memory policy mode requires at least one node but got 0")
 		}
-	case configs.MPOL_PREFERRED:
+	case unix.MPOL_PREFERRED:
 		// Zero or more nodes are allowed by the kernel.
 	default:
 		return fmt.Errorf("invalid memory policy mode: %d", mpol.Mode)
