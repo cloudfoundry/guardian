@@ -1,5 +1,5 @@
-code.cloudfoundry.org/commandrunner v0.58.0 h1:tLc7eynLSWnmn0CNDbTGwWR6WloAnRyDqb7WNjJ8SqM=
-code.cloudfoundry.org/commandrunner v0.58.0/go.mod h1:BY6Z+tRPfI1CLHMOfbTi+EBAySJMbHNJpKXPsji32aU=
+code.cloudfoundry.org/commandrunner v0.59.0 h1:bq2MzVIHQvP8plJfXhIFZm5DsamRWJEAOB/FS4D0BwQ=
+code.cloudfoundry.org/commandrunner v0.59.0/go.mod h1:sExa9fC/gfABCqJAljzwsJoOjy/Itx9jhbUUX/FCPhg=
 code.cloudfoundry.org/lager/v3 v3.64.0 h1:h+wI/FYDp9H702C/AuxOsrGc6nOVA4xCq3FeMtS5y40=
 code.cloudfoundry.org/lager/v3 v3.64.0/go.mod h1:kbKfKoR3YFCG1GFmpehwecitntPmIWqGF3MjgelUt8Q=
 github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk=
