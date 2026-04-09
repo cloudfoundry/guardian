@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased 1.4.z]
 
+## [1.4.2] - 2026-04-02
+
+> Я — Земля! Я своих провожаю питомцев.
+
+### Fixed ###
+- A regression in runc v1.3.0 which can result in a stuck `runc exec` or
+  `runc run` when the container process runs for a short time. (#5208,
+  #5210, #5216)
+- Mount sources that need to be open on the host are now closed earlier during
+  container start, reducing the total amount of used file descriptors and
+  helping to avoid hitting the open files limit when handling many such mounts.
+  (#5177, #5201)
+
 ## [1.4.1] - 2026-03-12
 
 > La guerre n'est pas une aventure. La guerre est une maladie. Comme le typhus.
@@ -90,6 +103,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - libct: switch to `(*CPUSet).Fill`. (#4927)
 - docs/spec-conformance.md: update for spec v1.3.0. (#4948)
+- Errors from `runc init` have historically been quite painful to understand
+  and debug, we have made several improvements to make them more comprehensive
+  and thus useful when debugging issues. (#5040, #4951, #4928)
 
 [CVE-2025-52881]: https://github.com/opencontainers/runc/security/advisories/GHSA-cgrx-mc8f-2prm
 
@@ -1463,7 +1479,8 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
 
 <!-- 1.4.z patch releases -->
-[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.1...release-1.4
+[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.2...release-1.4
+[1.4.2]: https://github.com/opencontainers/runc/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.4.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.2...v1.4.0-rc.3
