@@ -106,6 +106,23 @@ var _ = Describe("LinuxContainerNetworkMetricsProvider", func() {
 			Expect(actualNetworkMetrics.RxBytes).To(BeNumerically("~", 4096, 1000))
 		})
 
+		Context("when the container is a healthcheck container", func() {
+			BeforeEach(func() {
+				propertyManager.GetStub = func(h string, key string) (string, bool) {
+					if key == "network.healthcheck" {
+						return "true", true
+					}
+					return linkName, true
+				}
+			})
+
+			It("should return nil", func() {
+				actualNetworkMetrics, err := networkMetricsProvider.Get(logger, handle)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(actualNetworkMetrics).To(BeNil())
+			})
+		})
+
 		Context("when the network interface name is not stored in the property manager", func() {
 			BeforeEach(func() {
 				propertyManager.GetReturns("", false)
