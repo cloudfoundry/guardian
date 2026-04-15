@@ -1,12 +1,12 @@
-# code.cloudfoundry.org/commandrunner v0.59.0
+# code.cloudfoundry.org/commandrunner v0.60.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20260408024822-eda0e1f1fdfe => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20260415024909-a37c3c13fc35 => ../idmapper
 ## explicit; go 1.25.0
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.65.0
+# code.cloudfoundry.org/lager/v3 v3.66.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
@@ -279,7 +279,7 @@ golang.org/x/text/internal/utf8internal
 golang.org/x/text/language
 golang.org/x/text/runes
 golang.org/x/text/transform
-# golang.org/x/tools v0.43.0
+# golang.org/x/tools v0.44.0
 ## explicit; go 1.25.0
 golang.org/x/tools/cover
 golang.org/x/tools/go/ast/edge

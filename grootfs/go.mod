@@ -3,9 +3,9 @@ module code.cloudfoundry.org/grootfs
 go 1.25.0
 
 require (
-	code.cloudfoundry.org/commandrunner v0.59.0
-	code.cloudfoundry.org/idmapper v0.0.0-20260408024822-eda0e1f1fdfe
-	code.cloudfoundry.org/lager/v3 v3.65.0
+	code.cloudfoundry.org/commandrunner v0.60.0
+	code.cloudfoundry.org/idmapper v0.0.0-20260415024909-a37c3c13fc35
+	code.cloudfoundry.org/lager/v3 v3.66.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20251217143644-d1670a435f2a
 	github.com/containers/image/v5 v5.36.2
@@ -56,7 +56,7 @@ require (
 	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
-	golang.org/x/tools v0.43.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
