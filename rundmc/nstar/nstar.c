@@ -17,7 +17,11 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 #include <linux/sched.h>
-#include <linux/fcntl.h>
+#include <fcntl.h>
+
+#ifndef AT_EMPTY_PATH
+#define AT_EMPTY_PATH 0x1000
+#endif
 
 #include "pwd.h"
 
