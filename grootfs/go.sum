@@ -1,7 +1,7 @@
 code.cloudfoundry.org/commandrunner v0.61.0 h1:5fZpmBtFmvJq+ASWm4pav2+5g6RzKyfXS2nj3EUja6c=
 code.cloudfoundry.org/commandrunner v0.61.0/go.mod h1:Hr09rRmk61g/knTzQ0t9bx/7rsynFOqOz8U5rMzFtqI=
-code.cloudfoundry.org/lager/v3 v3.66.0 h1:OM9Zy+KCTUpanOfIlL4ac87po7VlBZEq+Mdf32VBi/g=
-code.cloudfoundry.org/lager/v3 v3.66.0/go.mod h1:d+HET0t/G9vf8+sxAzhauv313xbfv8molPzY4uNb7vo=
+code.cloudfoundry.org/lager/v3 v3.67.0 h1:UqWgVvHWvfGn8ik1VcWraj5SO6KMa+zMODFGCs3hVdg=
+code.cloudfoundry.org/lager/v3 v3.67.0/go.mod h1:DF0T7g0O/yuMjwZPI1HizUcoiRVi1k5Sdph90qQpg8M=
 github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk=
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1Xbatp0=
@@ -104,10 +104,10 @@ github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e h1:fD57ERR4JtEqsWb
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d h1:VhgPp6v9qf9Agr/56bj7Y/xa04UccTW04VP0Qed4vnQ=
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d/go.mod h1:YUTz3bUH2ZwIWBy3CJBeOBEugqcmXREj14T+iG/4k4U=
-github.com/onsi/ginkgo/v2 v2.28.1 h1:S4hj+HbZp40fNKuLUQOYLDgZLwNUVn19N3Atb98NCyI=
-github.com/onsi/ginkgo/v2 v2.28.1/go.mod h1:CLtbVInNckU3/+gC8LzkGUb9oF+e8W8TdUsxPwvdOgE=
-github.com/onsi/gomega v1.39.1 h1:1IJLAad4zjPn2PsnhH70V4DKRFlrCzGBNrNaru+Vf28=
-github.com/onsi/gomega v1.39.1/go.mod h1:hL6yVALoTOxeWudERyfppUcZXjMwIMLnuSfruD2lcfg=
+github.com/onsi/ginkgo/v2 v2.28.3 h1:4JvMdwtFU0imd8fHx25OJXoDMRexnf8v5NHKYSTTji4=
+github.com/onsi/ginkgo/v2 v2.28.3/go.mod h1:+aXOY+vzZ5mu2iI2HpTZUPmM//oQfsNFX6gU9kNcA44=
+github.com/onsi/gomega v1.40.0 h1:Vtol0e1MghCD2ZVIilPDIg44XSL9l2QAn8ZNaljWcJc=
+github.com/onsi/gomega v1.40.0/go.mod h1:M/Uqpu/8qTjtzCLUA2zJHX9Iilrau25x1PdoSRbWh5A=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.1 h1:y0fUlFfIZhPF1W537XOLg0/fcx6zcHCJwooC2xJA040=
