@@ -91,7 +91,7 @@ var privilegedMaxCaps = []string{
 var nonRootMaxCaps = append(unprivilegedMaxCaps, "CAP_SYS_ADMIN")
 
 var PrivilegedContainerNamespaces = []specs.LinuxNamespace{
-	goci.NetworkNamespace, goci.PIDNamespace, goci.UTSNamespace, goci.IPCNamespace, goci.MountNamespace,
+	goci.NetworkNamespace, goci.PIDNamespace, goci.UTSNamespace, goci.IPCNamespace, goci.MountNamespace, goci.CgroupNamespace,
 }
 
 var (
