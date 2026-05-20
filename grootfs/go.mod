@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	code.cloudfoundry.org/commandrunner v0.64.0
 	code.cloudfoundry.org/idmapper v0.0.0-20260513025238-0e3b22593587
-	code.cloudfoundry.org/lager/v3 v3.69.0
+	code.cloudfoundry.org/lager/v3 v3.70.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/sonde-go v0.0.0-20251217143644-d1670a435f2a
 	github.com/containers/image/v5 v5.36.2
@@ -14,8 +14,8 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/klauspost/compress v1.18.6
-	github.com/onsi/ginkgo/v2 v2.28.3
-	github.com/onsi/gomega v1.40.0
+	github.com/onsi/ginkgo/v2 v2.29.0
+	github.com/onsi/gomega v1.41.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/opencontainers/runtime-spec v1.3.0
