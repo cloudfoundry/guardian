@@ -11,18 +11,18 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.70.0
-	code.cloudfoundry.org/clock v1.70.0
+	code.cloudfoundry.org/archiver v0.71.0
+	code.cloudfoundry.org/clock v1.71.0
 	code.cloudfoundry.org/commandrunner v0.64.0
-	code.cloudfoundry.org/debugserver v0.96.0
-	code.cloudfoundry.org/garden v0.0.0-20260506025108-a2d6ae9c8f5b
+	code.cloudfoundry.org/debugserver v0.97.0
+	code.cloudfoundry.org/garden v0.0.0-20260513025144-9934e0066727
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20260513025238-0e3b22593587
-	code.cloudfoundry.org/lager/v3 v3.69.0
-	code.cloudfoundry.org/localip v0.71.0
+	code.cloudfoundry.org/lager/v3 v3.70.0
+	code.cloudfoundry.org/localip v0.72.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.118
+	github.com/cloudfoundry/gosigar v1.3.119
 	github.com/containerd/cgroups/v3 v3.1.3
 	github.com/containerd/containerd/api v1.11.0
 	github.com/containerd/containerd/v2 v2.3.0
@@ -37,8 +37,8 @@ require (
 	github.com/moby/sys/reexec v0.1.0
 	github.com/moby/sys/user v0.4.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo/v2 v2.28.3
-	github.com/onsi/gomega v1.40.0
+	github.com/onsi/ginkgo/v2 v2.29.0
+	github.com/onsi/gomega v1.41.0
 	github.com/opencontainers/cgroups v0.0.6
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
@@ -117,7 +117,7 @@ require (
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/tools v0.45.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260511170946-3700d4141b60 // indirect
-	google.golang.org/grpc v1.81.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260519071638-aa98bba5eb94 // indirect
+	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 )
