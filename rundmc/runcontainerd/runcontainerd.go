@@ -25,6 +25,7 @@ import (
 //counterfeiter:generate . ContainerManager
 type ContainerManager interface {
 	Create(log lager.Logger, containerID string, spec *specs.Spec, containerRootUID, containerRootGID uint32, processIO func() (io.Reader, io.Writer, io.Writer)) error
+	Start(log lager.Logger, containerID string) error
 	Delete(log lager.Logger, containerID string) error
 	Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer, bool)) (BackingProcess, error)
 	State(log lager.Logger, containerID string) (int, string, error)
@@ -149,6 +150,10 @@ func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pi
 	}
 
 	return nil
+}
+
+func (r *RunContainerd) Start(log lager.Logger, id string) error {
+	return r.containerManager.Start(log, id)
 }
 
 func updateAnnotationsIfNeeded(bundle *goci.Bndl) {

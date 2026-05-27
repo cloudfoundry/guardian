@@ -53,6 +53,7 @@ type State struct {
 
 type OCIRuntime interface {
 	Create(log lager.Logger, id string, bundle goci.Bndl, io garden.ProcessIO) error
+	Start(log lager.Logger, id string) error
 	Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, id, processId string, io garden.ProcessIO) (garden.Process, error)
 	Delete(log lager.Logger, id string) error
@@ -190,6 +191,11 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 	}
 
 	return nil
+}
+
+func (c *Containerizer) Start(log lager.Logger, handle string) error {
+	log = log.Session("containerizer-start", lager.Data{"handle": handle})
+	return c.runtime.Start(log, handle)
 }
 
 // Run runs a process inside a running container

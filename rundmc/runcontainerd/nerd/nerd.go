@@ -58,14 +58,18 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 	}
 
 	log.Debug("creating-task", lager.Data{"containerID": containerID})
-	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), client.WithNoNewKeyring, WithUIDAndGID(hostUID, hostGID))
+	_, err = container.NewTask(n.context, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), client.WithNoNewKeyring, WithUIDAndGID(hostUID, hostGID))
+	return err
+}
+
+func (n *Nerd) Start(log lager.Logger, containerID string) error {
+	_, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
 		return err
 	}
 
 	log.Debug("starting-task", lager.Data{"containerID": containerID})
-	err = task.Start(n.context)
-	if err != nil {
+	if err := task.Start(n.context); err != nil {
 		return err
 	}
 
