@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"regexp"
-	"strconv"
 
 	"code.cloudfoundry.org/guardian/rundmc"
 
@@ -175,17 +173,12 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 		return r.execer.ExecWithBndl(log, containerID, bundle, gardenProcessSpec, gardenIO)
 	}
 
-	containerPid, err := r.containerManager.GetContainerPID(log, containerID)
+	rootfsPath := bundle.Spec.Root.Path
+
+	resolvedUser, err := r.userLookupper.Lookup(rootfsPath, gardenProcessSpec.User)
 	if err != nil {
 		return nil, err
 	}
-
-	resolvedUser, err := r.userLookupper.Lookup(fmt.Sprintf("/proc/%d/root", containerPid), gardenProcessSpec.User)
-	if err != nil {
-		return nil, err
-	}
-
-	rootfsPath := filepath.Join("/proc", strconv.FormatInt(int64(containerPid), 10), "root")
 
 	hostUID := idmapper.MappingList(bundle.Spec.Linux.UIDMappings).Map(resolvedUser.Uid)
 	hostGID := idmapper.MappingList(bundle.Spec.Linux.GIDMappings).Map(resolvedUser.Gid)
