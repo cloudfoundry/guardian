@@ -73,6 +73,7 @@ var _ = Describe("Rundmc", func() {
 			0,
 			fakeRuntimeStopper,
 			fakeCPUCgrouper,
+			"",
 		)
 	})
 
@@ -664,6 +665,7 @@ var _ = Describe("Rundmc", func() {
 					entitlementPerSharePercent,
 					fakeRuntimeStopper,
 					fakeCPUCgrouper,
+					"",
 				)
 			})
 
