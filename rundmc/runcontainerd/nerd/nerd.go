@@ -49,7 +49,7 @@ func New(client *client.Client, context context.Context, ioFifoDir string, mp *m
 func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, hostUID, hostGID uint32, pio func() (io.Reader, io.Writer, io.Writer)) error {
 	log.Debug("creating-container", lager.Data{"containerID": containerID})
 	if n.runtimeType != "" && n.runtimeType != plugins.RuntimeRuncV2 {
-		spec.Windows = nil
+		spec.Windows = nil // runsc rejects the Windows section
 	}
 	container, err := n.client.NewContainer(n.context, containerID, client.WithSpec(spec))
 	if err != nil {
@@ -66,6 +66,7 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 	log.Debug("creating-task", lager.Data{"containerID": containerID})
 	var taskOpts []client.NewTaskOpts
 	if n.runtimeType == "" || n.runtimeType == plugins.RuntimeRuncV2 {
+		// runsc manages its own keyring and UID/GID via the OCI spec
 		taskOpts = append(taskOpts, client.WithNoNewKeyring, WithUIDAndGID(hostUID, hostGID))
 	}
 	_, err = container.NewTask(n.context, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), taskOpts...)

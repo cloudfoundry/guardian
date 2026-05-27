@@ -61,7 +61,6 @@ func New(
 	}
 }
 
-func (r *RunRunc) Start(log lager.Logger, id string) error {
-	log.Debug("start-noop-for-runc", lager.Data{"id": id})
+func (r *RunRunc) Start(_ lager.Logger, _ string) error {
 	return nil
 }
