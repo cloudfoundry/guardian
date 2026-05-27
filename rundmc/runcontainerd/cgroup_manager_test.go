@@ -72,8 +72,8 @@ var _ = Describe("CgroupManager", func() {
 				containerHandle = "foo"
 			})
 
-			It("returns an error", func() {
-				Expect(setErr).To(HaveOccurred())
+			It("returns nil (tolerates missing state for gVisor)", func() {
+				Expect(setErr).NotTo(HaveOccurred())
 			})
 		})
 
