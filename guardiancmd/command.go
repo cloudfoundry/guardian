@@ -693,7 +693,14 @@ func (cmd *CommonCommand) wireContainerizer(
 		return nil, nil, err
 	}
 
-	return rundmc.New(depot, template, ociRuntime, nstar, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper, cpuCgrouper, cmd.Containerd.RuntimeType), peaCleaner, nil
+	var streamer rundmc.Streamer
+	if cmd.Containerd.RuntimeType != "" && cmd.Containerd.RuntimeType != "io.containerd.runc.v2" {
+		streamer = rundmc.NewExecStreamer(ociRuntime)
+	} else {
+		streamer = rundmc.NewNstarStreamer(ociRuntime, nstar)
+	}
+
+	return rundmc.New(depot, template, ociRuntime, streamer, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper, cpuCgrouper), peaCleaner, nil
 }
 
 func (cmd *CommonCommand) useContainerd() bool {

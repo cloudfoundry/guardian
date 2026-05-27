@@ -1,11 +1,9 @@
 package rundmc
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -111,7 +109,7 @@ type Containerizer struct {
 	bundler                BundleGenerator
 	runtime                OCIRuntime
 	processesStopper       ProcessesStopper
-	nstar                  NstarRunner
+	streamer               Streamer
 	events                 EventStore
 	states                 StateStore
 	peaCreator             PeaCreator
@@ -119,14 +117,13 @@ type Containerizer struct {
 	cpuEntitlementPerShare float64
 	runtimeStopper         RuntimeStopper
 	cpuCgrouper            CPUCgrouper
-	runtimeType            string
 }
 
 func New(
 	depot Depot,
 	bundler BundleGenerator,
 	runtime OCIRuntime,
-	nstarRunner NstarRunner,
+	streamer Streamer,
 	processesStopper ProcessesStopper,
 	events EventStore,
 	states StateStore,
@@ -135,13 +132,12 @@ func New(
 	cpuEntitlementPerShare float64,
 	runtimeStopper RuntimeStopper,
 	cpuCgrouper CPUCgrouper,
-	runtimeType string,
 ) *Containerizer {
 	containerizer := &Containerizer{
 		depot:                  depot,
 		bundler:                bundler,
 		runtime:                runtime,
-		nstar:                  nstarRunner,
+		streamer:               streamer,
 		processesStopper:       processesStopper,
 		events:                 events,
 		states:                 states,
@@ -150,7 +146,6 @@ func New(
 		cpuEntitlementPerShare: cpuEntitlementPerShare,
 		runtimeStopper:         runtimeStopper,
 		cpuCgrouper:            cpuCgrouper,
-		runtimeType:            runtimeType,
 	}
 	return containerizer
 }
@@ -259,51 +254,7 @@ func (c *Containerizer) StreamIn(log lager.Logger, handle string, spec garden.St
 		_ = metrics.SendValue("StreamInDuration", float64(time.Since(startedAt).Nanoseconds()), "nanos")
 	}(time.Now())
 
-	if c.isNonRuncRuntime() {
-		return c.streamInViaExec(log, handle, spec)
-	}
-
-	state, err := c.runtime.State(log, handle)
-	if err != nil {
-		log.Error("check-pid-failed", err)
-		return fmt.Errorf("stream-in: pid not found for container")
-	}
-
-	if err := c.nstar.StreamIn(log, state.Pid, spec.Path, spec.User, spec.TarStream); err != nil {
-		log.Error("nstar-failed", err)
-		return fmt.Errorf("stream-in: nstar: %s", err)
-	}
-
-	return nil
-}
-
-func (c *Containerizer) streamInViaExec(log lager.Logger, handle string, spec garden.StreamInSpec) error {
-	user := spec.User
-	if user == "" {
-		user = "root"
-	}
-
-	if err := c.execAndWait(log, handle, garden.ProcessSpec{
-		Path: "/bin/mkdir",
-		Args: []string{"-p", spec.Path},
-		User: user,
-	}, garden.ProcessIO{Stdout: io.Discard, Stderr: io.Discard}); err != nil {
-		return fmt.Errorf("stream-in: mkdir: %s", err)
-	}
-
-	var stderrBuf bytes.Buffer
-	if err := c.execAndWait(log, handle, garden.ProcessSpec{
-		Path: "/bin/tar",
-		Args: []string{"-xf", "-", "-C", spec.Path},
-		User: user,
-	}, garden.ProcessIO{Stdin: spec.TarStream, Stdout: io.Discard, Stderr: &stderrBuf}); err != nil {
-		if stderrBuf.Len() > 0 {
-			log.Error("stream-in-tar-stderr", fmt.Errorf("%s", stderrBuf.String()))
-		}
-		return fmt.Errorf("stream-in: tar: %s", err)
-	}
-
-	return nil
+	return c.streamer.StreamIn(log, handle, spec)
 }
 
 // StreamOut stream files from the container
@@ -313,84 +264,7 @@ func (c *Containerizer) StreamOut(log lager.Logger, handle string, spec garden.S
 	log.Info("started")
 	defer log.Info("finished")
 
-	if c.isNonRuncRuntime() {
-		return c.streamOutViaExec(log, handle, spec)
-	}
-
-	state, err := c.runtime.State(log, handle)
-	if err != nil {
-		log.Error("check-pid-failed", err)
-		return nil, fmt.Errorf("stream-out: pid not found for container")
-	}
-
-	stream, err := c.nstar.StreamOut(log, state.Pid, spec.Path, spec.User)
-	if err != nil {
-		log.Error("nstar-failed", err)
-		return nil, fmt.Errorf("stream-out: nstar: %s", err)
-	}
-
-	return stream, nil
-}
-
-func (c *Containerizer) streamOutViaExec(log lager.Logger, handle string, spec garden.StreamOutSpec) (io.ReadCloser, error) {
-	path := spec.Path
-	sourcePath := filepath.Dir(path)
-	compressPath := filepath.Base(path)
-	if strings.HasSuffix(path, "/") {
-		sourcePath = path
-		compressPath = "."
-	}
-
-	reader, writer, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-
-	user := spec.User
-	if user == "" {
-		user = "root"
-	}
-
-	var stderrBuf bytes.Buffer
-	process, err := c.runtime.Exec(log, handle, garden.ProcessSpec{
-		Path: "/bin/tar",
-		Args: []string{"-cf", "-", "-C", sourcePath, compressPath},
-		User: user,
-	}, garden.ProcessIO{Stdout: writer, Stderr: &stderrBuf})
-	if err != nil {
-		writer.Close()
-		reader.Close()
-		return nil, fmt.Errorf("stream-out: exec tar: %s", err)
-	}
-
-	go func() {
-		exitCode, waitErr := process.Wait()
-		if waitErr != nil || exitCode != 0 {
-			log.Error("stream-out-tar-failed", fmt.Errorf("exit=%d stderr=%s", exitCode, stderrBuf.String()))
-		}
-		writer.Close()
-	}()
-
-	return reader, nil
-}
-
-func (c *Containerizer) isNonRuncRuntime() bool {
-	return c.runtimeType != "" && c.runtimeType != "io.containerd.runc.v2"
-}
-
-func (c *Containerizer) execAndWait(log lager.Logger, handle string, spec garden.ProcessSpec, pio garden.ProcessIO) error {
-	process, err := c.runtime.Exec(log, handle, spec, pio)
-	if err != nil {
-		return err
-	}
-	exitCode, err := process.Wait()
-	if err != nil {
-		return err
-	}
-	if exitCode != 0 {
-		return fmt.Errorf("exited %d", exitCode)
-	}
-	return nil
+	return c.streamer.StreamOut(log, handle, spec)
 }
 
 // Stop stops all the processes other than the init process in the container

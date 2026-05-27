@@ -64,7 +64,7 @@ var _ = Describe("Rundmc", func() {
 			fakeDepot,
 			fakeBundleGenerator,
 			fakeOCIRuntime,
-			fakeNstarRunner,
+			rundmc.NewNstarStreamer(fakeOCIRuntime, fakeNstarRunner),
 			fakeProcessesStopper,
 			fakeEventStore,
 			fakeStateStore,
@@ -73,7 +73,6 @@ var _ = Describe("Rundmc", func() {
 			0,
 			fakeRuntimeStopper,
 			fakeCPUCgrouper,
-			"",
 		)
 	})
 
@@ -656,7 +655,7 @@ var _ = Describe("Rundmc", func() {
 					fakeDepot,
 					fakeBundleGenerator,
 					fakeOCIRuntime,
-					fakeNstarRunner,
+					rundmc.NewNstarStreamer(fakeOCIRuntime, fakeNstarRunner),
 					fakeProcessesStopper,
 					fakeEventStore,
 					fakeStateStore,
@@ -665,7 +664,6 @@ var _ = Describe("Rundmc", func() {
 					entitlementPerSharePercent,
 					fakeRuntimeStopper,
 					fakeCPUCgrouper,
-					"",
 				)
 			})
 
