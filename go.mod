@@ -1,6 +1,6 @@
 module code.cloudfoundry.org/guardian
 
-go 1.26.2
+go 1.26.3
 
 replace (
 	code.cloudfoundry.org/garden => ../garden
@@ -11,21 +11,21 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.71.0
-	code.cloudfoundry.org/clock v1.71.0
+	code.cloudfoundry.org/archiver v0.72.0
+	code.cloudfoundry.org/clock v1.72.0
 	code.cloudfoundry.org/commandrunner v0.64.0
-	code.cloudfoundry.org/debugserver v0.97.0
-	code.cloudfoundry.org/garden v0.0.0-20260513025144-9934e0066727
+	code.cloudfoundry.org/debugserver v0.98.0
+	code.cloudfoundry.org/garden v0.0.0-20260520025236-3c8c94cab4c6
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20260513025238-0e3b22593587
-	code.cloudfoundry.org/lager/v3 v3.70.0
-	code.cloudfoundry.org/localip v0.72.0
+	code.cloudfoundry.org/idmapper v0.0.0-20260520025353-0ce64a3016c8
+	code.cloudfoundry.org/lager/v3 v3.71.0
+	code.cloudfoundry.org/localip v0.73.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.119
+	github.com/cloudfoundry/gosigar v1.3.120
 	github.com/containerd/cgroups/v3 v3.1.3
-	github.com/containerd/containerd/api v1.11.0
-	github.com/containerd/containerd/v2 v2.3.0
+	github.com/containerd/containerd/api v1.11.1
+	github.com/containerd/containerd/v2 v2.3.1
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/typeurl/v2 v2.2.3
 	github.com/eapache/go-resiliency v1.7.0
@@ -51,7 +51,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
-	golang.org/x/sys v0.44.0
+	golang.org/x/sys v0.45.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -64,7 +64,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/checkpoint-restore/go-criu/v7 v7.2.0 // indirect
 	github.com/cilium/ebpf v0.21.0 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20251217143644-d1670a435f2a // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20260526083715-66f310f13c26 // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/containerd/continuity v0.5.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -98,7 +98,7 @@ require (
 	github.com/moby/sys/signal v0.7.1 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/mrunalp/fileutils v0.5.1 // indirect
-	github.com/opencontainers/selinux v1.14.1 // indirect
+	github.com/opencontainers/selinux v1.15.0 // indirect
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/seccomp/libseccomp-golang v0.11.1 // indirect
@@ -113,11 +113,11 @@ require (
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/mod v0.36.0 // indirect
-	golang.org/x/net v0.54.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/tools v0.45.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260519071638-aa98bba5eb94 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 )
