@@ -278,8 +278,8 @@ func (c *Containerizer) StreamIn(log lager.Logger, handle string, spec garden.St
 
 func (c *Containerizer) streamInViaExec(log lager.Logger, handle string, spec garden.StreamInSpec) error {
 	processSpec := garden.ProcessSpec{
-		Path: "/bin/tar",
-		Args: []string{"-xf", "-", "-C", spec.Path},
+		Path: "/bin/sh",
+		Args: []string{"-c", fmt.Sprintf("mkdir -p %q && exec tar -xf - -C %q", spec.Path, spec.Path)},
 		User: spec.User,
 	}
 	if processSpec.User == "" {
