@@ -60,3 +60,7 @@ func New(
 		BundleManager: bundleManager,
 	}
 }
+
+func (r *RunRunc) Start(log lager.Logger, id string) error {
+	return nil
+}

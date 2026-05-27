@@ -19,6 +19,7 @@ import (
 	apievents "github.com/containerd/containerd/api/events"
 	v2types "github.com/containerd/containerd/api/types/runc/options"
 	"github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/plugins"
 	ctrdevents "github.com/containerd/containerd/v2/core/events"
 	"github.com/containerd/containerd/v2/pkg/cio"
 	"github.com/containerd/errdefs"
@@ -28,23 +29,28 @@ import (
 )
 
 type Nerd struct {
-	client    *client.Client
-	context   context.Context
-	ioFifoDir string
-	mp        *metrics.MetricsProvider
+	client      *client.Client
+	context     context.Context
+	ioFifoDir   string
+	mp          *metrics.MetricsProvider
+	runtimeType string
 }
 
-func New(client *client.Client, context context.Context, ioFifoDir string, mp *metrics.MetricsProvider) *Nerd {
+func New(client *client.Client, context context.Context, ioFifoDir string, mp *metrics.MetricsProvider, runtimeType string) *Nerd {
 	return &Nerd{
-		client:    client,
-		context:   context,
-		ioFifoDir: ioFifoDir,
-		mp:        mp,
+		client:      client,
+		context:     context,
+		ioFifoDir:   ioFifoDir,
+		mp:          mp,
+		runtimeType: runtimeType,
 	}
 }
 
 func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, hostUID, hostGID uint32, pio func() (io.Reader, io.Writer, io.Writer)) error {
 	log.Debug("creating-container", lager.Data{"containerID": containerID})
+	if n.runtimeType != "" && n.runtimeType != plugins.RuntimeRuncV2 {
+		spec.Windows = nil
+	}
 	container, err := n.client.NewContainer(n.context, containerID, client.WithSpec(spec))
 	if err != nil {
 		return err
@@ -58,7 +64,11 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 	}
 
 	log.Debug("creating-task", lager.Data{"containerID": containerID})
-	_, err = container.NewTask(n.context, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), client.WithNoNewKeyring, WithUIDAndGID(hostUID, hostGID))
+	var taskOpts []client.NewTaskOpts
+	if n.runtimeType == "" || n.runtimeType == plugins.RuntimeRuncV2 {
+		taskOpts = append(taskOpts, client.WithNoNewKeyring, WithUIDAndGID(hostUID, hostGID))
+	}
+	_, err = container.NewTask(n.context, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), taskOpts...)
 	return err
 }
 
