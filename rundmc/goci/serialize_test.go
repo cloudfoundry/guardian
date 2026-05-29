@@ -19,13 +19,15 @@ var _ = Describe("Bundle Serialization", func() {
 		tmp                  string
 		bndle                goci.Bndl
 		bundleSaver          *goci.BundleSaver
+		notFoundRuntimeError map[string]string
+	)
+
+	BeforeEach(func() {
 		notFoundRuntimeError = map[string]string{
 			"linux":   "no such file or directory",
 			"windows": "The system cannot find the path specified.",
 		}
-	)
 
-	BeforeEach(func() {
 		var err error
 		tmp, err = os.MkdirTemp("", "gocitest")
 		Expect(err).NotTo(HaveOccurred())
