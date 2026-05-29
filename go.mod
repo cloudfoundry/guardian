@@ -15,9 +15,9 @@ require (
 	code.cloudfoundry.org/clock v1.72.0
 	code.cloudfoundry.org/commandrunner v0.64.0
 	code.cloudfoundry.org/debugserver v0.98.0
-	code.cloudfoundry.org/garden v0.0.0-20260520025236-3c8c94cab4c6
+	code.cloudfoundry.org/garden v0.0.0-20260527025323-7fe1cefbd6e8
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20260520025353-0ce64a3016c8
+	code.cloudfoundry.org/idmapper v0.0.0-20260527025501-169d392b867b
 	code.cloudfoundry.org/lager/v3 v3.71.0
 	code.cloudfoundry.org/localip v0.73.0
 	github.com/BurntSushi/toml v1.6.0
@@ -27,7 +27,7 @@ require (
 	github.com/containerd/containerd/api v1.11.1
 	github.com/containerd/containerd/v2 v2.3.1
 	github.com/containerd/errdefs v1.0.0
-	github.com/containerd/typeurl/v2 v2.2.3
+	github.com/containerd/typeurl/v2 v2.3.0
 	github.com/eapache/go-resiliency v1.7.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jessevdk/go-flags v1.6.1
@@ -84,7 +84,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20260507013755-92041b743c96 // indirect
@@ -107,10 +106,10 @@ require (
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0 // indirect
-	go.opentelemetry.io/otel v1.43.0 // indirect
-	go.opentelemetry.io/otel/metric v1.43.0 // indirect
-	go.opentelemetry.io/otel/trace v1.43.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0 // indirect
+	go.opentelemetry.io/otel v1.44.0 // indirect
+	go.opentelemetry.io/otel/metric v1.44.0 // indirect
+	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/mod v0.36.0 // indirect
 	golang.org/x/net v0.55.0 // indirect

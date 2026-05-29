@@ -15,7 +15,7 @@ code.cloudfoundry.org/commandrunner/windows_command_runner
 # code.cloudfoundry.org/debugserver v0.98.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20260520025236-3c8c94cab4c6 => ../garden
+# code.cloudfoundry.org/garden v0.0.0-20260527025323-7fe1cefbd6e8 => ../garden
 ## explicit; go 1.25.0
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
@@ -30,7 +30,7 @@ code.cloudfoundry.org/garden/transport
 # code.cloudfoundry.org/grootfs v0.30.0 => ../grootfs
 ## explicit; go 1.25.0
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20260520025353-0ce64a3016c8 => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20260527025501-169d392b867b => ../idmapper
 ## explicit; go 1.25.0
 code.cloudfoundry.org/idmapper
 # code.cloudfoundry.org/lager/v3 v3.71.0
@@ -272,7 +272,7 @@ github.com/containerd/plugin
 # github.com/containerd/ttrpc v1.2.8
 ## explicit; go 1.22
 github.com/containerd/ttrpc
-# github.com/containerd/typeurl/v2 v2.2.3
+# github.com/containerd/typeurl/v2 v2.3.0
 ## explicit; go 1.21
 github.com/containerd/typeurl/v2
 # github.com/coreos/go-systemd/v22 v22.7.0
@@ -320,9 +320,6 @@ github.com/go-task/slim-sprig/v3
 # github.com/godbus/dbus/v5 v5.2.2
 ## explicit; go 1.20
 github.com/godbus/dbus/v5
-# github.com/gogo/protobuf v1.3.2
-## explicit; go 1.15
-github.com/gogo/protobuf/proto
 # github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8
 ## explicit; go 1.20
 github.com/golang/groupcache/lru
@@ -552,12 +549,12 @@ go.opencensus.io/trace/tracestate
 ## explicit; go 1.24.0
 go.opentelemetry.io/auto/sdk
 go.opentelemetry.io/auto/sdk/internal/telemetry
-# go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
+# go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0
 ## explicit; go 1.25.0
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv
-# go.opentelemetry.io/otel v1.43.0
+# go.opentelemetry.io/otel v1.44.0
 ## explicit; go 1.25.0
 go.opentelemetry.io/otel
 go.opentelemetry.io/otel/attribute
@@ -570,14 +567,14 @@ go.opentelemetry.io/otel/internal/errorhandler
 go.opentelemetry.io/otel/internal/global
 go.opentelemetry.io/otel/propagation
 go.opentelemetry.io/otel/semconv/v1.37.0
-go.opentelemetry.io/otel/semconv/v1.40.0
-go.opentelemetry.io/otel/semconv/v1.40.0/httpconv
-# go.opentelemetry.io/otel/metric v1.43.0
+go.opentelemetry.io/otel/semconv/v1.41.0
+go.opentelemetry.io/otel/semconv/v1.41.0/httpconv
+# go.opentelemetry.io/otel/metric v1.44.0
 ## explicit; go 1.25.0
 go.opentelemetry.io/otel/metric
 go.opentelemetry.io/otel/metric/embedded
 go.opentelemetry.io/otel/metric/noop
-# go.opentelemetry.io/otel/trace v1.43.0
+# go.opentelemetry.io/otel/trace v1.44.0
 ## explicit; go 1.25.0
 go.opentelemetry.io/otel/trace
 go.opentelemetry.io/otel/trace/embedded
