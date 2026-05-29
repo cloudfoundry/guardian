@@ -160,6 +160,111 @@ var _ = Describe("Security", func() {
 		})
 	})
 
+	Describe("NoNewPrivileges", func() {
+		Context("when the --no-new-privileges flag is set", func() {
+			BeforeEach(func() {
+				config.NoNewPrivileges = boolptr(true)
+			})
+
+			Context("when running processes in unprivileged containers", func() {
+				var (
+					container garden.Container
+					err       error
+				)
+
+				JustBeforeEach(func() {
+					container, err = client.Create(garden.ContainerSpec{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should set NoNewPrivileges on the process", func() {
+					buffer := gbytes.NewBuffer()
+
+					_, err = container.Run(garden.ProcessSpec{
+						Path: "grep",
+						Args: []string{"NoNewPrivs", "/proc/self/status"},
+					}, garden.ProcessIO{
+						Stdout: io.MultiWriter(GinkgoWriter, buffer),
+						Stderr: GinkgoWriter,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Eventually(buffer).Should(gbytes.Say(`NoNewPrivs:\s+1`))
+				})
+
+				Context("when running a pea", func() {
+					var peaRootfs string
+
+					BeforeEach(func() {
+						peaRootfs = createPeaRootfsTar()
+					})
+
+					AfterEach(func() {
+						Expect(os.RemoveAll(filepath.Dir(peaRootfs))).To(Succeed())
+					})
+
+					It("should set NoNewPrivileges on the process", func() {
+						buffer := gbytes.NewBuffer()
+
+						_, err = container.Run(garden.ProcessSpec{
+							Path:  "grep",
+							Args:  []string{"NoNewPrivs", "/proc/self/status"},
+							Image: garden.ImageRef{URI: peaRootfs},
+						}, garden.ProcessIO{
+							Stdout: io.MultiWriter(GinkgoWriter, buffer),
+							Stderr: GinkgoWriter,
+						})
+						Expect(err).NotTo(HaveOccurred())
+
+						Eventually(buffer).Should(gbytes.Say(`NoNewPrivs:\s+1`))
+					})
+				})
+			})
+
+			Context("when running processes in privileged containers", func() {
+				It("should not set NoNewPrivileges", func() {
+					container, err := client.Create(garden.ContainerSpec{
+						Privileged: true,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					buffer := gbytes.NewBuffer()
+
+					_, err = container.Run(garden.ProcessSpec{
+						Path: "grep",
+						Args: []string{"NoNewPrivs", "/proc/self/status"},
+					}, garden.ProcessIO{
+						Stdout: io.MultiWriter(GinkgoWriter, buffer),
+						Stderr: GinkgoWriter,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Eventually(buffer).Should(gbytes.Say(`NoNewPrivs:\s+0`))
+				})
+			})
+		})
+
+		Context("when the --no-new-privileges flag is not set", func() {
+			It("should not set NoNewPrivileges on processes in unprivileged containers", func() {
+				container, err := client.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				buffer := gbytes.NewBuffer()
+
+				_, err = container.Run(garden.ProcessSpec{
+					Path: "grep",
+					Args: []string{"NoNewPrivs", "/proc/self/status"},
+				}, garden.ProcessIO{
+					Stdout: io.MultiWriter(GinkgoWriter, buffer),
+					Stderr: GinkgoWriter,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(buffer).Should(gbytes.Say(`NoNewPrivs:\s+0`))
+			})
+		})
+	})
+
 	Describe("ptrace in seccomp allow rules", func() {
 		It("should allow the ptrace syscall without CAP_SYS_PTRACE", func() {
 			container, err := client.Create(garden.ContainerSpec{

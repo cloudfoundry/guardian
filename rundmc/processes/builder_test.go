@@ -196,6 +196,20 @@ var _ = Describe("ProcBuilder", func() {
 					Expect(preparedProc.ApparmorProfile).To(Equal("default-profile"))
 				})
 
+				It("passes NoNewPrivileges from the bundle", func() {
+					Expect(preparedProc.NoNewPrivileges).To(BeFalse())
+				})
+
+				Context("when the bundle has NoNewPrivileges set", func() {
+					BeforeEach(func() {
+						bndl.Spec.Process.NoNewPrivileges = true
+					})
+
+					It("propagates NoNewPrivileges to the process", func() {
+						Expect(preparedProc.NoNewPrivileges).To(BeTrue())
+					})
+				})
+
 				It("passes the UID, GID and SGIDs", func() {
 					Expect(preparedProc.User.UID).To(Equal(uint32(1)))
 					Expect(preparedProc.User.GID).To(Equal(uint32(2)))

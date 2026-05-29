@@ -53,6 +53,7 @@ func (p *ProcBuilder) BuildProcess(bndl goci.Bndl, spec garden.ProcessSpec, user
 		Rlimits:         toRlimits(spec.Limits),
 		Terminal:        spec.TTY != nil,
 		ApparmorProfile: bndl.Process().ApparmorProfile,
+		NoNewPrivileges: bndl.Process().NoNewPrivileges,
 	}
 }
 

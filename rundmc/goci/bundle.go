@@ -70,6 +70,28 @@ func (b Bndl) WithApparmorProfile(profile string) Bndl {
 	return b
 }
 
+func (b Bndl) WithNoNewPrivileges() Bndl {
+	b.CloneProcess().Spec.Process.NoNewPrivileges = true
+	return b
+}
+
+// WithPingGroupRange permits all non-root GIDs to use unprivileged ICMP
+// sockets (SOCK_DGRAM IPPROTO_ICMP) inside the container. This restores the
+// ability to run ping when NoNewPrivileges is set, since NNP causes file
+// capabilities (cap_net_raw on /bin/ping) to be dropped on exec.
+//
+// The range is bounded by the container's user namespace GID mapping. GID 0
+// is excluded because in an unprivileged userns it maps to the host overflow
+// GID; the upper bound stays well inside the mapping (which extends to
+// 4294901757) so kernel make_kgid translation succeeds.
+func (b Bndl) WithPingGroupRange() Bndl {
+	if b.Spec.Linux.Sysctl == nil {
+		b.CloneLinux().Spec.Linux.Sysctl = map[string]string{}
+	}
+	b.Spec.Linux.Sysctl["net.ipv4.ping_group_range"] = "1 2147483647"
+	return b
+}
+
 func (b Bndl) WithRootFS(absolutePath string) Bndl {
 	b.Spec.Root = &specs.Root{Path: absolutePath}
 	return b
