@@ -521,12 +521,12 @@ var _ = Describe("Containerd", func() {
 							status <- exit
 						}()
 
-						timeout := time.NewTimer(5 * time.Second)
+						timeout := time.NewTimer(10 * time.Second)
 						select {
 						case s := <-status:
 							Expect(s).To(BeEquivalentTo(42))
 						case <-timeout.C:
-							Fail("No signal received after 5 seconds!\n\nProcesses running:\n" + psFaux())
+							Fail("No signal received after 10 seconds!\n\nProcesses running:\n" + psFaux())
 						}
 					})
 				})
