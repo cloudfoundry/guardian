@@ -667,15 +667,16 @@ func (cmd *CommonCommand) wireContainerizer(
 
 	peaCleaner := cmd.wirePeaCleaner(factory, volumizer, ociRuntime, peaPidGetter)
 	peaCreator = &peas.PeaCreator{
-		Volumizer:        volumizer,
-		PidGetter:        containersPidGetter,
-		PrivilegedGetter: privilegeChecker,
-		NetworkDepot:     networkDepot,
-		BundleGenerator:  template,
-		ProcessBuilder:   processBuilder,
-		BundleSaver:      bundleSaver,
-		ExecRunner:       peasExecRunner,
-		PeaCleaner:       peaCleaner,
+		Volumizer:         volumizer,
+		PidGetter:         containersPidGetter,
+		PrivilegedGetter:  privilegeChecker,
+		NetworkDepot:      networkDepot,
+		BundleGenerator:   template,
+		ProcessBuilder:    processBuilder,
+		BundleSaver:       bundleSaver,
+		ExecRunner:        peasExecRunner,
+		PeaCleaner:        peaCleaner,
+		SkipUserNamespace: cmd.Containerd.RuntimeType != "" && cmd.Containerd.RuntimeType != "io.containerd.runc.v2",
 	}
 
 	peaUsernameResolver := &peas.PeaUsernameResolver{
@@ -700,7 +701,8 @@ func (cmd *CommonCommand) wireContainerizer(
 		streamer = rundmc.NewNstarStreamer(ociRuntime, nstar)
 	}
 
-	return rundmc.New(depot, template, ociRuntime, streamer, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper, cpuCgrouper), peaCleaner, nil
+	execPeas := cmd.Containerd.RuntimeType != "" && cmd.Containerd.RuntimeType != "io.containerd.runc.v2"
+	return rundmc.New(depot, template, ociRuntime, streamer, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper, cpuCgrouper, execPeas), peaCleaner, nil
 }
 
 func (cmd *CommonCommand) useContainerd() bool {

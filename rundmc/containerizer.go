@@ -117,6 +117,7 @@ type Containerizer struct {
 	cpuEntitlementPerShare float64
 	runtimeStopper         RuntimeStopper
 	cpuCgrouper            CPUCgrouper
+	execPeas               bool
 }
 
 func New(
@@ -132,6 +133,7 @@ func New(
 	cpuEntitlementPerShare float64,
 	runtimeStopper RuntimeStopper,
 	cpuCgrouper CPUCgrouper,
+	execPeas bool,
 ) *Containerizer {
 	containerizer := &Containerizer{
 		depot:                  depot,
@@ -146,6 +148,7 @@ func New(
 		cpuEntitlementPerShare: cpuEntitlementPerShare,
 		runtimeStopper:         runtimeStopper,
 		cpuCgrouper:            cpuCgrouper,
+		execPeas:               execPeas,
 	}
 	return containerizer
 }
@@ -206,6 +209,16 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 	defer log.Info("finished")
 
 	if isPea(spec) {
+		if c.execPeas {
+			// On gVisor, peas (sidecar containers) cannot share namespaces across
+			// sandboxes. Run the process as exec inside the existing container instead.
+			// The required binaries (healthcheck, etc.) are already bind-mounted in.
+			log.Info("exec-pea-as-process", lager.Data{"path": spec.Path})
+			spec.Image = garden.ImageRef{}
+			spec.BindMounts = nil
+			return c.runtime.Exec(log, handle, spec, io)
+		}
+
 		if shouldResolveUsername(spec.User) {
 			resolvedUID, resolvedGID, err := c.peaUsernameResolver.ResolveUser(log, handle, spec.Image, spec.User)
 			if err != nil {
