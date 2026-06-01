@@ -97,7 +97,7 @@ require (
 	github.com/moby/sys/signal v0.7.1 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/mrunalp/fileutils v0.5.1 // indirect
-	github.com/opencontainers/selinux v1.15.0 // indirect
+	github.com/opencontainers/selinux v1.15.1 // indirect
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/seccomp/libseccomp-golang v0.11.1 // indirect
