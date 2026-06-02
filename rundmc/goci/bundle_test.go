@@ -66,6 +66,44 @@ var _ = Describe("Bundle", func() {
 		})
 	})
 
+	Describe("WithNoNewPrivileges", func() {
+		It("sets NoNewPrivileges on the process", func() {
+			returnedBundle := initialBundle.WithNoNewPrivileges()
+			Expect(returnedBundle.Spec.Process.NoNewPrivileges).To(BeTrue())
+		})
+
+		It("does not modify the initial bundle", func() {
+			initialBundle.WithNoNewPrivileges()
+			Expect(initialBundle.Spec.Process.NoNewPrivileges).To(BeFalse())
+		})
+	})
+
+	Describe("WithPingGroupRange", func() {
+		It("sets net.ipv4.ping_group_range to the permissive range", func() {
+			returnedBundle := initialBundle.WithPingGroupRange()
+			Expect(returnedBundle.Spec.Linux.Sysctl).To(HaveKeyWithValue("net.ipv4.ping_group_range", "1 65535"))
+		})
+
+		It("does not modify the initial bundle", func() {
+			initialBundle.WithPingGroupRange()
+			Expect(initialBundle.Spec.Linux.Sysctl).NotTo(HaveKey("net.ipv4.ping_group_range"))
+		})
+
+		Context("when the bundle already has other sysctls", func() {
+			BeforeEach(func() {
+				initialBundle.Spec.Linux.Sysctl = map[string]string{
+					"net.ipv4.tcp_keepalive_time": "60",
+				}
+			})
+
+			It("preserves the existing sysctls", func() {
+				returnedBundle := initialBundle.WithPingGroupRange()
+				Expect(returnedBundle.Spec.Linux.Sysctl).To(HaveKeyWithValue("net.ipv4.tcp_keepalive_time", "60"))
+				Expect(returnedBundle.Spec.Linux.Sysctl).To(HaveKeyWithValue("net.ipv4.ping_group_range", "1 65535"))
+			})
+		})
+	})
+
 	Describe("WithProcess", func() {
 		It("adds the process to the bundle", func() {
 			returnedBundle := initialBundle.WithProcess(goci.Process("echo", "foo"))

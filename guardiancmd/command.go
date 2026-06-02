@@ -117,6 +117,7 @@ type CommonCommand struct {
 		DefaultGraceTime           time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`
 		DestroyContainersOnStartup bool          `long:"destroy-containers-on-startup" description:"Clean up all the existing containers on startup."`
 		ApparmorProfile            string        `long:"apparmor" description:"Apparmor profile to use for unprivileged container processes"`
+		NoNewPrivileges            bool          `long:"no-new-privileges" description:"Set NoNewPrivileges on unprivileged container processes"`
 	} `group:"Container Lifecycle"`
 
 	Bin struct {
@@ -526,6 +527,12 @@ func (cmd *CommonCommand) wireContainerizer(
 		return nil, nil, err
 	}
 	unprivilegedBundle.Spec.Linux.Seccomp = seccomp
+
+	if cmd.Containers.NoNewPrivileges {
+		unprivilegedBundle = unprivilegedBundle.
+			WithNoNewPrivileges().
+			WithPingGroupRange()
+	}
 
 	if cmd.Containers.ApparmorProfile != "" {
 		unprivilegedBundle = unprivilegedBundle.WithApparmorProfile(cmd.Containers.ApparmorProfile)
