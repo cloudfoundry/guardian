@@ -81,7 +81,7 @@ var _ = Describe("Bundle", func() {
 	Describe("WithPingGroupRange", func() {
 		It("sets net.ipv4.ping_group_range to the permissive range", func() {
 			returnedBundle := initialBundle.WithPingGroupRange()
-			Expect(returnedBundle.Spec.Linux.Sysctl).To(HaveKeyWithValue("net.ipv4.ping_group_range", "1 2147483647"))
+			Expect(returnedBundle.Spec.Linux.Sysctl).To(HaveKeyWithValue("net.ipv4.ping_group_range", "1 65535"))
 		})
 
 		It("does not modify the initial bundle", func() {
@@ -99,7 +99,7 @@ var _ = Describe("Bundle", func() {
 			It("preserves the existing sysctls", func() {
 				returnedBundle := initialBundle.WithPingGroupRange()
 				Expect(returnedBundle.Spec.Linux.Sysctl).To(HaveKeyWithValue("net.ipv4.tcp_keepalive_time", "60"))
-				Expect(returnedBundle.Spec.Linux.Sysctl).To(HaveKeyWithValue("net.ipv4.ping_group_range", "1 2147483647"))
+				Expect(returnedBundle.Spec.Linux.Sysctl).To(HaveKeyWithValue("net.ipv4.ping_group_range", "1 65535"))
 			})
 		})
 	})
