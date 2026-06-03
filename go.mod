@@ -14,7 +14,7 @@ require (
 	code.cloudfoundry.org/archiver v0.72.0
 	code.cloudfoundry.org/clock v1.72.0
 	code.cloudfoundry.org/commandrunner v0.64.0
-	code.cloudfoundry.org/debugserver v0.98.0
+	code.cloudfoundry.org/debugserver v0.99.0
 	code.cloudfoundry.org/garden v0.0.0-20260527025323-7fe1cefbd6e8
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20260527025501-169d392b867b
