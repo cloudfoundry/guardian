@@ -8,6 +8,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener/gardenerfakes"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/depot/depotfakes"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
@@ -35,9 +36,11 @@ var _ = Describe("PeaCreator", func() {
 
 		peaCreator *peas.PeaCreator
 
-		ctrHandle    string
-		ctrBundleDir string
-		log          *lagertest.TestLogger
+		ctrHandle                string
+		ctrBundleDir             string
+		log                      *lagertest.TestLogger
+		cgroupV2EnablerCallCount int
+		capturedCgroupPath       string
 
 		generatedBundle   = goci.Bndl{Spec: specs.Spec{Version: "our-bundle"}}
 		defaultBindMounts = []garden.BindMount{{
@@ -90,6 +93,14 @@ var _ = Describe("PeaCreator", func() {
 			ExecRunner:       execRunner,
 			PrivilegedGetter: privilegedGetter,
 			PeaCleaner:       peaCleaner,
+		}
+
+		cgroupV2EnablerCallCount = 0
+		capturedCgroupPath = ""
+		peaCreator.EnableControllersForCgroupsv2 = func(cgroupPath string) error {
+			cgroupV2EnablerCallCount++
+			capturedCgroupPath = cgroupPath
+			return nil
 		}
 
 		var err error
@@ -316,6 +327,25 @@ var _ = Describe("PeaCreator", func() {
 					CPU:    processSpec.OverrideContainerLimits.CPU,
 					Memory: processSpec.OverrideContainerLimits.Memory,
 				}))
+			})
+		})
+
+		Context("when CgroupV2Enabler is set (cgroupv2 path)", func() {
+			It("calls CgroupV2Enabler with the sandbox cgroup path before running the pea", func() {
+				Expect(cgroupV2EnablerCallCount).To(Equal(1))
+				expectedPath := filepath.Join(cgroups.Root, cgroups.Garden, ctrHandle)
+				Expect(capturedCgroupPath).To(Equal(expectedPath))
+			})
+		})
+
+		Context("when EnableControllersForCgroupsv2 is nil (cgroupv1 / Jammy path)", func() {
+			BeforeEach(func() {
+				peaCreator.EnableControllersForCgroupsv2 = nil
+			})
+
+			It("creates the pea without error", func() {
+				_, err := peaCreator.CreatePea(log, processSpec, pio, ctrHandle)
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})
