@@ -26,7 +26,7 @@ func (c CPUCgrouper) PrepareCgroups(handle string) error {
 		return err
 	}
 	if cgroups.IsCgroup2UnifiedMode() {
-		if err := enableSupportedControllers(badCgroupPath); err != nil {
+		if err := EnableSupportedControllers(badCgroupPath); err != nil {
 			return err
 		}
 	}

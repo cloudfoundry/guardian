@@ -11,6 +11,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
@@ -68,6 +69,10 @@ type PeaCreator struct {
 	ProcessBuilder   runrunc.ProcessBuilder
 	ExecRunner       ExecRunner
 	PeaCleaner       gardener.PeaCleaner
+	// EnableControllersForCgroupsv2 enables cgroup subtree controllers on the
+	// sandbox cgroup path before the pea sub-cgroup is created. Nil on cgroupv1
+	// hosts (Jammy).
+	EnableControllersForCgroupsv2 func(cgroupPath string) error
 }
 
 func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle string) (_ garden.Process, theErr error) {
@@ -154,6 +159,13 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 
 	preparedProcess := p.ProcessBuilder.BuildProcess(bndl, processSpec, &users.ExecUser{Uid: userUID, Gid: userGID})
 	bndl = bndl.WithProcess(*preparedProcess)
+
+	if p.EnableControllersForCgroupsv2 != nil {
+		sandboxCgroupPath := filepath.Join(cgroups.Root, cgroups.Garden, sandboxHandle)
+		if err := p.EnableControllersForCgroupsv2(sandboxCgroupPath); err != nil {
+			log.Error("enable-sandbox-cgroup-controllers-failed", err)
+		}
+	}
 
 	extraCleanup := func() error {
 		return p.PeaCleaner.Clean(log, processID)
