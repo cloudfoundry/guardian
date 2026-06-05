@@ -21,8 +21,6 @@ import (
 )
 
 const (
-	Root   = "/sys/fs/cgroup"
-	Garden = "garden"
 	Header = "#subsys_name hierarchy num_cgroups enabled"
 )
 
