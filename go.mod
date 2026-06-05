@@ -11,15 +11,15 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.72.0
-	code.cloudfoundry.org/clock v1.72.0
+	code.cloudfoundry.org/archiver v0.73.0
+	code.cloudfoundry.org/clock v1.73.0
 	code.cloudfoundry.org/commandrunner v0.64.0
-	code.cloudfoundry.org/debugserver v0.99.0
-	code.cloudfoundry.org/garden v0.0.0-20260527025323-7fe1cefbd6e8
+	code.cloudfoundry.org/debugserver v0.100.0
+	code.cloudfoundry.org/garden v0.0.0-20260605151806-250ac484dd9a
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20260527025501-169d392b867b
-	code.cloudfoundry.org/lager/v3 v3.71.0
-	code.cloudfoundry.org/localip v0.73.0
+	code.cloudfoundry.org/idmapper v0.0.0-20260604151449-2632238ca2d4
+	code.cloudfoundry.org/lager/v3 v3.72.0
+	code.cloudfoundry.org/localip v0.74.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.120
@@ -93,7 +93,7 @@ require (
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/sys/capability v0.4.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
-	github.com/moby/sys/sequential v0.6.0 // indirect
+	github.com/moby/sys/sequential v0.7.0 // indirect
 	github.com/moby/sys/signal v0.7.1 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/mrunalp/fileutils v0.5.1 // indirect
