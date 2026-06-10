@@ -11,15 +11,15 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.73.0
-	code.cloudfoundry.org/clock v1.73.0
-	code.cloudfoundry.org/commandrunner v0.64.0
-	code.cloudfoundry.org/debugserver v0.100.0
+	code.cloudfoundry.org/archiver v0.74.0
+	code.cloudfoundry.org/clock v1.74.0
+	code.cloudfoundry.org/commandrunner v0.66.0
+	code.cloudfoundry.org/debugserver v0.101.0
 	code.cloudfoundry.org/garden v0.0.0-20260605151806-250ac484dd9a
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20260604151449-2632238ca2d4
-	code.cloudfoundry.org/lager/v3 v3.72.0
-	code.cloudfoundry.org/localip v0.74.0
+	code.cloudfoundry.org/idmapper v0.0.0-20260610151154-d7788493358e
+	code.cloudfoundry.org/lager/v3 v3.73.0
+	code.cloudfoundry.org/localip v0.75.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.120
@@ -51,7 +51,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
-	golang.org/x/sys v0.45.0
+	golang.org/x/sys v0.46.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -111,12 +111,12 @@ require (
 	go.opentelemetry.io/otel/metric v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/mod v0.36.0 // indirect
+	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
 	golang.org/x/tools v0.45.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260608224507-4308a22a1bab // indirect
 	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 )
