@@ -682,12 +682,6 @@ func (cmd *CommonCommand) wireContainerizer(
 		BundleSaver:      bundleSaver,
 		ExecRunner:       peasExecRunner,
 		PeaCleaner:       peaCleaner,
-		EnableControllersForCgroupsv2: func(cgroupPath string) error {
-			if !gardencgroups.IsCgroup2UnifiedMode() {
-				return nil
-			}
-			return gardencgroups.EnableSupportedControllers(cgroupPath)
-		},
 	}
 
 	peaUsernameResolver := &peas.PeaUsernameResolver{
