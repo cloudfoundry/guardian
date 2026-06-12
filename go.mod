@@ -15,9 +15,9 @@ require (
 	code.cloudfoundry.org/clock v1.74.0
 	code.cloudfoundry.org/commandrunner v0.66.0
 	code.cloudfoundry.org/debugserver v0.101.0
-	code.cloudfoundry.org/garden v0.0.0-20260605151806-250ac484dd9a
+	code.cloudfoundry.org/garden v0.0.0-20260612142927-e02c02da0c18
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20260610151154-d7788493358e
+	code.cloudfoundry.org/idmapper v0.0.0-20260612143105-3ca30fce615d
 	code.cloudfoundry.org/lager/v3 v3.73.0
 	code.cloudfoundry.org/localip v0.75.0
 	github.com/BurntSushi/toml v1.6.0
@@ -37,7 +37,7 @@ require (
 	github.com/moby/sys/reexec v0.1.0
 	github.com/moby/sys/user v0.4.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo/v2 v2.29.0
+	github.com/onsi/ginkgo/v2 v2.30.0
 	github.com/onsi/gomega v1.41.0
 	github.com/opencontainers/cgroups v0.0.6
 	github.com/opencontainers/go-digest v1.0.0
@@ -79,7 +79,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
@@ -112,11 +112,11 @@ require (
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/mod v0.37.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
 	golang.org/x/text v0.38.0 // indirect
-	golang.org/x/tools v0.45.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260608224507-4308a22a1bab // indirect
+	golang.org/x/tools v0.46.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260610212136-7ab31c22f7ad // indirect
 	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 )
