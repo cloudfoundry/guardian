@@ -1,3 +1,8 @@
+// @AI-Generated
+// Generated in whole or in part by Cursor with a mix of different LLM models (Auto select mode)
+// Description:
+// 2026-06-11: Add PropagateContainerMemoryLimit to CPUCgrouper interface and call after container creation
+
 package rundmc
 
 import (
@@ -100,6 +105,7 @@ type CPUCgrouper interface {
 	PrepareCgroups(handle string) error
 	CleanupCgroups(handle string) error
 	ReadTotalCgroupUsage(handle string, cpuStats garden.ContainerCPUStat) (garden.ContainerCPUStat, error)
+	PropagateContainerMemoryLimit(handle string, memoryLimit int64, disableSwapLimit bool) error
 }
 
 // Containerizer knows how to manage a depot of container bundles
@@ -186,6 +192,16 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 
 	if err := c.runtime.Create(log, spec.Handle, bundle, garden.ProcessIO{}); err != nil {
 		log.Error("runtime-create-failed", err)
+		return err
+	}
+
+	// Determine if swap is being limited by checking whether the bundle's memory
+	// swap field was set (i.e. DisableSwapLimit was false in the bundler config).
+	disableSwapLimit := bundle.Spec.Linux == nil ||
+		bundle.Spec.Linux.Resources == nil ||
+		bundle.Spec.Linux.Resources.Memory.Swap == nil
+	if err := c.cpuCgrouper.PropagateContainerMemoryLimit(spec.Handle, int64(spec.Limits.Memory.LimitInBytes), disableSwapLimit); err != nil {
+		log.Error("propagate-memory-limit-failed", err)
 		return err
 	}
 
