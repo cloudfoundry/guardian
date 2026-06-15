@@ -35,9 +35,10 @@ var _ = Describe("PeaCreator", func() {
 
 		peaCreator *peas.PeaCreator
 
-		ctrHandle         string
-		ctrBundleDir      string
-		log               *lagertest.TestLogger
+		ctrHandle    string
+		ctrBundleDir string
+		log          *lagertest.TestLogger
+
 		generatedBundle   = goci.Bndl{Spec: specs.Spec{Version: "our-bundle"}}
 		defaultBindMounts = []garden.BindMount{{
 			SrcPath: "/some/src",
@@ -317,7 +318,6 @@ var _ = Describe("PeaCreator", func() {
 				}))
 			})
 		})
-
 	})
 
 	Describe("pea creation failing", func() {

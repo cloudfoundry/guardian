@@ -21,6 +21,8 @@ import (
 )
 
 const (
+	Root   = "/sys/fs/cgroup"
+	Garden = "garden"
 	Header = "#subsys_name hierarchy num_cgroups enabled"
 )
 
@@ -217,7 +219,7 @@ func (s *CgroupStarter) createAndChownCgroupV2(logger lager.Logger) error {
 	if err := s.createChownedCgroup(logger, gardenCgroupPath); err != nil {
 		return err
 	}
-	if err := EnableSupportedControllers(gardenCgroupPath); err != nil {
+	if err := enableSupportedControllers(gardenCgroupPath); err != nil {
 		return err
 	}
 
@@ -226,7 +228,7 @@ func (s *CgroupStarter) createAndChownCgroupV2(logger lager.Logger) error {
 		if err := s.createChownedCgroup(logger, goodCgroupPath); err != nil {
 			return err
 		}
-		if err := EnableSupportedControllers(goodCgroupPath); err != nil {
+		if err := enableSupportedControllers(goodCgroupPath); err != nil {
 			return err
 		}
 
@@ -234,7 +236,7 @@ func (s *CgroupStarter) createAndChownCgroupV2(logger lager.Logger) error {
 		if err := s.createChownedCgroup(logger, badCgroupPath); err != nil {
 			return err
 		}
-		if err := EnableSupportedControllers(badCgroupPath); err != nil {
+		if err := enableSupportedControllers(badCgroupPath); err != nil {
 			return err
 		}
 	}
@@ -251,7 +253,7 @@ func (s *CgroupStarter) createChownedCgroup(logger lager.Logger, cgroupPath stri
 }
 
 // from fs2.CreateCgroupPath
-func EnableSupportedControllers(cgroupPath string) error {
+func enableSupportedControllers(cgroupPath string) error {
 	const (
 		cgStCtlFile = "cgroup.subtree_control"
 	)

@@ -31,19 +31,6 @@ type FakeCPUCgrouper struct {
 	prepareCgroupsReturnsOnCall map[int]struct {
 		result1 error
 	}
-	PropagateContainerMemoryLimitStub        func(string, int64, bool) error
-	propagateContainerMemoryLimitMutex       sync.RWMutex
-	propagateContainerMemoryLimitArgsForCall []struct {
-		arg1 string
-		arg2 int64
-		arg3 bool
-	}
-	propagateContainerMemoryLimitReturns struct {
-		result1 error
-	}
-	propagateContainerMemoryLimitReturnsOnCall map[int]struct {
-		result1 error
-	}
 	ReadTotalCgroupUsageStub        func(string, garden.ContainerCPUStat) (garden.ContainerCPUStat, error)
 	readTotalCgroupUsageMutex       sync.RWMutex
 	readTotalCgroupUsageArgsForCall []struct {
@@ -184,69 +171,6 @@ func (fake *FakeCPUCgrouper) PrepareCgroupsReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeCPUCgrouper) PropagateContainerMemoryLimit(arg1 string, arg2 int64, arg3 bool) error {
-	fake.propagateContainerMemoryLimitMutex.Lock()
-	ret, specificReturn := fake.propagateContainerMemoryLimitReturnsOnCall[len(fake.propagateContainerMemoryLimitArgsForCall)]
-	fake.propagateContainerMemoryLimitArgsForCall = append(fake.propagateContainerMemoryLimitArgsForCall, struct {
-		arg1 string
-		arg2 int64
-		arg3 bool
-	}{arg1, arg2, arg3})
-	stub := fake.PropagateContainerMemoryLimitStub
-	fakeReturns := fake.propagateContainerMemoryLimitReturns
-	fake.recordInvocation("PropagateContainerMemoryLimit", []interface{}{arg1, arg2, arg3})
-	fake.propagateContainerMemoryLimitMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2, arg3)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *FakeCPUCgrouper) PropagateContainerMemoryLimitCallCount() int {
-	fake.propagateContainerMemoryLimitMutex.RLock()
-	defer fake.propagateContainerMemoryLimitMutex.RUnlock()
-	return len(fake.propagateContainerMemoryLimitArgsForCall)
-}
-
-func (fake *FakeCPUCgrouper) PropagateContainerMemoryLimitCalls(stub func(string, int64, bool) error) {
-	fake.propagateContainerMemoryLimitMutex.Lock()
-	defer fake.propagateContainerMemoryLimitMutex.Unlock()
-	fake.PropagateContainerMemoryLimitStub = stub
-}
-
-func (fake *FakeCPUCgrouper) PropagateContainerMemoryLimitArgsForCall(i int) (string, int64, bool) {
-	fake.propagateContainerMemoryLimitMutex.RLock()
-	defer fake.propagateContainerMemoryLimitMutex.RUnlock()
-	argsForCall := fake.propagateContainerMemoryLimitArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
-}
-
-func (fake *FakeCPUCgrouper) PropagateContainerMemoryLimitReturns(result1 error) {
-	fake.propagateContainerMemoryLimitMutex.Lock()
-	defer fake.propagateContainerMemoryLimitMutex.Unlock()
-	fake.PropagateContainerMemoryLimitStub = nil
-	fake.propagateContainerMemoryLimitReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeCPUCgrouper) PropagateContainerMemoryLimitReturnsOnCall(i int, result1 error) {
-	fake.propagateContainerMemoryLimitMutex.Lock()
-	defer fake.propagateContainerMemoryLimitMutex.Unlock()
-	fake.PropagateContainerMemoryLimitStub = nil
-	if fake.propagateContainerMemoryLimitReturnsOnCall == nil {
-		fake.propagateContainerMemoryLimitReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.propagateContainerMemoryLimitReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *FakeCPUCgrouper) ReadTotalCgroupUsage(arg1 string, arg2 garden.ContainerCPUStat) (garden.ContainerCPUStat, error) {
 	fake.readTotalCgroupUsageMutex.Lock()
 	ret, specificReturn := fake.readTotalCgroupUsageReturnsOnCall[len(fake.readTotalCgroupUsageArgsForCall)]
@@ -319,8 +243,6 @@ func (fake *FakeCPUCgrouper) Invocations() map[string][][]interface{} {
 	defer fake.cleanupCgroupsMutex.RUnlock()
 	fake.prepareCgroupsMutex.RLock()
 	defer fake.prepareCgroupsMutex.RUnlock()
-	fake.propagateContainerMemoryLimitMutex.RLock()
-	defer fake.propagateContainerMemoryLimitMutex.RUnlock()
 	fake.readTotalCgroupUsageMutex.RLock()
 	defer fake.readTotalCgroupUsageMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

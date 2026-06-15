@@ -1,8 +1,3 @@
-// @AI-Generated
-// Generated in whole or in part by Cursor with a mix of different LLM models (Auto select mode)
-// Description:
-// 2026-06-11: Wire UseInitSubCgroup=true on cgroupsv2 to put container init in sandbox-id/init sub-cgroup
-
 package guardiancmd
 
 import (
@@ -573,8 +568,7 @@ func (cmd *CommonCommand) wireContainerizer(
 		},
 		bundlerules.Namespaces{},
 		bundlerules.CGroupPath{
-			Path:             cgroupRootPath,
-			UseInitSubCgroup: gardencgroups.IsCgroup2UnifiedMode(),
+			Path: cgroupRootPath,
 		},
 		wireMounts(log),
 		bundlerules.Env{},
