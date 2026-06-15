@@ -9,10 +9,13 @@
 package cgroups
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // PropagateContainerMemoryLimit prepares the sandbox cgroup so that PEA
@@ -29,8 +32,39 @@ import (
 // sandbox cgroup has no direct processes, then enable domain controllers in
 // sandbox/cgroup.subtree_control. Subsequent PEA sub-cgroups will be created
 // in domain mode and will have working memory accounting.
+// #region agent log
+func debugLog(msg string, data map[string]interface{}) {
+	entry := map[string]interface{}{
+		"sessionId": "7b1df1",
+		"timestamp": time.Now().UnixMilli(),
+		"location":  "defaultcgrouper_linux.go",
+		"message":   msg,
+		"data":      data,
+	}
+	b, _ := json.Marshal(entry)
+	f, err := os.OpenFile("/Users/ad008239/workspace/.cursor/debug-7b1df1.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	fmt.Fprintf(f, "%s\n", b)
+}
+
+// #endregion
+
 func (c DefaultCgrouper) PropagateContainerMemoryLimit(handle string, memoryLimit int64, disableSwapLimit bool) error {
+	// #region agent log
+	debugLog("PropagateContainerMemoryLimit called", map[string]interface{}{
+		"handle": handle, "memoryLimit": memoryLimit, "disableSwapLimit": disableSwapLimit,
+		"isCgroup2": IsCgroup2UnifiedMode(), "hypothesisId": "A",
+	})
+	// #endregion
+
 	if !IsCgroup2UnifiedMode() || memoryLimit <= 0 || disableSwapLimit {
+		debugLog("PropagateContainerMemoryLimit early return", map[string]interface{}{
+			"reason":       fmt.Sprintf("cgroup2=%v memLimit=%d disableSwap=%v", IsCgroup2UnifiedMode(), memoryLimit, disableSwapLimit),
+			"hypothesisId": "A",
+		})
 		return nil
 	}
 	sandboxCgroupPath := filepath.Join(c.cgroupRoot, handle)
@@ -38,6 +72,9 @@ func (c DefaultCgrouper) PropagateContainerMemoryLimit(handle string, memoryLimi
 	if err := prepareSandboxSubtreeForPeas(sandboxCgroupPath); err != nil {
 		// If the sandbox cgroup doesn't exist (e.g. fake runtime in GQT tests),
 		// skip silently. Any other error is real.
+		debugLog("prepareSandboxSubtreeForPeas error", map[string]interface{}{
+			"err": err.Error(), "path": sandboxCgroupPath, "hypothesisId": "B",
+		})
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
@@ -46,8 +83,18 @@ func (c DefaultCgrouper) PropagateContainerMemoryLimit(handle string, memoryLimi
 
 	err := os.WriteFile(filepath.Join(sandboxCgroupPath, "memory.swap.max"), []byte("0"), 0644)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		debugLog("memory.swap.max write error", map[string]interface{}{
+			"err": err.Error(), "hypothesisId": "C",
+		})
 		return err
 	}
+
+	// #region agent log
+	debugLog("PropagateContainerMemoryLimit done", map[string]interface{}{
+		"handle": handle, "hypothesisId": "A",
+	})
+	// #endregion
+
 	return nil
 }
 
@@ -63,14 +110,22 @@ func prepareSandboxSubtreeForPeas(sandboxCgroupPath string) error {
 	}
 
 	pids := strings.Fields(string(procsData))
+	// #region agent log
+	debugLog("prepareSandboxSubtreeForPeas", map[string]interface{}{
+		"sandboxPath": sandboxCgroupPath, "pids": pids, "hypothesisId": "B",
+	})
+	// #endregion
+
 	if len(pids) > 0 {
 		initCgroupPath := filepath.Join(sandboxCgroupPath, "init")
-		if err := os.MkdirAll(initCgroupPath, 0755); err != nil {
-			return err
+		if mkdirErr := os.MkdirAll(initCgroupPath, 0755); mkdirErr != nil {
+			debugLog("mkdir init cgroup error", map[string]interface{}{"err": mkdirErr.Error(), "hypothesisId": "B"})
+			return mkdirErr
 		}
 		for _, pid := range pids {
-			if err := os.WriteFile(filepath.Join(initCgroupPath, "cgroup.procs"), []byte(pid), 0644); err != nil {
-				return err
+			if writeErr := os.WriteFile(filepath.Join(initCgroupPath, "cgroup.procs"), []byte(pid), 0644); writeErr != nil {
+				debugLog("move pid error", map[string]interface{}{"pid": pid, "err": writeErr.Error(), "hypothesisId": "B"})
+				return writeErr
 			}
 		}
 	}
@@ -81,9 +136,28 @@ func prepareSandboxSubtreeForPeas(sandboxCgroupPath string) error {
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	for _, ctr := range strings.Fields(string(controllersData)) {
-		_ = os.WriteFile(filepath.Join(sandboxCgroupPath, "cgroup.subtree_control"), []byte("+"+ctr), 0644)
+	controllers := strings.Fields(string(controllersData))
+	// #region agent log
+	debugLog("enabling subtree controllers", map[string]interface{}{
+		"sandboxPath": sandboxCgroupPath, "controllers": controllers, "hypothesisId": "B",
+	})
+	// #endregion
+	var subtreeErrs []string
+	for _, ctr := range controllers {
+		if writeErr := os.WriteFile(filepath.Join(sandboxCgroupPath, "cgroup.subtree_control"), []byte("+"+ctr), 0644); writeErr != nil {
+			subtreeErrs = append(subtreeErrs, fmt.Sprintf("%s:%v", ctr, writeErr))
+		}
 	}
+	// #region agent log
+	subtreeCtrlData, _ := os.ReadFile(filepath.Join(sandboxCgroupPath, "cgroup.subtree_control"))
+	cgroupType, _ := os.ReadFile(filepath.Join(sandboxCgroupPath, "cgroup.type"))
+	debugLog("after enabling subtree controllers", map[string]interface{}{
+		"subtreeControl": strings.TrimSpace(string(subtreeCtrlData)),
+		"cgroupType":     strings.TrimSpace(string(cgroupType)),
+		"writeErrors":    subtreeErrs,
+		"hypothesisId":   "B",
+	})
+	// #endregion
 
 	return nil
 }
