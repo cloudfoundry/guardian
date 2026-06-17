@@ -1,7 +1,7 @@
-# code.cloudfoundry.org/archiver v0.74.0
+# code.cloudfoundry.org/archiver v0.75.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/archiver/extractor/test_helper
-# code.cloudfoundry.org/clock v1.74.0
+# code.cloudfoundry.org/clock v1.75.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
@@ -12,10 +12,10 @@ code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.101.0
+# code.cloudfoundry.org/debugserver v0.102.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20260612142927-e02c02da0c18 => ../garden
+# code.cloudfoundry.org/garden v0.0.0-20260615182558-dd88c014d8c3 => ../garden
 ## explicit; go 1.25.0
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
@@ -30,17 +30,17 @@ code.cloudfoundry.org/garden/transport
 # code.cloudfoundry.org/grootfs v0.30.0 => ../grootfs
 ## explicit; go 1.25.0
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20260612143105-3ca30fce615d => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20260615182721-a3778a6bc53e => ../idmapper
 ## explicit; go 1.25.0
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.73.0
+# code.cloudfoundry.org/lager/v3 v3.74.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
 code.cloudfoundry.org/lager/v3/internal/truncate
 code.cloudfoundry.org/lager/v3/lagerctx
 code.cloudfoundry.org/lager/v3/lagertest
-# code.cloudfoundry.org/localip v0.75.0
+# code.cloudfoundry.org/localip v0.76.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/localip
 # cyphar.com/go-pathrs v0.2.4
@@ -661,7 +661,7 @@ golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20260610212136-7ab31c22f7ad
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20260615183401-62b3387ff324
 ## explicit; go 1.25.0
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.81.1
