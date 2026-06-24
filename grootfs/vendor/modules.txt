@@ -1,12 +1,12 @@
-# code.cloudfoundry.org/commandrunner v0.66.0
+# code.cloudfoundry.org/commandrunner v0.67.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/linux_command_runner
-# code.cloudfoundry.org/idmapper v0.0.0-20260615182721-a3778a6bc53e => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20260624020507-8356a773bc50 => ../idmapper
 ## explicit; go 1.25.0
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.74.0
+# code.cloudfoundry.org/lager/v3 v3.75.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
@@ -36,7 +36,7 @@ github.com/cloudfoundry/dropsonde/metric_sender
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/sonde-go v0.0.0-20260526083715-66f310f13c26
+# github.com/cloudfoundry/sonde-go v0.0.0-20260622134720-d7b012c5b9c4
 ## explicit; go 1.23
 github.com/cloudfoundry/sonde-go/events
 # github.com/containers/image/v5 v5.36.2
@@ -168,7 +168,7 @@ github.com/moby/sys/user
 # github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 ## explicit
 github.com/nu7hatch/gouuid
-# github.com/onsi/ginkgo/v2 v2.31.0
+# github.com/onsi/ginkgo/v2 v2.32.0
 ## explicit; go 1.25.0
 github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config
@@ -192,8 +192,8 @@ github.com/onsi/ginkgo/v2/internal/reporters
 github.com/onsi/ginkgo/v2/internal/testingtproxy
 github.com/onsi/ginkgo/v2/reporters
 github.com/onsi/ginkgo/v2/types
-# github.com/onsi/gomega v1.42.0
-## explicit; go 1.24.0
+# github.com/onsi/gomega v1.42.1
+## explicit; go 1.25.0
 github.com/onsi/gomega
 github.com/onsi/gomega/format
 github.com/onsi/gomega/gbytes
