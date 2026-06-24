@@ -4,12 +4,35 @@ This file documents all notable changes made to this project since runc 1.0.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased 1.4.z]
+## [Unreleased]
 
-## [1.4.3] - 2026-06-13
+## [1.5.0] - 2026-06-19
 
-> The best way to irritate him is to feed his grandmother to the Ravenous
-> Bugblatter Beast of Traal.
+> Why do we even have that lever?!
+
+### Added ###
+- `runc version` and `runc features` now provide version information about
+  libpathrs (when runc is built with the `libpathrs` build tag). (#5291, #5328)
+
+### Fixed ###
+- Since runc 1.3.0, the `org.opencontainers.runc.version` annotation included
+  in `runc features` contained an extraneous `\n`, possibly causing issues with
+  tools that parse the output. It is now properly stripped. (#5329, #5330,
+  #5331, #5335)
+
+### Changed ###
+- runc (when built with the `libpathrs` build tag) now depends on [libpathrs
+  v0.2.5] or later, and attempting to build with older versions will cause
+  compilation errors. (#5291, #5328)
+- Switched to go-criu v8.3.0, which reduces our binary size from ~16MB to
+  ~14MB. (#5312, #5326)
+
+[libpathrs v0.2.5]: https://github.com/cyphar/libpathrs/releases/tag/v0.2.5
+
+## [1.5.0-rc.3] - 2026-06-13
+
+> The best way to get a drink out of a Vogon is to stick your finger down his
+> throat.
 
 ### Security ###
 
@@ -25,16 +48,140 @@ This release includes a fix for the following low-severity security issue:
 
 [CVE-2026-41579]: https://github.com/opencontainers/runc/security/advisories/GHSA-xjvp-4fhw-gc47
 
+### libcontainer API ###
+- The `cmsg` helpers from `github.com/opencontainers/runc/libcontainer/utils`
+  have been moved to an internal package. We have included wrapper functions
+  but they will be removed in runc 1.6. (#5227, #5231)
+- Added `//go:fix inline` to ease migration for `libcontainer/devices` symbols
+  that are deprecated and scheduled for removal in runc 1.6. (#5223, #5225)
+
 ### Fixed ###
-- Various integration test improvements. (#5222, #5237, #5226, #5229, #5239,
-  #5249, #5269, #5287, #5295, #5304)
+- `runc list` now correctly handles non-existent `--root` arguments. (#5297,
+  #5301)
+- Various integration test improvements. (#5222, #5226, #5232, #5239, #5230,
+  #5236, #5246, #5248, #5279, #5283, #5269, #5286, #5295, #5303)
 
 ### Changed ###
-- When masking directories with `maskPaths`, runc will now re-use a single
+- When masking directories with `maskPaths`, runc will now reuse a single
   `tmpfs` instance (which is not writeable) to reduce the number `tmpfs`
   superblocks that need to be reaped when containers die (in particular,
   Kubernetes applies masks to per-CPU sysfs directories which get expensive
-  quickly). (#5275, #5281)
+  quickly). (#5275, #5280)
+
+## [1.5.0-rc.2] - 2026-04-02
+
+> いざやいざや、見に行かん
+
+> [!NOTE]
+> runc v1.5.0-rc.2 includes all of the patches backported to runc v1.4.2.
+
+### Fixed ###
+- Building with libpathrs for systems that use non-GNU awk, e.g. Debian.
+  (#5196, #5194)
+
+### Added ###
+- Installation notes for libpathrs. (#5199, #5195)
+- Support for specs.LinuxSeccompFlagWaitKillableRecv. (#5183, #5172)
+- When building runc, `RUNC_BUILDTAGS` make or shell environment variable can
+  be used to add build tags and/or remove existing build tags (when a tag is
+  prefixed with `-`). (#5198, #5171)
+
+### Changed ###
+- runc now requires Go 1.25+ to build. (#5211, #5205)
+- libcontainer now pre-opens container root filesystem and uses the file
+  descriptor (rather than the path) for most operations related to container
+  root during container start. (#5204, #5190)
+
+### Deprecated ###
+- `EXTRA_BUILDTAGS` make variable is deprecated in favor of `RUNC_BUILDTAGS`
+  and will be removed in runc 1.6. (#5171, #5198)
+- `libcontainer/devices` has been deprecated in favour of
+  `github.com/moby/sys/devices` (which is a carbon copy of the package). It
+  will be removed in runc 1.6. (#5220, #5142)
+
+## [1.5.0-rc.1] - 2026-03-12
+
+> 憎しみを束ねてもそれは脆い！
+
+> [!NOTE]
+> runc v1.5.0-rc.1 includes all of the patches backported to runc v1.4.1.
+
+### libcontainer API ###
+- The following deprecated Go APIs have been removed:
+  - `CleanPath`, `StripRoot`, and `WithProcfd` from `libcontainer/utils`. Note
+    that `WithProcfdFile` has not been removed (due to import cycle issues) but
+    is instead marked as internal in its godoc comment. (#5051)
+  - All of the cgroup-related types and functions from `libcontainer/configs`
+    which are now maintained in `github.com/opencontainers/cgroups` (#5141):
+    - `libcontainer/configs.Cgroup`
+    - `libcontainer/configs.Resources`
+    - `libcontainer/configs.FreezerState`
+    - `libcontainer/configs.LinuxRdma`
+    - `libcontainer/configs.BlockIODevice`
+    - `libcontainer/configs.WeightDevice`
+    - `libcontainer/configs.ThrottleDevice`
+    - `libcontainer/configs.HugepageLimit`
+    - `libcontainer/configs.IfPrioMap`
+    - `libcontainer/configs.Undefined`
+    - `libcontainer/configs.Frozen`
+    - `libcontainer/configs.Thawed`
+    - `libcontainer/configs.NewWeightDevice`
+    - `libcontainer/configs.NewThrottleDevice`
+  - `libcontainer/configs.HookList.RunHooks`. (#5141)
+  - `libcontainer/configs.MPOL_*` (#5141)
+  - All of the types in `libcontainer/devices` which are now maintained in
+    `github.com/opencontainers/cgroups/devices/config` (#5141):
+    - `libcontainer/devices.Wildcard`
+    - `libcontainer/devices.WildcardDevice`
+    - `libcontainer/devices.BlockDevice`
+    - `libcontainer/devices.CharDevice`
+    - `libcontainer/devices.FifoDevice`
+    - `libcontainer/devices.Device`
+    - `libcontainer/devices.Permissions`
+    - `libcontainer/devices.Type`
+    - `libcontainer/devices.Rule`
+- `libcontainer.Process` methods (`Wait`, `Pid`, `Signal`) and
+  `libcontainer/configs.Config` methods (`HostUID`, `HostRootUID`, `HostGID`,
+  `HostRootGID`) now use pointer receivers. (#5088)
+- The example code for `libcontainer` has been moved out of a `README` and into
+  a proper `Example*` test file that will be compile-tested by our CI. As
+  mentioned elsewhere, we still *do not* recommend users make use of the
+  `libcontainer` API directly. (#5127)
+
+### Deprecated ###
+- The `libcontainer/configs.Mount.Relabel` configuration field (used to relabel
+  mounts with the `z` and `Z` "pseudo" mount options) was never accessible
+  outside of the libcontainer API, and in practice the relabel logic has always
+  lived in higher level runtimes. It has been made into a no-op and the field
+  will be removed entirely in runc 1.7. (#5152, #5160)
+
+### Removed ###
+- The `memfd-bind` helper binary has been removed, as it has never been
+  particularly useful and was completely obsoleted by the changes to
+  `/proc/self/exe` sealing we introduced in runc [1.2.0][]. (#5141)
+
+### Added ###
+- User-namespaced containers can now configure `user.*` sysctls. (#4889)
+- Intel RDT: the RDT subdirectory is now only removed if runc created it,
+  matching the updated runtime-spec guidance. (#3832, #5155)
+
+### Changed ###
+- Our release binaries and default build configuration now use [libpathrs][] by
+  default, providing better hardening against certain kinds of attacks. Users
+  of runc should not see any changes as a result of this, but packagers will
+  need to adjust their packaging accordingly. runc can still be built without
+  libpathrs (by building without the `libpathrs` build tag), but we currently
+  plan to make runc 1.6 *require* libpathrs. (#5103)
+- `runc exec` will now request systemd to move the `exec` process into the
+  container cgroup, making the procedure more rootless-friendly. (#4822)
+- seccomp: minor documentation updates. (#4902)
+- Update spec conformance documentation for OCI runtime-spec v1.3.0. (#4948,
+  #5150)
+- Our release archives now have the name `runc-$version.tar.xz` to make distro
+  packaging a little easier by matching the filename to the top-level directory
+  name in the archive. (#5052)
+
+[libpathrs]: https://github.com/cyphar/libpathrs
 
 ## [1.4.2] - 2026-04-02
 
@@ -54,7 +201,8 @@ This release includes a fix for the following low-severity security issue:
 > La guerre n'est pas une aventure. La guerre est une maladie. Comme le typhus.
 
 ### Deprecated ###
-- `libcontainer/configs.MPOL_*` constants added in runc [1.4.0][]. (#5110, #5055)
+- `libcontainer/configs.MPOL_*` constants added in runc [1.4.0][]. (#5110,
+  #5055)
 
 ### Added ###
 - Preliminary `loong64` support. (#5062, #4938)
@@ -79,9 +227,9 @@ This release includes a fix for the following low-severity security issue:
 - On machines with more than 1024 CPU cores, our logic for resetting the CPU
   affinity will now correctly reset the affinity onto _all_ available cores
   (not just the first 1024). (#5149, #5025)
-- PR #4757 caused a regression that resulted in spurious `cannot start a container
-  that has stopped` errors when running `runc create` and has thus been
-  reverted. (#5157, #5153, #5151, #4645, #4757)
+- PR #4757 caused a regression that resulted in spurious `cannot start a
+  container that has stopped` errors when running `runc create` and has thus
+  been reverted. (#5157, #5153, #5151, #4645, #4757)
 
 ### Changed ###
 - Previously we made an attempt to make our `runc.armhf` release binaries work
@@ -122,9 +270,9 @@ This release includes a fix for the following low-severity security issue:
 - libct: fix mips compilation. (#4962, #4967)
 - When configuring a `tmpfs` mount, only set the `mode=` argument if the target
   path already existed. This fixes a regression introduced in our
-  [CVE-2025-52881][] mitigation patches. (#4971, #4976)
+  [CVE-2025-52881][] mitigation patches. (#4971, #4973, #4976)
 - Fix various file descriptor leaks and add additional tests to detect them as
-  comprehensively as possible. (#5007, #5021, #5034)
+  comprehensively as possible. (#5007, #5021, #5026, #5034)
 - The "hallucination" helpers added as part of the [CVE-2025-52881][]
   mitigation have been made more generic and now apply to all of our `pathrs`
   helper functions, which should ensure we will not regress dangling symlink
@@ -136,6 +284,44 @@ This release includes a fix for the following low-severity security issue:
 - Errors from `runc init` have historically been quite painful to understand
   and debug, we have made several improvements to make them more comprehensive
   and thus useful when debugging issues. (#5040, #4951, #4928)
+
+[CVE-2025-52881]: https://github.com/opencontainers/runc/security/advisories/GHSA-cgrx-mc8f-2prm
+
+## [1.3.4] - 2025-11-27
+
+> Take me to your heart, take me to your soul.
+
+### Fixed
+ * libct: fix mips compilation. (#4962, #4966)
+ * When configuring a `tmpfs` mount, only set the `mode=` argument if the
+   target path already existed. This fixes a regression introduced in our
+   [CVE-2025-52881][] mitigation patches. (#4971, #4973, #4976)
+ * Fix various file descriptor leaks and add additional tests to detect them as
+   comprehensively as possible. (#5007, #5021, #5026, #5034)
+
+### Changed
+ * Downgrade `github.com/cyphar/filepath-securejoin` dependency to `v0.5.2`,
+   which should make it easier for some downstreams to import `runc` without
+   pulling in too many extra packages. (#5028)
+
+[CVE-2025-52881]: https://github.com/opencontainers/runc/security/advisories/GHSA-cgrx-mc8f-2prm
+
+## [1.2.9] - 2025-11-27
+
+> Stars hide your fires, let me rest tonight.
+
+### Fixed
+ * libct: fix mips compilation. (#4962, #4965)
+ * When configuring a `tmpfs` mount, only set the `mode=` argument if the
+   target path already existed. This fixes a regression introduced in our
+   [CVE-2025-52881][] mitigation patches. (#4971, #4974)
+ * Fix various file descriptor leaks and add additional tests to detect them as
+   comprehensively as possible. (#5007, #5021, #5026, #5027)
+
+### Changed
+ * Downgrade `github.com/cyphar/filepath-securejoin` dependency to `v0.5.2`,
+   which should make it easier for some downstreams to import `runc` without
+   pulling in too many extra packages. (#5027)
 
 [CVE-2025-52881]: https://github.com/opencontainers/runc/security/advisories/GHSA-cgrx-mc8f-2prm
 
@@ -173,6 +359,79 @@ This release includes fixes for the following high-severity security issues:
    resetting the CPU affinity of runc. (#4926, #4927)
  * Correctly close child fds during `(*setns).start` if an error occurs.
    (#4930, #4936)
+
+[CVE-2019-19921]: https://github.com/opencontainers/runc/security/advisories/GHSA-fh74-hm69-rqjw
+[CVE-2025-31133]: https://github.com/opencontainers/runc/security/advisories/GHSA-9493-h29p-rfm2
+[CVE-2025-52565]: https://github.com/opencontainers/runc/security/advisories/GHSA-qw9x-cqr3-wc7r
+[CVE-2025-52881]: https://github.com/opencontainers/runc/security/advisories/GHSA-cgrx-mc8f-2prm
+
+## [1.3.3] - 2025-11-05
+
+> 奴らに支配されていた恐怖を
+
+### Security
+
+This release includes fixes for the following high-severity security issues:
+
+* [CVE-2025-31133][] exploits an issue with how masked paths are implemented in
+  runc. When masking files, runc will bind-mount the container's `/dev/null`
+  inode on top of the file. However, if an attacker can replace `/dev/null`
+  with a symlink to some other procfs file, runc will instead bind-mount the
+  symlink target read-write. This issue affected all known runc versions.
+
+* [CVE-2025-52565][] is very similar in concept and application to
+  [CVE-2025-31133][], except that it exploits a flaw in `/dev/console`
+  bind-mounts. When creating the `/dev/console` bind-mount (to `/dev/pts/$n`),
+  if an attacker replaces `/dev/pts/$n` with a symlink then runc will
+  bind-mount the symlink target over `/dev/console`. This issue affected all
+  versions of runc >= 1.0.0-rc3.
+
+* [CVE-2025-52881][] is a more sophisticated variant of [CVE-2019-19921][],
+  which was a flaw that allowed an attacker to trick runc into writing the LSM
+  process labels for a container process into a dummy tmpfs file and thus not
+  apply the correct LSM labels to the container process. The mitigation we
+  applied for [CVE-2019-19921][] was fairly limited and effectively only caused
+  runc to verify that when we write LSM labels that those labels are actual
+  procfs files. This issue affects all known runc versions.
+
+### Added
+
+* `runc update` now supports configuring per-device weights and iops. (#4775,
+  #4807, #4825, #4931)
+
+[CVE-2019-19921]: https://github.com/opencontainers/runc/security/advisories/GHSA-fh74-hm69-rqjw
+[CVE-2025-31133]: https://github.com/opencontainers/runc/security/advisories/GHSA-9493-h29p-rfm2
+[CVE-2025-52565]: https://github.com/opencontainers/runc/security/advisories/GHSA-qw9x-cqr3-wc7r
+[CVE-2025-52881]: https://github.com/opencontainers/runc/security/advisories/GHSA-cgrx-mc8f-2prm
+
+## [1.2.8] - 2025-11-05
+
+> 鳥籠の中に囚われた屈辱を
+
+### Security
+
+This release includes fixes for the following high-severity security issues:
+
+* [CVE-2025-31133][] exploits an issue with how masked paths are implemented in
+  runc. When masking files, runc will bind-mount the container's `/dev/null`
+  inode on top of the file. However, if an attacker can replace `/dev/null`
+  with a symlink to some other procfs file, runc will instead bind-mount the
+  symlink target read-write. This issue affected all known runc versions.
+
+* [CVE-2025-52565][] is very similar in concept and application to
+  [CVE-2025-31133][], except that it exploits a flaw in `/dev/console`
+  bind-mounts. When creating the `/dev/console` bind-mount (to `/dev/pts/$n`),
+  if an attacker replaces `/dev/pts/$n` with a symlink then runc will
+  bind-mount the symlink target over `/dev/console`. This issue affected all
+  versions of runc >= 1.0.0-rc3.
+
+* [CVE-2025-52881][] is a more sophisticated variant of [CVE-2019-19921][],
+  which was a flaw that allowed an attacker to trick runc into writing the LSM
+  process labels for a container process into a dummy tmpfs file and thus not
+  apply the correct LSM labels to the container process. The mitigation we
+  applied for [CVE-2019-19921][] was fairly limited and effectively only caused
+  runc to verify that when we write LSM labels that those labels are actual
+  procfs files. This issue affects all known runc versions.
 
 [CVE-2019-19921]: https://github.com/opencontainers/runc/security/advisories/GHSA-fh74-hm69-rqjw
 [CVE-2025-31133]: https://github.com/opencontainers/runc/security/advisories/GHSA-9493-h29p-rfm2
@@ -270,7 +529,7 @@ This version of runc requires Go 1.24 to build.
    previously result in spurious errors. (#4735)
  * CI: skip bpf tests on misbehaving udev systems. (#4825)
 
-### Changed
+### Changes
  * Use Go's built-in `pidfd_send_signal(2)` support when available. (#4666)
  * Make `state.json` 25% smaller. (#4685)
  * Migrate to Go 1.22+ features. (#4687, #4703)
@@ -285,8 +544,6 @@ This version of runc requires Go 1.24 to build.
    versions). (#4817)
  * Simplify the prepareCriuRestoreMounts logic for checkpoint-restore.
    (#4765)
- * The conversion from cgroup v1 CPU shares to cgroup v2 CPU weight is
-   improved to better fit default v1 and v2 values. (#4772, #4785)
  * Bump minimum Go version to 1.24. (#4851)
  * CI: migrate virtualised Fedora tests from Vagrant + Cirrus to Lima + GHA. We
    still use Cirrus for the AlmaLinux tests, since they can be run without
@@ -304,6 +561,22 @@ This version of runc requires Go 1.24 to build.
    #4702, #4701, #4707, #4710, #4746, #4756, #4751, #4758, #4764, #4768, #4779,
    #4783, #4785, #4801, #4808, #4803, #4839, #4846, #4847, #4845, #4850, #4861,
    #4860)
+
+## [1.3.2] - 2025-10-02
+
+> Ночь, улица, фонарь, аптека...
+
+### Changed
+ * The conversion from cgroup v1 CPU shares to cgroup v2 CPU weight is
+   improved to better fit default v1 and v2 values. (#4772, #4785, #4897)
+ * Dependency github.com/opencontainers/cgroups updated from v0.0.1 to
+   v0.0.4. (#4897)
+
+### Fixed
+ * runc state: fix occasional "cgroup.freeze: no such device" error.
+   (#4798, #4808, #4897)
+ * Fixed integration test failure on ppc64, caused by 64K page size so the
+   kernel was rounding memory limit to 64K. (#4841, #4895, #4893)
 
 ## [1.3.1] - 2025-09-05
 
@@ -1458,7 +1731,8 @@ implementation (libcontainer) is *not* covered by this policy.
    cgroups at all during `runc update`). (#2994)
 
 <!-- minor releases -->
-[Unreleased]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.1...HEAD
+[Unreleased]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...HEAD
+[1.5.0]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...v1.5.0
 [1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.3.0]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...v1.3.0
 [1.2.0]: https://github.com/opencontainers/runc/compare/v1.2.0-rc.1...v1.2.0
@@ -1491,7 +1765,9 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.1.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.0.0...v1.1.0-rc.1
 
 <!-- 1.2.z patch releases -->
-[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.7...release-1.2
+[Unreleased 1.2.z]: https://github.com/opencontainers/runc/compare/v1.2.9...release-1.2
+[1.2.9]: https://github.com/opencontainers/runc/compare/v1.2.8...v1.2.9
+[1.2.8]: https://github.com/opencontainers/runc/compare/v1.2.7...v1.2.8
 [1.2.7]: https://github.com/opencontainers/runc/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/opencontainers/runc/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/opencontainers/runc/compare/v1.2.4...v1.2.5
@@ -1504,17 +1780,27 @@ implementation (libcontainer) is *not* covered by this policy.
 [1.2.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.1.0...v1.2.0-rc.1
 
 <!-- 1.3.z patch releases -->
-[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.1...release-1.3
+[Unreleased 1.3.z]: https://github.com/opencontainers/runc/compare/v1.3.4...release-1.3
+[1.3.4]: https://github.com/opencontainers/runc/compare/v1.3.3...v1.3.4
+[1.3.3]: https://github.com/opencontainers/runc/compare/v1.3.2...v1.3.3
+[1.3.2]: https://github.com/opencontainers/runc/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.3.1
+[1.3.0]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.2...v1.3.0
 [1.3.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.3.0-rc.1...v1.3.0-rc.2
 [1.3.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.2.0...v1.3.0-rc.1
 
 <!-- 1.4.z patch releases -->
-[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.3...release-1.4
-[1.4.3]: https://github.com/opencontainers/runc/compare/v1.4.2...v1.4.3
+[Unreleased 1.4.z]: https://github.com/opencontainers/runc/compare/v1.4.2...release-1.4
 [1.4.2]: https://github.com/opencontainers/runc/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.3...v1.4.0
 [1.4.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.2...v1.4.0-rc.3
 [1.4.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.4.0-rc.1...v1.4.0-rc.2
 [1.4.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.3.0...v1.4.0-rc.1
+
+<!-- 1.5.z patch releases -->
+[Unreleased 1.5.z]: https://github.com/opencontainers/runc/compare/v1.5.0...release-1.5
+[1.5.0]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.3...v1.5.0
+[1.5.0-rc.3]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.2...v1.5.0-rc.3
+[1.5.0-rc.2]: https://github.com/opencontainers/runc/compare/v1.5.0-rc.1...v1.5.0-rc.2
+[1.5.0-rc.1]: https://github.com/opencontainers/runc/compare/v1.4.0...v1.5.0-rc.1

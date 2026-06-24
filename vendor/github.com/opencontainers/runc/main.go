@@ -1,3 +1,6 @@
+// runc is a command line client for running applications packaged according to
+// the Open Container Initiative (OCI) format and is a compliant implementation
+// of the Open Container Initiative specification.
 package main
 
 import (
@@ -48,6 +51,10 @@ func printVersion(c *cli.Context) {
 	if major+minor+micro > 0 {
 		fmt.Fprintf(w, "libseccomp: %d.%d.%d\n", major, minor, micro)
 	}
+
+	if v := pathrsVersionString(); v != "" {
+		fmt.Fprintf(w, "libpathrs: %s\n", v)
+	}
 }
 
 const (
@@ -55,8 +62,8 @@ const (
 	usage      = `Open Container Initiative runtime
 
 runc is a command line client for running applications packaged according to
-the Open Container Initiative (OCI) format and is a compliant implementation of the
-Open Container Initiative specification.
+the Open Container Initiative (OCI) format and is a compliant implementation of
+the Open Container Initiative specification.
 
 runc integrates well with existing process supervisors to provide a production
 container runtime environment for applications. It can be used with your

@@ -33,7 +33,7 @@ var featuresCommand = cli.Command{
 			OCIVersionMin: "1.0.0",
 			OCIVersionMax: specs.Version,
 			Annotations: map[string]string{
-				runcfeatures.AnnotationRuncVersion:           version,
+				runcfeatures.AnnotationRuncVersion:           context.App.Version,
 				runcfeatures.AnnotationRuncCommit:            gitCommit,
 				runcfeatures.AnnotationRuncCheckpointEnabled: "true",
 			},
@@ -91,6 +91,10 @@ var featuresCommand = cli.Command{
 			}
 			major, minor, patch := seccomp.Version()
 			feat.Annotations[runcfeatures.AnnotationLibseccompVersion] = fmt.Sprintf("%d.%d.%d", major, minor, patch)
+		}
+
+		if v := pathrsVersionString(); v != "" {
+			feat.Annotations[runcfeatures.AnnotationLibpathrsVersion] = v
 		}
 
 		enc := json.NewEncoder(context.App.Writer)

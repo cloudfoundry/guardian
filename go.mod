@@ -11,21 +11,21 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.75.0
-	code.cloudfoundry.org/clock v1.75.0
-	code.cloudfoundry.org/commandrunner v0.66.0
-	code.cloudfoundry.org/debugserver v0.102.0
-	code.cloudfoundry.org/garden v0.0.0-20260615182558-dd88c014d8c3
+	code.cloudfoundry.org/archiver v0.76.0
+	code.cloudfoundry.org/clock v1.76.0
+	code.cloudfoundry.org/commandrunner v0.68.0
+	code.cloudfoundry.org/debugserver v0.103.0
+	code.cloudfoundry.org/garden v0.0.0-20260617020226-a9e754564bb5
 	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20260615182721-a3778a6bc53e
-	code.cloudfoundry.org/lager/v3 v3.74.0
-	code.cloudfoundry.org/localip v0.76.0
+	code.cloudfoundry.org/idmapper v0.0.0-20260624020507-8356a773bc50
+	code.cloudfoundry.org/lager/v3 v3.75.0
+	code.cloudfoundry.org/localip v0.77.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/cloudfoundry/dropsonde v1.1.0
-	github.com/cloudfoundry/gosigar v1.3.121
+	github.com/cloudfoundry/gosigar v1.3.122
 	github.com/containerd/cgroups/v3 v3.1.3
 	github.com/containerd/containerd/api v1.11.1
-	github.com/containerd/containerd/v2 v2.3.1
+	github.com/containerd/containerd/v2 v2.3.2
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/typeurl/v2 v2.3.0
 	github.com/eapache/go-resiliency v1.7.0
@@ -37,12 +37,12 @@ require (
 	github.com/moby/sys/reexec v0.1.0
 	github.com/moby/sys/user v0.4.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
-	github.com/onsi/ginkgo/v2 v2.31.0
-	github.com/onsi/gomega v1.42.0
-	github.com/opencontainers/cgroups v0.0.6
+	github.com/onsi/ginkgo/v2 v2.32.0
+	github.com/onsi/gomega v1.42.1
+	github.com/opencontainers/cgroups v0.0.7
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
-	github.com/opencontainers/runc v1.4.3
+	github.com/opencontainers/runc v1.5.0
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.4
@@ -56,15 +56,16 @@ require (
 )
 
 require (
-	cyphar.com/go-pathrs v0.2.4 // indirect
+	cyphar.com/go-pathrs v0.2.5 // indirect
 	github.com/Masterminds/semver/v3 v3.5.0 // indirect
 	github.com/Microsoft/go-winio v0.6.3-0.20251027160822-ad3df93bed29 // indirect
-	github.com/Microsoft/hcsshim v0.15.0-rc.1 // indirect
+	github.com/Microsoft/hcsshim v0.15.0-rc.2 // indirect
+	github.com/aperturerobotics/protobuf-go-lite v0.14.0 // indirect
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/checkpoint-restore/go-criu/v7 v7.2.0 // indirect
+	github.com/checkpoint-restore/go-criu/v8 v8.3.0 // indirect
 	github.com/cilium/ebpf v0.21.0 // indirect
-	github.com/cloudfoundry/sonde-go v0.0.0-20260526083715-66f310f13c26 // indirect
+	github.com/cloudfoundry/sonde-go v0.0.0-20260622134720-d7b012c5b9c4 // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/containerd/continuity v0.5.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -76,7 +77,7 @@ require (
 	github.com/containerd/ttrpc v1.2.8 // indirect
 	github.com/coreos/go-systemd/v22 v22.7.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
-	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
+	github.com/cyphar/filepath-securejoin v0.7.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
@@ -116,7 +117,7 @@ require (
 	golang.org/x/sync v0.21.0 // indirect
 	golang.org/x/text v0.38.0 // indirect
 	golang.org/x/tools v0.46.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260615183401-62b3387ff324 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260622175928-b703f567277d // indirect
 	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 )
