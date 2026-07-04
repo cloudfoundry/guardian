@@ -156,6 +156,12 @@ func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, use
 
 	cgroupManager := runcontainerd.NewCgroupManager(containerdRuncRoot(), containerdNamespace)
 
+	// For non-runc runtimes (e.g. gVisor/runsc), use containerd task API for metrics
+	// instead of shelling out to runc which has no knowledge of the container.
+	if runtimeType != plugins.RuntimeRuncV2 {
+		statser = runcontainerd.NewContainerdStatser(nerd)
+	}
+
 	containerdManager := runcontainerd.New(nerd, nerd, processBuilder, userLookupper, wireExecer(pidGetter), statser, f.config.Containerd.UseContainerdForProcesses, cgroupManager, f.WireMkdirer(), peaHandlesGetter, f.config.Containers.CleanupProcessDirsOnWait, nerdStopper)
 
 	peaRunner := runcontainerd.NewRunContainerPea(containerdManager, nerd, volumizer, f.config.Containers.CleanupProcessDirsOnWait)

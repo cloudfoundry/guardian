@@ -23,6 +23,7 @@ import (
 	ctrdevents "github.com/containerd/containerd/v2/core/events"
 	"github.com/containerd/containerd/v2/pkg/cio"
 	"github.com/containerd/errdefs"
+	cgroup2stats "github.com/containerd/cgroups/v3/cgroup2/stats"
 	"github.com/containerd/typeurl/v2"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -465,4 +466,39 @@ func updateTaskInfoCreateOptions(taskInfo *client.TaskInfo, updateCreateOptions 
 	}
 
 	return updateCreateOptions(opts)
+}
+
+// TaskMetrics retrieves cgroup metrics for a container via the containerd task
+// API. Returns cgroupsv2 Metrics and the container creation time (used for Age).
+func (n *Nerd) TaskMetrics(log lager.Logger, containerID string) (*cgroup2stats.Metrics, time.Time, error) {
+	log = log.Session("task-metrics", lager.Data{"containerID": containerID})
+
+	container, task, err := n.loadContainerAndTask(log, containerID)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+
+	metric, err := task.Metrics(n.context)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("task.Metrics: %w", err)
+	}
+
+	if metric.Data == nil {
+		return nil, time.Time{}, fmt.Errorf("no metrics data for container %s", containerID)
+	}
+
+	cgMetrics, err := runcontainerd.UnmarshalContainerdMetrics(metric.Data)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+
+	// Get creation time from container info
+	info, err := container.Info(n.context)
+	if err != nil {
+		// Non-fatal: use zero time (Age will be large but metrics still report)
+		log.Error("get-info-for-creation-time", err)
+		return cgMetrics, time.Time{}, nil
+	}
+
+	return cgMetrics, info.CreatedAt, nil
 }
