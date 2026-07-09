@@ -8,7 +8,6 @@ import (
 	"net"
 	"os/exec"
 	"strings"
-	"time"
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
@@ -190,127 +189,6 @@ func setupLoopback(log lager.Logger, pid int) error {
 	}
 
 	log.Info("setup-loopback-success", lager.Data{"pid": pid})
-	return nil
-}
-
-// warmARPCache ensures the container's network namespace has resolved ARP
-// entries for all gateway IPs. gVisor's netstack copies ARP entries from the
-// namespace at startup but only those in "live" states (PERMANENT, REACHABLE,
-// STALE). On silk CNI with point-to-point links, gateway ARP entries may not
-// exist until triggered. This function probes each gateway with a UDP packet
-// to force ARP resolution, then promotes entries to PERMANENT so gVisor
-// reliably picks them up.
-func warmARPCache(log lager.Logger, pid int) error {
-	containerNS, err := netns.GetFromPid(pid)
-	if err != nil {
-		return fmt.Errorf("getting netns for pid %d: %w", pid, err)
-	}
-	defer containerNS.Close()
-
-	nlh, err := netlink.NewHandleAt(containerNS)
-	if err != nil {
-		return fmt.Errorf("creating netlink handle: %w", err)
-	}
-	defer nlh.Close()
-
-	// Find all gateway IPs from routes in the container namespace.
-	routes, err := nlh.RouteList(nil, netlink.FAMILY_ALL)
-	if err != nil {
-		return fmt.Errorf("listing routes: %w", err)
-	}
-
-	gwSet := map[string]net.IP{}
-	for _, r := range routes {
-		if r.Gw != nil && !r.Gw.IsUnspecified() {
-			gwSet[r.Gw.String()] = r.Gw
-		}
-	}
-
-	if len(gwSet) == 0 {
-		return nil
-	}
-
-	// Check which gateways already have ARP entries.
-	links, _ := nlh.LinkList()
-	var primaryLink netlink.Link
-	for _, l := range links {
-		if l.Attrs().Name != "lo" {
-			primaryLink = l
-			break
-		}
-	}
-
-	if primaryLink == nil {
-		return nil
-	}
-
-	neighs, _ := nlh.NeighList(primaryLink.Attrs().Index, netlink.FAMILY_ALL)
-	hasEntry := func(ip net.IP) bool {
-		for _, n := range neighs {
-			if n.IP.Equal(ip) && len(n.HardwareAddr) > 0 {
-				return true
-			}
-		}
-		return false
-	}
-
-	// Probe unresolved gateways with a UDP packet to trigger ARP.
-	probed := false
-	for _, gw := range gwSet {
-		if hasEntry(gw) {
-			continue
-		}
-		network := "udp4"
-		if gw.To4() == nil {
-			network = "udp6"
-		}
-		conn, err := net.DialUDP(network, nil, &net.UDPAddr{IP: gw, Port: 9})
-		if err != nil {
-			log.Info("arp-warm-probe-failed", lager.Data{"gw": gw.String(), "error": err.Error()})
-			continue
-		}
-		conn.Write([]byte{})
-		conn.Close()
-		probed = true
-	}
-
-	if probed {
-		time.Sleep(75 * time.Millisecond) // wait for ARP reply
-	}
-
-	// Re-read neighbor table and promote entries to PERMANENT.
-	neighs, err = nlh.NeighList(primaryLink.Attrs().Index, netlink.FAMILY_ALL)
-	if err != nil {
-		return fmt.Errorf("re-reading neighbor table: %w", err)
-	}
-
-	const liveStates = netlink.NUD_REACHABLE | netlink.NUD_STALE | netlink.NUD_DELAY | netlink.NUD_PROBE | netlink.NUD_PERMANENT
-	promoted := 0
-	for _, n := range neighs {
-		if len(n.HardwareAddr) == 0 || n.State&liveStates == 0 {
-			continue
-		}
-		if _, isGW := gwSet[n.IP.String()]; !isGW {
-			continue
-		}
-		if n.State == netlink.NUD_PERMANENT {
-			continue // already permanent
-		}
-		// Promote to PERMANENT so gVisor's scraper picks it up.
-		err := nlh.NeighSet(&netlink.Neigh{
-			LinkIndex:    primaryLink.Attrs().Index,
-			IP:           n.IP,
-			HardwareAddr: n.HardwareAddr,
-			State:        netlink.NUD_PERMANENT,
-		})
-		if err != nil {
-			log.Info("arp-promote-failed", lager.Data{"ip": n.IP.String(), "error": err.Error()})
-		} else {
-			promoted++
-		}
-	}
-
-	log.Info("warm-arp-cache-done", lager.Data{"pid": pid, "gateways": len(gwSet), "promoted": promoted})
 	return nil
 }
 
