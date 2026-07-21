@@ -192,6 +192,7 @@ type CommonCommand struct {
 	Containerd struct {
 		Socket                    string `long:"containerd-socket" description:"Path to a containerd socket."`
 		UseContainerdForProcesses bool   `long:"use-containerd-for-processes" description:"Use containerd to run processes in containers."`
+		RuntimeType               string `long:"containerd-runtime-type" description:"Containerd runtime type (e.g. io.containerd.runc.v2 or io.containerd.runsc.v1)."`
 	} `group:"Containerd"`
 
 	CPUThrottling struct {
@@ -673,15 +674,16 @@ func (cmd *CommonCommand) wireContainerizer(
 
 	peaCleaner := cmd.wirePeaCleaner(factory, volumizer, ociRuntime, peaPidGetter)
 	peaCreator = &peas.PeaCreator{
-		Volumizer:        volumizer,
-		PidGetter:        containersPidGetter,
-		PrivilegedGetter: privilegeChecker,
-		NetworkDepot:     networkDepot,
-		BundleGenerator:  template,
-		ProcessBuilder:   processBuilder,
-		BundleSaver:      bundleSaver,
-		ExecRunner:       peasExecRunner,
-		PeaCleaner:       peaCleaner,
+		Volumizer:         volumizer,
+		PidGetter:         containersPidGetter,
+		PrivilegedGetter:  privilegeChecker,
+		NetworkDepot:      networkDepot,
+		BundleGenerator:   template,
+		ProcessBuilder:    processBuilder,
+		BundleSaver:       bundleSaver,
+		ExecRunner:        peasExecRunner,
+		PeaCleaner:        peaCleaner,
+		SkipUserNamespace: cmd.Containerd.RuntimeType != "" && cmd.Containerd.RuntimeType != "io.containerd.runc.v2",
 	}
 
 	peaUsernameResolver := &peas.PeaUsernameResolver{
@@ -699,7 +701,15 @@ func (cmd *CommonCommand) wireContainerizer(
 		return nil, nil, err
 	}
 
-	return rundmc.New(depot, template, ociRuntime, nstar, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper, cpuCgrouper), peaCleaner, nil
+	var streamer rundmc.Streamer
+	if cmd.Containerd.RuntimeType != "" && cmd.Containerd.RuntimeType != "io.containerd.runc.v2" {
+		streamer = rundmc.NewExecStreamer(ociRuntime)
+	} else {
+		streamer = rundmc.NewNstarStreamer(ociRuntime, nstar)
+	}
+
+	execPeas := cmd.Containerd.RuntimeType != "" && cmd.Containerd.RuntimeType != "io.containerd.runc.v2"
+	return rundmc.New(depot, template, ociRuntime, streamer, processesStopper, eventStore, stateStore, peaCreator, peaUsernameResolver, cpuEntitlementPerShare, runtimeStopper, cpuCgrouper, execPeas), peaCleaner, nil
 }
 
 func (cmd *CommonCommand) useContainerd() bool {

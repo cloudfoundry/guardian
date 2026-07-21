@@ -59,15 +59,16 @@ type ExecRunner interface {
 }
 
 type PeaCreator struct {
-	Volumizer        Volumizer
-	PidGetter        PidGetter
-	PrivilegedGetter PrivilegedGetter
-	NetworkDepot     NetworkDepot
-	BundleGenerator  BundleGenerator
-	BundleSaver      depot.BundleSaver
-	ProcessBuilder   runrunc.ProcessBuilder
-	ExecRunner       ExecRunner
-	PeaCleaner       gardener.PeaCleaner
+	Volumizer          Volumizer
+	PidGetter          PidGetter
+	PrivilegedGetter   PrivilegedGetter
+	NetworkDepot       NetworkDepot
+	BundleGenerator    BundleGenerator
+	BundleSaver        depot.BundleSaver
+	ProcessBuilder     runrunc.ProcessBuilder
+	ExecRunner         ExecRunner
+	PeaCleaner         gardener.PeaCleaner
+	SkipUserNamespace  bool
 }
 
 func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle string) (_ garden.Process, theErr error) {
@@ -181,7 +182,7 @@ func (p *PeaCreator) linuxNamespaces(log lager.Logger, sandboxHandle string, pri
 	linuxNamespaces["pid"] = fmt.Sprintf("/proc/%d/ns/pid", originalCtrInitPid)
 	linuxNamespaces["uts"] = fmt.Sprintf("/proc/%d/ns/uts", originalCtrInitPid)
 
-	if !privileged {
+	if !privileged && !p.SkipUserNamespace {
 		linuxNamespaces["user"] = fmt.Sprintf("/proc/%d/ns/user", originalCtrInitPid)
 	}
 

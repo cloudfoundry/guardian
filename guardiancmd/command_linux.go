@@ -140,17 +140,27 @@ func (f *LinuxFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {
 }
 
 func (f *LinuxFactory) WireContainerd(processBuilder *processes.ProcBuilder, userLookupper users.UserLookupper, wireExecer func(pidGetter runrunc.PidGetter) *runrunc.Execer, statser runcontainerd.Statser, log lager.Logger, volumizer peas.Volumizer, peaHandlesGetter runcontainerd.PeaHandlesGetter, metricsProvider *metrics.MetricsProvider) (*runcontainerd.RunContainerd, *runcontainerd.RunContainerPea, *runcontainerd.PidGetter, *privchecker.PrivilegeChecker, peas.BundleLoader, error) {
-	containerdClient, err := client.New(f.config.Containerd.Socket, client.WithDefaultRuntime(plugins.RuntimeRuncV2))
+	runtimeType := f.config.Containerd.RuntimeType
+	if runtimeType == "" {
+		runtimeType = plugins.RuntimeRuncV2
+	}
+	containerdClient, err := client.New(f.config.Containerd.Socket, client.WithDefaultRuntime(runtimeType))
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
 	ctx := namespaces.WithNamespace(context.Background(), containerdNamespace)
 	ctx = leases.WithLease(ctx, "lease-is-off")
-	nerd := nerdpkg.New(containerdClient, ctx, filepath.Join(containerdRuncRoot(), "fifo"), metricsProvider)
+	nerd := nerdpkg.New(containerdClient, ctx, filepath.Join(containerdRuncRoot(), "fifo"), metricsProvider, runtimeType)
 	nerdStopper := nerdpkg.NewNerdStopper(containerdClient)
 	pidGetter := &runcontainerd.PidGetter{Nerd: nerd}
 
 	cgroupManager := runcontainerd.NewCgroupManager(containerdRuncRoot(), containerdNamespace)
+
+	// For non-runc runtimes (e.g. gVisor/runsc), use containerd task API for metrics
+	// instead of shelling out to runc which has no knowledge of the container.
+	if runtimeType != plugins.RuntimeRuncV2 {
+		statser = runcontainerd.NewContainerdStatser(nerd)
+	}
 
 	containerdManager := runcontainerd.New(nerd, nerd, processBuilder, userLookupper, wireExecer(pidGetter), statser, f.config.Containerd.UseContainerdForProcesses, cgroupManager, f.WireMkdirer(), peaHandlesGetter, f.config.Containers.CleanupProcessDirsOnWait, nerdStopper)
 
