@@ -175,10 +175,14 @@ type CommonCommand struct {
 	} `group:"Container Networking"`
 
 	Limits struct {
-		CPUQuotaPerShare     uint64 `long:"cpu-quota-per-share" default:"0" description:"Maximum number of microseconds each cpu share assigned to a container allows per quota period"`
-		DefaultBlockIOWeight uint16 `long:"default-container-blockio-weight" default:"0" description:"Default block IO weight assigned to a container"`
-		MaxContainers        uint64 `long:"max-containers" default:"0" description:"Maximum number of containers that can be created."`
-		DisableSwapLimit     bool   `long:"disable-swap-limit" description:"Disable swap memory limit"`
+		CPUQuotaPerShare          uint64 `long:"cpu-quota-per-share" default:"0" description:"Maximum number of microseconds each cpu share assigned to a container allows per quota period"`
+		DefaultBlockIOWeight      uint16 `long:"default-container-blockio-weight" default:"0" description:"Default block IO weight assigned to a container"`
+		ContainerIOMaxReadBps     uint64 `long:"container-io-max-read-bps" default:"0" description:"Per-container read bytes/s limit (cgroups v2 only, 0=unlimited)"`
+		ContainerIOMaxWriteBps    uint64 `long:"container-io-max-write-bps" default:"0" description:"Per-container write bytes/s limit (cgroups v2 only, 0=unlimited)"`
+		ContainerIOMaxReadIOPS    uint64 `long:"container-io-max-read-iops" default:"0" description:"Per-container read IOPS limit (cgroups v2 only, 0=unlimited)"`
+		ContainerIOMaxWriteIOPS   uint64 `long:"container-io-max-write-iops" default:"0" description:"Per-container write IOPS limit (cgroups v2 only, 0=unlimited)"`
+		MaxContainers             uint64 `long:"max-containers" default:"0" description:"Maximum number of containers that can be created."`
+		DisableSwapLimit          bool   `long:"disable-swap-limit" description:"Disable swap memory limit"`
 	} `group:"Limits"`
 
 	Metrics struct {
@@ -576,9 +580,13 @@ func (cmd *CommonCommand) wireContainerizer(
 		bundlerules.Windows{},
 		bundlerules.RootFS{},
 		bundlerules.Limits{
-			CpuQuotaPerShare: cmd.Limits.CPUQuotaPerShare,
-			BlockIOWeight:    cmd.Limits.DefaultBlockIOWeight,
-			DisableSwapLimit: cmd.Limits.DisableSwapLimit,
+			CpuQuotaPerShare:     cmd.Limits.CPUQuotaPerShare,
+			BlockIOWeight:        cmd.Limits.DefaultBlockIOWeight,
+			IOMaxReadBps:         cmd.Limits.ContainerIOMaxReadBps,
+			IOMaxWriteBps:        cmd.Limits.ContainerIOMaxWriteBps,
+			IOMaxReadIOPS:        cmd.Limits.ContainerIOMaxReadIOPS,
+			IOMaxWriteIOPS:       cmd.Limits.ContainerIOMaxWriteIOPS,
+			DisableSwapLimit:     cmd.Limits.DisableSwapLimit,
 		},
 	}
 
