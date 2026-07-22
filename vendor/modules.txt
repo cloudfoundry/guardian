@@ -1,21 +1,21 @@
-# code.cloudfoundry.org/archiver v0.79.0
+# code.cloudfoundry.org/archiver v0.80.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/archiver/extractor/test_helper
-# code.cloudfoundry.org/clock v1.79.0
+# code.cloudfoundry.org/clock v1.80.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
-# code.cloudfoundry.org/commandrunner v0.71.0
+# code.cloudfoundry.org/commandrunner v0.72.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/commandrunner
 code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.106.0
+# code.cloudfoundry.org/debugserver v0.107.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20260708020641-3ee0e5230510 => ../garden
+# code.cloudfoundry.org/garden v0.0.0-20260715020742-79c9837591af => ../garden
 ## explicit; go 1.25.0
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
@@ -30,17 +30,17 @@ code.cloudfoundry.org/garden/transport
 # code.cloudfoundry.org/grootfs v0.30.0 => ../grootfs
 ## explicit; go 1.25.0
 code.cloudfoundry.org/grootfs/commands/config
-# code.cloudfoundry.org/idmapper v0.0.0-20260715020852-f58f350c17b3 => ../idmapper
+# code.cloudfoundry.org/idmapper v0.0.0-20260722021010-9c84232f2761 => ../idmapper
 ## explicit; go 1.25.0
 code.cloudfoundry.org/idmapper
-# code.cloudfoundry.org/lager/v3 v3.78.0
+# code.cloudfoundry.org/lager/v3 v3.79.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/lager/v3
 code.cloudfoundry.org/lager/v3/chug
 code.cloudfoundry.org/lager/v3/internal/truncate
 code.cloudfoundry.org/lager/v3/lagerctx
 code.cloudfoundry.org/lager/v3/lagertest
-# code.cloudfoundry.org/localip v0.80.0
+# code.cloudfoundry.org/localip v0.81.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/localip
 # cyphar.com/go-pathrs v0.2.5
@@ -142,11 +142,11 @@ github.com/cloudfoundry/dropsonde/metric_sender/fake
 github.com/cloudfoundry/dropsonde/metricbatcher
 github.com/cloudfoundry/dropsonde/metrics
 github.com/cloudfoundry/dropsonde/runtime_stats
-# github.com/cloudfoundry/gosigar v1.3.124
+# github.com/cloudfoundry/gosigar v1.3.125
 ## explicit; go 1.25.0
 github.com/cloudfoundry/gosigar
 github.com/cloudfoundry/gosigar/sys/windows
-# github.com/cloudfoundry/sonde-go v0.0.0-20260706112804-cd2c61a47573
+# github.com/cloudfoundry/sonde-go v0.0.0-20260720065356-6728909ed72b
 ## explicit; go 1.23
 github.com/cloudfoundry/sonde-go/events
 # github.com/containerd/cgroups/v3 v3.1.3
@@ -311,7 +311,7 @@ github.com/eapache/go-resiliency/retrier
 # github.com/felixge/httpsnoop v1.1.0
 ## explicit; go 1.25
 github.com/felixge/httpsnoop
-# github.com/go-logr/logr v1.4.3
+# github.com/go-logr/logr v1.4.4
 ## explicit; go 1.18
 github.com/go-logr/logr
 github.com/go-logr/logr/funcr
@@ -349,7 +349,7 @@ github.com/jessevdk/go-flags
 # github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 ## explicit
 github.com/kardianos/osext
-# github.com/klauspost/compress v1.19.0
+# github.com/klauspost/compress v1.19.1
 ## explicit; go 1.24
 github.com/klauspost/compress
 github.com/klauspost/compress/fse
@@ -444,7 +444,7 @@ github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
-# github.com/opencontainers/cgroups v0.0.7
+# github.com/opencontainers/cgroups v0.0.8
 ## explicit; go 1.24.0
 github.com/opencontainers/cgroups
 github.com/opencontainers/cgroups/devices
@@ -667,10 +667,10 @@ golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20260713224248-f5fc221cf8c4
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20260720211330-0afa2a65878a
 ## explicit; go 1.25.0
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.82.0
+# google.golang.org/grpc v1.82.1
 ## explicit; go 1.25.0
 google.golang.org/grpc
 google.golang.org/grpc/attributes
