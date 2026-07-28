@@ -193,6 +193,105 @@ var _ = Describe("LimitsRule", func() {
 			}
 		})
 
+		Context("io.max throttling", func() {
+			It("sets ThrottleReadBpsDevice when IOMaxReadBps is configured", func() {
+				limits := bundlerules.Limits{
+					IOMaxReadBps: 59768832,
+				}
+				newBndl, err := limits.Apply(goci.Bundle(), spec.DesiredContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(newBndl.Resources().BlockIO.ThrottleReadBpsDevice).NotTo(BeEmpty())
+				for _, dev := range newBndl.Resources().BlockIO.ThrottleReadBpsDevice {
+					Expect(dev.Rate).To(Equal(uint64(59768832)))
+					Expect(dev.Major).NotTo(Equal(int64(0)))
+				}
+				Expect(newBndl.Resources().BlockIO.ThrottleWriteBpsDevice).To(BeEmpty())
+				Expect(newBndl.Resources().BlockIO.ThrottleReadIOPSDevice).To(BeEmpty())
+				Expect(newBndl.Resources().BlockIO.ThrottleWriteIOPSDevice).To(BeEmpty())
+			})
+
+			It("sets ThrottleWriteBpsDevice when IOMaxWriteBps is configured", func() {
+				limits := bundlerules.Limits{
+					IOMaxWriteBps: 59768832,
+				}
+				newBndl, err := limits.Apply(goci.Bundle(), spec.DesiredContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(newBndl.Resources().BlockIO.ThrottleWriteBpsDevice).NotTo(BeEmpty())
+				for _, dev := range newBndl.Resources().BlockIO.ThrottleWriteBpsDevice {
+					Expect(dev.Rate).To(Equal(uint64(59768832)))
+				}
+				Expect(newBndl.Resources().BlockIO.ThrottleReadBpsDevice).To(BeEmpty())
+			})
+
+			It("sets ThrottleReadIOPSDevice when IOMaxReadIOPS is configured", func() {
+				limits := bundlerules.Limits{
+					IOMaxReadIOPS: 900,
+				}
+				newBndl, err := limits.Apply(goci.Bundle(), spec.DesiredContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(newBndl.Resources().BlockIO.ThrottleReadIOPSDevice).NotTo(BeEmpty())
+				for _, dev := range newBndl.Resources().BlockIO.ThrottleReadIOPSDevice {
+					Expect(dev.Rate).To(Equal(uint64(900)))
+				}
+				Expect(newBndl.Resources().BlockIO.ThrottleWriteIOPSDevice).To(BeEmpty())
+			})
+
+			It("sets ThrottleWriteIOPSDevice when IOMaxWriteIOPS is configured", func() {
+				limits := bundlerules.Limits{
+					IOMaxWriteIOPS: 900,
+				}
+				newBndl, err := limits.Apply(goci.Bundle(), spec.DesiredContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(newBndl.Resources().BlockIO.ThrottleWriteIOPSDevice).NotTo(BeEmpty())
+				for _, dev := range newBndl.Resources().BlockIO.ThrottleWriteIOPSDevice {
+					Expect(dev.Rate).To(Equal(uint64(900)))
+				}
+			})
+
+			It("sets all throttle devices when all io.max values are configured", func() {
+				limits := bundlerules.Limits{
+					IOMaxReadBps:   59768832,
+					IOMaxWriteBps:  59768832,
+					IOMaxReadIOPS:  900,
+					IOMaxWriteIOPS: 900,
+				}
+				newBndl, err := limits.Apply(goci.Bundle(), spec.DesiredContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(newBndl.Resources().BlockIO.ThrottleReadBpsDevice).NotTo(BeEmpty())
+				Expect(newBndl.Resources().BlockIO.ThrottleWriteBpsDevice).NotTo(BeEmpty())
+				Expect(newBndl.Resources().BlockIO.ThrottleReadIOPSDevice).NotTo(BeEmpty())
+				Expect(newBndl.Resources().BlockIO.ThrottleWriteIOPSDevice).NotTo(BeEmpty())
+
+				// All throttle device arrays should have the same length (one entry per real block device)
+				numDevices := len(newBndl.Resources().BlockIO.ThrottleReadBpsDevice)
+				Expect(numDevices).To(BeNumerically(">", 0))
+				Expect(newBndl.Resources().BlockIO.ThrottleWriteBpsDevice).To(HaveLen(numDevices))
+				Expect(newBndl.Resources().BlockIO.ThrottleReadIOPSDevice).To(HaveLen(numDevices))
+				Expect(newBndl.Resources().BlockIO.ThrottleWriteIOPSDevice).To(HaveLen(numDevices))
+			})
+
+			It("does not set any throttle devices when all io.max values are 0", func() {
+				limits := bundlerules.Limits{
+					IOMaxReadBps:   0,
+					IOMaxWriteBps:  0,
+					IOMaxReadIOPS:  0,
+					IOMaxWriteIOPS: 0,
+				}
+				newBndl, err := limits.Apply(goci.Bundle(), spec.DesiredContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(newBndl.Resources().BlockIO.ThrottleReadBpsDevice).To(BeNil())
+				Expect(newBndl.Resources().BlockIO.ThrottleWriteBpsDevice).To(BeNil())
+				Expect(newBndl.Resources().BlockIO.ThrottleReadIOPSDevice).To(BeNil())
+				Expect(newBndl.Resources().BlockIO.ThrottleWriteIOPSDevice).To(BeNil())
+			})
+		})
+
 		Context("when swap limit is disabled", func() {
 			It("does not limit swap in bundle resources", func() {
 				limits := bundlerules.Limits{DisableSwapLimit: true}
