@@ -11,15 +11,15 @@ replace (
 )
 
 require (
-	code.cloudfoundry.org/archiver v0.80.0
-	code.cloudfoundry.org/clock v1.80.0
+	code.cloudfoundry.org/archiver v0.81.0
+	code.cloudfoundry.org/clock v1.81.0
 	code.cloudfoundry.org/commandrunner v0.72.0
 	code.cloudfoundry.org/debugserver v0.107.0
-	code.cloudfoundry.org/garden v0.0.0-20260715020742-79c9837591af
+	code.cloudfoundry.org/garden v0.0.0-20260722020902-0d62a2590a0f
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20260722021010-9c84232f2761
-	code.cloudfoundry.org/lager/v3 v3.79.0
-	code.cloudfoundry.org/localip v0.81.0
+	code.cloudfoundry.org/lager/v3 v3.80.0
+	code.cloudfoundry.org/localip v0.82.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/cloudfoundry/dropsonde v1.1.0
 	github.com/cloudfoundry/gosigar v1.3.125
@@ -60,7 +60,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.5.0 // indirect
 	github.com/Microsoft/go-winio v0.6.3-0.20251027160822-ad3df93bed29 // indirect
 	github.com/Microsoft/hcsshim v0.15.0-rc.3 // indirect
-	github.com/aperturerobotics/protobuf-go-lite v0.15.0 // indirect
+	github.com/aperturerobotics/protobuf-go-lite v0.16.0 // indirect
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/checkpoint-restore/go-criu/v8 v8.4.0 // indirect
@@ -111,13 +111,13 @@ require (
 	go.opentelemetry.io/otel v1.44.0 // indirect
 	go.opentelemetry.io/otel/metric v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
-	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/tools v0.48.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260720211330-0afa2a65878a // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260727163830-6c54dddc4772 // indirect
 	google.golang.org/grpc v1.82.1 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 )
