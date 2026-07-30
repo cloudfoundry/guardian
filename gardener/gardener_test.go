@@ -1877,6 +1877,7 @@ var _ = Describe("Gardener", func() {
 			containerizer.InfoReturns(spec.ActualContainerSpec{
 				Limits: garden.Limits{
 					CPU: garden.CPULimits{
+						//lint:ignore SA1019 - we still specify this to make the deprecated logic work until we get rid of the code in garden
 						LimitInShares: 10,
 					},
 				},

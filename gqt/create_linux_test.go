@@ -417,7 +417,8 @@ var _ = Describe("Creating a Container", func() {
 		createContainerWithCpuConfig := func(weight, shares uint64) (garden.Container, error) {
 			limits := garden.Limits{
 				CPU: garden.CPULimits{
-					Weight:        weight,
+					Weight: weight,
+					//lint:ignore SA1019 - we still specify this to make the deprecated logic work until we get rid of the code in garden
 					LimitInShares: shares,
 				},
 			}
