@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/integration"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"

@@ -1,4 +1,4 @@
-package locksmith // import "code.cloudfoundry.org/grootfs/store/locksmith"
+package locksmith // import "code.cloudfoundry.org/guardian/grootfs/store/locksmith"
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 	"code.cloudfoundry.org/lager/v3"
 	errorspkg "github.com/pkg/errors"
 	"golang.org/x/sys/unix"

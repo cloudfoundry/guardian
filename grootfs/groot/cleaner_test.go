@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/groot/grootfakes"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/groot/grootfakes"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 

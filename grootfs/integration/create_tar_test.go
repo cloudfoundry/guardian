@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
-	"code.cloudfoundry.org/grootfs/integration/runner"
-	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/integration"
+	"code.cloudfoundry.org/guardian/grootfs/integration/runner"
+	"code.cloudfoundry.org/guardian/grootfs/store"
+	"code.cloudfoundry.org/guardian/grootfs/testhelpers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

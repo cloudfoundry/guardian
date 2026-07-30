@@ -3,7 +3,7 @@ package overlayxfs_test
 import (
 	"fmt"
 
-	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/guardian/grootfs/testhelpers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,7 +28,7 @@ func TestOverlayxfs(t *testing.T) {
 
 	BeforeSuite(func() {
 		var err error
-		TardisBinPath, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis", "-mod=vendor")
+		TardisBinPath, err = gexec.Build("code.cloudfoundry.org/guardian/grootfs/store/filesystems/overlayxfs/tardis", "-mod=vendor")
 		Expect(err).NotTo(HaveOccurred())
 		testhelpers.SuidBinary(TardisBinPath)
 	})

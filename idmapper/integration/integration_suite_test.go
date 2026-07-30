@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"path"
 
-	"code.cloudfoundry.org/idmapper"
+	"code.cloudfoundry.org/guardian/idmapper"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,23 +32,23 @@ func TestIntegration(t *testing.T) {
 	SynchronizedBeforeSuite(func() []byte {
 		bins := make(map[string]string)
 
-		newuidmapBin, err := gexec.Build("code.cloudfoundry.org/idmapper/cmd/newuidmap", "-mod=vendor")
+		newuidmapBin, err := gexec.Build("code.cloudfoundry.org/guardian/idmapper/cmd/newuidmap", "-mod=vendor")
 		Expect(err).NotTo(HaveOccurred())
 		bins["newuidmapBin"] = newuidmapBin
 		fixPermission(path.Dir(newuidmapBin))
 		suid(newuidmapBin)
 
-		newgidmapBin, err := gexec.Build("code.cloudfoundry.org/idmapper/cmd/newgidmap", "-mod=vendor")
+		newgidmapBin, err := gexec.Build("code.cloudfoundry.org/guardian/idmapper/cmd/newgidmap", "-mod=vendor")
 		Expect(err).NotTo(HaveOccurred())
 		bins["newgidmapBin"] = newgidmapBin
 		fixPermission(path.Dir(newgidmapBin))
 		suid(newgidmapBin)
 
-		maximusBin, err := gexec.Build("code.cloudfoundry.org/idmapper/cmd/maximus", "-mod=vendor")
+		maximusBin, err := gexec.Build("code.cloudfoundry.org/guardian/idmapper/cmd/maximus", "-mod=vendor")
 		Expect(err).NotTo(HaveOccurred())
 		bins["maximusBin"] = maximusBin
 
-		namespaceWrapperBin, err := gexec.Build("code.cloudfoundry.org/idmapper/integration/wrapper", "-mod=vendor")
+		namespaceWrapperBin, err := gexec.Build("code.cloudfoundry.org/guardian/idmapper/integration/wrapper", "-mod=vendor")
 		Expect(err).NotTo(HaveOccurred())
 		bins["namespaceWrapperBin"] = namespaceWrapperBin
 

@@ -1,4 +1,4 @@
-package source // import "code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
+package source // import "code.cloudfoundry.org/guardian/grootfs/fetcher/layer_fetcher/source"
 
 import (
 	"context"

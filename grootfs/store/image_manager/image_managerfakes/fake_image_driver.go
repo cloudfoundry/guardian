@@ -4,8 +4,8 @@ package image_managerfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/store/image_manager"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/store/image_manager"
 	lager "code.cloudfoundry.org/lager/v3"
 )
 

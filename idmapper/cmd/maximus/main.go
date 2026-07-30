@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"code.cloudfoundry.org/idmapper"
+	"code.cloudfoundry.org/guardian/idmapper"
 )
 
 func main() {

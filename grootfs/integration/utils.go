@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/guardian/grootfs/testhelpers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

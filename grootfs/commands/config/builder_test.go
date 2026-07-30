@@ -4,7 +4,7 @@ import (
 	"os"
 	"path"
 
-	"code.cloudfoundry.org/grootfs/commands/config"
+	"code.cloudfoundry.org/guardian/grootfs/commands/config"
 	yaml "gopkg.in/yaml.v2"
 
 	. "github.com/onsi/ginkgo/v2"

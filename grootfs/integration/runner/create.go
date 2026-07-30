@@ -9,7 +9,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 )
 
 func (r Runner) StartCreate(spec groot.CreateSpec) (*gexec.Session, error) {

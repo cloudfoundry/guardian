@@ -5,8 +5,8 @@ import (
 	"path"
 	"path/filepath"
 
-	"code.cloudfoundry.org/grootfs/commands/idfinder"
-	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/guardian/grootfs/commands/idfinder"
+	"code.cloudfoundry.org/guardian/grootfs/store"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

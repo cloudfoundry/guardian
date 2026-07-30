@@ -13,10 +13,10 @@ import (
 	"strings"
 	"testing"
 
-	"code.cloudfoundry.org/grootfs/integration"
-	"code.cloudfoundry.org/grootfs/integration/runner"
-	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/guardian/grootfs/integration"
+	"code.cloudfoundry.org/guardian/grootfs/integration/runner"
+	"code.cloudfoundry.org/guardian/grootfs/store"
+	"code.cloudfoundry.org/guardian/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -50,12 +50,12 @@ func TestGroot(t *testing.T) {
 		Expect(err).NotTo(HaveOccurred())
 		grootFSBin = integration.MakeBinaryAccessibleToEveryone(grootFSBin)
 
-		tardisBin, err := gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis", "-mod=vendor")
+		tardisBin, err := gexec.Build("code.cloudfoundry.org/guardian/grootfs/store/filesystems/overlayxfs/tardis", "-mod=vendor")
 		Expect(err).NotTo(HaveOccurred())
 		tardisBin = integration.MakeBinaryAccessibleToEveryone(tardisBin)
 		testhelpers.SuidBinary(tardisBin)
 
-		namespacerBin, err := gexec.Build("code.cloudfoundry.org/grootfs/integration/namespacer", "-mod=vendor")
+		namespacerBin, err := gexec.Build("code.cloudfoundry.org/guardian/grootfs/integration/namespacer", "-mod=vendor")
 		Expect(err).NotTo(HaveOccurred())
 
 		return []byte(grootFSBin + ":" + tardisBin + ":" + namespacerBin)

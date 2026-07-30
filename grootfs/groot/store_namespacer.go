@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"sort"
 
-	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/guardian/grootfs/store"
 	errorspkg "github.com/pkg/errors"
 )
 

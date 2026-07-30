@@ -1,4 +1,4 @@
-package image_manager // import "code.cloudfoundry.org/grootfs/store/image_manager"
+package image_manager // import "code.cloudfoundry.org/guardian/grootfs/store/image_manager"
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"path"
 	"path/filepath"
 
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/store"
 	"code.cloudfoundry.org/lager/v3"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	errorspkg "github.com/pkg/errors"

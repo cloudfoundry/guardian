@@ -3,7 +3,7 @@ package runner
 import (
 	"encoding/json"
 
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 )
 
 func (r Runner) Stats(id string) (groot.VolumeStats, error) {

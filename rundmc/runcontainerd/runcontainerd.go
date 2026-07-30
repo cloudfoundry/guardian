@@ -15,7 +15,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/event"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/users"
-	"code.cloudfoundry.org/idmapper"
+	"code.cloudfoundry.org/guardian/idmapper"
 	"code.cloudfoundry.org/lager/v3"
 	apievents "github.com/containerd/containerd/api/events"
 	uuid "github.com/nu7hatch/gouuid"

@@ -4,8 +4,8 @@ package sandboxfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/sandbox"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/sandbox"
 	"code.cloudfoundry.org/lager/v3"
 )
 

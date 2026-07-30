@@ -8,10 +8,10 @@ import (
 	"os"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 
-	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
-	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/layer_fetcherfakes"
+	"code.cloudfoundry.org/guardian/grootfs/fetcher/layer_fetcher"
+	"code.cloudfoundry.org/guardian/grootfs/fetcher/layer_fetcher/layer_fetcherfakes"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	"github.com/containers/image/v5/types"
 	. "github.com/onsi/ginkgo/v2"

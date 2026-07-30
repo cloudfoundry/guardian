@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/metrics"
-	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/guardian/grootfs/metrics"
+	"code.cloudfoundry.org/guardian/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	"github.com/cloudfoundry/sonde-go/events"
 

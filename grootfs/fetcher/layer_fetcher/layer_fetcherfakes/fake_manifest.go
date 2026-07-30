@@ -5,7 +5,7 @@ import (
 	"context"
 	"sync"
 
-	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
+	"code.cloudfoundry.org/guardian/grootfs/fetcher/layer_fetcher"
 	"github.com/containers/image/v5/docker/reference"
 	"github.com/containers/image/v5/types"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"

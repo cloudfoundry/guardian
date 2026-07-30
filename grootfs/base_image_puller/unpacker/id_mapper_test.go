@@ -5,8 +5,8 @@ import (
 	"os/exec"
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
-	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/base_image_puller/unpacker"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo/v2"

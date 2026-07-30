@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"code.cloudfoundry.org/grootfs/groot"
-	quotapkg "code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/quota"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	quotapkg "code.cloudfoundry.org/guardian/grootfs/store/filesystems/overlayxfs/quota"
 	"code.cloudfoundry.org/lager/v3"
 	errorspkg "github.com/pkg/errors"
 )

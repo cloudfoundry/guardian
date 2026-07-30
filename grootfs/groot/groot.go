@@ -1,4 +1,4 @@
-package groot // import "code.cloudfoundry.org/grootfs/groot"
+package groot // import "code.cloudfoundry.org/guardian/grootfs/groot"
 
 import (
 	"io"

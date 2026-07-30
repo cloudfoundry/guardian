@@ -1,10 +1,10 @@
-package commands // import "code.cloudfoundry.org/grootfs/commands"
+package commands // import "code.cloudfoundry.org/guardian/grootfs/commands"
 
 import (
 	"encoding/json"
 	"os"
 
-	"code.cloudfoundry.org/grootfs/commands/config"
+	"code.cloudfoundry.org/guardian/grootfs/commands/config"
 	"code.cloudfoundry.org/lager/v3"
 	"github.com/urfave/cli/v2"
 )

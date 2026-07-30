@@ -9,7 +9,7 @@ import (
 	"io"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
+	"code.cloudfoundry.org/guardian/grootfs/fetcher/layer_fetcher"
 )
 
 var _ = Describe("QuotaedReader", func() {

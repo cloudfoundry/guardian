@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"sync"
 
-	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
+	"code.cloudfoundry.org/guardian/grootfs/fetcher/layer_fetcher/source"
 	"code.cloudfoundry.org/lager/v3"
 	"github.com/containers/image/v5/types"
 )

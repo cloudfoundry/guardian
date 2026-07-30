@@ -4,8 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
-	grootfsRunner "code.cloudfoundry.org/grootfs/integration/runner"
-	"code.cloudfoundry.org/grootfs/testhelpers"
+	grootfsRunner "code.cloudfoundry.org/guardian/grootfs/integration/runner"
+	"code.cloudfoundry.org/guardian/grootfs/testhelpers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

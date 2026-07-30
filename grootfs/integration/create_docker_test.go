@@ -17,12 +17,12 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
-	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
-	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
-	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/guardian/grootfs/commands/config"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/integration"
+	runnerpkg "code.cloudfoundry.org/guardian/grootfs/integration/runner"
+	"code.cloudfoundry.org/guardian/grootfs/store"
+	"code.cloudfoundry.org/guardian/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager/v3"
 
 	units "github.com/docker/go-units"

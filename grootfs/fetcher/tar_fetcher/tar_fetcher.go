@@ -1,4 +1,4 @@
-package tar_fetcher // import "code.cloudfoundry.org/grootfs/fetcher/tar_fetcher"
+package tar_fetcher // import "code.cloudfoundry.org/guardian/grootfs/fetcher/tar_fetcher"
 
 import (
 	"crypto/sha256"
@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"os"
 
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 	"code.cloudfoundry.org/lager/v3"
 	errorspkg "github.com/pkg/errors"
 )

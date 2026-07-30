@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/store/storefakes"
+	"code.cloudfoundry.org/guardian/grootfs/store"
+	"code.cloudfoundry.org/guardian/grootfs/store/storefakes"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

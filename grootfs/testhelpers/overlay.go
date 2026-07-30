@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/guardian/grootfs/store"
 
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"

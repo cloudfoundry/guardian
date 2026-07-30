@@ -4,8 +4,8 @@ import (
 	"errors"
 	"path/filepath"
 
-	"code.cloudfoundry.org/grootfs/store/garbage_collector"
-	"code.cloudfoundry.org/grootfs/store/garbage_collector/garbage_collectorfakes"
+	"code.cloudfoundry.org/guardian/grootfs/store/garbage_collector"
+	"code.cloudfoundry.org/guardian/grootfs/store/garbage_collector/garbage_collectorfakes"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 

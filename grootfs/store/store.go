@@ -1,4 +1,4 @@
-package store // import "code.cloudfoundry.org/grootfs/store"
+package store // import "code.cloudfoundry.org/guardian/grootfs/store"
 import "path/filepath"
 
 const (

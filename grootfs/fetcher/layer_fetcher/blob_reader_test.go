@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
+	"code.cloudfoundry.org/guardian/grootfs/fetcher/layer_fetcher"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

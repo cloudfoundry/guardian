@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
+	"code.cloudfoundry.org/guardian/grootfs/store/filesystems/overlayxfs"
 	"github.com/pkg/errors"
 )
 

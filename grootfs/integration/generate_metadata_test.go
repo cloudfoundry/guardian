@@ -7,11 +7,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller"
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
-	grootfsRunner "code.cloudfoundry.org/grootfs/integration/runner"
-	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/guardian/grootfs/base_image_puller"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/integration"
+	grootfsRunner "code.cloudfoundry.org/guardian/grootfs/integration/runner"
+	"code.cloudfoundry.org/guardian/grootfs/store"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

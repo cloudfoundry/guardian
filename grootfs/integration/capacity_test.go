@@ -1,7 +1,7 @@
 package integration_test
 
 import (
-	"code.cloudfoundry.org/grootfs/commands/config"
+	"code.cloudfoundry.org/guardian/grootfs/commands/config"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

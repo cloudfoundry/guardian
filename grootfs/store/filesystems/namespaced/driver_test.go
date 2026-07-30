@@ -3,12 +3,12 @@ package namespaced_test
 import (
 	"errors"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller"
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/groot/grootfakes"
-	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
-	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced/namespacedfakes"
-	"code.cloudfoundry.org/grootfs/store/image_manager"
+	"code.cloudfoundry.org/guardian/grootfs/base_image_puller"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/groot/grootfakes"
+	"code.cloudfoundry.org/guardian/grootfs/store/filesystems/namespaced"
+	"code.cloudfoundry.org/guardian/grootfs/store/filesystems/namespaced/namespacedfakes"
+	"code.cloudfoundry.org/guardian/grootfs/store/image_manager"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 

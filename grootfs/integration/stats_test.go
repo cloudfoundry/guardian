@@ -8,11 +8,11 @@ import (
 	"strings"
 	"syscall"
 
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
-	"code.cloudfoundry.org/grootfs/integration/runner"
-	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/integration"
+	"code.cloudfoundry.org/guardian/grootfs/integration/runner"
+	"code.cloudfoundry.org/guardian/grootfs/store"
+	"code.cloudfoundry.org/guardian/grootfs/testhelpers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -148,7 +148,7 @@ var _ = Describe("Stats", func() {
 			)
 
 			BeforeEach(func() {
-				tardisBin, err := gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis", "-mod=vendor")
+				tardisBin, err := gexec.Build("code.cloudfoundry.org/guardian/grootfs/store/filesystems/overlayxfs/tardis", "-mod=vendor")
 				Expect(err).NotTo(HaveOccurred())
 				tardisBin = integration.MakeBinaryAccessibleToEveryone(tardisBin)
 

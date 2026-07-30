@@ -7,9 +7,9 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
-	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/guardian/grootfs/commands/config"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/integration"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

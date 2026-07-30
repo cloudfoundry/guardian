@@ -4,7 +4,7 @@ package garbage_collectorfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/grootfs/store/garbage_collector"
+	"code.cloudfoundry.org/guardian/grootfs/store/garbage_collector"
 	"code.cloudfoundry.org/lager/v3"
 )
 

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/groot/grootfakes"
-	"code.cloudfoundry.org/grootfs/store/locksmith"
+	"code.cloudfoundry.org/guardian/grootfs/groot/grootfakes"
+	"code.cloudfoundry.org/guardian/grootfs/store/locksmith"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

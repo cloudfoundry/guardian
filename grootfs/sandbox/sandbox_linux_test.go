@@ -8,9 +8,9 @@ import (
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
-	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/sandbox"
+	unpackerpkg "code.cloudfoundry.org/guardian/grootfs/base_image_puller/unpacker"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/sandbox"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	"github.com/containers/storage/pkg/reexec"

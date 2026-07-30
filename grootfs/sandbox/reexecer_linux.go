@@ -1,7 +1,7 @@
 //go:build linux
 // +build linux
 
-package sandbox // import "code.cloudfoundry.org/grootfs/sandbox"
+package sandbox // import "code.cloudfoundry.org/guardian/grootfs/sandbox"
 
 import (
 	"bytes"
@@ -14,8 +14,8 @@ import (
 
 	"github.com/containers/storage/pkg/reexec"
 
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/relogger"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/relogger"
 	"code.cloudfoundry.org/lager/v3"
 	errorspkg "github.com/pkg/errors"
 )

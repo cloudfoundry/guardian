@@ -33,7 +33,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/guardian/sysinfo"
 	"code.cloudfoundry.org/guardian/throttle"
-	"code.cloudfoundry.org/idmapper"
+	"code.cloudfoundry.org/guardian/idmapper"
 	"code.cloudfoundry.org/lager/v3"
 	"github.com/containerd/containerd/v2/client"
 	"github.com/containerd/containerd/v2/cmd/containerd-shim-runc-v2/process"

@@ -1,6 +1,6 @@
 package main
 
-import "code.cloudfoundry.org/idmapper/cmd"
+import "code.cloudfoundry.org/guardian/idmapper/cmd"
 
 func main() {
 	cmd.HandleCmd("g")

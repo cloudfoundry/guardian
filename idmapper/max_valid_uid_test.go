@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"code.cloudfoundry.org/idmapper"
+	"code.cloudfoundry.org/guardian/idmapper"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

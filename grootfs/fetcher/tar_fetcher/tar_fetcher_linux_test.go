@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"time"
 
-	fetcherpkg "code.cloudfoundry.org/grootfs/fetcher/tar_fetcher"
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
+	fetcherpkg "code.cloudfoundry.org/guardian/grootfs/fetcher/tar_fetcher"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/integration"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo/v2"

@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
-	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
+	"code.cloudfoundry.org/guardian/grootfs/base_image_puller/unpacker"
+	"code.cloudfoundry.org/guardian/grootfs/store/filesystems/overlayxfs"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"golang.org/x/sys/unix"

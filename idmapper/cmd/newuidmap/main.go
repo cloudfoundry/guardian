@@ -1,7 +1,7 @@
 package main
 
 import (
-	"code.cloudfoundry.org/idmapper/cmd"
+	"code.cloudfoundry.org/guardian/idmapper/cmd"
 )
 
 func main() {

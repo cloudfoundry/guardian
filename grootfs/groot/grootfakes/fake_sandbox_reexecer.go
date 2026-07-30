@@ -4,7 +4,7 @@ package grootfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 )
 
 type FakeSandboxReexecer struct {

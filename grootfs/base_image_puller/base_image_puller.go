@@ -1,4 +1,4 @@
-package base_image_puller // import "code.cloudfoundry.org/grootfs/base_image_puller"
+package base_image_puller // import "code.cloudfoundry.org/guardian/grootfs/base_image_puller"
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 	"code.cloudfoundry.org/lager/v3"
 	errorspkg "github.com/pkg/errors"
 )

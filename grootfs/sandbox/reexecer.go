@@ -1,7 +1,7 @@
-package sandbox // import "code.cloudfoundry.org/grootfs/sandbox"
+package sandbox // import "code.cloudfoundry.org/guardian/grootfs/sandbox"
 
 import (
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 	"code.cloudfoundry.org/lager/v3"
 )
 

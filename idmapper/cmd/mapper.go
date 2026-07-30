@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	"code.cloudfoundry.org/idmapper"
+	"code.cloudfoundry.org/guardian/idmapper"
 )
 
 type mapping struct {

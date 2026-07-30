@@ -1,6 +1,6 @@
 package unpacker
 
-import "code.cloudfoundry.org/grootfs/groot"
+import "code.cloudfoundry.org/guardian/grootfs/groot"
 
 //go:generate counterfeiter . IDTranslator
 type IDTranslator interface {

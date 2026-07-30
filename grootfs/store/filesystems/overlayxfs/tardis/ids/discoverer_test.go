@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
-	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis/ids"
+	"code.cloudfoundry.org/guardian/grootfs/store/filesystems/overlayxfs"
+	"code.cloudfoundry.org/guardian/grootfs/store/filesystems/overlayxfs/tardis/ids"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo/v2"

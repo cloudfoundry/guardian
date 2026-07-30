@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"code.cloudfoundry.org/idmapper"
+	"code.cloudfoundry.org/guardian/idmapper"
 )
 
 func init() {

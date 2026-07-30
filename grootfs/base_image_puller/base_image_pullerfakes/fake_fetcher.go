@@ -5,8 +5,8 @@ import (
 	"io"
 	"sync"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller"
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/base_image_puller"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 	"code.cloudfoundry.org/lager/v3"
 )
 

@@ -1,4 +1,4 @@
-package layer_fetcher // import "code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
+package layer_fetcher // import "code.cloudfoundry.org/guardian/grootfs/fetcher/layer_fetcher"
 
 import (
 	"io"

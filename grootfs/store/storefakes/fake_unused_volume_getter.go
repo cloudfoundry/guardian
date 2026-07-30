@@ -4,7 +4,7 @@ package storefakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/guardian/grootfs/store"
 	"code.cloudfoundry.org/lager/v3"
 )
 

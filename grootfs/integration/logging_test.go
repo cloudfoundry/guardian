@@ -4,9 +4,9 @@ import (
 	"os"
 	"os/exec"
 
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
-	"code.cloudfoundry.org/grootfs/integration/runner"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/integration"
+	"code.cloudfoundry.org/guardian/grootfs/integration/runner"
 	"code.cloudfoundry.org/lager/v3"
 
 	. "github.com/onsi/ginkgo/v2"

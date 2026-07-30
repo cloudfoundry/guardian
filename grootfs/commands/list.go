@@ -1,11 +1,11 @@
-package commands // import "code.cloudfoundry.org/grootfs/commands"
+package commands // import "code.cloudfoundry.org/guardian/grootfs/commands"
 
 import (
 	"fmt"
 	"os"
 
-	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/commands/config"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 	"code.cloudfoundry.org/lager/v3"
 	errorspkg "github.com/pkg/errors"
 

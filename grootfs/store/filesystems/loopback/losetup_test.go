@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/store/filesystems/loopback"
-	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/guardian/grootfs/store/filesystems/loopback"
+	"code.cloudfoundry.org/guardian/grootfs/testhelpers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

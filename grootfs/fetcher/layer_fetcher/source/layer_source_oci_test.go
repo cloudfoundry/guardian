@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/exec"
 
-	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/fetcher/layer_fetcher/source"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	"github.com/containers/image/v5/types"
 	. "github.com/onsi/ginkgo/v2"

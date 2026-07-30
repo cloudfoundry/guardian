@@ -6,7 +6,7 @@ import (
 	"io"
 	"sync"
 
-	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
+	"code.cloudfoundry.org/guardian/grootfs/fetcher/layer_fetcher/source"
 	"github.com/containers/image/v5/types"
 	digest "github.com/opencontainers/go-digest"
 )

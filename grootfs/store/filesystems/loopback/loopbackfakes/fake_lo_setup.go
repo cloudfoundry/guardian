@@ -4,7 +4,7 @@ package loopbackfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/grootfs/store/filesystems/loopback"
+	"code.cloudfoundry.org/guardian/grootfs/store/filesystems/loopback"
 )
 
 type FakeLoSetup struct {

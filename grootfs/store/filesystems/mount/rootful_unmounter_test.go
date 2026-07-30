@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"code.cloudfoundry.org/grootfs/store/filesystems/mount"
+	"code.cloudfoundry.org/guardian/grootfs/store/filesystems/mount"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/lager/v3/lagertest"
 	. "github.com/onsi/ginkgo/v2"

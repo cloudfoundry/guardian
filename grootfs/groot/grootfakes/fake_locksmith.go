@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 )
 
 type FakeLocksmith struct {

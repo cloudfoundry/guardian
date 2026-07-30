@@ -4,7 +4,7 @@ import (
 	"os"
 	"path"
 
-	"code.cloudfoundry.org/grootfs/store/dependency_manager"
+	"code.cloudfoundry.org/guardian/grootfs/store/dependency_manager"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

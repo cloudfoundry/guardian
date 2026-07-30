@@ -14,7 +14,7 @@ import (
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	yaml "gopkg.in/yaml.v2"
 
-	grootconf "code.cloudfoundry.org/grootfs/commands/config"
+	grootconf "code.cloudfoundry.org/guardian/grootfs/commands/config"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"

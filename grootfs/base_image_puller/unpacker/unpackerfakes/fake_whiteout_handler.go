@@ -4,7 +4,7 @@ package unpackerfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
+	"code.cloudfoundry.org/guardian/grootfs/base_image_puller/unpacker"
 )
 
 type FakeWhiteoutHandler struct {

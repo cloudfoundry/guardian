@@ -1,4 +1,4 @@
-package unpacker // import "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
+package unpacker // import "code.cloudfoundry.org/guardian/grootfs/base_image_puller/unpacker"
 
 import (
 	"archive/tar"
@@ -10,7 +10,7 @@ import (
 	"github.com/docker/docker/pkg/system"
 	"github.com/pkg/errors"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller"
+	"code.cloudfoundry.org/guardian/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager/v3"
 )
 

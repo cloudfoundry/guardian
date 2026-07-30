@@ -3,7 +3,7 @@ package runner
 import (
 	"fmt"
 
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 )
 
 type InitSpec struct {

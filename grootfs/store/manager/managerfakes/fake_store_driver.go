@@ -4,7 +4,7 @@ package managerfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/grootfs/store/manager"
+	"code.cloudfoundry.org/guardian/grootfs/store/manager"
 	"code.cloudfoundry.org/lager/v3"
 )
 

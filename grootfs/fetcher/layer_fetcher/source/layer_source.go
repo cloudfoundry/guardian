@@ -1,4 +1,4 @@
-package source // import "code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
+package source // import "code.cloudfoundry.org/guardian/grootfs/fetcher/layer_fetcher/source"
 
 import (
 	"compress/gzip"
@@ -12,8 +12,8 @@ import (
 	"os"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/fetcher/layer_fetcher"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 	"code.cloudfoundry.org/lager/v3"
 	_ "github.com/containers/image/v5/docker"
 	"github.com/containers/image/v5/image"

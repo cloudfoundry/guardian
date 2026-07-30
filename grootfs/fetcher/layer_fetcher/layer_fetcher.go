@@ -1,4 +1,4 @@
-package layer_fetcher // import "code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
+package layer_fetcher // import "code.cloudfoundry.org/guardian/grootfs/fetcher/layer_fetcher"
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/guardian/grootfs/groot"
 	"code.cloudfoundry.org/lager/v3"
 
 	"github.com/containers/image/v5/types"
