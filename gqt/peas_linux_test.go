@@ -201,6 +201,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 						Args:  []string{"-c", "cat /proc/self/cgroup && echo done && sleep 3600"},
 						Image: garden.ImageRef{URI: "raw://" + peaRootfs},
 						OverrideContainerLimits: &garden.ProcessLimits{
+							//lint:ignore SA1019 - we still specify this to make the deprecated logic work until we get rid of the code in garden
 							CPU: garden.CPULimits{LimitInShares: 128},
 						},
 					}, garden.ProcessIO{
@@ -266,6 +267,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 						Args:  []string{"-c", "cat /proc/self/cgroup && echo done && sleep 3600"},
 						Image: garden.ImageRef{URI: "raw://" + peaRootfs},
 						OverrideContainerLimits: &garden.ProcessLimits{
+							//lint:ignore SA1019 - we still specify this to make the deprecated logic work until we get rid of the code in garden
 							CPU: garden.CPULimits{LimitInShares: 128},
 						},
 					}, garden.ProcessIO{
