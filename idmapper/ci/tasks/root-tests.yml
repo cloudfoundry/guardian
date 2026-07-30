@@ -1,0 +1,10 @@
+---
+platform: linux
+
+inputs:
+  - name: idmapper
+
+run:
+  path: ci/scripts/root-tests.sh
+  dir: idmapper
+  user: root
