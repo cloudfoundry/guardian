@@ -1,0 +1,23 @@
+---
+platform: linux
+
+inputs:
+  - name: grootfs-git-repo
+    path: src/code.cloudfoundry.org/grootfs
+
+params:
+  DOCKER_REGISTRY_USERNAME:
+  DOCKER_REGISTRY_PASSWORD:
+  GROOTFS_TEST_UID: 0
+  GROOTFS_TEST_GID: 0
+  GROOTFS_USER: nonroot
+
+run:
+  dir: src/code.cloudfoundry.org/grootfs
+  path: ci/scripts/integration-tests.sh
+  user: root
+
+image_resource:
+  source:
+    repository: cloudfoundry/garden-runc-release
+  type: docker-image

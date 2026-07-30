@@ -1,0 +1,15 @@
+# Artifacts
+/grootfs
+/grootfs.exe
+/drax
+/tardis
+playground/grootfs
+playground/drax
+tags
+build
+!/vendor/github.com/onsi/ginkgo/v2/ginkgo/build
+
+# OSX
+.DS_Store
+
+grootfs.iml
