@@ -31,9 +31,24 @@ fi
 
 # shellcheck disable=SC2068
 # Double-quoting array expansion here causes ginkgo to fail
+# grootfs is tested separately below with its own storage setup
 #runc
-go run github.com/onsi/ginkgo/v2/ginkgo ${@}
+go run github.com/onsi/ginkgo/v2/ginkgo --skip-package=grootfs ${@}
 #containerd
-CONTAINERD_ENABLED=true go run github.com/onsi/ginkgo/v2/ginkgo ${@}
+CONTAINERD_ENABLED=true go run github.com/onsi/ginkgo/v2/ginkgo --skip-package=grootfs ${@}
 #containerd and cpu-throttling
-CONTAINERD_ENABLED=true CPU_THROTTLING_ENABLED=true go run github.com/onsi/ginkgo/v2/ginkgo ${@}
+CONTAINERD_ENABLED=true CPU_THROTTLING_ENABLED=true go run github.com/onsi/ginkgo/v2/ginkgo --skip-package=grootfs ${@}
+
+# grootfs tests
+: "DOCKER_REGISTRY_USERNAME: ${DOCKER_REGISTRY_USERNAME:?Need to set DOCKER_REGISTRY_USERNAME}"
+: "DOCKER_REGISTRY_PASSWORD: ${DOCKER_REGISTRY_PASSWORD:?Need to set DOCKER_REGISTRY_PASSWORD}"
+
+(
+  trap filesystem_unmount_storage EXIT
+  filesystem_mount_storage
+
+  export GROOTFS_USER="nonroot"
+  pushd grootfs
+  GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 go run github.com/onsi/ginkgo/v2/ginkgo ${@}
+  popd
+)
