@@ -3,9 +3,6 @@ module code.cloudfoundry.org/guardian
 go 1.26.3
 
 replace (
-	code.cloudfoundry.org/garden => ../garden
-	code.cloudfoundry.org/grootfs => ../grootfs
-	code.cloudfoundry.org/idmapper => ../idmapper
 	github.com/cilium/ebpf => github.com/cilium/ebpf v0.17.3
 	github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
 )
@@ -16,12 +13,15 @@ require (
 	code.cloudfoundry.org/commandrunner v0.72.0
 	code.cloudfoundry.org/debugserver v0.107.0
 	code.cloudfoundry.org/garden v0.0.0-20260729020900-a0441c36f7b5
-	code.cloudfoundry.org/grootfs v0.30.0
-	code.cloudfoundry.org/idmapper v0.0.0-20260722021010-9c84232f2761
 	code.cloudfoundry.org/lager/v3 v3.80.0
 	code.cloudfoundry.org/localip v0.82.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/cloudfoundry/dropsonde v1.1.0
+	github.com/containers/image/v5 v5.36.2
+	github.com/containers/storage v1.59.1
+	github.com/docker/distribution v2.8.3+incompatible
+	github.com/docker/docker v28.5.2+incompatible
+	github.com/ventu-io/go-shortid v0.0.0-20201117134242-e59966efd125
 	github.com/cloudfoundry/gosigar v1.3.125
 	github.com/containerd/cgroups/v3 v3.1.3
 	github.com/containerd/containerd/api v1.11.1
@@ -78,8 +78,13 @@ require (
 	github.com/coreos/go-systemd/v22 v22.7.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/cyphar/filepath-securejoin v0.7.0 // indirect
+	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
+	github.com/containers/ocicrypt v1.3.2 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
+	github.com/docker/docker-credential-helpers v0.9.8 // indirect
+	github.com/docker/go-connections v0.8.1 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
+	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -104,6 +109,7 @@ require (
 	github.com/seccomp/libseccomp-golang v0.11.1 // indirect
 	github.com/tedsuo/rata v1.0.0 // indirect
 	github.com/urfave/cli v1.22.17 // indirect
+	github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125 // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
@@ -112,6 +118,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect

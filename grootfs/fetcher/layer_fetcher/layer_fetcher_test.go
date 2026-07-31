@@ -1,0 +1,224 @@
+package layer_fetcher_test
+
+import (
+	"bytes"
+	"compress/gzip"
+	"errors"
+	"io"
+	"os"
+	"time"
+
+	"code.cloudfoundry.org/guardian/grootfs/groot"
+
+	"code.cloudfoundry.org/guardian/grootfs/fetcher/layer_fetcher"
+	"code.cloudfoundry.org/guardian/grootfs/fetcher/layer_fetcher/layer_fetcherfakes"
+	"code.cloudfoundry.org/lager/v3/lagertest"
+	"github.com/containers/image/v5/types"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	digestpkg "github.com/opencontainers/go-digest"
+	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
+)
+
+var _ = Describe("LayerFetcher", func() {
+	var (
+		fakeSource        *layer_fetcherfakes.FakeSource
+		fetcher           *layer_fetcher.LayerFetcher
+		logger            *lagertest.TestLogger
+		gzipedBlobContent []byte
+	)
+
+	BeforeEach(func() {
+		fakeSource = new(layer_fetcherfakes.FakeSource)
+
+		gzipBuffer := bytes.NewBuffer([]byte{})
+		gzipWriter := gzip.NewWriter(gzipBuffer)
+		_, err := gzipWriter.Write([]byte("hello-world"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(gzipWriter.Close()).To(Succeed())
+		gzipedBlobContent, err = io.ReadAll(gzipBuffer)
+		Expect(err).NotTo(HaveOccurred())
+
+		fetcher = layer_fetcher.NewLayerFetcher(fakeSource)
+
+		logger = lagertest.NewTestLogger("test-layer-fetcher")
+
+	})
+
+	Describe("BaseImageInfo", func() {
+		It("fetches the manifest", func() {
+			fakeManifest := new(layer_fetcherfakes.FakeManifest)
+			fakeManifest.OCIConfigReturns(&specsv1.Image{}, nil)
+			fakeSource.ManifestReturns(fakeManifest, nil)
+
+			_, err := fetcher.BaseImageInfo(logger)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeSource.ManifestCallCount()).To(Equal(1))
+		})
+
+		Context("when fetching the manifest fails", func() {
+			BeforeEach(func() {
+				fakeSource.ManifestReturns(nil, errors.New("fetching the manifest"))
+			})
+
+			It("returns an error", func() {
+				_, err := fetcher.BaseImageInfo(logger)
+				Expect(err).To(MatchError(ContainSubstring("fetching the manifest")))
+			})
+		})
+
+		It("returns the correct list of layer digests", func() {
+			config := &specsv1.Image{
+				RootFS: specsv1.RootFS{
+					DiffIDs: []digestpkg.Digest{
+						digestpkg.NewDigestFromHex("sha256", "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5"),
+						digestpkg.NewDigestFromHex("sha256", "d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0"),
+					},
+				},
+			}
+			fakeManifest := new(layer_fetcherfakes.FakeManifest)
+			fakeManifest.OCIConfigReturns(config, nil)
+			fakeManifest.LayerInfosReturns([]types.BlobInfo{
+				types.BlobInfo{
+					Digest:      digestpkg.NewDigestFromHex("sha256", "47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58"),
+					Size:        1024,
+					Annotations: map[string]string{"org.cloudfoundry.experimental.image.base-directory": "/home/cool-user"},
+				},
+				types.BlobInfo{
+					Digest: digestpkg.NewDigestFromHex("sha256", "7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76"),
+					Size:   2048,
+				},
+			})
+			fakeSource.ManifestReturns(fakeManifest, nil)
+
+			baseImageInfo, err := fetcher.BaseImageInfo(logger)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(baseImageInfo.LayerInfos).To(Equal([]groot.LayerInfo{
+				groot.LayerInfo{
+					BlobID:        "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
+					ChainID:       "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
+					DiffID:        "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
+					ParentChainID: "",
+					BaseDirectory: "/home/cool-user",
+					Size:          1024,
+				},
+				groot.LayerInfo{
+					BlobID:        "sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76",
+					ChainID:       "9242945d3c9c7cf5f127f9352fea38b1d3efe62ee76e25f70a3e6db63a14c233",
+					DiffID:        "d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0",
+					ParentChainID: "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
+					Size:          2048,
+				},
+			}))
+		})
+
+		Context("when retrieving the OCI Config fails", func() {
+			BeforeEach(func() {
+				fakeManifest := new(layer_fetcherfakes.FakeManifest)
+				fakeManifest.OCIConfigReturns(&specsv1.Image{}, errors.New("OCI Config retrieval failed"))
+				fakeSource.ManifestReturns(fakeManifest, nil)
+			})
+
+			It("returns the error", func() {
+				_, err := fetcher.BaseImageInfo(logger)
+				Expect(err).To(MatchError(ContainSubstring("OCI Config retrieval failed")))
+			})
+		})
+
+		It("returns the correct OCI image config", func() {
+			timestamp := time.Time{}.In(time.UTC)
+			expectedConfig := specsv1.Image{
+				Created: &timestamp,
+				RootFS: specsv1.RootFS{
+					DiffIDs: []digestpkg.Digest{
+						digestpkg.NewDigestFromHex("sha256", "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5"),
+						digestpkg.NewDigestFromHex("sha256", "d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0"),
+					},
+				},
+			}
+
+			fakeManifest := new(layer_fetcherfakes.FakeManifest)
+			fakeManifest.OCIConfigReturns(&expectedConfig, nil)
+			fakeSource.ManifestReturns(fakeManifest, nil)
+
+			baseImageInfo, err := fetcher.BaseImageInfo(logger)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(baseImageInfo.Config).To(Equal(expectedConfig))
+		})
+	})
+
+	Describe("StreamBlob", func() {
+		var layerInfo = groot.LayerInfo{
+			BlobID: "sha256:layer-digest",
+		}
+		BeforeEach(func() {
+			tmpFile, err := os.CreateTemp("", "")
+			Expect(err).NotTo(HaveOccurred())
+			_, err = tmpFile.Write(gzipedBlobContent)
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { _ = tmpFile.Close() }()
+
+			fakeSource.BlobReturns(tmpFile.Name(), 0, nil)
+		})
+
+		It("uses the source", func() {
+			_, _, err := fetcher.StreamBlob(logger, layerInfo)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeSource.BlobCallCount()).To(Equal(1))
+			_, layerInfo := fakeSource.BlobArgsForCall(0)
+			Expect(layerInfo.BlobID).To(Equal("sha256:layer-digest"))
+		})
+
+		It("returns the stream from the source", func() {
+			done := make(chan interface{})
+			go func() {
+				stream, _, err := fetcher.StreamBlob(logger, layerInfo)
+				Expect(err).NotTo(HaveOccurred())
+
+				gzipReader, err := gzip.NewReader(stream)
+				Expect(err).NotTo(HaveOccurred())
+				contents, err := io.ReadAll(gzipReader)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("hello-world"))
+
+				close(done)
+			}()
+			Eventually(done, 2.0).Should(BeClosed())
+		})
+
+		It("returns the size of the stream", func() {
+			tmpFile, err := os.CreateTemp("", "")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { _ = tmpFile.Close() }()
+
+			gzipWriter := gzip.NewWriter(tmpFile)
+			Expect(gzipWriter.Close()).To(Succeed())
+
+			fakeSource.BlobReturns(tmpFile.Name(), 1024, nil)
+
+			_, size, err := fetcher.StreamBlob(logger, layerInfo)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(size).To(Equal(int64(1024)))
+		})
+
+		Context("when the source fails to stream the blob", func() {
+			It("returns an error", func() {
+				fakeSource.BlobReturns("", 0, errors.New("failed to stream blob"))
+
+				_, _, err := fetcher.StreamBlob(logger, layerInfo)
+				Expect(err).To(MatchError(ContainSubstring("failed to stream blob")))
+			})
+		})
+	})
+	Describe("Close", func() {
+		It("closes the source", func() {
+			Expect(fetcher.Close()).To(Succeed())
+			Expect(fakeSource.CloseCallCount()).To(Equal(1))
+		})
+	})
+
+})

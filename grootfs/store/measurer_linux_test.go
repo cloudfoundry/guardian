@@ -1,0 +1,214 @@
+package store_test
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"code.cloudfoundry.org/guardian/grootfs/store"
+	"code.cloudfoundry.org/guardian/grootfs/store/storefakes"
+	"code.cloudfoundry.org/lager/v3/lagertest"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
+
+var _ = Describe("Measurer", func() {
+	var (
+		storePath          string
+		storeMeasurer      *store.StoreMeasurer
+		logger             *lagertest.TestLogger
+		volumeDriver       *storefakes.FakeVolumeDriver
+		unusedVolumeGetter *storefakes.FakeUnusedVolumeGetter
+	)
+
+	BeforeEach(func() {
+		mountPoint := fmt.Sprintf("/mnt/xfs-%d", GinkgoParallelProcess())
+		var err error
+		storePath, err = os.MkdirTemp(mountPoint, "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.MkdirAll(
+			filepath.Join(storePath, store.VolumesDirName), 0744,
+		)).To(Succeed())
+		Expect(os.MkdirAll(
+			filepath.Join(storePath, store.ImageDirName), 0744,
+		)).To(Succeed())
+
+		volumeDriver = new(storefakes.FakeVolumeDriver)
+		unusedVolumeGetter = new(storefakes.FakeUnusedVolumeGetter)
+
+		storeMeasurer = store.NewStoreMeasurer(storePath, volumeDriver, unusedVolumeGetter)
+
+		logger = lagertest.NewTestLogger("store-measurer")
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(storePath)).To(Succeed())
+	})
+
+	Describe("TotalVolumesSize", func() {
+		BeforeEach(func() {
+			volumeDriver.VolumeSizeReturns(2048, nil)
+			volumeDriver.VolumesReturns([]string{"sha256:fake1", "sha256:fake2"}, nil)
+		})
+
+		It("measures the size of all layers", func() {
+			cacheUsage, err := storeMeasurer.TotalVolumesSize(logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cacheUsage).To(BeNumerically("==", 4096))
+		})
+
+		Context("when getting volumes returns an error", func() {
+			BeforeEach(func() {
+				volumeDriver.VolumesReturns([]string{}, errors.New("failed here"))
+			})
+
+			It("returns the error", func() {
+				_, err := storeMeasurer.TotalVolumesSize(logger)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		Context("when the driver VolumeSize returns an error", func() {
+			BeforeEach(func() {
+				volumeDriver.VolumeSizeReturns(0, errors.New("failed here"))
+			})
+
+			It("returns the error", func() {
+				_, err := storeMeasurer.TotalVolumesSize(logger)
+				Expect(err).To(HaveOccurred())
+			})
+
+			Context("but it's because a file doesn't exist", func() {
+				BeforeEach(func() {
+					volumeDriver.VolumeSizeReturns(0, os.ErrNotExist)
+				})
+
+				It("carries on silently", func() {
+					_, err := storeMeasurer.TotalVolumesSize(logger)
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+		})
+	})
+
+	Describe("UsedVolumesSize", func() {
+		BeforeEach(func() {
+			volumeDriver.VolumeSizeReturns(1024, nil)
+			unusedVolumeGetter.UnusedVolumesReturns([]string{"sha256:fake1", "sha256:fake2"}, nil)
+			volumeDriver.VolumesReturns([]string{"sha256:fake1", "sha256:fake2"}, nil)
+		})
+
+		It("measures the size of the used layers", func() {
+			cacheUsage, err := storeMeasurer.UsedVolumesSize(logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cacheUsage).To(BeNumerically("==", 0))
+		})
+
+		Context("when getting total volumes returns an error", func() {
+			BeforeEach(func() {
+				volumeDriver.VolumesReturns([]string{}, errors.New("failed here"))
+			})
+
+			It("returns the error", func() {
+				_, err := storeMeasurer.TotalVolumesSize(logger)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		Context("when getting unused volumes returns an error", func() {
+			BeforeEach(func() {
+				unusedVolumeGetter.UnusedVolumesReturns([]string{}, errors.New("failed here"))
+			})
+
+			It("returns the error", func() {
+				_, err := storeMeasurer.UnusedVolumesSize(logger)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+	})
+
+	Describe("UnusedVolumeSize", func() {
+		BeforeEach(func() {
+			volumeDriver.VolumeSizeReturns(1024, nil)
+			unusedVolumeGetter.UnusedVolumesReturns([]string{"sha256:fake1", "sha256:fake2"}, nil)
+		})
+
+		It("measures the size of the unused layers", func() {
+			cacheUsage, err := storeMeasurer.UnusedVolumesSize(logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cacheUsage).To(BeNumerically("==", 2048))
+		})
+
+		Context("when getting volumes returns an error", func() {
+			BeforeEach(func() {
+				unusedVolumeGetter.UnusedVolumesReturns([]string{}, errors.New("failed here"))
+			})
+
+			It("returns the error", func() {
+				_, err := storeMeasurer.UnusedVolumesSize(logger)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		Context("when the driver VolumeSize returns an error", func() {
+			BeforeEach(func() {
+				volumeDriver.VolumeSizeReturns(0, errors.New("failed here"))
+			})
+
+			It("returns the error", func() {
+				_, err := storeMeasurer.UnusedVolumesSize(logger)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+	})
+
+	Describe("CommittedQuota", func() {
+		BeforeEach(func() {
+			image1Path := filepath.Join(storePath, store.ImageDirName, "my-image-1")
+			Expect(os.MkdirAll(image1Path, 0744)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(image1Path, "image_quota"), []byte("1024"), 0777)).To(Succeed())
+
+			image2Path := filepath.Join(storePath, store.ImageDirName, "my-image-2")
+			Expect(os.MkdirAll(image2Path, 0744)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(image2Path, "image_quota"), []byte("2048"), 0777)).To(Succeed())
+		})
+
+		It("returns the committed size of the store", func() {
+			committedSize, err := storeMeasurer.CommittedQuota(logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(committedSize).To(BeNumerically("==", 3072))
+		})
+
+		It("ignores images without quota", func() {
+			Expect(os.Remove(filepath.Join(storePath, store.ImageDirName, "my-image-2", "image_quota"))).To(Succeed())
+			committedSize, err := storeMeasurer.CommittedQuota(logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(committedSize).To(BeNumerically("==", 1024))
+		})
+
+		It("errors if it cannot read the images dir", func() {
+			Expect(os.RemoveAll(filepath.Join(storePath, store.ImageDirName))).To(Succeed())
+			_, err := storeMeasurer.CommittedQuota(logger)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("errors when unable to read quota files containing garbage", func() {
+			erroneousImagePath := filepath.Join(storePath, store.ImageDirName, "erroneous-image")
+			Expect(os.MkdirAll(erroneousImagePath, 0744)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(erroneousImagePath, "image_quota"), []byte("what!?"), 0777)).To(Succeed())
+
+			_, err := storeMeasurer.CommittedQuota(logger)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("silently ignores empty quota files", func() {
+			erroneousImagePath := filepath.Join(storePath, store.ImageDirName, "erroneous-image")
+			Expect(os.MkdirAll(erroneousImagePath, 0744)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(erroneousImagePath, "image_quota"), []byte(""), 0777)).To(Succeed())
+
+			_, err := storeMeasurer.CommittedQuota(logger)
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+})

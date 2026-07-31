@@ -1,0 +1,21 @@
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions  = v3_req
+
+[ req_distinguished_name ]
+countryName                 = Country Name (2 letter code)
+stateOrProvinceName         = State or Province Name (full name)
+localityName                = Locality Name (eg, city)
+organizationName            = Organization Name (eg, company)
+organizationName_default    = Acme Co
+commonName                  = Common Name (e.g. server FQDN or YOUR name)
+
+[ v3_req ]
+subjectAltName = @alt_names
+basicConstraints       = critical, CA:true
+keyUsage               = keyCertSign, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth, clientAuth
+
+[ alt_names ]
+DNS = localhost
+email = a@a.com

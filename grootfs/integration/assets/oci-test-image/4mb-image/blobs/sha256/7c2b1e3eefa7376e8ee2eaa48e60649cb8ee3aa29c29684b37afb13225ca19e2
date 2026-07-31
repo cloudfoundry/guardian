@@ -1,0 +1,41 @@
+{
+  "created": "2017-08-02T10:38:44.277669063Z",
+  "architecture": "amd64",
+  "os": "linux",
+  "config": {
+    "Env": [
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    ],
+    "Cmd": [
+      "sh"
+    ]
+  },
+  "rootfs": {
+    "type": "layers",
+    "diff_ids": [
+      "sha256:12a0fa782e2a843bc8305312dcd213c2c420e5053ab39f187b83c40c611ae61b",
+      "sha256:f11657495b7429e83386f5ac8f86174cdd3537dde4e3afce20d6e8ad8f25e2ae",
+      "sha256:4954d641256254f3f24901bdafb94ff23ba0860b50eb2c2d07365af6b97e883d",
+      "sha256:a2430ec78a9ddf7d246d042f10f0dd74d34c2d523ec0c000a72aa4cf70ff23c7"
+    ]
+  },
+  "history": [
+    {
+      "created": "2017-07-19T23:34:11.72766006Z",
+      "created_by": "/bin/sh -c #(nop) ADD file:0516fc7a5988ef4bc7b691588095c80f3ea8637eb37141cfe5f6cb859d6955c8 in / "
+    },
+    {
+      "created": "2017-07-19T23:34:19.030879144Z",
+      "created_by": "/bin/sh -c #(nop)  CMD [\"sh\"]",
+      "empty_layer": true
+    },
+    {
+      "created": "2017-08-02T10:38:43.23719859Z",
+      "created_by": "/bin/sh -c touch /file-1"
+    },
+    {
+      "created": "2017-08-02T10:38:44.277669063Z",
+      "created_by": "/bin/sh -c touch /file-3"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+package ids_test
+
+import (
+	"fmt"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"testing"
+)
+
+var (
+	StorePath string
+)
+
+func TestOverlayxfs(t *testing.T) {
+	RegisterFailHandler(Fail)
+
+	BeforeEach(func() {
+		StorePath = fmt.Sprintf("/mnt/xfs-%d", GinkgoParallelProcess())
+	})
+
+	RunSpecs(t, "Tardis/ids Suite")
+}

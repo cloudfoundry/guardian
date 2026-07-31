@@ -41,7 +41,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/rundmc/users"
 	"code.cloudfoundry.org/guardian/sysinfo"
-	"code.cloudfoundry.org/idmapper"
+	"code.cloudfoundry.org/guardian/idmapper"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/localip"
 	"github.com/eapache/go-resiliency/retrier"

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 2,
+  "config": {
+    "mediaType": "application/vnd.oci.image.config.v1+json",
+    "digest": "sha256:75f89dadfa8a29f4b72ddfd9ab3ed5ce9349fd547f2cf7874c84114216bbfdc4",
+    "size": 1001
+  },
+  "layers": [
+    {
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "digest": "sha256:8e3ba11ec2a2b39ab372c60c16b421536e50e5ce64a0bc81765c2e38381bcff6",
+      "size": 2206542
+    },
+    {
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "digest": "sha256:eab7a7e0728a90576fc720d866c4e17d9eaa798fb0563b360c6d3265b091283d",
+      "size": 1244
+    },
+    {
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "digest": "sha256:96df3b5b181c5084d3cf4259d1b242a698c95305d7bcaed4bbbb72784ea07c47",
+      "size": 89,
+      "annotations": {
+        "org.cloudfoundry.experimental.image.base-directory": "/home/vcap/app"
+      }
+    }
+  ]
+}

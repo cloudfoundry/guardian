@@ -1,0 +1,50 @@
+package commands // import "code.cloudfoundry.org/guardian/grootfs/commands"
+
+import (
+	"fmt"
+
+	"code.cloudfoundry.org/guardian/grootfs/commands/config"
+	"code.cloudfoundry.org/guardian/grootfs/store/filesystems/loopback"
+	"code.cloudfoundry.org/guardian/grootfs/store/filesystems/overlayxfs"
+	"code.cloudfoundry.org/lager/v3"
+
+	errorspkg "github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+)
+
+var GenerateVolumeSizeMetadata = cli.Command{
+	Name:   "generate-volume-size-metadata",
+	Hidden: true,
+
+	Action: func(ctx *cli.Context) error {
+		logger := ctx.App.Metadata["logger"].(lager.Logger)
+		logger = logger.Session("generate-metadata")
+
+		if ctx.NArg() != 0 {
+			logger.Error("parsing-command", errorspkg.New("invalid arguments"), lager.Data{"args": ctx.Args()})
+			return cli.Exit(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
+		}
+
+		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
+		cfg, err := configBuilder.Build()
+		if err != nil {
+			return err
+		}
+
+		driver := overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, nil, loopback.NewNoopDirectIO())
+
+		volumes, err := driver.Volumes(logger)
+		if err != nil {
+			return err
+		}
+
+		for _, volumeID := range volumes {
+			err = driver.GenerateVolumeMeta(logger, volumeID)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	},
+}
