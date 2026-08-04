@@ -38,6 +38,9 @@ func NewCgroupManager(runcRoot, namespace string) CgroupManager {
 
 func (m cgroupManager) SetUseMemoryHierarchy(handle string) error {
 	statePath := filepath.Join(m.runcRoot, m.namespace, handle, "state.json")
+	if _, statErr := os.Stat(statePath); os.IsNotExist(statErr) {
+		return nil
+	}
 	stateFile, err := os.Open(statePath)
 	if err != nil {
 		return err

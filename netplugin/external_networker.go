@@ -14,6 +14,8 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/lager/v3"
+	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 )
 
 const NetworkPropertyPrefix = "network."
@@ -111,6 +113,15 @@ func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 		return err
 	}
 
+	// Ensure loopback interface is up in the container's network namespace.
+	// External network plugins (e.g. silk CNI) typically only create a veth pair.
+	// Runtimes like gVisor that build their own netstack by scraping the netns
+	// need lo to be present for applications binding to 127.0.0.1.
+	if err := setupLoopback(log, pid); err != nil {
+		log.Error("setup-loopback", err)
+		// Non-fatal: runc brings up lo on its own, only gVisor needs this.
+	}
+
 	for k, v := range outputs.Properties {
 		p.configStore.Set(containerSpec.Handle, k, v)
 	}
@@ -148,6 +159,36 @@ func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 		}
 	}
 
+	return nil
+}
+
+// setupLoopback enters the container's network namespace and brings up the
+// loopback interface. This is needed for runtimes like gVisor that scrape the
+// netns for interfaces rather than creating lo themselves.
+func setupLoopback(log lager.Logger, pid int) error {
+	containerNS, err := netns.GetFromPid(pid)
+	if err != nil {
+		return fmt.Errorf("getting netns for pid %d: %w", pid, err)
+	}
+	defer containerNS.Close()
+
+	// Create a netlink handle in the container's network namespace.
+	nlh, err := netlink.NewHandleAt(containerNS)
+	if err != nil {
+		return fmt.Errorf("creating netlink handle in container netns: %w", err)
+	}
+	defer nlh.Close()
+
+	lo, err := nlh.LinkByName("lo")
+	if err != nil {
+		return fmt.Errorf("finding lo interface: %w", err)
+	}
+
+	if err := nlh.LinkSetUp(lo); err != nil {
+		return fmt.Errorf("bringing up lo: %w", err)
+	}
+
+	log.Info("setup-loopback-success", lager.Data{"pid": pid})
 	return nil
 }
 

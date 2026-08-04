@@ -53,6 +53,7 @@ type State struct {
 
 type OCIRuntime interface {
 	Create(log lager.Logger, id string, bundle goci.Bndl, io garden.ProcessIO) error
+	Start(log lager.Logger, id string) error
 	Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, id, processId string, io garden.ProcessIO) (garden.Process, error)
 	Delete(log lager.Logger, id string) error
@@ -108,7 +109,7 @@ type Containerizer struct {
 	bundler                BundleGenerator
 	runtime                OCIRuntime
 	processesStopper       ProcessesStopper
-	nstar                  NstarRunner
+	streamer               Streamer
 	events                 EventStore
 	states                 StateStore
 	peaCreator             PeaCreator
@@ -116,13 +117,14 @@ type Containerizer struct {
 	cpuEntitlementPerShare float64
 	runtimeStopper         RuntimeStopper
 	cpuCgrouper            CPUCgrouper
+	execPeas               bool
 }
 
 func New(
 	depot Depot,
 	bundler BundleGenerator,
 	runtime OCIRuntime,
-	nstarRunner NstarRunner,
+	streamer Streamer,
 	processesStopper ProcessesStopper,
 	events EventStore,
 	states StateStore,
@@ -131,12 +133,13 @@ func New(
 	cpuEntitlementPerShare float64,
 	runtimeStopper RuntimeStopper,
 	cpuCgrouper CPUCgrouper,
+	execPeas bool,
 ) *Containerizer {
 	containerizer := &Containerizer{
 		depot:                  depot,
 		bundler:                bundler,
 		runtime:                runtime,
-		nstar:                  nstarRunner,
+		streamer:               streamer,
 		processesStopper:       processesStopper,
 		events:                 events,
 		states:                 states,
@@ -145,6 +148,7 @@ func New(
 		cpuEntitlementPerShare: cpuEntitlementPerShare,
 		runtimeStopper:         runtimeStopper,
 		cpuCgrouper:            cpuCgrouper,
+		execPeas:               execPeas,
 	}
 	return containerizer
 }
@@ -192,6 +196,11 @@ func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec)
 	return nil
 }
 
+func (c *Containerizer) Start(log lager.Logger, handle string) error {
+	log = log.Session("containerizer-start", lager.Data{"handle": handle})
+	return c.runtime.Start(log, handle)
+}
+
 // Run runs a process inside a running container
 func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	log = log.Session("run", lager.Data{"handle": handle, "path": spec.Path})
@@ -200,6 +209,16 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 	defer log.Info("finished")
 
 	if isPea(spec) {
+		if c.execPeas {
+			// On gVisor, peas (sidecar containers) cannot share namespaces across
+			// sandboxes. Run the process as exec inside the existing container instead.
+			// The required binaries (healthcheck, etc.) are already bind-mounted in.
+			log.Info("exec-pea-as-process", lager.Data{"path": spec.Path})
+			spec.Image = garden.ImageRef{}
+			spec.BindMounts = nil
+			return c.runtime.Exec(log, handle, spec, io)
+		}
+
 		if shouldResolveUsername(spec.User) {
 			resolvedUID, resolvedGID, err := c.peaUsernameResolver.ResolveUser(log, handle, spec.Image, spec.User)
 			if err != nil {
@@ -248,18 +267,7 @@ func (c *Containerizer) StreamIn(log lager.Logger, handle string, spec garden.St
 		_ = metrics.SendValue("StreamInDuration", float64(time.Since(startedAt).Nanoseconds()), "nanos")
 	}(time.Now())
 
-	state, err := c.runtime.State(log, handle)
-	if err != nil {
-		log.Error("check-pid-failed", err)
-		return fmt.Errorf("stream-in: pid not found for container")
-	}
-
-	if err := c.nstar.StreamIn(log, state.Pid, spec.Path, spec.User, spec.TarStream); err != nil {
-		log.Error("nstar-failed", err)
-		return fmt.Errorf("stream-in: nstar: %s", err)
-	}
-
-	return nil
+	return c.streamer.StreamIn(log, handle, spec)
 }
 
 // StreamOut stream files from the container
@@ -269,19 +277,7 @@ func (c *Containerizer) StreamOut(log lager.Logger, handle string, spec garden.S
 	log.Info("started")
 	defer log.Info("finished")
 
-	state, err := c.runtime.State(log, handle)
-	if err != nil {
-		log.Error("check-pid-failed", err)
-		return nil, fmt.Errorf("stream-out: pid not found for container")
-	}
-
-	stream, err := c.nstar.StreamOut(log, state.Pid, spec.Path, spec.User)
-	if err != nil {
-		log.Error("nstar-failed", err)
-		return nil, fmt.Errorf("stream-out: nstar: %s", err)
-	}
-
-	return stream, nil
+	return c.streamer.StreamOut(log, handle, spec)
 }
 
 // Stop stops all the processes other than the init process in the container
