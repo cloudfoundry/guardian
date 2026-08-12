@@ -14,8 +14,8 @@ require (
 	code.cloudfoundry.org/archiver v0.83.0
 	code.cloudfoundry.org/clock v1.83.0
 	code.cloudfoundry.org/commandrunner v0.73.0
-	code.cloudfoundry.org/debugserver v0.109.0
-	code.cloudfoundry.org/garden v0.0.0-20260805020914-eb681524f408
+	code.cloudfoundry.org/debugserver v0.110.0
+	code.cloudfoundry.org/garden v0.0.0-20260811183727-158508cf0d71
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20260722021010-9c84232f2761
 	code.cloudfoundry.org/lager/v3 v3.82.0
@@ -60,7 +60,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.5.0 // indirect
 	github.com/Microsoft/go-winio v0.6.3-0.20251027160822-ad3df93bed29 // indirect
 	github.com/Microsoft/hcsshim v0.15.0-rc.3 // indirect
-	github.com/aperturerobotics/protobuf-go-lite v0.16.0 // indirect
+	github.com/aperturerobotics/protobuf-go-lite v0.17.0 // indirect
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/checkpoint-restore/go-criu/v8 v8.4.0 // indirect

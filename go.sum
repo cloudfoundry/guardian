@@ -598,8 +598,8 @@ code.cloudfoundry.org/clock v1.83.0 h1:mfvo8W/0rbabUP14xffa/IaGjNVPbROta8kZoG9nu
 code.cloudfoundry.org/clock v1.83.0/go.mod h1:7ZvHLD4H0HfcO8WJsGb/CCOTT9bky1ruYUwCP5glzRA=
 code.cloudfoundry.org/commandrunner v0.73.0 h1:Ww3JD0RKepLboSii0dWZU8rSLuPey4wS3QOcerpUs0U=
 code.cloudfoundry.org/commandrunner v0.73.0/go.mod h1:RMtGRHGmKTlvKOS3vZDakn+pbdkt6y8Bbyqn19UkApw=
-code.cloudfoundry.org/debugserver v0.109.0 h1:modvdAAeo2uxBkAd552S8i9riSy5p/jeIMVkT6RRZk4=
-code.cloudfoundry.org/debugserver v0.109.0/go.mod h1:GtCxRWCzyNy2guz+GzmbsaS5J0De2x/9vuW6T5Ff7KM=
+code.cloudfoundry.org/debugserver v0.110.0 h1:1i2oLlKvjGjEv/SUBLjSTE4INK11fWqSK2rbU4BPMXs=
+code.cloudfoundry.org/debugserver v0.110.0/go.mod h1:nq5tffMlBWHMpSZJ9U2hJYIuCU/jMYYV2CdqQBbIJyc=
 code.cloudfoundry.org/lager/v3 v3.82.0 h1:/iTYAOg02MbOaq/Sh4jdka5IUtUYVN1YYR8GHbjMOK0=
 code.cloudfoundry.org/lager/v3 v3.82.0/go.mod h1:MfEnRvMtBJxBIDRHZKv9s6ssvB5HFnprVLSiwWZlx+s=
 code.cloudfoundry.org/localip v0.84.0 h1:eVEqnkhQ/5rf3zmcyDeoSmOJYc/EGddQMnpup+l42e0=
@@ -633,8 +633,8 @@ github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kd
 github.com/apache/arrow/go/v10 v10.0.1/go.mod h1:YvhnlEePVnBS4+0z3fhPfUy7W1Ikj0Ih0vcRo/gZ1M0=
 github.com/apache/arrow/go/v11 v11.0.0/go.mod h1:Eg5OsL5H+e299f7u5ssuXsuHQVEGC4xei5aX110hRiI=
 github.com/apache/thrift v0.16.0/go.mod h1:PHK3hniurgQaNMZYaCLEqXKsYK8upmhPbmdP2FXSqgU=
-github.com/aperturerobotics/protobuf-go-lite v0.16.0 h1:McGR0jrc15ZkH8HUpAARDOtazjwqr+uYXVHrrR59K28=
-github.com/aperturerobotics/protobuf-go-lite v0.16.0/go.mod h1:3Ay/E7iaw2KWLirK3+dDdNJZHK0hu8Y1/kKeYeUa+8s=
+github.com/aperturerobotics/protobuf-go-lite v0.17.0 h1:paEC3KNvw+JnIyKAQZlMLh2h4nY6P/Hm0oc20eubYe4=
+github.com/aperturerobotics/protobuf-go-lite v0.17.0/go.mod h1:3Ay/E7iaw2KWLirK3+dDdNJZHK0hu8Y1/kKeYeUa+8s=
 github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77 h1:afT88tB6u9JCKQZVAAaa9ICz/uGn5Uw9ekn6P22mYKM=
 github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77/go.mod h1:bXvGk6IkT1Agy7qzJ+DjIw/SJ1AaB3AvAuMDVV+Vkoo=
 github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f h1:gOO/tNZMjjvTKZWpY7YnXC72ULNLErRtp94LountVE8=

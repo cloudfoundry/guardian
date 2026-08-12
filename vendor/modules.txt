@@ -12,10 +12,10 @@ code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.109.0
+# code.cloudfoundry.org/debugserver v0.110.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/debugserver
-# code.cloudfoundry.org/garden v0.0.0-20260805020914-eb681524f408 => ../garden
+# code.cloudfoundry.org/garden v0.0.0-20260811183727-158508cf0d71 => ../garden
 ## explicit; go 1.25.0
 code.cloudfoundry.org/garden
 code.cloudfoundry.org/garden/client
@@ -97,7 +97,7 @@ github.com/Microsoft/hcsshim/internal/winapi/cimwriter
 github.com/Microsoft/hcsshim/internal/winapi/types
 github.com/Microsoft/hcsshim/osversion
 github.com/Microsoft/hcsshim/pkg/ociwclayer
-# github.com/aperturerobotics/protobuf-go-lite v0.16.0
+# github.com/aperturerobotics/protobuf-go-lite v0.17.0
 ## explicit; go 1.23
 github.com/aperturerobotics/protobuf-go-lite
 # github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f
