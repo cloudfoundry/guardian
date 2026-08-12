@@ -241,6 +241,7 @@ func setupTTYSocket(stdin io.Reader, stdout io.Writer, winszFifo io.Reader, pidF
 		defer socket.Close()
 
 		// Get the master file descriptor from runC.
+		//lint:ignore SA1019 cmsg.RecvFile is deprecated but its replacement is internal to runc
 		master, err := cmsg.RecvFile(socket)
 		if err != nil {
 			return

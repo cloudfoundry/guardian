@@ -46,7 +46,9 @@ func (r *FakeRegistry) Start() {
 	r.revProxy = httputil.NewSingleHostReverseProxy(r.ActualRegistryURL)
 	// Dockerhub returns 503 if the host is set to localhost as it happens with
 	// the reverse proxy
+	//lint:ignore SA1019 Director is deprecated since Go 1.26 but Rewrite requires a larger refactor
 	oldDirector := r.revProxy.Director
+	//lint:ignore SA1019 Director is deprecated since Go 1.26 but Rewrite requires a larger refactor
 	r.revProxy.Director = func(req *http.Request) {
 		oldDirector(req)
 		req.Host = r.ActualRegistryURL.Host

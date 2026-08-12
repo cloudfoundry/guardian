@@ -1,3 +1,5 @@
+//lint:file-ignore SA1019 - we still specify LimitInShares to make the deprecated logic work until we get rid of the code in garden
+
 package gqt_test
 
 import (
@@ -85,7 +87,6 @@ var _ = Describe("Runtime Plugin", func() {
 							LimitInBytes: 1 * 1024 * 1024,
 						},
 						CPU: garden.CPULimits{
-							//lint:ignore SA1019 - we still specify this to make the deprecated logic work until we get rid of the code in garden
 							LimitInShares: 10,
 						},
 						Pid: garden.PidLimits{

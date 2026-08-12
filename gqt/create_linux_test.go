@@ -1,3 +1,5 @@
+//lint:file-ignore SA1019 - we still specify LimitInShares to make the deprecated logic work until we get rid of the code in garden
+
 package gqt_test
 
 import (
@@ -417,8 +419,7 @@ var _ = Describe("Creating a Container", func() {
 		createContainerWithCpuConfig := func(weight, shares uint64) (garden.Container, error) {
 			limits := garden.Limits{
 				CPU: garden.CPULimits{
-					Weight: weight,
-					//lint:ignore SA1019 - we still specify this to make the deprecated logic work until we get rid of the code in garden
+					Weight:        weight,
 					LimitInShares: shares,
 				},
 			}
