@@ -299,7 +299,7 @@ var _ = Describe("PeaCreator", func() {
 			BeforeEach(func() {
 				processSpec.OverrideContainerLimits = &garden.ProcessLimits{
 					//lint:ignore SA1019 testing deprecated LimitInShares until removed
-				CPU:    garden.CPULimits{LimitInShares: 1},
+					CPU:    garden.CPULimits{LimitInShares: 1},
 					Memory: garden.MemoryLimits{LimitInBytes: 2},
 				}
 			})

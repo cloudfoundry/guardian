@@ -164,7 +164,7 @@ var _ = Describe("LimitsRule", func() {
 				newBndl, err := bundlerules.Limits{}.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 					Limits: garden.Limits{
 						//lint:ignore SA1019 testing deprecated LimitInShares until removed
-					CPU: garden.CPULimits{LimitInShares: 1},
+						CPU: garden.CPULimits{LimitInShares: 1},
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -388,7 +388,7 @@ var _ = Describe("LimitsRule", func() {
 				newBndl, err := bundlerules.Limits{}.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 					Limits: garden.Limits{
 						//lint:ignore SA1019 testing deprecated LimitInShares until removed
-					CPU: garden.CPULimits{LimitInShares: 1},
+						CPU: garden.CPULimits{LimitInShares: 1},
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
