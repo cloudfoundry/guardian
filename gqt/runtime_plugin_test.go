@@ -85,7 +85,7 @@ var _ = Describe("Runtime Plugin", func() {
 							LimitInBytes: 1 * 1024 * 1024,
 						},
 						CPU: garden.CPULimits{
-							LimitInShares: 10,
+							LimitInShares: 10, //lint:ignore SA1019 testing deprecated LimitInShares until removed
 						},
 						Pid: garden.PidLimits{
 							Max: 300,

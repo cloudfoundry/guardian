@@ -108,6 +108,7 @@ var _ = Describe("Limits", func() {
 
 		Context("CPU Limits", func() {
 			BeforeEach(func() {
+				//lint:ignore SA1019 testing deprecated LimitInShares until removed
 				limits = garden.Limits{CPU: garden.CPULimits{LimitInShares: 128}}
 				cgroupType = "cpu"
 			})

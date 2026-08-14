@@ -26,7 +26,8 @@ var _ = Describe("WindowsRule", func() {
 			},
 			Limits: garden.Limits{
 				Memory: garden.MemoryLimits{LimitInBytes: 4096},
-				CPU:    garden.CPULimits{LimitInShares: 321},
+				//lint:ignore SA1019 testing deprecated LimitInShares until removed
+			CPU:    garden.CPULimits{LimitInShares: 321},
 			},
 		}
 	})

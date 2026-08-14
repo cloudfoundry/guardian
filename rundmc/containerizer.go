@@ -383,6 +383,7 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (spec.ActualContai
 		Events:     c.events.Events(handle),
 		Stopped:    c.states.IsStopped(handle),
 		Limits: garden.Limits{
+			//lint:ignore SA1019 LimitInShares still used until Weight migration completes
 			CPU: garden.CPULimits{
 				LimitInShares: cpuShares,
 			},
