@@ -1,3 +1,4 @@
+//lint:file-ignore SA1019 LimitInShares is deprecated but still tested until Weight migration completes
 package bundlerules_test
 
 import (
@@ -163,7 +164,6 @@ var _ = Describe("LimitsRule", func() {
 			It("sets the CPU shares", func() {
 				newBndl, err := bundlerules.Limits{}.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 					Limits: garden.Limits{
-						//lint:ignore SA1019 testing deprecated LimitInShares until removed
 						CPU: garden.CPULimits{LimitInShares: 1},
 					},
 				})
@@ -177,7 +177,6 @@ var _ = Describe("LimitsRule", func() {
 			It("Weight has precedence ", func() {
 				newBndl, err := bundlerules.Limits{}.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 					Limits: garden.Limits{
-						//lint:ignore SA1019 testing deprecated LimitInShares until removed
 						CPU: garden.CPULimits{LimitInShares: 1, Weight: 2},
 					},
 				})
@@ -387,7 +386,6 @@ var _ = Describe("LimitsRule", func() {
 			It("sets the CPU shares", func() {
 				newBndl, err := bundlerules.Limits{}.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 					Limits: garden.Limits{
-						//lint:ignore SA1019 testing deprecated LimitInShares until removed
 						CPU: garden.CPULimits{LimitInShares: 1},
 					},
 				})
@@ -402,7 +400,6 @@ var _ = Describe("LimitsRule", func() {
 			It("Weight has precedence ", func() {
 				newBndl, err := bundlerules.Limits{}.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 					Limits: garden.Limits{
-						//lint:ignore SA1019 testing deprecated LimitInShares until removed
 						CPU: garden.CPULimits{LimitInShares: 1, Weight: 2},
 					},
 				})

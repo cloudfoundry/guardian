@@ -1,3 +1,4 @@
+//lint:file-ignore SA1019 LimitInShares is deprecated but still used until Weight migration completes
 package rundmc
 
 import (
@@ -384,7 +385,7 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (spec.ActualContai
 		Stopped:    c.states.IsStopped(handle),
 		Limits: garden.Limits{
 			CPU: garden.CPULimits{
-				LimitInShares: cpuShares, //lint:ignore SA1019 LimitInShares still used until Weight migration completes
+				LimitInShares: cpuShares,
 			},
 			Memory: garden.MemoryLimits{
 				LimitInBytes: limitInBytes,

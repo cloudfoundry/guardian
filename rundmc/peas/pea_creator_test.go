@@ -1,3 +1,4 @@
+//lint:file-ignore SA1019 LimitInShares is deprecated but still tested until Weight migration completes
 package peas_test
 
 import (
@@ -298,7 +299,6 @@ var _ = Describe("PeaCreator", func() {
 		Context("when limits are provided", func() {
 			BeforeEach(func() {
 				processSpec.OverrideContainerLimits = &garden.ProcessLimits{
-					//lint:ignore SA1019 testing deprecated LimitInShares until removed
 					CPU:    garden.CPULimits{LimitInShares: 1},
 					Memory: garden.MemoryLimits{LimitInBytes: 2},
 				}

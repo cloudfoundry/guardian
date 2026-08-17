@@ -1,3 +1,4 @@
+//lint:file-ignore SA1019 LimitInShares is deprecated but still tested until Weight migration completes
 package gardener_test
 
 import (
@@ -1877,7 +1878,7 @@ var _ = Describe("Gardener", func() {
 			containerizer.InfoReturns(spec.ActualContainerSpec{
 				Limits: garden.Limits{
 					CPU: garden.CPULimits{
-						LimitInShares: 10, //lint:ignore SA1019 testing deprecated LimitInShares until removed
+						LimitInShares: 10,
 					},
 				},
 			}, nil)

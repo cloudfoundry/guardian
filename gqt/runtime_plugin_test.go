@@ -1,3 +1,4 @@
+//lint:file-ignore SA1019 LimitInShares is deprecated but still tested until Weight migration completes
 package gqt_test
 
 import (
@@ -85,7 +86,7 @@ var _ = Describe("Runtime Plugin", func() {
 							LimitInBytes: 1 * 1024 * 1024,
 						},
 						CPU: garden.CPULimits{
-							LimitInShares: 10, //lint:ignore SA1019 testing deprecated LimitInShares until removed
+							LimitInShares: 10,
 						},
 						Pid: garden.PidLimits{
 							Max: 300,

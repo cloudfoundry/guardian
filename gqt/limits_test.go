@@ -1,3 +1,4 @@
+//lint:file-ignore SA1019 LimitInShares is deprecated but still tested until Weight migration completes
 package gqt_test
 
 import (
@@ -108,7 +109,6 @@ var _ = Describe("Limits", func() {
 
 		Context("CPU Limits", func() {
 			BeforeEach(func() {
-				//lint:ignore SA1019 testing deprecated LimitInShares until removed
 				limits = garden.Limits{CPU: garden.CPULimits{LimitInShares: 128}}
 				cgroupType = "cpu"
 			})
