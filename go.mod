@@ -14,9 +14,9 @@ replace (
 
 require (
 	code.cloudfoundry.org/archiver v0.84.0
-	code.cloudfoundry.org/clock v1.83.0
+	code.cloudfoundry.org/clock v1.84.0
 	code.cloudfoundry.org/commandrunner v0.73.0
-	code.cloudfoundry.org/debugserver v0.110.0
+	code.cloudfoundry.org/debugserver v0.111.0
 	code.cloudfoundry.org/garden v0.0.0-20260814181737-66902029982f
 	code.cloudfoundry.org/grootfs v0.30.0
 	code.cloudfoundry.org/idmapper v0.0.0-20260722021010-9c84232f2761
@@ -47,9 +47,9 @@ require (
 	github.com/opencontainers/runc v1.5.1
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.10.0
+	github.com/sirupsen/logrus v1.10.1
 	github.com/spf13/pflag v1.0.10
-	github.com/tedsuo/ifrit v0.0.0-20260418191334-846868129986
+	github.com/tedsuo/ifrit v0.0.0-20260813155221-94822c932811
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
@@ -74,7 +74,7 @@ require (
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/go-runc v1.1.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
-	github.com/containerd/platforms v1.0.0-rc.4 // indirect
+	github.com/containerd/platforms v1.0.0-rc.5 // indirect
 	github.com/containerd/plugin v1.1.0 // indirect
 	github.com/containerd/ttrpc v1.2.9 // indirect
 	github.com/coreos/go-systemd/v22 v22.7.0 // indirect
@@ -120,7 +120,7 @@ require (
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260818201246-1b0934165a6f // indirect
-	google.golang.org/grpc v1.83.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260819154853-08b0e4226688 // indirect
+	google.golang.org/grpc v1.83.1 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 )

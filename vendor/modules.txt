@@ -1,7 +1,7 @@
 # code.cloudfoundry.org/archiver v0.84.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/archiver/extractor/test_helper
-# code.cloudfoundry.org/clock v1.83.0
+# code.cloudfoundry.org/clock v1.84.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
@@ -12,7 +12,7 @@ code.cloudfoundry.org/commandrunner/fake_command_runner
 code.cloudfoundry.org/commandrunner/fake_command_runner/matchers
 code.cloudfoundry.org/commandrunner/linux_command_runner
 code.cloudfoundry.org/commandrunner/windows_command_runner
-# code.cloudfoundry.org/debugserver v0.110.0
+# code.cloudfoundry.org/debugserver v0.111.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/debugserver
 # code.cloudfoundry.org/garden v0.0.0-20260814181737-66902029982f => ../garden
@@ -267,7 +267,7 @@ github.com/containerd/go-runc
 # github.com/containerd/log v0.1.0
 ## explicit; go 1.20
 github.com/containerd/log
-# github.com/containerd/platforms v1.0.0-rc.4
+# github.com/containerd/platforms v1.0.0-rc.5
 ## explicit; go 1.24
 github.com/containerd/platforms
 # github.com/containerd/plugin v1.1.0
@@ -514,13 +514,13 @@ github.com/russross/blackfriday/v2
 # github.com/seccomp/libseccomp-golang v0.11.1
 ## explicit; go 1.19
 github.com/seccomp/libseccomp-golang
-# github.com/sirupsen/logrus v1.10.0
+# github.com/sirupsen/logrus v1.10.1
 ## explicit; go 1.23
 github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.10
 ## explicit; go 1.12
 github.com/spf13/pflag
-# github.com/tedsuo/ifrit v0.0.0-20260418191334-846868129986 => github.com/tedsuo/ifrit v0.0.0-20260418191334-846868129986
+# github.com/tedsuo/ifrit v0.0.0-20260813155221-94822c932811 => github.com/tedsuo/ifrit v0.0.0-20260418191334-846868129986
 ## explicit; go 1.16
 github.com/tedsuo/ifrit
 github.com/tedsuo/ifrit/ginkgomon_v2
@@ -675,10 +675,10 @@ golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20260818201246-1b0934165a6f
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20260819154853-08b0e4226688
 ## explicit; go 1.25.0
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.83.0
+# google.golang.org/grpc v1.83.1
 ## explicit; go 1.25.0
 google.golang.org/grpc
 google.golang.org/grpc/attributes
