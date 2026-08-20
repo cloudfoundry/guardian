@@ -8,11 +8,13 @@ replace (
 	code.cloudfoundry.org/idmapper => ../idmapper
 	github.com/cilium/ebpf => github.com/cilium/ebpf v0.17.3
 	github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
+	// pin ifrit until https://github.com/tedsuo/ifrit/pull/48 is merged
+	github.com/tedsuo/ifrit => github.com/tedsuo/ifrit v0.0.0-20260418191334-846868129986
 )
 
 require (
 	code.cloudfoundry.org/archiver v0.84.0
-	code.cloudfoundry.org/clock v1.84.0
+	code.cloudfoundry.org/clock v1.83.0
 	code.cloudfoundry.org/commandrunner v0.73.0
 	code.cloudfoundry.org/debugserver v0.110.0
 	code.cloudfoundry.org/garden v0.0.0-20260814181737-66902029982f
@@ -47,7 +49,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.10.0
 	github.com/spf13/pflag v1.0.10
-	github.com/tedsuo/ifrit v0.0.0-20260813155221-94822c932811
+	github.com/tedsuo/ifrit v0.0.0-20260418191334-846868129986
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5

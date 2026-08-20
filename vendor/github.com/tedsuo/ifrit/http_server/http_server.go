@@ -3,8 +3,6 @@ package http_server
 import (
 	"context"
 	"crypto/tls"
-	"errors"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -53,9 +51,8 @@ func NewTLSServer(address string, handler http.Handler, tlsConfig *tls.Config) i
 
 func (s *httpServer) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	server := http.Server{
-		Handler:           s.handler,
-		TLSConfig:         s.tlsConfig,
-		ReadHeaderTimeout: 2 * time.Second,
+		Handler:   s.handler,
+		TLSConfig: s.tlsConfig,
 	}
 
 	listener, err := s.getListener(server.TLSConfig)
@@ -78,17 +75,8 @@ func (s *httpServer) Run(signals <-chan os.Signal, ready chan<- struct{}) error 
 		case <-signals:
 			listener.Close()
 
-			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-			defer cancel()
-			if shutdownErr := server.Shutdown(ctx); shutdownErr != nil {
-				// 2. Filter out http.ErrServerClosed (this is a normal, successful shutdown)
-				if errors.Is(shutdownErr, http.ErrServerClosed) {
-					log.Println("HTTP server closed gracefully.")
-				} else {
-					// 3. Handle actual errors (e.g., context deadline timeout)
-					log.Fatalf("HTTP server shutdown failed: %v", err)
-				}
-			}
+			ctx, _ := context.WithTimeout(context.Background(), 1*time.Minute)
+			server.Shutdown(ctx)
 
 			return nil
 		}
@@ -122,14 +110,7 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	if err != nil {
 		return
 	}
-	err = tc.SetKeepAlive(true)
-	if err != nil {
-		return nil, err
-	}
-
-	err = tc.SetKeepAlivePeriod(3 * time.Minute)
-	if err != nil {
-		return nil, err
-	}
+	tc.SetKeepAlive(true)
+	tc.SetKeepAlivePeriod(3 * time.Minute)
 	return tc, nil
 }

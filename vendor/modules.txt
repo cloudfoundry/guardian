@@ -1,7 +1,7 @@
 # code.cloudfoundry.org/archiver v0.84.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/archiver/extractor/test_helper
-# code.cloudfoundry.org/clock v1.84.0
+# code.cloudfoundry.org/clock v1.83.0
 ## explicit; go 1.25.0
 code.cloudfoundry.org/clock
 code.cloudfoundry.org/clock/fakeclock
@@ -520,8 +520,8 @@ github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.10
 ## explicit; go 1.12
 github.com/spf13/pflag
-# github.com/tedsuo/ifrit v0.0.0-20260813155221-94822c932811
-## explicit; go 1.25.0
+# github.com/tedsuo/ifrit v0.0.0-20260418191334-846868129986 => github.com/tedsuo/ifrit v0.0.0-20260418191334-846868129986
+## explicit; go 1.16
 github.com/tedsuo/ifrit
 github.com/tedsuo/ifrit/ginkgomon_v2
 github.com/tedsuo/ifrit/http_server
@@ -791,3 +791,4 @@ gopkg.in/yaml.v2
 # code.cloudfoundry.org/idmapper => ../idmapper
 # github.com/cilium/ebpf => github.com/cilium/ebpf v0.17.3
 # github.com/jessevdk/go-flags => github.com/jessevdk/go-flags v1.4.0
+# github.com/tedsuo/ifrit => github.com/tedsuo/ifrit v0.0.0-20260418191334-846868129986
