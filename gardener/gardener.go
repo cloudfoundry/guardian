@@ -50,6 +50,7 @@ type SysInfoProvider interface {
 
 type Containerizer interface {
 	Create(log lager.Logger, desiredContainerSpec spec.DesiredContainerSpec) error
+	Start(log lager.Logger, handle string) error
 	Handles() ([]string, error)
 
 	StreamIn(log lager.Logger, handle string, streamInSpec garden.StreamInSpec) error
@@ -317,6 +318,10 @@ func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Contai
 	}
 
 	if err = g.Networker.Network(log, containerSpec, actualSpec.Pid); err != nil {
+		return nil, err
+	}
+
+	if err = g.Containerizer.Start(log, containerSpec.Handle); err != nil {
 		return nil, err
 	}
 

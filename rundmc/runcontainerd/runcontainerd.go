@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"regexp"
-	"strconv"
 
 	"code.cloudfoundry.org/guardian/rundmc"
 
@@ -25,6 +23,7 @@ import (
 //counterfeiter:generate . ContainerManager
 type ContainerManager interface {
 	Create(log lager.Logger, containerID string, spec *specs.Spec, containerRootUID, containerRootGID uint32, processIO func() (io.Reader, io.Writer, io.Writer)) error
+	Start(log lager.Logger, containerID string) error
 	Delete(log lager.Logger, containerID string) error
 	Exec(log lager.Logger, containerID, processID string, spec *specs.Process, processIO func() (io.Reader, io.Writer, io.Writer, bool)) (BackingProcess, error)
 	State(log lager.Logger, containerID string) (int, string, error)
@@ -151,6 +150,10 @@ func (r *RunContainerd) Create(log lager.Logger, id string, bundle goci.Bndl, pi
 	return nil
 }
 
+func (r *RunContainerd) Start(log lager.Logger, id string) error {
+	return r.containerManager.Start(log, id)
+}
+
 func updateAnnotationsIfNeeded(bundle *goci.Bndl) {
 	if _, ok := bundle.Spec.Annotations["container-type"]; !ok {
 		if bundle.Spec.Annotations == nil {
@@ -170,17 +173,12 @@ func (r *RunContainerd) Exec(log lager.Logger, containerID string, gardenProcess
 		return r.execer.ExecWithBndl(log, containerID, bundle, gardenProcessSpec, gardenIO)
 	}
 
-	containerPid, err := r.containerManager.GetContainerPID(log, containerID)
+	rootfsPath := bundle.Spec.Root.Path
+
+	resolvedUser, err := r.userLookupper.Lookup(rootfsPath, gardenProcessSpec.User)
 	if err != nil {
 		return nil, err
 	}
-
-	resolvedUser, err := r.userLookupper.Lookup(fmt.Sprintf("/proc/%d/root", containerPid), gardenProcessSpec.User)
-	if err != nil {
-		return nil, err
-	}
-
-	rootfsPath := filepath.Join("/proc", strconv.FormatInt(int64(containerPid), 10), "root")
 
 	hostUID := idmapper.MappingList(bundle.Spec.Linux.UIDMappings).Map(resolvedUser.Uid)
 	hostGID := idmapper.MappingList(bundle.Spec.Linux.GIDMappings).Map(resolvedUser.Gid)

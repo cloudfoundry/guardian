@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"path/filepath"
 
 	"code.cloudfoundry.org/guardian/rundmc"
 
@@ -299,6 +298,7 @@ var _ = Describe("Runcontainerd", func() {
 			bundle = goci.Bndl{
 				Spec: specs.Spec{
 					Hostname: "test-hostname",
+					Root:     &specs.Root{Path: "/test/rootfs"},
 					Linux:    &specs.Linux{},
 				},
 			}.WithUIDMappings(specs.LinuxIDMapping{
@@ -417,13 +417,10 @@ var _ = Describe("Runcontainerd", func() {
 			})
 
 			It("creates the process with the resolved user", func() {
-				_, actualContainerId := containerManager.GetContainerPIDArgsForCall(0)
-				Expect(actualContainerId).To(Equal("container-id"))
-
 				Expect(userLookupper.LookupCallCount()).To(Equal(1))
 				passedRootfs, passedUserId := userLookupper.LookupArgsForCall(0)
 				Expect(passedUserId).To(Equal("testuser"))
-				Expect(passedRootfs).To(Equal("/proc/1234/root"))
+				Expect(passedRootfs).To(Equal("/test/rootfs"))
 
 				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
 				_, _, user := processBuilder.BuildProcessArgsForCall(0)
@@ -435,7 +432,7 @@ var _ = Describe("Runcontainerd", func() {
 			It("sets up the working directory", func() {
 				Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
 				rootfsPath, hostUID, hostGID, mode, shouldRecreate, workDir := mkdirer.MkdirAsArgsForCall(0)
-				Expect(rootfsPath).To(Equal(filepath.Join("/proc", "1234", "root")))
+				Expect(rootfsPath).To(Equal("/test/rootfs"))
 				Expect(hostUID).To(Equal(2000))
 				Expect(hostGID).To(Equal(2001))
 				Expect(mode).To(Equal(os.FileMode(0755)))
@@ -502,16 +499,6 @@ var _ = Describe("Runcontainerd", func() {
 
 				It("returns the error", func() {
 					Expect(execErr).To(MatchError("user-lookup-failure"))
-				})
-			})
-
-			Context("when getting the container PID fails", func() {
-				BeforeEach(func() {
-					containerManager.GetContainerPIDReturns(0, errors.New("get-container-pid-failure"))
-				})
-
-				It("returns the error", func() {
-					Expect(execErr).To(MatchError("get-container-pid-failure"))
 				})
 			})
 
