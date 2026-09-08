@@ -1,3 +1,7 @@
+> [!CAUTION]
+> This repository has been in-lined (using git-subtree) into garden-runc-release. Please make any
+> future contributions directly to garden-runc-release.
+
 # guardian
 
 [![Go Report
