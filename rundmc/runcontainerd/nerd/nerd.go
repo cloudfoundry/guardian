@@ -19,32 +19,39 @@ import (
 	apievents "github.com/containerd/containerd/api/events"
 	v2types "github.com/containerd/containerd/api/types/runc/options"
 	"github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/plugins"
 	ctrdevents "github.com/containerd/containerd/v2/core/events"
 	"github.com/containerd/containerd/v2/pkg/cio"
 	"github.com/containerd/errdefs"
+	cgroup2stats "github.com/containerd/cgroups/v3/cgroup2/stats"
 	"github.com/containerd/typeurl/v2"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type Nerd struct {
-	client    *client.Client
-	context   context.Context
-	ioFifoDir string
-	mp        *metrics.MetricsProvider
+	client      *client.Client
+	context     context.Context
+	ioFifoDir   string
+	mp          *metrics.MetricsProvider
+	runtimeType string
 }
 
-func New(client *client.Client, context context.Context, ioFifoDir string, mp *metrics.MetricsProvider) *Nerd {
+func New(client *client.Client, context context.Context, ioFifoDir string, mp *metrics.MetricsProvider, runtimeType string) *Nerd {
 	return &Nerd{
-		client:    client,
-		context:   context,
-		ioFifoDir: ioFifoDir,
-		mp:        mp,
+		client:      client,
+		context:     context,
+		ioFifoDir:   ioFifoDir,
+		mp:          mp,
+		runtimeType: runtimeType,
 	}
 }
 
 func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, hostUID, hostGID uint32, pio func() (io.Reader, io.Writer, io.Writer)) error {
 	log.Debug("creating-container", lager.Data{"containerID": containerID})
+	if n.runtimeType != "" && n.runtimeType != plugins.RuntimeRuncV2 {
+		spec.Windows = nil // runsc rejects the Windows section
+	}
 	container, err := n.client.NewContainer(n.context, containerID, client.WithSpec(spec))
 	if err != nil {
 		return err
@@ -58,14 +65,23 @@ func (n *Nerd) Create(log lager.Logger, containerID string, spec *specs.Spec, ho
 	}
 
 	log.Debug("creating-task", lager.Data{"containerID": containerID})
-	task, err := container.NewTask(n.context, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), client.WithNoNewKeyring, WithUIDAndGID(hostUID, hostGID))
+	var taskOpts []client.NewTaskOpts
+	if n.runtimeType == "" || n.runtimeType == plugins.RuntimeRuncV2 {
+		// runsc manages its own keyring and UID/GID via the OCI spec
+		taskOpts = append(taskOpts, client.WithNoNewKeyring, WithUIDAndGID(hostUID, hostGID))
+	}
+	_, err = container.NewTask(n.context, cio.NewCreator(withProcessIO(noTTYProcessIO(pio), n.ioFifoDir)), taskOpts...)
+	return err
+}
+
+func (n *Nerd) Start(log lager.Logger, containerID string) error {
+	_, task, err := n.loadContainerAndTask(log, containerID)
 	if err != nil {
 		return err
 	}
 
 	log.Debug("starting-task", lager.Data{"containerID": containerID})
-	err = task.Start(n.context)
-	if err != nil {
+	if err := task.Start(n.context); err != nil {
 		return err
 	}
 
@@ -450,4 +466,39 @@ func updateTaskInfoCreateOptions(taskInfo *client.TaskInfo, updateCreateOptions 
 	}
 
 	return updateCreateOptions(opts)
+}
+
+// TaskMetrics retrieves cgroup metrics for a container via the containerd task
+// API. Returns cgroupsv2 Metrics and the container creation time (used for Age).
+func (n *Nerd) TaskMetrics(log lager.Logger, containerID string) (*cgroup2stats.Metrics, time.Time, error) {
+	log = log.Session("task-metrics", lager.Data{"containerID": containerID})
+
+	container, task, err := n.loadContainerAndTask(log, containerID)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+
+	metric, err := task.Metrics(n.context)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("task.Metrics: %w", err)
+	}
+
+	if metric.Data == nil {
+		return nil, time.Time{}, fmt.Errorf("no metrics data for container %s", containerID)
+	}
+
+	cgMetrics, err := runcontainerd.UnmarshalContainerdMetrics(metric.Data)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+
+	// Get creation time from container info
+	info, err := container.Info(n.context)
+	if err != nil {
+		// Non-fatal: use zero time (Age will be large but metrics still report)
+		log.Error("get-info-for-creation-time", err)
+		return cgMetrics, time.Time{}, nil
+	}
+
+	return cgMetrics, info.CreatedAt, nil
 }
